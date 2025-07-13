@@ -45,6 +45,7 @@ export const sections: SidebarSectionType[] = [
       { title: "Servicios", link: "/dashboard/servicios", level: 2 },
       { title: "Otros gastos", link: "/dashboard/otros-gastos", level: 2 },
       { title: "Avisos", link: "/dashboard/avisos", level: 2 },
+      { title: "Equipamientos", link: "/dashboard/equipamientos", level: 2 },
     ],
   },
   {

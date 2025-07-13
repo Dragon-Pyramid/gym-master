@@ -78,8 +78,10 @@ export const useSidebarMenu = (
       "Socios",
       "Pagos",
       "Ventas",
+      "Avisos",
       "Rutinas",
       "Dietas",
+      "Equipamientos",
       "Actividades",
       "Entrenadores",
       "Cuotas",
@@ -90,7 +92,6 @@ export const useSidebarMenu = (
       "Otros gastos",
       "Perfil",
       "Preferencias",
-      "Avisos",
     ];
 
     sections.forEach((section: SidebarSectionType) => {

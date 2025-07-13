@@ -15,16 +15,19 @@ import {
   YAxis,
 } from "recharts";
 import { AppHeader } from "@/components/header/AppHeader";
+import { AppFooter } from "@/components/footer/AppFooter";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import DashboardInitialContent from "@/components/dashboard/DashboardInitialContent";
 
-import dynamic from "next/dynamic";
-const FechaHora = dynamic(() => import("@/components/ui/FechaHora"), {
-  ssr: false,
-});
+import { useEffect, useState } from "react";
+import { getAllEquipamientos } from "@/services/equipamientoService";
+import { getAllMantenimientos } from "@/services/mantenimientoService";
+
+import { Equipamento } from "@/interfaces/equipamiento.interface";
+import { Mantenimiento } from "@/interfaces/mantenimiento.interface";
 
 const asistenciaPorDia = [
   { name: "Lun", socios: 40 },
@@ -49,10 +52,48 @@ const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [equipos, setEquipos] = useState<Equipamento[]>([]);
+  const [mantenimientos, setMantenimientos] = useState<Mantenimiento[]>([]);
+  const [loadingDatos, setLoadingDatos] = useState(true);
 
-  if (status === "loading") {
+  useEffect(() => {
+    async function fetchData() {
+      setLoadingDatos(true);
+      const eqs = await getAllEquipamientos();
+      const mants = await getAllMantenimientos();
+      setEquipos(eqs || []);
+      setMantenimientos(mants || []);
+      setLoadingDatos(false);
+    }
+    fetchData();
+  }, []);
+
+  const equiposTotales = equipos.length;
+  const equiposEnRevision = equipos.filter(
+    (e) => e.estado === "en mantenimiento"
+  ).length;
+  const equiposFueraDeServicio = equipos.filter(
+    (e) => e.estado === "fuera de servicio"
+  ).length;
+  const proximosMantenimientos = equipos.filter((e) => {
+    if (!e.proxima_revision) return false;
+    const fecha = new Date(e.proxima_revision);
+    const hoy = new Date();
+    const en30dias = new Date();
+    en30dias.setDate(hoy.getDate() + 30);
+    return fecha >= hoy && fecha <= en30dias;
+  }).length;
+  const mesActual = new Date().toISOString().slice(0, 7);
+  const costoMantenimientoMensual = mantenimientos
+    .filter(
+      (m) =>
+        m.fecha_mantenimiento && m.fecha_mantenimiento.startsWith(mesActual)
+    )
+    .reduce((acc, m) => acc + (m.costo || 0), 0);
+
+  if (status === "loading" || loadingDatos) {
     return (
-      <div className="flex justify-center items-center h-screen">
+      <div className="flex items-center justify-center h-screen">
         Cargando dashboard...
       </div>
     );
@@ -72,8 +113,7 @@ export default function DashboardPage() {
 
         <div className="flex flex-col flex-1 w-full">
           <AppHeader title="Dashboard" />
-
-          <main className="flex-1 px-4 py-6 space-y-6 w-full max-w-full md:px-8">
+          <main className="flex-1 w-full max-w-full px-4 py-6 space-y-6 md:px-8">
             {(userType === "socio" || userType === "usuario") && (
               <DashboardInitialContent />
             )}
@@ -205,9 +245,82 @@ export default function DashboardPage() {
                     </CardContent>
                   </Card>
                 </div>
+
+                <div className="grid grid-cols-1 gap-4 mt-6 md:grid-cols-2 xl:grid-cols-3">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Equipos Totales</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold">{equiposTotales}</div>
+                      <p className="text-sm text-muted-foreground">
+                        Total de equipos registrados
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Equipos en Revisión</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold">
+                        {equiposEnRevision}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Actualmente en proceso de revisión
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Próximos Mantenimientos</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold">
+                        {proximosMantenimientos}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Equipos con mantenimiento programado
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>
+                        Costo Total de Mantenimiento Mensual
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold">
+                        ${costoMantenimientoMensual}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Costo estimado para este mes
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Equipos Fuera de Servicio</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold">
+                        {equiposFueraDeServicio}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Equipos no operativos actualmente
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
               </>
             )}
           </main>
+          <AppFooter />
         </div>
       </div>
     </SidebarProvider>
