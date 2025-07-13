@@ -2,6 +2,8 @@ import { CreateMantenimientoDTO, Mantenimiento, UpdateMantenimientoDTO } from "@
 import { supabase } from "./supabaseClient"
 import { getOneEquipamientoById, updateEquipamiento } from "./equipamientoService";
 import dayjs from "dayjs";
+import { EstadoMantenimiento } from "@/enums/estadoMantenimiento.enum";
+import { EstadoEquipamiento } from "@/enums/estadoEquipamiento.enum";
 
 export const getMantenimientoByIdEquipamiento = async (id: string) : Promise<Mantenimiento[]>=> {
     const equipamiento = await getOneEquipamientoById(id);
@@ -65,7 +67,7 @@ export const getAllMantenimientos = async () : Promise<Mantenimiento[]> => {
 export const mantenimientoCompletado = async (id: string) : Promise<Mantenimiento> => {
     const { data, error } = await supabase
         .from('mantenimiento')
-        .update({ estado: 'completado' })
+        .update({ estado: EstadoMantenimiento.COMPLETADO })
         .eq('id', id)
         .select()
         .single();
@@ -79,7 +81,7 @@ export const mantenimientoCompletado = async (id: string) : Promise<Mantenimient
     const ultima_revision = dayjs().format("YYYY-MM-DD");
     const proxima_revision = dayjs().add(3, 'month').format("YYYY-MM-DD");
     const observaciones = 'Sin observaciones';
-   const equipamientoActualizado = await updateEquipamiento(idEquipamiento, { estado: 'operativo', ultima_revision, proxima_revision, observaciones});
+   const equipamientoActualizado = await updateEquipamiento(idEquipamiento, { estado: EstadoEquipamiento.OPERATIVO, ultima_revision, proxima_revision, observaciones});
     console.log("Equipamiento actualizado:", equipamientoActualizado );
     return data;
 }

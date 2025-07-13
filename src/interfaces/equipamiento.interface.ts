@@ -1,3 +1,5 @@
+import { EstadoEquipamiento } from "@/enums/estadoEquipamiento.enum";
+
 export interface Equipamento{
     id: string; // UUID
     nombre: string;
@@ -5,7 +7,7 @@ export interface Equipamento{
     marca: string;
     modelo: string;
     ubicacion: string;
-    estado: 'operativo' | 'en mantenimiento' | 'fuera de servicio';
+    estado: EstadoEquipamiento;
     fecha_adquisicion: string;
     ultima_revision: string;
     proxima_revision: string;
@@ -31,7 +33,7 @@ export interface UpdateEquipamentoDTO {
     marca?: string;
     modelo?: string;
     ubicacion?: string;
-    estado?: 'operativo' | 'en mantenimiento' | 'fuera de servicio';
+    estado?: EstadoEquipamiento;
     fecha_adquisicion?: string; // si no se proporciona, se mantiene el valor actual
     ultima_revision?: string; // si no se proporciona, se mantiene el valor actual
     proxima_revision?: string; // si no se proporciona, se calcula automáticamente

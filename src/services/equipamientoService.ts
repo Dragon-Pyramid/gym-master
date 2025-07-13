@@ -56,6 +56,7 @@ export const updateEquipamiento = async (id: string, updateData:UpdateEquipament
     return data;
 }
 
+
 export const deleteEquipamiento = async (id: string): Promise<Equipamento> => {
     const {data, error } = await supabase
         .from("equipamiento")
