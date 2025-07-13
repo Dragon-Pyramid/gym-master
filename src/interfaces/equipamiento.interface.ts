@@ -1,9 +1,10 @@
 import { EstadoEquipamiento } from "@/enums/estadoEquipamiento.enum";
+import { TipoEquipamiento } from "@/enums/tipoEquipamiento.enum";
 
 export interface Equipamento{
     id: string; // UUID
     nombre: string;
-    tipo: string; // ej: "Cardio", "Fuerza", "Accesorio"
+    tipo: TipoEquipamiento;
     marca: string;
     modelo: string;
     ubicacion: string;
@@ -17,7 +18,7 @@ export interface Equipamento{
 
 export interface CreateEquipamentoDTO {
     nombre: string;
-    tipo: string; // ej: "Cardio", "Fuerza", "Accesorio"
+    tipo: TipoEquipamiento;
     marca: string;
     modelo: string;
     ubicacion: string;
@@ -29,7 +30,7 @@ export interface CreateEquipamentoDTO {
 
 export interface UpdateEquipamentoDTO {
     nombre?: string;
-    tipo?: string; // ej: "Cardio", "Fuerza", "Accesorio"
+    tipo?: TipoEquipamiento;
     marca?: string;
     modelo?: string;
     ubicacion?: string;

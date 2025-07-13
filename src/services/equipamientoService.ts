@@ -1,4 +1,5 @@
 import { CreateEquipamentoDTO, Equipamento, UpdateEquipamentoDTO } from "@/interfaces/equipamiento.interface";
+import { TipoEquipamiento } from "@/enums/tipoEquipamiento.enum";
 import { supabase } from "./supabaseClient";
 import dayjs from "dayjs";
 
@@ -20,10 +21,28 @@ const ultima_revision = dayjs().format("YYYY-MM-DD");
 const observaciones = payload.observaciones || "Sin observaciones";
 const proxima_revision = payload.proxima_revision || dayjs().add(3, 'month').format("YYYY-MM-DD");
 
+// Si se pasa tipo como string, convertir a enum
+let tipo = payload.tipo.toLowerCase();
+
+if (typeof tipo === 'string') {
+  if(tipo === "cardio"){
+  tipo = TipoEquipamiento.CARDIO;
+  } else if(tipo === "fuerza"){
+  tipo = TipoEquipamiento.FUERZA;
+  } else if(tipo === "accesorio"){
+  tipo = TipoEquipamiento.ACCESORIO;
+  } else {
+    throw new Error("Tipo de equipamiento no válido");
+  }
+} else {
+  throw new Error("El tipo de equipamiento debe ser una cadena de texto");
+}
+
     const { data, error } = await supabase
         .from("equipamiento")
         .insert({
             ...payload,
+            tipo,
             fecha_adquisicion,
             ultima_revision,
             proxima_revision,
