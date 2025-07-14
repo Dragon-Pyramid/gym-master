@@ -1,11 +1,14 @@
+import { EstadoEquipamiento } from "@/enums/estadoEquipamiento.enum";
+import { TipoEquipamiento } from "@/enums/tipoEquipamiento.enum";
+
 export interface Equipamento{
     id: string; // UUID
     nombre: string;
-    tipo: string; // ej: "Cardio", "Fuerza", "Accesorio"
+    tipo: TipoEquipamiento;
     marca: string;
     modelo: string;
     ubicacion: string;
-    estado: 'operativo' | 'en mantenimiento' | 'fuera de servicio';
+    estado: EstadoEquipamiento;
     fecha_adquisicion: string;
     ultima_revision: string;
     proxima_revision: string;
@@ -15,7 +18,7 @@ export interface Equipamento{
 
 export interface CreateEquipamentoDTO {
     nombre: string;
-    tipo: string; // ej: "Cardio", "Fuerza", "Accesorio"
+    tipo: TipoEquipamiento;
     marca: string;
     modelo: string;
     ubicacion: string;
@@ -27,11 +30,11 @@ export interface CreateEquipamentoDTO {
 
 export interface UpdateEquipamentoDTO {
     nombre?: string;
-    tipo?: string; // ej: "Cardio", "Fuerza", "Accesorio"
+    tipo?: TipoEquipamiento;
     marca?: string;
     modelo?: string;
     ubicacion?: string;
-    estado?: 'operativo' | 'en mantenimiento' | 'fuera de servicio';
+    estado?: EstadoEquipamiento;
     fecha_adquisicion?: string; // si no se proporciona, se mantiene el valor actual
     ultima_revision?: string; // si no se proporciona, se mantiene el valor actual
     proxima_revision?: string; // si no se proporciona, se calcula automáticamente
