@@ -1,0 +1,5 @@
+gimnasio,socio_id,ultima_asistencia,semanas_sin_asistir,estado
+gym_master,2c2af6cb-1e8d-4557-8c69-9ffe76a5afa7,2025-07-01,1,Activo
+gym_master,45abc190-8f38-4976-8ebb-198e73bfa1ce,2025-06-04,5,Inactivo
+gym_master,5f15aeba-329d-463d-96d2-b035d50f5ced,2025-06-02,6,Inactivo
+gym_master,ee59a685-6c32-4181-8315-2fd19df24021,2025-06-26,2,Activo
