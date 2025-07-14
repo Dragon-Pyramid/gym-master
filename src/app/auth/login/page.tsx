@@ -4,7 +4,7 @@ import { useState, FormEvent, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { toast } from "sonner";
-import { Sun, Moon } from "lucide-react";
+import { Sun, Moon, Check, ChevronsUpDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +23,68 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+
+const userTypes = [
+  {
+    value: "admin",
+    label: "Administrador",
+  },
+  {
+    value: "socio",
+    label: "Socio",
+  },
+  {
+    value: "usuario",
+    label: "Usuario",
+  },
+];
+
+const gymDatabases = [
+  {
+    value: "gym_central",
+    label: "Gym Central",
+    initial: "C",
+    color: "bg-blue-500",
+  },
+  {
+    value: "gym_norte",
+    label: "Gym Norte",
+    initial: "N",
+    color: "bg-green-500",
+  },
+  {
+    value: "gym_sur",
+    label: "Gym Sur",
+    initial: "S",
+    color: "bg-red-500",
+  },
+  {
+    value: "gym_oeste",
+    label: "Gym Oeste",
+    initial: "O",
+    color: "bg-purple-500",
+  },
+  {
+    value: "gym_fitness_plus",
+    label: "Gym Fitness Plus",
+    initial: "F",
+    color: "bg-orange-500",
+  },
+];
 
 function useDarkMode() {
   const [dark, setDark] = useState(false);
@@ -56,24 +118,42 @@ export default function LoginPage() {
   const [userType, setUserType] = useState<"admin" | "socio" | "usuario" | "">(
     ""
   );
-
+  const [dbName, setDbName] = useState("");
+  const [open, setOpen] = useState(false);
+  const [userTypeOpen, setUserTypeOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { dark, toggle } = useDarkMode();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    if (!email || !password || !userType) {
-      toast.error("Todos los campos son obligatorios");
+    if (!email.trim()) {
+      toast.error("El campo Usuario es obligatorio");
+      return;
+    }
+
+    if (!password.trim()) {
+      toast.error("El campo Contraseña es obligatorio");
+      return;
+    }
+
+    if (!userType) {
+      toast.error("Debe seleccionar un tipo de usuario");
+      return;
+    }
+
+    if (!dbName) {
+      toast.error("Debe seleccionar una base de datos");
       return;
     }
 
     setLoading(true);
 
     const res = await signIn("credentials", {
-      email,
-      password,
+      email: email.trim(),
+      password: password.trim(),
       userType,
+      dbName,
       redirect: false,
     });
 
@@ -92,7 +172,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex relative inset-0 flex-col gap-4 justify-center items-center bg-background">
+    <div className="relative inset-0 flex flex-col items-center justify-center gap-4 bg-background">
       <div className="absolute top-4 right-4">
         <TooltipProvider>
           <Tooltip>
@@ -131,7 +211,7 @@ export default function LoginPage() {
       </div>
 
       <div className="w-[400px] px-4">
-        <Card className="overflow-hidden w-full rounded-xl shadow-md">
+        <Card className="w-full overflow-hidden shadow-md rounded-xl">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold text-center">
               Iniciar Sesión
@@ -168,29 +248,158 @@ export default function LoginPage() {
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="userType">Tipo de Usuario</Label>
-                <select
-                  id="userType"
-                  value={userType}
-                  onChange={(e) =>
-                    setUserType(
-                      e.target.value as "admin" | "socio" | "usuario" | ""
-                    )
-                  }
-                  className="px-3 py-2 text-sm rounded-md border shadow-sm border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
-                  required
-                >
-                  <option value="" disabled>
-                    Seleccione el tipo de usuario
-                  </option>
-                  <option value="admin">Administrador</option>
-                  <option value="socio">Socio</option>
-                  <option value="usuario">Usuario</option>
-                </select>
+                <Label>Tipo de Usuario</Label>
+                <Popover open={userTypeOpen} onOpenChange={setUserTypeOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={userTypeOpen}
+                      className="justify-between w-full"
+                    >
+                      {userType
+                        ? userTypes.find((type) => type.value === userType)
+                            ?.label
+                        : "Seleccione el tipo de usuario..."}
+                      <ChevronsUpDown className="w-4 h-4 ml-2 opacity-50 shrink-0" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0 bg-background">
+                    <Command>
+                      <CommandInput
+                        placeholder="Buscar tipo de usuario..."
+                        className="h-9"
+                      />
+                      <CommandList>
+                        <CommandEmpty>
+                          No se encontró ningún tipo de usuario.
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {userTypes.map((type) => (
+                            <CommandItem
+                              key={type.value}
+                              value={type.value}
+                              onSelect={(currentValue) => {
+                                setUserType(
+                                  currentValue === userType
+                                    ? ""
+                                    : (currentValue as
+                                        | "admin"
+                                        | "socio"
+                                        | "usuario"
+                                        | "")
+                                );
+                                setUserTypeOpen(false);
+                              }}
+                            >
+                              {type.label}
+                              <Check
+                                className={cn(
+                                  "ml-auto h-4 w-4",
+                                  userType === type.value
+                                    ? "opacity-100"
+                                    : "opacity-0"
+                                )}
+                              />
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
-              <Button type="submit" className="mt-2 w-full" disabled={loading}>
-                {loading ? "Ingresando..." : "Iniciar sesión"}
+              <div className="grid gap-2">
+                <Label>Base de Datos</Label>
+                <Popover open={open} onOpenChange={setOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={open}
+                      className="justify-between w-full"
+                    >
+                      <div className="flex items-center gap-2">
+                        {dbName && (
+                          <div
+                            className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-semibold ${
+                              gymDatabases.find((gym) => gym.value === dbName)
+                                ?.color
+                            }`}
+                          >
+                            {
+                              gymDatabases.find((gym) => gym.value === dbName)
+                                ?.initial
+                            }
+                          </div>
+                        )}
+                        <span>
+                          {dbName
+                            ? gymDatabases.find((gym) => gym.value === dbName)
+                                ?.label
+                            : "Seleccione una base de datos..."}
+                        </span>
+                      </div>
+                      <ChevronsUpDown className="w-4 h-4 ml-2 opacity-50 shrink-0" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0 bg-background">
+                    <Command>
+                      <CommandInput
+                        placeholder="Buscar gimnasio..."
+                        className="h-9"
+                      />
+                      <CommandList>
+                        <CommandEmpty>
+                          No se encontró ningún gimnasio.
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {gymDatabases.map((gym) => (
+                            <CommandItem
+                              key={gym.value}
+                              value={gym.value}
+                              onSelect={(currentValue) => {
+                                setDbName(
+                                  currentValue === dbName ? "" : currentValue
+                                );
+                                setOpen(false);
+                              }}
+                            >
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-semibold ${gym.color}`}
+                                >
+                                  {gym.initial}
+                                </div>
+                                <span>{gym.label}</span>
+                              </div>
+                              <Check
+                                className={cn(
+                                  "ml-auto h-4 w-4",
+                                  dbName === gym.value
+                                    ? "opacity-100"
+                                    : "opacity-0"
+                                )}
+                              />
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <Button type="submit" className="w-full mt-2" disabled={loading}>
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-current rounded-full border-t-transparent animate-spin"></div>
+                    <span>Ingresando...</span>
+                  </div>
+                ) : (
+                  "Iniciar sesión"
+                )}
               </Button>
             </form>
           </CardContent>
