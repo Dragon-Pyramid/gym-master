@@ -1,9 +1,18 @@
 import bcrypt from 'bcryptjs';
-import { supabase } from './supabaseClient';
+import { getSupabaseClient, supabase } from './supabaseClient';
 import { Usuario, CreateUsuarioDto, UpdateUsuarioDto, ResponseUsuario } from "../interfaces/usuario.interface";
 
-export const fetchUsuarios = async (): Promise<ResponseUsuario[]> => {
-  const { data, error } = await supabase
+export const fetchUsuarios = async (user): Promise<ResponseUsuario[]> => {
+const dbName = user?.dbName 
+if (!dbName) {
+  throw new Error("No se encontró el nombre de la base de datos en el usuario");
+}
+  const supabase = getSupabaseClient(dbName);
+  if (!supabase) {
+    throw new Error(`No se pudo obtener el cliente de Supabase para la base de datos: ${dbName}`);
+  }
+
+const { data, error } = await supabase
     .from('usuario')
     .select('*');
   if (error) throw new Error(error.message);

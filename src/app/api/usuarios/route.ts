@@ -5,10 +5,15 @@ import {
   updateUsuarios,
   deleteUsuarios
 } from '@/services/usuarioService';
+import { authMiddleware } from '@/middlewares/auth.middleware';
 
-export async function GET() {
+export async function GET(req : Request) {
+
   try {
-    const usuarios = await fetchUsuarios();
+  const {user} = await authMiddleware(req);
+  console.log(user);
+  
+    const usuarios = await fetchUsuarios(user);
     return NextResponse.json({data:usuarios}, { status: 200 });
   } catch {
     return NextResponse.json({ error: 'Error al obtener usuarios' }, { status: 500 });
