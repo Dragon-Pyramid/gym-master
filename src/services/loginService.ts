@@ -1,21 +1,20 @@
 import { SignInDto } from "@/interfaces/credentials.interface";
-import { getSupabaseClient, supabase } from "./supabaseClient";
+import { getSupabaseClient } from "./supabaseClient";
 import * as bcrypt  from 'bcryptjs';
 import  * as jwt  from 'jsonwebtoken';
 
 export const signIn = async (login:SignInDto)=>{
     const { email, password, rol, dbName } = login;
-//debo conectar a la base de datos 
-console.log(dbName);
 if (!dbName) {
   throw new Error("No se encontró el nombre de la base de datos en el usuario");
 }
+//ME CONECTO A LA BD DINAMICAMENTE, CON SU NOMBRE
   const supabase = getSupabaseClient(dbName);
   if (!supabase) {
     throw new Error(`No se pudo obtener el cliente de Supabase para la base de datos: ${dbName}`);
   }
 
-
+//BUSCO EN ESA BD, EL USUARIO
 const {data,error}= await supabase
    .from("usuario")
     .select()

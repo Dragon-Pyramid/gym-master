@@ -10,9 +10,11 @@ import { authMiddleware } from '@/middlewares/auth.middleware';
 export async function GET(req : Request) {
 
   try {
+    //MIDDLEWARE PARA VERIFICAR QUE VENGA EL TOKEN Y ESTE FIRMADO CON LA CLAVESECRETA
   const {user} = await authMiddleware(req);
   console.log(user);
   
+  //PASO EL PAYLOAD DEL USUARIO LOGUEADO AL SERVICIO  
     const usuarios = await fetchUsuarios(user);
     return NextResponse.json({data:usuarios}, { status: 200 });
   } catch {
