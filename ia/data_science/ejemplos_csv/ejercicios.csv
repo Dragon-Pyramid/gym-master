@@ -1,7 +1,0 @@
-id_ejercicio,nombre,id_nivel,id_objetivo,grupo_muscular,imagen_url
-1,Remo con barra,2,1,Espalda,https://ejemplo.com/remo.gif
-2,Press banca,2,1,Pecho,https://ejemplo.com/press.gif
-3,Sentadilla,2,1,Piernas,https://ejemplo.com/sentadilla.gif
-4,Curl de bíceps,2,1,Bíceps,https://ejemplo.com/curl.gif
-5,Extensión de tríceps,2,1,Tríceps,https://ejemplo.com/triceps.gif
-6,Elevaciones laterales,2,1,Hombros,https://ejemplo.com/hombros.gif
