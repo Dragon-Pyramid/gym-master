@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useAuthStore } from "@/stores/authStore";
 import { AppHeader } from "@/components/header/AppHeader";
 import { AppFooter } from "@/components/footer/AppFooter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -19,7 +19,8 @@ import { toast } from "sonner";
 import ExcelJS from "exceljs";
 
 export default function ProductoPage() {
-  const { data: session, status } = useSession();
+  const { user, isAuthenticated, initializeAuth, isInitialized } =
+    useAuthStore();
   const router = useRouter();
   const [productos, setProductos] = useState<Producto[]>([]);
   const [filteredProductos, setFilteredProductos] = useState<Producto[]>([]);
@@ -33,10 +34,14 @@ export default function ProductoPage() {
   const [productoVer, setProductoVer] = useState<Producto | null>(null);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    initializeAuth();
+  }, [initializeAuth]);
+
+  useEffect(() => {
+    if (isInitialized && !isAuthenticated) {
       router.push("/auth/login");
     }
-  }, [status, router]);
+  }, [isAuthenticated, isInitialized, router]);
 
   const loadProductos = async () => {
     setLoading(true);
@@ -85,10 +90,10 @@ export default function ProductoPage() {
   };
 
   useEffect(() => {
-    if (status === "authenticated") {
+    if (isInitialized && isAuthenticated) {
       loadProductos();
     }
-  }, [status]);
+  }, [isInitialized, isAuthenticated]);
 
   useEffect(() => {
     if (searchTerm.trim() === "") {
@@ -107,8 +112,12 @@ export default function ProductoPage() {
     setFilteredProductos(filtered);
   }, [searchTerm, productos]);
 
-  if (status === "loading" || loading) {
-    return <p>Cargando datos de productos...</p>;
+  if (!isInitialized) {
+    return <div>Cargando...</div>;
+  }
+
+  if (!isAuthenticated) {
+    return null;
   }
 
   return (

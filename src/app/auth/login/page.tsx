@@ -2,8 +2,8 @@
 
 import { useState, FormEvent, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
 import { toast } from "sonner";
+import { useAuthStore } from "@/stores/authStore";
 import { Sun, Moon, Check, ChevronsUpDown } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import GymSelector from "@/components/ui/gym-selector";
 
 const userTypes = [
   {
@@ -50,39 +51,6 @@ const userTypes = [
   {
     value: "usuario",
     label: "Usuario",
-  },
-];
-
-const gymDatabases = [
-  {
-    value: "gym_central",
-    label: "Gym Central",
-    initial: "C",
-    color: "bg-blue-500",
-  },
-  {
-    value: "gym_norte",
-    label: "Gym Norte",
-    initial: "N",
-    color: "bg-green-500",
-  },
-  {
-    value: "gym_sur",
-    label: "Gym Sur",
-    initial: "S",
-    color: "bg-red-500",
-  },
-  {
-    value: "gym_oeste",
-    label: "Gym Oeste",
-    initial: "O",
-    color: "bg-purple-500",
-  },
-  {
-    value: "gym_fitness_plus",
-    label: "Gym Fitness Plus",
-    initial: "F",
-    color: "bg-orange-500",
   },
 ];
 
@@ -113,16 +81,37 @@ function useDarkMode() {
 
 export default function LoginPage() {
   const router = useRouter();
+  const {
+    login: authLogin,
+    isLoading,
+    error,
+    isAuthenticated,
+    initializeAuth,
+    clearError,
+    isInitialized,
+  } = useAuthStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [userType, setUserType] = useState<"admin" | "socio" | "usuario" | "">(
     ""
   );
   const [dbName, setDbName] = useState("");
-  const [open, setOpen] = useState(false);
   const [userTypeOpen, setUserTypeOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
   const { dark, toggle } = useDarkMode();
+
+  useEffect(() => {
+    initializeAuth();
+    if (isInitialized && isAuthenticated) {
+      router.push("/dashboard");
+    }
+  }, [initializeAuth, isAuthenticated, isInitialized, router]);
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+      clearError();
+    }
+  }, [error, clearError]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -147,28 +136,17 @@ export default function LoginPage() {
       return;
     }
 
-    setLoading(true);
-
-    const res = await signIn("credentials", {
+    const success = await authLogin({
       email: email.trim(),
       password: password.trim(),
-      userType,
+      rol: userType,
       dbName,
-      redirect: false,
     });
 
-    if (res?.ok) {
+    if (success) {
       toast.success("Inicio de sesión exitoso");
-      router.replace("/dashboard");
-    } else {
-      let errorMessage = "Correo o contraseña incorrectos";
-      if (res?.error) {
-        errorMessage = res.error;
-      }
-      toast.error(errorMessage);
+      router.push("/dashboard");
     }
-
-    setLoading(false);
   };
 
   return (
@@ -312,87 +290,15 @@ export default function LoginPage() {
 
               <div className="grid gap-2">
                 <Label>Base de Datos</Label>
-                <Popover open={open} onOpenChange={setOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={open}
-                      className="justify-between w-full"
-                    >
-                      <div className="flex items-center gap-2">
-                        {dbName && (
-                          <div
-                            className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-semibold ${
-                              gymDatabases.find((gym) => gym.value === dbName)
-                                ?.color
-                            }`}
-                          >
-                            {
-                              gymDatabases.find((gym) => gym.value === dbName)
-                                ?.initial
-                            }
-                          </div>
-                        )}
-                        <span>
-                          {dbName
-                            ? gymDatabases.find((gym) => gym.value === dbName)
-                                ?.label
-                            : "Seleccione una base de datos..."}
-                        </span>
-                      </div>
-                      <ChevronsUpDown className="w-4 h-4 ml-2 opacity-50 shrink-0" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-full p-0 bg-background">
-                    <Command>
-                      <CommandInput
-                        placeholder="Buscar gimnasio..."
-                        className="h-9"
-                      />
-                      <CommandList>
-                        <CommandEmpty>
-                          No se encontró ningún gimnasio.
-                        </CommandEmpty>
-                        <CommandGroup>
-                          {gymDatabases.map((gym) => (
-                            <CommandItem
-                              key={gym.value}
-                              value={gym.value}
-                              onSelect={(currentValue) => {
-                                setDbName(
-                                  currentValue === dbName ? "" : currentValue
-                                );
-                                setOpen(false);
-                              }}
-                            >
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-semibold ${gym.color}`}
-                                >
-                                  {gym.initial}
-                                </div>
-                                <span>{gym.label}</span>
-                              </div>
-                              <Check
-                                className={cn(
-                                  "ml-auto h-4 w-4",
-                                  dbName === gym.value
-                                    ? "opacity-100"
-                                    : "opacity-0"
-                                )}
-                              />
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                <GymSelector value={dbName} onChange={setDbName} />
               </div>
 
-              <Button type="submit" className="w-full mt-2" disabled={loading}>
-                {loading ? (
+              <Button
+                type="submit"
+                className="w-full mt-2"
+                disabled={isLoading}
+              >
+                {isLoading ? (
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-current rounded-full border-t-transparent animate-spin"></div>
                     <span>Ingresando...</span>

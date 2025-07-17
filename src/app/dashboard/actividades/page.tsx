@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useAuthStore } from "@/stores/authStore";
 import { AppHeader } from "@/components/header/AppHeader";
 import { AppFooter } from "@/components/footer/AppFooter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -23,7 +23,8 @@ import { toast } from "sonner";
 import ExcelJS from "exceljs";
 
 export default function ActividadesPage() {
-  const { data: session, status } = useSession();
+  const { user, isAuthenticated, initializeAuth, isInitialized } =
+    useAuthStore();
   const router = useRouter();
   const [actividades, setActividades] = useState<Actividad[]>([]);
   const [filteredActividades, setFilteredActividades] = useState<Actividad[]>(
@@ -39,10 +40,14 @@ export default function ActividadesPage() {
   const [actividadVer, setActividadVer] = useState<Actividad | null>(null);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    initializeAuth();
+  }, [initializeAuth]);
+
+  useEffect(() => {
+    if (isInitialized && !isAuthenticated) {
       router.push("/auth/login");
     }
-  }, [status, router]);
+  }, [isAuthenticated, isInitialized, router]);
 
   const loadActividades = useCallback(async () => {
     setLoading(true);
@@ -104,10 +109,10 @@ export default function ActividadesPage() {
   };
 
   useEffect(() => {
-    if (status === "authenticated") {
+    if (isInitialized && isAuthenticated) {
       loadActividades();
     }
-  }, [status, loadActividades]);
+  }, [isInitialized, isAuthenticated, loadActividades]);
 
   useEffect(() => {
     if (searchTerm.trim() === "") {
@@ -123,8 +128,12 @@ export default function ActividadesPage() {
     setFilteredActividades(filtered);
   }, [searchTerm, actividades]);
 
-  if (status === "loading" || loading) {
-    return <p>Cargando datos de actividades...</p>;
+  if (!isInitialized) {
+    return <div>Cargando...</div>;
+  }
+
+  if (!isAuthenticated) {
+    return null;
   }
 
   return (

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useAuthStore } from "@/stores/authStore";
 import { AppHeader } from "@/components/header/AppHeader";
 import { AppFooter } from "@/components/footer/AppFooter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -30,7 +30,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function UsuariosPage() {
-  const { data: session, status } = useSession();
+  const { user, isAuthenticated, initializeAuth, isInitialized } =
+    useAuthStore();
   const router = useRouter();
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [filteredUsuarios, setFilteredUsuarios] = useState<Usuario[]>([]);
@@ -43,10 +44,14 @@ export default function UsuariosPage() {
   const [filtroActivo, setFiltroActivo] = useState("todos");
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    initializeAuth();
+  }, [initializeAuth]);
+
+  useEffect(() => {
+    if (isInitialized && !isAuthenticated) {
       router.push("/auth/login");
     }
-  }, [status, router]);
+  }, [isAuthenticated, isInitialized, router]);
 
   const loadUsuarios = useCallback(async () => {
     setLoading(true);
@@ -117,10 +122,10 @@ export default function UsuariosPage() {
   };
 
   useEffect(() => {
-    if (status === "authenticated") {
+    if (isInitialized && isAuthenticated) {
       loadUsuarios();
     }
-  }, [status, loadUsuarios]);
+  }, [isInitialized, isAuthenticated, loadUsuarios]);
 
   useEffect(() => {
     let usuariosFiltrados = usuarios;
@@ -148,8 +153,12 @@ export default function UsuariosPage() {
       ? "Activos"
       : "Inactivos";
 
-  if (status === "loading" || loading) {
-    return <p>Cargando datos de usuarios...</p>;
+  if (!isInitialized) {
+    return <div>Cargando...</div>;
+  }
+
+  if (!isAuthenticated) {
+    return null;
   }
 
   return (

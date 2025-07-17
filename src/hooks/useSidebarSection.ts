@@ -22,6 +22,7 @@ export const useSidebarMenu = (
   if (userType === "socio") {
     const socioAllowedTitles = [
       "Inicio",
+      "Control de Asistencia",
       "Rutinas",
       "Dietas",
       "Evolución",

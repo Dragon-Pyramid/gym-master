@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useAuthStore } from "@/stores/authStore";
 import { AppHeader } from "@/components/header/AppHeader";
 import { AppFooter } from "@/components/footer/AppFooter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -73,7 +73,8 @@ const niveles = ["Principiante", "Intermedio", "Avanzado"];
 const objetivos = ["Hipertrofia", "Definición", "Fuerza", "Resistencia"];
 
 export default function RutinasPage() {
-  const { data: session, status } = useSession();
+  const { user, isAuthenticated, initializeAuth, isInitialized } =
+    useAuthStore();
   const router = useRouter();
   const [rutinas, setRutinas] = useState<Rutina[]>([]);
   const [filteredRutinas, setFilteredRutinas] = useState<Rutina[]>([]);
@@ -87,10 +88,14 @@ export default function RutinasPage() {
   const [selectedObjetivos, setSelectedObjetivos] = useState<string[]>([]);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    initializeAuth();
+  }, [initializeAuth]);
+
+  useEffect(() => {
+    if (isInitialized && !isAuthenticated) {
       router.push("/auth/login");
     }
-  }, [status, router]);
+  }, [isAuthenticated, isInitialized, router]);
 
   const fetchRutinas = async () => {
     setLoading(true);
@@ -164,10 +169,10 @@ export default function RutinasPage() {
   };
 
   useEffect(() => {
-    if (status === "authenticated") {
+    if (isInitialized && isAuthenticated) {
       fetchRutinas();
     }
-  }, [status]);
+  }, [isInitialized, isAuthenticated]);
 
   useEffect(() => {
     let rutinasFiltradas = rutinas;
@@ -197,8 +202,12 @@ export default function RutinasPage() {
     setFilteredRutinas(rutinasFiltradas);
   }, [searchTerm, rutinas, selectedNiveles, selectedObjetivos]);
 
-  if (status === "loading" || loading) {
-    return <p>Cargando datos de rutinas...</p>;
+  if (!isInitialized) {
+    return <div>Cargando...</div>;
+  }
+
+  if (!isAuthenticated) {
+    return null;
   }
 
   return (

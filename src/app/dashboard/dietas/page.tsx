@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useAuthStore } from "@/stores/authStore";
 import { AppHeader } from "@/components/header/AppHeader";
 import { AppFooter } from "@/components/footer/AppFooter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -58,7 +58,8 @@ const dietasHardcodeadas: Dieta[] = [
 const objetivos = ["Hipertrofia", "Definición", "Fuerza", "Resistencia"];
 
 export default function DietasPage() {
-  const { data: session, status } = useSession();
+  const { user, isAuthenticated, initializeAuth, isInitialized } =
+    useAuthStore();
   const router = useRouter();
   const [dietas, setDietas] = useState<Dieta[]>([]);
   const [filteredDietas, setFilteredDietas] = useState<Dieta[]>([]);
@@ -71,10 +72,14 @@ export default function DietasPage() {
   const [selectedObjetivos, setSelectedObjetivos] = useState<string[]>([]);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    initializeAuth();
+  }, [initializeAuth]);
+
+  useEffect(() => {
+    if (isInitialized && !isAuthenticated) {
       router.push("/auth/login");
     }
-  }, [status, router]);
+  }, [isAuthenticated, isInitialized, router]);
 
   const fetchDietas = async () => {
     setLoading(true);
@@ -136,10 +141,10 @@ export default function DietasPage() {
   };
 
   useEffect(() => {
-    if (status === "authenticated") {
+    if (isInitialized && isAuthenticated) {
       fetchDietas();
     }
-  }, [status]);
+  }, [isInitialized, isAuthenticated]);
 
   useEffect(() => {
     let dietasFiltradas = dietas;
@@ -162,8 +167,12 @@ export default function DietasPage() {
     setFilteredDietas(dietasFiltradas);
   }, [searchTerm, dietas, selectedObjetivos]);
 
-  if (status === "loading" || loading) {
-    return <p>Cargando datos de dietas...</p>;
+  if (!isInitialized) {
+    return <div>Cargando...</div>;
+  }
+
+  if (!isAuthenticated) {
+    return null;
   }
 
   return (

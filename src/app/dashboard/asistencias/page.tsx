@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useAuthStore } from "@/stores/authStore";
 import { AppHeader } from "@/components/header/AppHeader";
 import { AppFooter } from "@/components/footer/AppFooter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -23,7 +23,8 @@ import { toast } from "sonner";
 import ExcelJS from "exceljs";
 
 export default function AsistenciasPage() {
-  const { data: session, status } = useSession();
+  const { user, isAuthenticated, initializeAuth, isInitialized } =
+    useAuthStore();
   const router = useRouter();
   const [asistencias, setAsistencias] = useState<Asistencia[]>([]);
   const [filteredAsistencias, setFilteredAsistencias] = useState<Asistencia[]>(
@@ -38,10 +39,14 @@ export default function AsistenciasPage() {
   const [asistenciaVer, setAsistenciaVer] = useState<Asistencia | null>(null);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    initializeAuth();
+  }, [initializeAuth]);
+
+  useEffect(() => {
+    if (isInitialized && !isAuthenticated) {
       router.push("/auth/login");
     }
-  }, [status, router]);
+  }, [isAuthenticated, isInitialized, router]);
 
   const loadAsistencias = useCallback(async () => {
     setLoading(true);
@@ -105,10 +110,10 @@ export default function AsistenciasPage() {
   };
 
   useEffect(() => {
-    if (status === "authenticated") {
+    if (isInitialized && isAuthenticated) {
       loadAsistencias();
     }
-  }, [status, loadAsistencias]);
+  }, [isInitialized, isAuthenticated, loadAsistencias]);
 
   useEffect(() => {
     if (searchTerm.trim() === "") {
@@ -126,8 +131,12 @@ export default function AsistenciasPage() {
     setFilteredAsistencias(filtered);
   }, [searchTerm, asistencias]);
 
-  if (status === "loading" || loading) {
-    return <p>Cargando datos de asistencias...</p>;
+  if (!isInitialized) {
+    return <div>Cargando...</div>;
+  }
+
+  if (!isAuthenticated) {
+    return null;
   }
 
   return (

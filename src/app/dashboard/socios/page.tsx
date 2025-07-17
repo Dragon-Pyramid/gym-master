@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useAuthStore } from "@/stores/authStore";
 import { AppHeader } from "@/components/header/AppHeader";
 import { AppFooter } from "@/components/footer/AppFooter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -25,7 +25,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function SociosPage() {
-  const { data: session, status } = useSession();
+  const { user, isAuthenticated, initializeAuth, isInitialized } =
+    useAuthStore();
   const router = useRouter();
   const [socios, setSocios] = useState<Socio[]>([]);
   const [filteredSocios, setFilteredSocios] = useState<Socio[]>([]);
@@ -38,10 +39,14 @@ export default function SociosPage() {
   const [filtroActivo, setFiltroActivo] = useState("todos");
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    initializeAuth();
+  }, [initializeAuth]);
+
+  useEffect(() => {
+    if (isInitialized && !isAuthenticated) {
       router.push("/auth/login");
     }
-  }, [status, router]);
+  }, [isAuthenticated, isInitialized, router]);
 
   const loadSocios = async () => {
     setLoading(true);
@@ -92,10 +97,10 @@ export default function SociosPage() {
   };
 
   useEffect(() => {
-    if (status === "authenticated") {
+    if (isInitialized && isAuthenticated) {
       loadSocios();
     }
-  }, [status]);
+  }, [isInitialized, isAuthenticated]);
 
   useEffect(() => {
     let sociosFiltrados = socios;
@@ -124,8 +129,16 @@ export default function SociosPage() {
       ? "Activos"
       : "Inactivos";
 
-  if (status === "loading" || loading) {
-    return <p>Cargando datos de socios...</p>;
+  if (loading || !isInitialized) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        Cargando datos de socios...
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
   }
 
   return (
