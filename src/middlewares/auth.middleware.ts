@@ -10,11 +10,11 @@ export async function authMiddleware(req: Request) {
     if(!process.env.JWT_SECRET){
         throw new Error("JWT_SECRET no está definido en las variables de entorno");
     }
-    try {
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if(!decoded){
+        throw new Error("Token inválido");
+    }
     return { user: decoded };
-  } catch (error) {
-    console.error("Error al verificar el token:", error);
-    throw new Error("Token inválido");
-  }
+
     }
