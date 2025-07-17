@@ -121,9 +121,11 @@ export default function DashboardPage() {
 
   return (
     <SidebarProvider>
-      <div className="flex w-full min-h-screen">
+      <div className="relative flex w-full min-h-screen">
+        {showQr && (
+          <div className="fixed inset-0 z-50 transition-opacity duration-300 bg-black" style={{ pointerEvents: 'auto', opacity: 1 }} />
+        )}
         <AppSidebar />
-
         <div className="flex flex-col flex-1 w-full">
           <AppHeader title="Dashboard" />
           <QrDisplayModal open={showQr} onClose={() => setShowQr(false)} />
