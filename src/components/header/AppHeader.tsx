@@ -1,6 +1,5 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
 import React from "react";
 import { useSidebar } from "../ui/sidebar";
 import { Search, Bell, Settings, Sun, Moon } from "lucide-react";
@@ -21,8 +20,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useRouter } from "next/navigation";
-import FechaHora from "../ui/FechaHora"; // ← muestra fecha/hora en vivo
+import FechaHora from "../ui/FechaHora";
 import Image from "next/image";
+import { useAuthStore } from "@/stores/authStore";
 
 /* ----------------------------------------------------------------
    Hook: Dark Mode (toggle y persistencia en localStorage)
@@ -56,8 +56,8 @@ interface AppHeaderProps {
 
 export const AppHeader = ({ title }: AppHeaderProps) => {
   const router = useRouter();
-  const { data: session } = useSession();
-  const { isMobile } = useSidebar(); // <- por si lo necesitas luego
+  const { user, logout } = useAuthStore();
+  const { isMobile } = useSidebar();
   const { dark, toggle } = useDarkMode();
 
   /* --------------------------------------------------------------
@@ -69,16 +69,17 @@ export const AppHeader = ({ title }: AppHeaderProps) => {
   };
 
   const handleLogout = () => {
-    signOut({ callbackUrl: "/auth/login" });
+    logout();
+    router.push("/auth/login");
   };
 
-  const userEmail = session?.user?.email ?? "";
+  const userEmail = user?.email ?? "";
   const initials = getInitials(userEmail);
 
   return (
     <header className="w-full flex flex-col md:flex-row justify-between items-center py-3 px-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       {/* ---------- Logo y Título ---------- */}
-      <div className="flex gap-3 items-center mb-4 md:w-auto md:mb-0">
+      <div className="flex items-center gap-3 mb-4 md:w-auto md:mb-0">
         <Image
           src="/gm_logo.svg"
           alt="Gym Master Logo"
@@ -90,7 +91,7 @@ export const AppHeader = ({ title }: AppHeaderProps) => {
       </div>
 
       {/* ---------- Iconos/acciones ---------- */}
-      <div className="flex gap-4 items-center">
+      <div className="flex items-center gap-4">
         {/* Dark Mode */}
         <TooltipProvider>
           <Tooltip>

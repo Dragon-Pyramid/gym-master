@@ -20,6 +20,17 @@ export const sections: SidebarSectionType[] = [
     items: [{ title: "Inicio", link: "/dashboard", level: 2 }],
   },
   {
+    title: "Menú Personal",
+    icon: Dumbbell,
+    items: [
+      {
+        title: "Control de Asistencia",
+        link: "/dashboard/control-asistencia",
+        level: 2,
+      },
+    ],
+  },
+  {
     title: "Gestión de Gimnasio",
     icon: Dumbbell,
     items: [
