@@ -3,7 +3,7 @@ import { authHeader } from "@/services/storageService";
 
 export const fetchQrCode = async (): Promise<string> => {
   const response = await axios.get("api/asistencias/qr-dia");
-  return response.data.qr;
+  return response.data.qrCode;
 };
 
 export const registrarAsistenciaQR = async (
