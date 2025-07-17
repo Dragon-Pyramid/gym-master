@@ -106,3 +106,22 @@ export const getAllSociosActivos = async () :Promise<Socio[]> => {
 };
 
 
+export const getSocioByIdUsuario = async (id_usuario: string): Promise<Socio> => {
+
+    //TRAIGO EL SOCIO QUE  ESTA RELACIONADO A ESE USUARIO
+    const { data: dataSocio, error: errorSocio } = await supabase
+      .from("socio")
+      .select()
+      .eq("usuario_id", id_usuario)
+      .single();
+
+    if (errorSocio) {
+      throw new Error(`Error al obtener el socio: ${errorSocio.message}`);
+    }
+
+    if(!dataSocio){
+      throw new Error("No se encontró el socio");
+    }
+    return dataSocio;
+}
+
