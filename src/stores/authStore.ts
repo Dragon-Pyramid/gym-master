@@ -9,11 +9,13 @@ import {
 } from "@/services/storageService";
 import { jwtDecode } from "jwt-decode";
 
-interface User {
+import type { Usuario } from "@/interfaces/usuario.interface";
+
+interface User extends Partial<Usuario> {
   id: string;
   email: string;
   rol: string;
-  dbName: string;
+  dbName?: string;
 }
 
 interface AuthState {

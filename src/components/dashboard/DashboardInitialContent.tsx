@@ -1,15 +1,15 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useSession } from "next-auth/react";
+import { useAuthStore } from "@/stores/authStore";
 import Image from "next/image";
 import { Card } from "@/components/ui/card";
 import { Clock, Dumbbell, Star } from "lucide-react";
 
 const DashboardInitialContent = () => {
-  const { data: session } = useSession();
-  const userName = session?.user?.name || "invitado";
-  const userType = session?.user?.userType || "";
+  const { user } = useAuthStore();
+  const userName = user?.nombre || "Invitado";
+  const userType = user?.rol || "";
 
   const motivationalMessages = useMemo(
     () => [
@@ -89,17 +89,17 @@ const DashboardInitialContent = () => {
   return (
     <div className="p-4 bg-gradient-to-br from-background via-background to-muted/20 md:p-8">
       <div className="mx-auto max-w-7xl">
-        <div className="grid gap-8 items-center lg:grid-cols-2 lg:gap-12">
+        <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-12">
           <div className="order-2 space-y-8 lg:order-1">
             <div className="space-y-4">
-              <div className="flex flex-wrap gap-3 items-center">
+              <div className="flex flex-wrap items-center gap-3">
                 <div
                   className={`inline-flex items-center px-3 py-1 text-sm font-medium rounded-full ${getTypeColor()}`}
                 >
-                  <Star className="mr-1 w-3 h-3" />
+                  <Star className="w-3 h-3 mr-1" />
                   {typeDisplay}
                 </div>
-                <div className="flex gap-2 items-center px-3 py-1 text-sm rounded-full text-muted-foreground bg-muted/50">
+                <div className="flex items-center gap-2 px-3 py-1 text-sm rounded-full text-muted-foreground bg-muted/50">
                   <Clock className="w-4 h-4" />
                   {currentTime.toLocaleTimeString("es-ES", {
                     hour: "2-digit",
@@ -117,7 +117,7 @@ const DashboardInitialContent = () => {
                     {userName}
                   </span>
                 </h2>
-                <div className="flex gap-3 items-center pt-2">
+                <div className="flex items-center gap-3 pt-2">
                   <Dumbbell className="w-8 h-8 text-primary" />
                   <p className="text-xl font-bold sm:text-2xl md:text-3xl text-foreground">
                     ¡Llegó la hora de entrenar!
@@ -127,8 +127,8 @@ const DashboardInitialContent = () => {
             </div>
 
             <Card className="p-6 bg-gradient-to-r backdrop-blur-sm from-primary/5 via-primary/10 to-primary/5 border-primary/20">
-              <div className="flex gap-3 items-start">
-                <div className="mt-3 w-2 h-2 rounded-full animate-pulse bg-primary" />
+              <div className="flex items-start gap-3">
+                <div className="w-2 h-2 mt-3 rounded-full animate-pulse bg-primary" />
                 <blockquote
                   className={`text-lg sm:text-xl font-medium text-foreground leading-relaxed transition-all duration-300 ${
                     isFading
@@ -136,13 +136,13 @@ const DashboardInitialContent = () => {
                       : "opacity-100 transform translate-y-0"
                   }`}
                 >
-                  &ldquo;{randomMotivation}&rdquo; 
+                  &ldquo;{randomMotivation}&rdquo;
                 </blockquote>
               </div>
             </Card>
 
             <div className="grid grid-cols-3 gap-4 pt-4">
-              <Card className="p-4 text-center bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 dark:from-blue-950/20 dark:to-blue-900/20 dark:border-blue-800">
+              <Card className="p-4 text-center border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 dark:border-blue-800">
                 <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                   💪
                 </div>
@@ -150,7 +150,7 @@ const DashboardInitialContent = () => {
                   Fuerza
                 </p>
               </Card>
-              <Card className="p-4 text-center bg-gradient-to-br from-green-50 to-green-100 border-green-200 dark:from-green-950/20 dark:to-green-900/20 dark:border-green-800">
+              <Card className="p-4 text-center border-green-200 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 dark:border-green-800">
                 <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                   🎯
                 </div>
@@ -158,7 +158,7 @@ const DashboardInitialContent = () => {
                   Enfoque
                 </p>
               </Card>
-              <Card className="p-4 text-center bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 dark:from-orange-950/20 dark:to-orange-900/20 dark:border-orange-800">
+              <Card className="p-4 text-center border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 dark:border-orange-800">
                 <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
                   🔥
                 </div>
@@ -170,23 +170,23 @@ const DashboardInitialContent = () => {
           </div>
 
           <div className="relative order-1 lg:order-2">
-            <div className="relative mx-auto max-w-lg aspect-square lg:max-w-none">
+            <div className="relative max-w-lg mx-auto aspect-square lg:max-w-none">
               <div className="absolute inset-0 bg-gradient-to-br via-transparent rounded-3xl blur-3xl from-primary/20 to-primary/10" />
-              <div className="relative p-8 bg-gradient-to-br rounded-3xl border shadow-2xl backdrop-blur-sm from-background to-muted/50">
+              <div className="relative p-8 border shadow-2xl bg-gradient-to-br rounded-3xl backdrop-blur-sm from-background to-muted/50">
                 <div className="relative aspect-square">
                   <Image
                     src="/gm_logo.svg"
                     alt="Gym Master Logo"
                     fill
-                    className="object-contain drop-shadow-2xl transition-transform duration-700 dark:invert hover:scale-105"
+                    className="object-contain transition-transform duration-700 drop-shadow-2xl dark:invert hover:scale-105"
                     priority
                   />
                 </div>
               </div>
             </div>
 
-            <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br rounded-full blur-xl animate-pulse from-primary/20 to-primary/40" />
-            <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-gradient-to-br rounded-full blur-xl delay-1000 animate-pulse from-secondary/20 to-secondary/40" />
+            <div className="absolute w-24 h-24 rounded-full -top-4 -right-4 bg-gradient-to-br blur-xl animate-pulse from-primary/20 to-primary/40" />
+            <div className="absolute w-32 h-32 delay-1000 rounded-full -bottom-8 -left-8 bg-gradient-to-br blur-xl animate-pulse from-secondary/20 to-secondary/40" />
           </div>
         </div>
       </div>
