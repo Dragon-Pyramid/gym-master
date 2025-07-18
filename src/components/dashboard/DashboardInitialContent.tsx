@@ -86,6 +86,15 @@ const DashboardInitialContent = () => {
     }
   };
 
+  //! Esto es solo un mockeo
+
+  const isSocio = userType === "socio";
+
+  const cuotaPagada = false;
+  const cuotaEstado = cuotaPagada ? "Pagada" : "Pendiente";
+  const cuotaMonto = "$8.000";
+  const cuotaFechaLimite = "31/07/2025";
+
   return (
     <div className="p-4 bg-gradient-to-br from-background via-background to-muted/20 md:p-8">
       <div className="mx-auto max-w-7xl">
@@ -125,6 +134,53 @@ const DashboardInitialContent = () => {
                 </div>
               </div>
             </div>
+
+            {isSocio && (
+              <Card className="p-6 mb-4 border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 dark:border-blue-800">
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm text-muted-foreground">
+                        Estado de la cuota
+                      </span>
+                      <span
+                        className={`text-lg font-semibold ${
+                          cuotaPagada
+                            ? "text-green-600 dark:text-green-400"
+                            : "text-red-600 dark:text-red-400"
+                        }`}
+                      >
+                        {cuotaEstado}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm text-muted-foreground">
+                        Monto
+                      </span>
+                      <span className="text-lg font-semibold text-blue-700 dark:text-blue-300">
+                        {cuotaMonto}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-sm text-muted-foreground">
+                        Fecha límite de pago
+                      </span>
+                      <span className="text-lg font-semibold text-orange-700 dark:text-orange-300">
+                        {cuotaFechaLimite}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex justify-end pt-2">
+                    <button
+                      className="px-6 py-2 rounded bg-[#02a8e1] text-white font-semibold hover:bg-[#0288b1] dark:bg-[#0288b1] dark:hover:bg-[#02a8e1] transition-colors"
+                      onClick={() => {}}
+                    >
+                      Pagar con Stripe
+                    </button>
+                  </div>
+                </div>
+              </Card>
+            )}
 
             <Card className="p-6 bg-gradient-to-r backdrop-blur-sm from-primary/5 via-primary/10 to-primary/5 border-primary/20">
               <div className="flex items-start gap-3">
