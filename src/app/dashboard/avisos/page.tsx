@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useAuthStore } from "@/stores/authStore";
 import { AppHeader } from "@/components/header/AppHeader";
 import { AppFooter } from "@/components/footer/AppFooter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -18,7 +18,8 @@ import AvisosModal from "@/components/modal/AvisosModal";
 import AvisosModalView from "@/components/modal/AvisosModalView";
 
 export default function AvisosPage() {
-  const { data: session, status } = useSession();
+  const { user, isAuthenticated, initializeAuth, isInitialized } =
+    useAuthStore();
   const router = useRouter();
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [filteredAvisos, setFilteredAvisos] = useState<Aviso[]>([]);
@@ -39,16 +40,20 @@ export default function AvisosPage() {
   };
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/auth/login");
-    }
-  }, [status, router]);
+    initializeAuth();
+  }, [initializeAuth]);
 
   useEffect(() => {
-    if (status === "authenticated") {
+    if (isInitialized && !isAuthenticated) {
+      router.push("/auth/login");
+    }
+  }, [isAuthenticated, isInitialized, router]);
+
+  useEffect(() => {
+    if (isInitialized && isAuthenticated) {
       fetchAvisos();
     }
-  }, [status]);
+  }, [isInitialized, isAuthenticated]);
 
   useEffect(() => {
     let avisosFiltrados = avisos;
@@ -74,8 +79,12 @@ export default function AvisosPage() {
     setLoading(false);
   };
 
-  if (status === "loading" || loading) {
-    return <p>Cargando datos de avisos...</p>;
+  if (!isInitialized) {
+    return <div>Cargando...</div>;
+  }
+
+  if (!isAuthenticated) {
+    return null;
   }
 
   return (

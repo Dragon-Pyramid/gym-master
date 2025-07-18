@@ -5,22 +5,25 @@ import { Menu, X } from "lucide-react";
 import { SidebarSection } from "./SidebarSection";
 import { useIsMobile } from "@/hooks/use-mobile";
 import "@/app/styles/scrollbar.css";
-import { useSession } from "next-auth/react";
+import { useAuthStore } from "@/stores/authStore";
 import { useSidebarMenu } from "@/hooks/useSidebarSection";
 import { usePathname } from "next/navigation";
 
 export const AppSidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const isMobile = useIsMobile();
-  const { data: session, status } = useSession();
+  const { user, isAuthenticated, isInitialized, initializeAuth } =
+    useAuthStore();
   const pathname = usePathname();
 
-  const userType = session?.user?.userType;
+  const userType = user?.rol;
   const menuSections = useSidebarMenu(userType);
 
-  useEffect(() => {}, [isMobile]);
+  useEffect(() => {
+    initializeAuth();
+  }, [initializeAuth]);
 
-  if (status === "loading") {
+  if (!isInitialized) {
     return (
       <aside
         style={{
@@ -40,7 +43,7 @@ export const AppSidebar = () => {
     );
   }
 
-  if (status === "unauthenticated" || !session) {
+  if (!isAuthenticated || !user) {
     return null;
   }
 

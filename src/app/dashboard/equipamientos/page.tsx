@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useAuthStore } from "@/stores/authStore";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Equipamento } from "@/interfaces/equipamiento.interface";
@@ -28,7 +28,8 @@ import { AppFooter } from "@/components/footer/AppFooter";
 import ExcelJS from "exceljs";
 
 export default function EquipamientosPage() {
-  const { status } = useSession();
+  const { user, isAuthenticated, initializeAuth, isInitialized } =
+    useAuthStore();
   const router = useRouter();
   const [equipos, setEquipos] = useState<Equipamento[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -48,10 +49,14 @@ export default function EquipamientosPage() {
   const ubicaciones = ["Zona A", "Zona B", "Zona C", "Zona D"];
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    initializeAuth();
+  }, [initializeAuth]);
+
+  useEffect(() => {
+    if (isInitialized && !isAuthenticated) {
       router.push("/auth/login");
     }
-  }, [status, router]);
+  }, [isAuthenticated, isInitialized, router]);
 
   const loadEquipos = async () => {
     setLoading(true);
@@ -61,10 +66,10 @@ export default function EquipamientosPage() {
   };
 
   useEffect(() => {
-    if (status === "authenticated") {
+    if (isInitialized && isAuthenticated) {
       loadEquipos();
     }
-  }, [status]);
+  }, [isInitialized, isAuthenticated]);
 
   const getFilteredEquipos = () => {
     let equiposFiltrados = [...equipos];
@@ -127,7 +132,11 @@ export default function EquipamientosPage() {
     window.URL.revokeObjectURL(url);
   };
 
-  if (status === "loading" || loading) {
+  if (!isInitialized) {
+    return <div>Cargando...</div>;
+  }
+
+  if (!isAuthenticated) {
     return null;
   }
 

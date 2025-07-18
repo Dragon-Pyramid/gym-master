@@ -17,12 +17,14 @@ import {
 import { AppHeader } from "@/components/header/AppHeader";
 import { AppFooter } from "@/components/footer/AppFooter";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { useSession } from "next-auth/react";
+import { useAuthStore } from "@/stores/authStore";
 import { useRouter } from "next/navigation";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import DashboardInitialContent from "@/components/dashboard/DashboardInitialContent";
 
 import { useEffect, useState } from "react";
+import QrDisplayModal from "@/components/ui/qr-display";
+import { Button } from "@/components/ui/button";
 import { getAllEquipamientos } from "@/services/equipamientoService";
 import { getAllMantenimientos } from "@/services/mantenimientoService";
 
@@ -50,11 +52,23 @@ const actividadesData = [
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
 
 export default function DashboardPage() {
-  const { data: session, status } = useSession();
+  const { user, isAuthenticated, initializeAuth, isInitialized } =
+    useAuthStore();
   const router = useRouter();
   const [equipos, setEquipos] = useState<Equipamento[]>([]);
   const [mantenimientos, setMantenimientos] = useState<Mantenimiento[]>([]);
   const [loadingDatos, setLoadingDatos] = useState(true);
+  const [showQr, setShowQr] = useState(false);
+
+  useEffect(() => {
+    initializeAuth();
+  }, [initializeAuth]);
+
+  useEffect(() => {
+    if (isInitialized && !isAuthenticated) {
+      router.push("/auth/login");
+    }
+  }, [isAuthenticated, isInitialized, router]);
 
   useEffect(() => {
     async function fetchData() {
@@ -91,7 +105,7 @@ export default function DashboardPage() {
     )
     .reduce((acc, m) => acc + (m.costo || 0), 0);
 
-  if (status === "loading" || loadingDatos) {
+  if (loadingDatos || !isInitialized) {
     return (
       <div className="flex items-center justify-center h-screen">
         Cargando dashboard...
@@ -99,25 +113,26 @@ export default function DashboardPage() {
     );
   }
 
-  if (status === "unauthenticated") {
-    router.replace("/auth/login");
+  if (!isAuthenticated) {
     return null;
   }
 
-  const userType = session?.user?.userType;
+  const userType = user?.rol;
 
   return (
     <SidebarProvider>
-      <div className="flex w-full min-h-screen">
+      <div className="relative flex w-full min-h-screen">
+        {showQr && (
+          <div className="fixed inset-0 z-50 transition-opacity duration-300 bg-black" style={{ pointerEvents: 'auto', opacity: 1 }} />
+        )}
         <AppSidebar />
-
         <div className="flex flex-col flex-1 w-full">
           <AppHeader title="Dashboard" />
+          <QrDisplayModal open={showQr} onClose={() => setShowQr(false)} />
           <main className="flex-1 w-full max-w-full px-4 py-6 space-y-6 md:px-8">
             {(userType === "socio" || userType === "usuario") && (
               <DashboardInitialContent />
             )}
-
             {userType === "admin" && (
               <>
                 <div className="p-5">
@@ -127,8 +142,15 @@ export default function DashboardPage() {
                   <p className="text-lg text-gray-700 dark:text-gray-300">
                     Este es tu panel de control administrativo.
                   </p>
+                  <div className="flex items-center justify-start w-full mt-6">
+                    <Button
+                      className="px-6 py-3 text-base font-medium"
+                      onClick={() => setShowQr(true)}
+                    >
+                      QR del Día
+                    </Button>
+                  </div>
                 </div>
-
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                   <Card>
                     <CardHeader>

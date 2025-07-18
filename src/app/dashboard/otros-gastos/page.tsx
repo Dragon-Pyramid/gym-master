@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useAuthStore } from "@/stores/authStore";
 import { AppHeader } from "@/components/header/AppHeader";
 import { AppFooter } from "@/components/footer/AppFooter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -24,7 +24,8 @@ import { toast } from "sonner";
 import ExcelJS from "exceljs";
 
 export default function OtrosGastosPage() {
-  const { data: session, status } = useSession();
+  const { user, isAuthenticated, initializeAuth, isInitialized } =
+    useAuthStore();
   const router = useRouter();
   const [gastos, setGastos] = useState<OtrosGastos[]>([]);
   const [filteredGastos, setFilteredGastos] = useState<OtrosGastos[]>([]);
@@ -36,10 +37,14 @@ export default function OtrosGastosPage() {
   const [gastoVer, setGastoVer] = useState<OtrosGastos | null>(null);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    initializeAuth();
+  }, [initializeAuth]);
+
+  useEffect(() => {
+    if (isInitialized && !isAuthenticated) {
       router.push("/auth/login");
     }
-  }, [status, router]);
+  }, [isAuthenticated, isInitialized, router]);
 
   const loadGastos = async () => {
     setLoading(true);
@@ -84,10 +89,10 @@ export default function OtrosGastosPage() {
   };
 
   useEffect(() => {
-    if (status === "authenticated") {
+    if (isInitialized && isAuthenticated) {
       loadGastos();
     }
-  }, [status]);
+  }, [isInitialized, isAuthenticated]);
 
   useEffect(() => {
     if (searchTerm.trim() === "") {
@@ -105,8 +110,12 @@ export default function OtrosGastosPage() {
     setFilteredGastos(filtered);
   }, [searchTerm, gastos]);
 
-  if (status === "loading" || loading) {
-    return <p>Cargando datos de otros gastos...</p>;
+  if (!isInitialized) {
+    return <div>Cargando...</div>;
+  }
+
+  if (!isAuthenticated) {
+    return null;
   }
 
   return (

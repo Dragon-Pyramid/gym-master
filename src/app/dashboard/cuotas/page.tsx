@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useAuthStore } from "@/stores/authStore";
 import { AppHeader } from "@/components/header/AppHeader";
 import { AppFooter } from "@/components/footer/AppFooter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -25,7 +25,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function CuotasPage() {
-  const { data: session, status } = useSession();
+  const { user, isAuthenticated, initializeAuth, isInitialized } =
+    useAuthStore();
   const router = useRouter();
   const [cuotas, setCuotas] = useState<Cuota[]>([]);
   const [filteredCuotas, setFilteredCuotas] = useState<Cuota[]>([]);
@@ -38,10 +39,14 @@ export default function CuotasPage() {
   const [filtroActivo, setFiltroActivo] = useState("todos");
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    initializeAuth();
+  }, [initializeAuth]);
+
+  useEffect(() => {
+    if (isInitialized && !isAuthenticated) {
       router.push("/auth/login");
     }
-  }, [status, router]);
+  }, [isAuthenticated, isInitialized, router]);
 
   const loadCuotas = async () => {
     setLoading(true);
@@ -90,10 +95,10 @@ export default function CuotasPage() {
   };
 
   useEffect(() => {
-    if (status === "authenticated") {
+    if (isInitialized && isAuthenticated) {
       loadCuotas();
     }
-  }, [status]);
+  }, [isInitialized, isAuthenticated]);
 
   useEffect(() => {
     let cuotasFiltradas = cuotas;
@@ -120,8 +125,12 @@ export default function CuotasPage() {
       ? "Activos"
       : "Inactivos";
 
-  if (status === "loading" || loading) {
-    return <p>Cargando datos de cuotas...</p>;
+  if (!isInitialized) {
+    return <div>Cargando...</div>;
+  }
+
+  if (!isAuthenticated) {
+    return null;
   }
 
   return (
