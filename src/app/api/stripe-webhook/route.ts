@@ -1,10 +1,13 @@
 import { createPago } from "@/services/pagoService";
 import { NextResponse } from "next/server";
+import { stripe } from "@/lib/stripe";
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+if(!process.env.STRIPE_WEBHOOK_SECRET){
+throw new Error("STRIPE_WEBHOOK_SECRET no esta definido");
+}
 
-const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
 export async function POST(request:Request) {
   const body = await request.text();
@@ -30,11 +33,13 @@ export async function POST(request:Request) {
     if (!socio_id) {
         return NextResponse.json({ error: "socio_id no encontrado en los metadatos" }, { status: 400 });
     }
-       
-    //AHORA DEBO GENERAR EL PAGO.
+           //AHORA DEBO GENERAR EL PAGO.
     const pago = await createPago({socio_id,registrado_por:"978b915d-a2ae-45d7-b05f-74b8ab555956"})
-      // enviar un correo
-      console.log({ checkoutSessionCompleted }); 
+    console.log("pago creado", pago);
+      
+    // TODO: enviar un correo
+      //
+      console.log("checkoutSessionCompleted", {checkoutSessionCompleted}); 
 
       break;
     default:
