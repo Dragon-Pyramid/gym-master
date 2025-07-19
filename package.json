@@ -47,9 +47,9 @@
     "qrcode": "^1.5.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-qr-reader": "^3.0.0-beta-1",
     "recharts": "^2.15.4",
     "sonner": "^2.0.5",
+    "stripe": "^18.3.0",
     "tailwind-merge": "^3.3.0",
     "tailwind-variants": "^1.0.0",
     "zustand": "^5.0.6"
