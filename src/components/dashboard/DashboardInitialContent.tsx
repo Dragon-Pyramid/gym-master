@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
 import Image from "next/image";
 import { Card } from "@/components/ui/card";
@@ -86,14 +87,31 @@ const DashboardInitialContent = () => {
     }
   };
 
-  //! Esto es solo un mockeo
-
   const isSocio = userType === "socio";
-
   const cuotaPagada = false;
   const cuotaEstado = cuotaPagada ? "Pagada" : "Pendiente";
   const cuotaMonto = "$8.000";
   const cuotaFechaLimite = "31/07/2025";
+
+  const router = useRouter();
+  const [loadingPago, setLoadingPago] = useState(false);
+
+  const handlePagarStripe = async () => {
+    setLoadingPago(true);
+    try {
+      const res = await fetch("/api/pagar-cuota", { method: "POST" });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        window.location.assign(data.url);
+        return;
+      }
+      router.push("/pago-fallido");
+    } catch {
+      router.push("/pago-fallido");
+    } finally {
+      setLoadingPago(false);
+    }
+  };
 
   return (
     <div className="p-4 bg-gradient-to-br from-background via-background to-muted/20 md:p-8">
@@ -172,10 +190,11 @@ const DashboardInitialContent = () => {
                   </div>
                   <div className="flex justify-end pt-2">
                     <button
-                      className="px-6 py-2 rounded bg-[#02a8e1] text-white font-semibold hover:bg-[#0288b1] dark:bg-[#0288b1] dark:hover:bg-[#02a8e1] transition-colors"
-                      onClick={() => {}}
+                      className="px-6 py-2 rounded bg-[#02a8e1] text-white font-semibold hover:bg-[#0288b1] dark:bg-[#0288b1] dark:hover:bg-[#02a8e1] transition-colors disabled:opacity-60"
+                      onClick={handlePagarStripe}
+                      disabled={loadingPago}
                     >
-                      Pagar con Stripe
+                      {loadingPago ? "Redirigiendo..." : "Pagar con Stripe"}
                     </button>
                   </div>
                 </div>
