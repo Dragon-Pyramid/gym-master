@@ -6,6 +6,8 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export const getSupabaseClient = (dbName: string): SupabaseClient => {
+  console.log(dbName);
+  
   const gym = getGymConfig(dbName);
   if (!gym) {
     throw new Error(`No se encontraron configuraciones para la base de datos: ${dbName}`);
