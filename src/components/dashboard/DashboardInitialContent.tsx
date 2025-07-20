@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { pagarCuotaConStripe } from "@/services/apiClient";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
 import Image from "next/image";
@@ -88,10 +89,24 @@ const DashboardInitialContent = () => {
   };
 
   const isSocio = userType === "socio";
-  const cuotaPagada = false;
+  const [cuotaPagada, setCuotaPagada] = useState(false);
+  const [cuotaMonto, setCuotaMonto] = useState(0);
+  const [cuotaFechaLimite, setCuotaFechaLimite] = useState("");
   const cuotaEstado = cuotaPagada ? "Pagada" : "Pendiente";
-  const cuotaMonto = "$8.000";
-  const cuotaFechaLimite = "31/07/2025";
+
+  useEffect(() => {
+    if (!isSocio) return;
+    const fetchEstadoCuota = async () => {
+      const res = await fetch("/api/cuota-estado", { method: "GET" });
+      if (res.ok) {
+        const data = await res.json();
+        setCuotaPagada(data.pagada);
+        setCuotaMonto(data.monto);
+        setCuotaFechaLimite(data.fecha_limite);
+      }
+    };
+    fetchEstadoCuota();
+  }, [isSocio]);
 
   const router = useRouter();
   const [loadingPago, setLoadingPago] = useState(false);
@@ -99,10 +114,9 @@ const DashboardInitialContent = () => {
   const handlePagarStripe = async () => {
     setLoadingPago(true);
     try {
-      const res = await fetch("/api/pagar-cuota", { method: "POST" });
-      const data = await res.json();
-      if (res.ok && data.url) {
-        window.location.assign(data.url);
+      const result = await pagarCuotaConStripe();
+      if (result.ok && result.url) {
+        window.location.assign(result.url);
         return;
       }
       router.push("/pago-fallido");
@@ -176,7 +190,7 @@ const DashboardInitialContent = () => {
                         Monto
                       </span>
                       <span className="text-lg font-semibold text-blue-700 dark:text-blue-300">
-                        {cuotaMonto}
+                        {cuotaMonto ? `$${cuotaMonto}` : "-"}
                       </span>
                     </div>
                     <div className="flex flex-col gap-1">
@@ -184,19 +198,21 @@ const DashboardInitialContent = () => {
                         Fecha límite de pago
                       </span>
                       <span className="text-lg font-semibold text-orange-700 dark:text-orange-300">
-                        {cuotaFechaLimite}
+                        {cuotaFechaLimite || "-"}
                       </span>
                     </div>
                   </div>
-                  <div className="flex justify-end pt-2">
-                    <button
-                      className="px-6 py-2 rounded bg-[#02a8e1] text-white font-semibold hover:bg-[#0288b1] dark:bg-[#0288b1] dark:hover:bg-[#02a8e1] transition-colors disabled:opacity-60"
-                      onClick={handlePagarStripe}
-                      disabled={loadingPago}
-                    >
-                      {loadingPago ? "Redirigiendo..." : "Pagar con Stripe"}
-                    </button>
-                  </div>
+                  {!cuotaPagada && (
+                    <div className="flex justify-end pt-2">
+                      <button
+                        className="px-6 py-2 rounded bg-[#02a8e1] text-white font-semibold hover:bg-[#0288b1] dark:bg-[#0288b1] dark:hover:bg-[#02a8e1] transition-colors disabled:opacity-60"
+                        onClick={handlePagarStripe}
+                        disabled={loadingPago}
+                      >
+                        {loadingPago ? "Redirigiendo..." : "Pagar con Stripe"}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </Card>
             )}

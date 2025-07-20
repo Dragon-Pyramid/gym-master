@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
 import { AppHeader } from "@/components/header/AppHeader";
 import { AppFooter } from "@/components/footer/AppFooter";
@@ -13,6 +13,8 @@ import { XCircle } from "lucide-react";
 export default function PagoFallidoPage() {
   const { isAuthenticated, initializeAuth, isInitialized } = useAuthStore();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const sessionId = searchParams?.get("session_id");
 
   useEffect(() => {
     initializeAuth();
@@ -36,8 +38,8 @@ export default function PagoFallidoPage() {
     return null;
   }
 
-//! Esto es solo un mockeo
-  
+  //! Esto es solo un mockeo
+
   return (
     <SidebarProvider>
       <div className="flex w-full min-h-screen bg-background text-foreground">
@@ -54,11 +56,18 @@ export default function PagoFallidoPage() {
               </CardHeader>
               <CardContent className="flex flex-col items-center gap-4 p-6">
                 <p className="text-lg text-center text-gray-700 dark:text-gray-200">
-                  Hubo un problema al intentar procesar tu suscripción como socio.
+                  Hubo un problema al intentar procesar tu suscripción como
+                  socio.
                 </p>
                 <p className="text-sm text-center text-gray-500 dark:text-gray-400">
-                  Por favor, verifica los datos de tu tarjeta o intenta nuevamente más tarde.
+                  Por favor, verifica los datos de tu tarjeta o intenta
+                  nuevamente más tarde.
                 </p>
+                {sessionId && (
+                  <div className="w-full p-2 mt-2 text-xs text-center text-gray-700 bg-gray-100 rounded">
+                    <strong>ID de sesión Stripe:</strong> {sessionId}
+                  </div>
+                )}
                 <button
                   className="mt-4 px-6 py-2 bg-[#02a8e1] text-white rounded hover:bg-[#0288b1] dark:bg-[#0288b1] dark:text-white dark:hover:bg-[#02a8e1]"
                   onClick={() => router.push("/dashboard")}
