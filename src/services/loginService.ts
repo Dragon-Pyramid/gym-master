@@ -56,6 +56,7 @@ export const signIn = async (login: SignInDto) => {
     email: data.email,
     rol: data.rol,
     dbName,
+    nombre: data.nombre,
   };
   if (!process.env.JWT_SECRET) {
     throw new Error("JWT_SECRET no está definido en las variables de entorno");
