@@ -10,7 +10,7 @@ export async function GET(req: Request) {
     }
 
 
-    //TODO VALIDAR QUE TENGA ROL ADMIN
+   
      const rolAdmin = rolAdminMiddleware(user);
         if (!rolAdmin) {
             return NextResponse.json({ error: "Unauthorized: User no tiene rol de admin" }, { status: 403 });

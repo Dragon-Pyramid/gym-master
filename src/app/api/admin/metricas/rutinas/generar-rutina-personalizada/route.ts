@@ -9,7 +9,7 @@ export async function POST(req: Request) {
     if (!user) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    //TODO VALIDAR QUE TENGA ROL ADMIN
+    
 const rolAdmin = rolAdminMiddleware(user);
         if (!rolAdmin) {
             return NextResponse.json({ error: "Unauthorized: User no tiene rol de admin" }, { status: 403 });
