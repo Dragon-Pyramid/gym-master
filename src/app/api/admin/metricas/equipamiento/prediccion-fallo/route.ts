@@ -1,4 +1,5 @@
 import { authMiddleware } from "@/middlewares/auth.middleware";
+import { rolAdminMiddleware } from "@/middlewares/rolAdmin.middleware";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
