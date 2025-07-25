@@ -1,4 +1,5 @@
 import { authMiddleware } from "@/middlewares/auth.middleware";
+import { rolAdminMiddleware } from "@/middlewares/rolAdmin.middleware";
 import { dataAnalisisCostoBeneficio } from "@/services/equipamientoService";
 import { NextResponse } from "next/server";
 
@@ -10,6 +11,10 @@ export async function GET(req: Request) {
     }
 
     //TODO VALIDAR QUE TENGA ROL ADMIN
+    const rolAdmin = rolAdminMiddleware(user);
+            if (!rolAdmin) {
+                return NextResponse.json({ error: "Unauthorized: User no tiene rol de admin" }, { status: 403 });
+            }
 
     const costoBeneficio = await dataAnalisisCostoBeneficio(user);
 
