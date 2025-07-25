@@ -135,3 +135,45 @@ export const registrarAsistenciaDesdeQR = async (tokenAsistencia: string,user:an
     return { valido: true, asistencia: createAsistenciaResult };
 
 }
+
+export const dataConcurrenciaSemanal = async (user: any) => {
+    const supabase = getSupabaseClient(user.dbName);
+    const { data, error } = await supabase
+        .rpc('sp_concurrencia_semanal');
+    if (error) throw new Error(error.message);
+    return data;
+}
+
+export const dataConcurrenciaMensual = async (user: any) => {
+    const supabase = getSupabaseClient(user.dbName);
+    const { data, error } = await supabase
+        .rpc('sp_concurrencia_mensual');
+    if (error) throw new Error(error.message);
+    return data;
+}
+
+export const dataConcurrenciaAnual = async (user: any) => {
+    const supabase = getSupabaseClient(user.dbName);
+    const { data, error } = await supabase
+        .rpc('sp_concurrencia_anual');
+    if (error) throw new Error(error.message);
+    return data;
+}
+
+//TODO FALTA AGREGAR LA FUNCION A SUPABASE
+export const dataPrediccionAbandono = async (user: any) => {
+    const supabase = getSupabaseClient(user.dbName);
+    const { data, error } = await supabase
+        .rpc('sp_prediccion_abandono');
+    if (error) throw new Error(error.message);
+    return data;
+} 
+
+//TODO FALTA AGREGAR LA FUNCION A SUPABASE
+export const dataTopInactivos = async (user: any) => {
+    const supabase = getSupabaseClient(user.dbName);
+    const { data, error } = await supabase
+        .rpc('sp_top_inactivos');
+    if (error) throw new Error(error.message);
+    return data;
+}

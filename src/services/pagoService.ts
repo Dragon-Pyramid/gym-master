@@ -1,4 +1,4 @@
-import { supabase } from "./supabaseClient";
+import { getSupabaseClient, supabase } from "./supabaseClient";
 import { Pago, CreatePagoDto, UpdatePagoDto, ResponsePago } from "../interfaces/pago.interface";
 import  dayjs  from 'dayjs';
 
@@ -129,3 +129,16 @@ export const getPagoById = async (id: string): Promise<ResponsePago> => {
   return response;
 };
 
+// Funciones para métricas de pagos
+export const dataAnalisisConductaPagos = async (user: any) => {
+    const supabase = getSupabaseClient(user.dbName);
+    const { data, error } = await supabase
+        .rpc('sp_analisis_conducta_pagos');
+    if (error) throw new Error(error.message);
+    return data;
+}
+
+export const dataProyeccionIngresos = async (user: any) => {
+    //TODO IMPLEMENTAR LÓGICA DE PROYECCIÓN DE INGRESOS
+    throw new Error("Funcionalidad no implementada");
+}
