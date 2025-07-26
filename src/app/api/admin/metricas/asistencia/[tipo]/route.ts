@@ -1,6 +1,6 @@
 import { authMiddleware } from "@/middlewares/auth.middleware";
+import { rolAdminMiddleware } from "@/middlewares/rolAdmin.middleware";
 import { dataConcurrenciaAnual, dataConcurrenciaMensual, dataConcurrenciaSemanal } from "@/services/asistenciaService";
-import { getSupabaseClient } from "@/services/supabaseClient";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request, { params }: { params: { tipo: string } }) {
@@ -10,7 +10,10 @@ export async function GET(req: Request, { params }: { params: { tipo: string } }
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    //TODO VALIDAR QUE TENGA ROL ADMIN
+    const rolAdmin = rolAdminMiddleware(user);
+            if (!rolAdmin) {
+                return NextResponse.json({ error: "Unauthorized: User no tiene rol de admin" }, { status: 403 });
+            }
 
     const { tipo } = params;
     let concurrencia;
