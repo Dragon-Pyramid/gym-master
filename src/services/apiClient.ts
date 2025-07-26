@@ -36,3 +36,159 @@ export async function pagarCuotaConStripe() {
 export function logout() {
   logoutSession();
 }
+
+export async function getEvolucionPromedioRutinas() {
+  const token = getToken();
+  const res = await fetch("/api/admin/metricas/rutinas/evolucion-promedio", {
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
+export async function getAdherenciaRutinas() {
+  const token = getToken();
+  const res = await fetch("/api/admin/metricas/rutinas/adherencia", {
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
+export async function generarRutina(body: any) {
+  const token = getToken();
+  const res = await fetch("/api/admin/metricas/rutinas/generar-rutina", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data };
+}
+
+export async function generarRutinaPersonalizada(body: any) {
+  const token = getToken();
+  const res = await fetch(
+    "/api/admin/metricas/rutinas/generar-rutina-personalizada",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(body),
+    }
+  );
+  const data = await res.json();
+  return { ok: res.ok, ...data };
+}
+
+export async function getSegmentacionPagos() {
+  const token = getToken();
+  const res = await fetch("/api/admin/metricas/pagos/segmentacion", {
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
+export async function getProyeccionIngresos() {
+  const token = getToken();
+  const res = await fetch("/api/admin/metricas/pagos/proyeccion-ingresos", {
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data };
+}
+
+export async function getHistogramaPagos() {
+  const token = getToken();
+  const res = await fetch("/api/admin/metricas/pagos/histograma", {
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
+export async function getTopFallosEquipamiento() {
+  const token = getToken();
+  const res = await fetch("/api/admin/metricas/equipamiento/top-fallos", {
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
+export async function getPrediccionFalloEquipamiento() {
+  const token = getToken();
+  const res = await fetch("/api/admin/metricas/equipamiento/prediccion-fallo", {
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data };
+}
+
+export async function getEstadoActualEquipamiento() {
+  const token = getToken();
+  const res = await fetch("/api/admin/metricas/equipamiento/estado-actual", {
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
+export async function getCostoBeneficioEquipamiento() {
+  const token = getToken();
+  const res = await fetch("/api/admin/metricas/equipamiento/costo-beneficio", {
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data };
+}
+
+export async function getTopInactivosAsistencia() {
+  const token = getToken();
+  const res = await fetch("/api/admin/metricas/asistencia/top-inactivos", {
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data };
+}
+
+export async function getPrediccionAbandonoAsistencia() {
+  const token = getToken();
+  const res = await fetch(
+    "/api/admin/metricas/asistencia/prediccion-abandono",
+    {
+      method: "GET",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    }
+  );
+  const data = await res.json();
+  return { ok: res.ok, ...data };
+}
+
+export async function getConcurrenciaAsistencia(
+  tipo: "semanal" | "mensual" | "anual"
+) {
+  const token = getToken();
+  const res = await fetch(`/api/admin/metricas/asistencia/${tipo}`, {
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
