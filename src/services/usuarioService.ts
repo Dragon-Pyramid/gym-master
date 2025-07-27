@@ -47,16 +47,21 @@ export const updateUsuarios = async (
   id: string,
   updateData: UpdateUsuarioDto
 ): Promise<Usuario> => {
+  
   const { data, error } = await supabase
     .from('usuario')
     .update(updateData)
     .eq('id', id)
     .select()
     .single();
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.log(error.message);
+      throw new Error(error.message)};
   if (!data || data.length === 0) {
     throw new Error('No se encontró el usuario con ese ID');
   }
+  console.log(data);
+  
   return data as Usuario;
 };
 

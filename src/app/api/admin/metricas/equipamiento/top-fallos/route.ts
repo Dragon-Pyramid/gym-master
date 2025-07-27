@@ -4,21 +4,26 @@ import { dataRankingFallosEquipamiento } from "@/services/equipamientoService";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
-    const { user } = await authMiddleware(req);
-    if (!user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    try {
+        const { user } = await authMiddleware(req);
+        if (!user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const rolAdmin = rolAdminMiddleware(user);
+        if (!rolAdmin) {
+            return NextResponse.json({ error: "Unauthorized: User no tiene rol de admin" }, { status: 403 });
+        }
+
+        const topFallos = await dataRankingFallosEquipamiento(user);
+
+        if (!topFallos) {
+            return NextResponse.json({ error: "No se encontraron datos del ranking de fallos de equipamiento" }, { status: 404 });
+        }
+
+        return NextResponse.json(topFallos);
+    } catch (error: any) {
+        console.error("Error en el ranking de fallos de equipamiento:", error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
-
-    const rolAdmin = rolAdminMiddleware(user);
-    if (!rolAdmin) {
-        return NextResponse.json({ error: "Unauthorized: User no tiene rol de admin" }, { status: 403 });
-    }
-
-    const topFallos = await dataRankingFallosEquipamiento(user);
-
-    if (!topFallos) {
-        return NextResponse.json({ error: "No se encontraron datos del ranking de fallos de equipamiento" }, { status: 404 });
-    }
-
-    return NextResponse.json(topFallos);
 }

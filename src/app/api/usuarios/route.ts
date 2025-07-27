@@ -44,12 +44,12 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   try {
-    const { id, ...updateData } = await req.json();
+    const { id, updateData } = await req.json();
 
     if (!id || typeof id !== 'string') {
       return NextResponse.json({ error: 'ID inválido para actualizar' }, { status: 400 });
     }
-
+    
     const actualizado = await updateUsuarios(id, updateData);
     return NextResponse.json({
       message: 'Usuario actualizado con éxito',

@@ -2,6 +2,7 @@ import { SignInDto } from "@/interfaces/credentials.interface";
 import { getSupabaseClient } from "./supabaseClient";
 import * as bcrypt from "bcryptjs";
 import * as jwt from "jsonwebtoken";
+import { getSocioByIdUsuario } from "./socioService";
 
 export const signIn = async (login: SignInDto) => {
   const { email, password, rol, dbName } = login;
@@ -50,9 +51,17 @@ export const signIn = async (login: SignInDto) => {
     console.log("Usuario inactivo");
     throw new Error("Usuario inactivo");
   }
+
+  const socio = await getSocioByIdUsuario(data.id);
+  if (!socio) {
+    console.log("No se encontró el socio asociado al usuario");
+    throw new Error("No se encontró el socio asociado al usuario");
+  }
+
   const payload = {
     sub: data.id,
     id: data.id,
+    id_socio: socio.id_socio,
     email: data.email,
     rol: data.rol,
     dbName,
