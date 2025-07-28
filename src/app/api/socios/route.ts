@@ -1,3 +1,4 @@
+import { supabase } from '@/services/supabaseClient' // asegurate de tener esta importación
 import { NextResponse } from 'next/server'
 import {
   fetchSocios,
@@ -16,9 +17,11 @@ export async function GET() {
   }
 }
 
-import { supabase } from '@/services/supabaseClient' // asegurate de tener esta importación
 
 export async function POST(req: Request) {
+
+  
+  console.log(req);
   try {
     const body = await req.json()
 
@@ -29,6 +32,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Nombre completo y DNI son obligatorios' }, { status: 400 })
     }
 
+    
     // ✅ Validar si usuario_id existe (si se envía)
     if (body.usuario_id) {
       const { data, error } = await supabase
