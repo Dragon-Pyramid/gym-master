@@ -1,6 +1,10 @@
 import { authMiddleware } from "@/middlewares/auth.middleware";
 import { rolAdminMiddleware } from "@/middlewares/rolAdmin.middleware";
-import { dataConcurrenciaAnual, dataConcurrenciaMensual, dataConcurrenciaSemanal } from "@/services/asistenciaService";
+import {
+  dataConcurrenciaAnual,
+  dataConcurrenciaMensual,
+  dataConcurrenciaSemanal,
+} from "@/services/asistenciaService";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request, { params }: { params: { tipo: string } }) {
@@ -16,7 +20,7 @@ export async function GET(req: Request, { params }: { params: { tipo: string } }
             return NextResponse.json({ error: "Unauthorized: User no tiene rol de admin" }, { status: 403 });
         }
 
-        const { tipo } = params;
+        const { tipo } = await params;
         let concurrencia;
 
         if (tipo === 'semanal') {
