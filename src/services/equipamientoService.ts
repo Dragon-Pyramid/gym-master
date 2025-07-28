@@ -1,6 +1,6 @@
 import { CreateEquipamentoDTO, Equipamento, UpdateEquipamentoDTO } from "@/interfaces/equipamiento.interface";
 import { TipoEquipamiento } from "@/enums/tipoEquipamiento.enum";
-import { supabase } from "./supabaseClient";
+import { getSupabaseClient, supabase } from "./supabaseClient";
 import dayjs from "dayjs";
 
 export const getAllEquipamientos = async () : Promise<Equipamento[]> => {
@@ -105,3 +105,33 @@ export const getOneEquipamientoById = async (id:string) : Promise<Equipamento> =
 
   return data;
 };
+
+// Funciones para métricas de equipamiento
+export const dataEstadoEquipamientoSemaforo = async (user: any) => {
+    const supabase = getSupabaseClient(user.dbName);
+    const { data, error } = await supabase
+        .rpc('sp_estado_equipamiento_semaforo');
+    if (error) throw new Error(error.message);
+    return data;
+}
+
+export const dataRankingFallosEquipamiento = async (user: any) => {
+    const supabase = getSupabaseClient(user.dbName);
+    const { data, error } = await supabase
+        .rpc('sp_ranking_fallos_equipamiento');
+    if (error) throw new Error(error.message);
+    return data;
+}
+
+export const dataAnalisisCostoBeneficio = async (user: any) => {
+    const supabase = getSupabaseClient(user.dbName);
+    const { data, error } = await supabase
+        .rpc('sp_analisis_costo_beneficio');
+    if (error) throw new Error(error.message);
+    return data;
+}
+
+export const dataPrediccionFallo = async (user: any) => {
+    //TODO IMPLEMENTAR LÓGICA DE PREDICCIÓN DE FALLOS DE EQUIPAMIENTO
+    throw new Error("Funcionalidad no implementada");
+}
