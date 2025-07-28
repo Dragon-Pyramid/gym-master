@@ -2,18 +2,18 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
   Tooltip,
   Legend,
-  LineChart,
-  Line,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-} from "recharts";
+  ArcElement,
+} from "chart.js";
+import { Line, Bar, Pie } from "react-chartjs-2";
 import { AppHeader } from "@/components/header/AppHeader";
 import { AppFooter } from "@/components/footer/AppFooter";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -27,29 +27,96 @@ import QrDisplayModal from "@/components/ui/qr-display";
 import { Button } from "@/components/ui/button";
 import { getAllEquipamientos } from "@/services/equipamientoService";
 import { getAllMantenimientos } from "@/services/mantenimientoService";
+import {
+  getAdherenciaRutinas,
+  getEvolucionPromedioRutinas,
+  getConcurrenciaAsistencia,
+  getTopFallosEquipamiento,
+  getEstadoActualEquipamiento,
+  getSegmentacionPagos,
+  getHistogramaPagos,
+} from "@/services/apiClient";
 
 import { Equipamento } from "@/interfaces/equipamiento.interface";
 import { Mantenimiento } from "@/interfaces/mantenimiento.interface";
 
-const asistenciaPorDia = [
-  { name: "Lun", socios: 40 },
-  { name: "Mar", socios: 35 },
-  { name: "Mié", socios: 52 },
-  { name: "Jue", socios: 47 },
-  { name: "Vie", socios: 63 },
-  { name: "Sáb", socios: 70 },
-  { name: "Dom", socios: 30 },
-];
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+);
 
-const actividadesData = [
-  { name: "Musculación", value: 400 },
-  { name: "Crossfit", value: 300 },
-  { name: "Yoga", value: 200 },
-  { name: "Spinning", value: 180 },
-  { name: "Boxeo", value: 220 },
-];
+interface MetricaAdherencia {
+  anio_mes: string;
+  asistencias_registradas: number;
+  porcentaje_adherencia: number;
+  sesiones_recomendadas: number;
+  socio_id: string;
+  usuario_id: string;
+}
 
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
+interface MetricaEvolucion {
+  id_objetivo: number;
+  año_mes: string;
+  promedio_asistencias: number;
+}
+
+interface MetricaConcurrencia {
+  anio: number;
+  semana: number;
+  sexo: string;
+  asistencias: number;
+}
+
+interface MetricaFallos {
+  id_equipamiento: string;
+  nombre: string;
+  total_fallos: number;
+  costo_total: number;
+  ranking: number;
+}
+
+interface MetricaEstadoEquipamiento {
+  id: string;
+  nombre: string;
+  estado_semaforo: string;
+  costo_ultimos_3m: number;
+  mantenimientos_ultimos_3m: number;
+  proxima_revision: string;
+  ultima_revision: string;
+}
+
+interface MetricaSegmentacionPagos {
+  anio_mes: string;
+  cantidad_pagos: number;
+  pagos_leve_retraso: number;
+  pagos_morosos: number;
+  pagos_puntuales: number;
+  porcentaje_morosidad: number;
+  porcentaje_puntualidad: number;
+  socio_id: string;
+  total_descuento: number;
+  total_pagado: number;
+}
+
+interface MetricaHistogramaPagos {
+  anio_mes: string;
+  cantidad_pagos: number;
+  pagos_leve_retraso: number;
+  pagos_morosos: number;
+  pagos_puntuales: number;
+  porcentaje_morosidad: number;
+  porcentaje_puntualidad: number;
+  socio_id: string;
+  total_descuento: number;
+  total_pagado: number;
+}
 
 export default function DashboardPage() {
   const { user, isAuthenticated, initializeAuth, isInitialized } =
@@ -59,6 +126,26 @@ export default function DashboardPage() {
   const [mantenimientos, setMantenimientos] = useState<Mantenimiento[]>([]);
   const [loadingDatos, setLoadingDatos] = useState(true);
   const [showQr, setShowQr] = useState(false);
+
+  const [adherenciaRutinas, setAdherenciaRutinas] = useState<
+    MetricaAdherencia[]
+  >([]);
+  const [evolucionRutinas, setEvolucionRutinas] = useState<MetricaEvolucion[]>(
+    []
+  );
+  const [concurrenciaSemanal, setConcurrenciaSemanal] = useState<
+    MetricaConcurrencia[]
+  >([]);
+  const [topFallos, setTopFallos] = useState<MetricaFallos[]>([]);
+  const [estadoEquipamiento, setEstadoEquipamiento] = useState<
+    MetricaEstadoEquipamiento[]
+  >([]);
+  const [segmentacionPagos, setSegmentacionPagos] = useState<
+    MetricaSegmentacionPagos[]
+  >([]);
+  const [histogramaPagos, setHistogramaPagos] = useState<
+    MetricaHistogramaPagos[]
+  >([]);
 
   useEffect(() => {
     initializeAuth();
@@ -77,10 +164,49 @@ export default function DashboardPage() {
       const mants = await getAllMantenimientos();
       setEquipos(eqs || []);
       setMantenimientos(mants || []);
+
+      if (user?.rol === "admin") {
+        const [
+          adherencia,
+          evolucion,
+          concurrencia,
+          fallos,
+          estado,
+          segmentacion,
+          histograma,
+        ] = await Promise.all([
+          getAdherenciaRutinas(),
+          getEvolucionPromedioRutinas(),
+          getConcurrenciaAsistencia("semanal"),
+          getTopFallosEquipamiento(),
+          getEstadoActualEquipamiento(),
+          getSegmentacionPagos(),
+          getHistogramaPagos(),
+        ]);
+
+        setAdherenciaRutinas(
+          adherencia.ok && adherencia.data ? adherencia.data : []
+        );
+        setEvolucionRutinas(
+          evolucion.ok && evolucion.data ? evolucion.data : []
+        );
+        setConcurrenciaSemanal(
+          concurrencia.ok && concurrencia.data ? concurrencia.data : []
+        );
+        setTopFallos(fallos.ok && fallos.data ? fallos.data : []);
+        setEstadoEquipamiento(estado.ok && estado.data ? estado.data : []);
+        setSegmentacionPagos(
+          segmentacion.ok && segmentacion.data ? segmentacion.data : []
+        );
+        setHistogramaPagos(
+          histograma.ok && histograma.data ? histograma.data : []
+        );
+      }
+
       setLoadingDatos(false);
     }
     fetchData();
-  }, []);
+  }, [user?.rol]);
 
   const equiposTotales = equipos.length;
   const equiposEnRevision = equipos.filter(
@@ -123,7 +249,10 @@ export default function DashboardPage() {
     <SidebarProvider>
       <div className="relative flex w-full min-h-screen">
         {showQr && (
-          <div className="fixed inset-0 z-50 transition-opacity duration-300 bg-black" style={{ pointerEvents: 'auto', opacity: 1 }} />
+          <div
+            className="fixed inset-0 z-50 transition-opacity duration-300 bg-black"
+            style={{ pointerEvents: "auto", opacity: 1 }}
+          />
         )}
         <AppSidebar />
         <div className="flex flex-col flex-1 w-full">
@@ -150,122 +279,6 @@ export default function DashboardPage() {
                       QR del Día
                     </Button>
                   </div>
-                </div>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Socios Activos</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-3xl font-bold">120</div>
-                      <p className="text-sm text-muted-foreground">
-                        Socios registrados actualmente
-                      </p>
-                      <p className="mt-1 text-sm text-green-500">
-                        +8 nuevos esta semana
-                      </p>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Actividades</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-3xl font-bold">5</div>
-                      <p className="text-sm text-muted-foreground">
-                        Tipos de actividades en el gimnasio
-                      </p>
-                      <p className="mt-1 text-sm text-foreground">
-                        ≈ Sin cambios
-                      </p>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Entrenadores</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-3xl font-bold">4</div>
-                      <p className="text-sm text-muted-foreground">
-                        Entrenadores disponibles
-                      </p>
-                      <p className="mt-1 text-sm text-green-500">
-                        ↑ +1 desde el mes pasado
-                      </p>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Clases Semanales</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-3xl font-bold">36</div>
-                      <p className="text-sm text-muted-foreground">
-                        Total de clases esta semana
-                      </p>
-                      <p className="mt-1 text-sm text-green-500">
-                        ↑ +10% asistencia
-                      </p>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-                  <Card className="col-span-12 lg:col-span-8">
-                    <CardHeader>
-                      <CardTitle>Asistencias por Día</CardTitle>
-                    </CardHeader>
-                    <CardContent className="h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={asistenciaPorDia}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="name" />
-                          <YAxis />
-                          <Tooltip />
-                          <Legend />
-                          <Line
-                            type="monotone"
-                            dataKey="socios"
-                            stroke="#02a8e1"
-                            activeDot={{ r: 8 }}
-                            strokeWidth={2}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="col-span-12 lg:col-span-4">
-                    <CardHeader>
-                      <CardTitle>Distribución por Actividad</CardTitle>
-                    </CardHeader>
-                    <CardContent className="h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={actividadesData}
-                            cx="50%"
-                            cy="50%"
-                            outerRadius={80}
-                            fill="#8884d8"
-                            dataKey="value"
-                          >
-                            {actividadesData.map((entry, index) => (
-                              <Cell
-                                key={`cell-${index}`}
-                                fill={COLORS[index % COLORS.length]}
-                              />
-                            ))}
-                          </Pie>
-                          <Tooltip />
-                          <Legend />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </CardContent>
-                  </Card>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 mt-6 md:grid-cols-2 xl:grid-cols-3">
@@ -336,6 +349,273 @@ export default function DashboardPage() {
                       <p className="text-sm text-muted-foreground">
                         Equipos no operativos actualmente
                       </p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+                  <Card className="col-span-12 lg:col-span-6">
+                    <CardHeader>
+                      <CardTitle>Adherencia a Rutinas</CardTitle>
+                    </CardHeader>
+                    <CardContent className="h-[300px]">
+                      <Line
+                        data={{
+                          labels: adherenciaRutinas.map(
+                            (item) => item.anio_mes
+                          ),
+                          datasets: [
+                            {
+                              label: "Porcentaje Adherencia",
+                              data: adherenciaRutinas.map(
+                                (item) => item.porcentaje_adherencia
+                              ),
+                              borderColor: "#0088FE",
+                              backgroundColor: "rgba(0, 136, 254, 0.1)",
+                              tension: 0.1,
+                            },
+                          ],
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              position: "top" as const,
+                            },
+                          },
+                        }}
+                      />
+                    </CardContent>
+                  </Card>
+
+                  <Card className="col-span-12 lg:col-span-6">
+                    <CardHeader>
+                      <CardTitle>Evolución Promedio por Objetivo</CardTitle>
+                    </CardHeader>
+                    <CardContent className="h-[300px]">
+                      <Line
+                        data={{
+                          labels: evolucionRutinas.map((item) => item.año_mes),
+                          datasets: [
+                            {
+                              label: "Promedio Asistencias",
+                              data: evolucionRutinas.map(
+                                (item) => item.promedio_asistencias
+                              ),
+                              borderColor: "#00C49F",
+                              backgroundColor: "rgba(0, 196, 159, 0.1)",
+                              tension: 0.1,
+                            },
+                          ],
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              position: "top" as const,
+                            },
+                          },
+                        }}
+                      />
+                    </CardContent>
+                  </Card>
+
+                  <Card className="col-span-12 lg:col-span-8">
+                    <CardHeader>
+                      <CardTitle>Concurrencia Semanal</CardTitle>
+                    </CardHeader>
+                    <CardContent className="h-[300px]">
+                      <Line
+                        data={{
+                          labels: concurrenciaSemanal.map(
+                            (item) => `${item.anio}-S${item.semana}`
+                          ),
+                          datasets: [
+                            {
+                              label: "Asistencias",
+                              data: concurrenciaSemanal.map(
+                                (item) => item.asistencias
+                              ),
+                              borderColor: "#FFBB28",
+                              backgroundColor: "rgba(255, 187, 40, 0.1)",
+                              tension: 0.1,
+                            },
+                          ],
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              position: "top" as const,
+                            },
+                          },
+                        }}
+                      />
+                    </CardContent>
+                  </Card>
+
+                  <Card className="col-span-12 lg:col-span-4">
+                    <CardHeader>
+                      <CardTitle>Estado de Equipamiento</CardTitle>
+                    </CardHeader>
+                    <CardContent className="lg:h-[300px] md:h-[600px] overflow-y-auto">
+                      <div className="lg:h-[500px] md:h-[500px]">
+                        <Pie
+                          data={{
+                            labels: estadoEquipamiento.map(
+                              (item) => item.nombre
+                            ),
+                            datasets: [
+                              {
+                                label: "Costo Últimos 3M",
+                                data: estadoEquipamiento.map(
+                                  (item) => item.costo_ultimos_3m
+                                ),
+                                backgroundColor: [
+                                  "#0088FE",
+                                  "#00C49F",
+                                  "#FFBB28",
+                                  "#FF8042",
+                                  "#8884d8",
+                                  "#82ca9d",
+                                ],
+                                borderWidth: 1,
+                              },
+                            ],
+                          }}
+                          options={{
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                              legend: {
+                                position: "bottom" as const,
+                                labels: {
+                                  usePointStyle: true,
+                                  padding: 10,
+                                },
+                              },
+                            },
+                          }}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="col-span-12 lg:col-span-6">
+                    <CardHeader>
+                      <CardTitle>Top Fallos de Equipamiento</CardTitle>
+                    </CardHeader>
+                    <CardContent className="h-[300px]">
+                      <Bar
+                        data={{
+                          labels: topFallos.map((item) => item.nombre),
+                          datasets: [
+                            {
+                              label: "Total Fallos",
+                              data: topFallos.map((item) => item.total_fallos),
+                              backgroundColor: "#FF8042",
+                              borderColor: "#FF8042",
+                              borderWidth: 1,
+                            },
+                          ],
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              position: "top" as const,
+                            },
+                          },
+                          scales: {
+                            y: {
+                              beginAtZero: true,
+                            },
+                          },
+                        }}
+                      />
+                    </CardContent>
+                  </Card>
+
+                  <Card className="col-span-12 lg:col-span-6">
+                    <CardHeader>
+                      <CardTitle>Segmentación de Pagos</CardTitle>
+                    </CardHeader>
+                    <CardContent className="h-[300px]">
+                      <Pie
+                        data={{
+                          labels: segmentacionPagos.map(
+                            (item) => item.anio_mes
+                          ),
+                          datasets: [
+                            {
+                              label: "Total Pagado",
+                              data: segmentacionPagos.map(
+                                (item) => item.total_pagado
+                              ),
+                              backgroundColor: [
+                                "#0088FE",
+                                "#00C49F",
+                                "#FFBB28",
+                                "#FF8042",
+                                "#8884d8",
+                                "#82ca9d",
+                              ],
+                              borderWidth: 1,
+                            },
+                          ],
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              position: "bottom" as const,
+                            },
+                          },
+                        }}
+                      />
+                    </CardContent>
+                  </Card>
+
+                  <Card className="col-span-12">
+                    <CardHeader>
+                      <CardTitle>Histograma de Pagos</CardTitle>
+                    </CardHeader>
+                    <CardContent className="h-[300px]">
+                      <Bar
+                        data={{
+                          labels: histogramaPagos.map((item) => item.anio_mes),
+                          datasets: [
+                            {
+                              label: "Total Pagado",
+                              data: histogramaPagos.map(
+                                (item) => item.total_pagado
+                              ),
+                              backgroundColor: "#82ca9d",
+                              borderColor: "#82ca9d",
+                              borderWidth: 1,
+                            },
+                          ],
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              position: "top" as const,
+                            },
+                          },
+                          scales: {
+                            y: {
+                              beginAtZero: true,
+                            },
+                          },
+                        }}
+                      />
                     </CardContent>
                   </Card>
                 </div>
