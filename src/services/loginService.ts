@@ -63,7 +63,7 @@ export const signIn = async (login: SignInDto) => {
   } = {
     sub: data.id,
     id: data.id,
-    id_socio: socio.id_socio,
+    id_socio: "",
     email: data.email,
     rol: data.rol,
     dbName,
