@@ -36,11 +36,11 @@ pdfMake.vfs = pdfFonts.vfs;
 
 interface RutinaDisplay {
   id_rutina: string;
-  socio: string;
   objetivo: string;
   nivel: string;
   fecha: string;
   dias: string;
+  creado_en: string;
 }
 
 export default function RutinasPage() {
@@ -75,14 +75,43 @@ export default function RutinasPage() {
 
       const rutinasData: Rutina[] = response.data;
 
-      const rutinasDisplay: RutinaDisplay[] = rutinasData.map((rutina) => ({
-        id_rutina: rutina.id_rutina,
-        socio: user.nombre || "Socio",
-        objetivo: "Objetivo por definir",
-        nivel: "Nivel por definir",
-        fecha: new Date().toLocaleDateString(),
-        dias: "Por definir",
-      }));
+      const rutinasDisplay: RutinaDisplay[] = rutinasData.map((rutina) => {
+        let diasCalculados = "Sin definir";
+
+        if (rutina.rutina_desc) {
+          let rutinaDesc = rutina.rutina_desc;
+
+          if (typeof rutina.rutina_desc === "string") {
+            try {
+              rutinaDesc = JSON.parse(rutina.rutina_desc);
+            } catch (e) {
+              console.warn("Error parsing rutina_desc JSON:", e);
+            }
+          }
+
+          if (rutinaDesc && rutinaDesc.semana) {
+            const diasSemana = Object.keys(rutinaDesc.semana);
+            const diasFormateados = diasSemana.map(
+              (dia) => dia.charAt(0).toUpperCase() + dia.slice(1)
+            );
+            diasCalculados = `${diasSemana.length} días (${diasFormateados.join(
+              ", "
+            )})`;
+          }
+        }
+
+        return {
+          id_rutina: rutina.id_rutina,
+          socio: user.nombre || "Socio",
+          objetivo: "Objetivo por definir",
+          nivel: "Nivel por definir",
+          fecha: rutina.creado_en
+            ? new Date(rutina.creado_en).toLocaleDateString()
+            : new Date().toLocaleDateString(),
+          dias: diasCalculados,
+          creado_en: rutina.creado_en || new Date().toISOString(),
+        };
+      });
 
       setRutinas(rutinasDisplay);
       setFilteredRutinas(rutinasDisplay);
