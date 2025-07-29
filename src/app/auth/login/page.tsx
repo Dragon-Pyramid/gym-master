@@ -37,7 +37,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import GymSelector from "@/components/ui/gym-selector";
 
 const userTypes = [
   {
@@ -131,8 +130,8 @@ export default function LoginPage() {
       return;
     }
 
-    if (!dbName) {
-      toast.error("Debe seleccionar una base de datos");
+    if (!dbName.trim()) {
+      toast.error("Debe ingresar el nombre del gimnasio");
       return;
     }
 
@@ -289,8 +288,15 @@ export default function LoginPage() {
               </div>
 
               <div className="grid gap-2">
-                <Label>Base de Datos</Label>
-                <GymSelector value={dbName} onChange={setDbName} />
+                <Label htmlFor="gymName">Gimnasio</Label>
+                <Input
+                  id="gymName"
+                  type="text"
+                  placeholder="Ej: Gym Master, Fitness Center..."
+                  value={dbName}
+                  onChange={(e) => setDbName(e.target.value)}
+                  required
+                />
               </div>
 
               <Button

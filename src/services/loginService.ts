@@ -52,13 +52,15 @@ export const signIn = async (login: SignInDto) => {
     throw new Error("Usuario inactivo");
   }
 
-  const socio = await getSocioByIdUsuario(data.id);
-  if (!socio) {
-    console.log("No se encontró el socio asociado al usuario");
-    throw new Error("No se encontró el socio asociado al usuario");
-  }
-
-  const payload = {
+  const basePayload: {
+    sub: string;
+    id: string;
+    email: string;
+    rol: string;
+    dbName: string;
+    nombre: string;
+    id_socio?: string;
+  } = {
     sub: data.id,
     id: data.id,
     id_socio: socio.id_socio,
@@ -67,6 +69,17 @@ export const signIn = async (login: SignInDto) => {
     dbName,
     nombre: data.nombre,
   };
+
+  if (rol === "socio") {
+    const socio = await getSocioByIdUsuario(data.id);
+    if (!socio) {
+      console.log("No se encontró el socio asociado al usuario");
+      throw new Error("No se encontró el socio asociado al usuario");
+    }
+    basePayload.id_socio = socio.id_socio;
+  }
+
+  const payload = basePayload;
   if (!process.env.JWT_SECRET) {
     throw new Error("JWT_SECRET no está definido en las variables de entorno");
   }
