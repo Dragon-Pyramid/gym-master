@@ -5,6 +5,8 @@ export interface Rutina {
     contenido: any;
     semana: number;
     nombre: string;
+    creado_en?: string;
+    actualizado_en?: string;
 }
 
 export interface GeneracionRutina {
