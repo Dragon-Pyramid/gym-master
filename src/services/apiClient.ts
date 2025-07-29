@@ -192,3 +192,51 @@ export async function getConcurrenciaAsistencia(
   const data = await res.json();
   return { ok: res.ok, data };
 }
+
+export async function getHistorialRutinas() {
+  const token = getToken();
+  const res = await fetch("/api/rutina/historial", {
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
+export async function getObjetivos() {
+  const token = getToken();
+  const res = await fetch("/api/objetivos", {
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
+export async function getNiveles() {
+  const token = getToken();
+  const res = await fetch("/api/niveles", {
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
+export async function generarNuevaRutina(body: {
+  objetivo: number;
+  nivel: number;
+  dias: number;
+}) {
+  const token = getToken();
+  const res = await fetch("/api/rutina/generar", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}

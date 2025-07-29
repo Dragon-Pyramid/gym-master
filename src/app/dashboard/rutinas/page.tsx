@@ -13,7 +13,7 @@ import { Search, Printer, FileSpreadsheet, Filter } from "lucide-react";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
-import RutinasTable, { type Rutina } from "@/components/tables/RutinasTable";
+import RutinasTable from "@/components/tables/RutinasTable";
 import RutinaModal from "@/components/modal/RutinaModal";
 import RutinaModalView from "@/components/modal/RutinaModalView";
 import pdfMake from "pdfmake/build/pdfmake";
@@ -23,69 +23,115 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Rutina } from "@/interfaces/rutina.interface";
+import { Objetivo } from "@/interfaces/objetivo.interface";
+import { Nivel } from "@/interfaces/niveles.interface";
 
 pdfMake.vfs = pdfFonts.vfs;
 
-const rutinasHardcodeadas: Rutina[] = [
-  {
-    id_rutina: "1",
-    socio: "Juan Pérez",
-    objetivo: "Hipertrofia",
-    nivel: "Intermedio",
-    fecha: "2024-06-10",
-    dias: "Lunes, Miércoles, Viernes",
-  },
-  {
-    id_rutina: "2",
-    socio: "María Gómez",
-    objetivo: "Definición",
-    nivel: "Avanzado",
-    fecha: "2024-06-11",
-    dias: "Lunes, Martes, Jueves",
-  },
-  {
-    id_rutina: "3",
-    socio: "Carlos López",
-    objetivo: "Fuerza",
-    nivel: "Principiante",
-    fecha: "2024-06-12",
-    dias: "Martes, Jueves, Viernes",
-  },
-  {
-    id_rutina: "4",
-    socio: "Juan Pérez",
-    objetivo: "Resistencia",
-    nivel: "Intermedio",
-    fecha: "2024-06-13",
-    dias: "Lunes, Miércoles, Viernes",
-  },
-  {
-    id_rutina: "5",
-    socio: "María Gómez",
-    objetivo: "Hipertrofia",
-    nivel: "Avanzado",
-    fecha: "2024-06-14",
-    dias: "Lunes, Martes, Miércoles",
-  },
-];
-
-const niveles = ["Principiante", "Intermedio", "Avanzado"];
-const objetivos = ["Hipertrofia", "Definición", "Fuerza", "Resistencia"];
+interface RutinaDisplay {
+  id_rutina: string;
+  socio: string;
+  objetivo: string;
+  nivel: string;
+  fecha: string;
+  dias: string;
+}
 
 export default function RutinasPage() {
-  const { user, isAuthenticated, initializeAuth, isInitialized } =
+  const { user, isAuthenticated, initializeAuth, isInitialized, token } =
     useAuthStore();
   const router = useRouter();
-  const [rutinas, setRutinas] = useState<Rutina[]>([]);
-  const [filteredRutinas, setFilteredRutinas] = useState<Rutina[]>([]);
+  const [rutinas, setRutinas] = useState<RutinaDisplay[]>([]);
+  const [filteredRutinas, setFilteredRutinas] = useState<RutinaDisplay[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
-  const [selectedRutina, setSelectedRutina] = useState<Rutina | null>(null);
+  const [selectedRutina, setSelectedRutina] = useState<RutinaDisplay | null>(
+    null
+  );
   const [openModalVer, setOpenModalVer] = useState(false);
-  const [rutinaVer, setRutinaVer] = useState<Rutina | null>(null);
+  const [rutinaVer, setRutinaVer] = useState<RutinaDisplay | null>(null);
   const [selectedNiveles, setSelectedNiveles] = useState<string[]>([]);
   const [selectedObjetivos, setSelectedObjetivos] = useState<string[]>([]);
+  const [niveles, setNiveles] = useState<Nivel[]>([]);
+  const [objetivos, setObjetivos] = useState<Objetivo[]>([]);
+
+  const fetchRutinas = async () => {
+    if (!user || !token) return;
+
+    setLoading(true);
+    try {
+      const response = await fetch("/api/rutina/historial", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Error al cargar rutinas");
+      }
+
+      const rutinasData: Rutina[] = await response.json();
+
+      const rutinasDisplay: RutinaDisplay[] = rutinasData.map((rutina) => ({
+        id_rutina: rutina.id_rutina,
+        socio: user.nombre || "Socio",
+        objetivo: "Objetivo por definir",
+        nivel: "Nivel por definir",
+        fecha: new Date().toLocaleDateString(),
+        dias: "Por definir",
+      }));
+
+      setRutinas(rutinasDisplay);
+      setFilteredRutinas(rutinasDisplay);
+    } catch (error) {
+      console.error("Error al cargar rutinas:", error);
+      toast.error("Error al cargar rutinas");
+      setRutinas([]);
+      setFilteredRutinas([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchObjetivos = async () => {
+    if (!user || !token) return;
+
+    try {
+      const response = await fetch("/api/objetivos", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setObjetivos(data);
+      }
+    } catch (error) {
+      console.error("Error al cargar objetivos:", error);
+    }
+  };
+
+  const fetchNiveles = async () => {
+    if (!user || !token) return;
+
+    try {
+      const response = await fetch("/api/niveles", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setNiveles(data);
+      }
+    } catch (error) {
+      console.error("Error al cargar niveles:", error);
+    }
+  };
 
   useEffect(() => {
     initializeAuth();
@@ -97,13 +143,13 @@ export default function RutinasPage() {
     }
   }, [isAuthenticated, isInitialized, router]);
 
-  const fetchRutinas = async () => {
-    setLoading(true);
-    const data = rutinasHardcodeadas;
-    setRutinas(data ?? []);
-    setFilteredRutinas(data ?? []);
-    setLoading(false);
-  };
+  useEffect(() => {
+    if (isInitialized && isAuthenticated && user && token) {
+      fetchRutinas();
+      fetchObjetivos();
+      fetchNiveles();
+    }
+  }, [isInitialized, isAuthenticated, user, token]);
 
   const handlePrint = () => {
     window.print();
@@ -169,10 +215,12 @@ export default function RutinasPage() {
   };
 
   useEffect(() => {
-    if (isInitialized && isAuthenticated) {
+    if (isInitialized && isAuthenticated && user) {
       fetchRutinas();
+      fetchObjetivos();
+      fetchNiveles();
     }
-  }, [isInitialized, isAuthenticated]);
+  }, [isInitialized, isAuthenticated, user]);
 
   useEffect(() => {
     let rutinasFiltradas = rutinas;
@@ -219,7 +267,7 @@ export default function RutinasPage() {
           <main className="flex-1 p-6 space-y-6">
             <Card className="w-full">
               <CardHeader className="flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap">
-                <h2 className="text-xl font-bold">Listado de Rutinas</h2>
+                <h2 className="text-xl font-bold">Mis Rutinas</h2>
                 <div className="flex flex-wrap items-center w-full gap-2 md:w-auto">
                   <div className="flex items-center flex-grow gap-2 md:flex-grow-0">
                     <Popover>
@@ -239,24 +287,26 @@ export default function RutinasPage() {
                             <div className="space-y-2">
                               {niveles.map((nivel) => (
                                 <div
-                                  key={nivel}
+                                  key={nivel.id_nivel}
                                   className="flex items-center space-x-2"
                                 >
                                   <Checkbox
-                                    id={`nivel-${nivel}`}
-                                    checked={selectedNiveles.includes(nivel)}
+                                    id={`nivel-${nivel.id_nivel}`}
+                                    checked={selectedNiveles.includes(
+                                      nivel.nombre_nivel
+                                    )}
                                     onCheckedChange={(checked) =>
                                       handleNivelChange(
-                                        nivel,
+                                        nivel.nombre_nivel,
                                         checked as boolean
                                       )
                                     }
                                   />
                                   <label
-                                    htmlFor={`nivel-${nivel}`}
+                                    htmlFor={`nivel-${nivel.id_nivel}`}
                                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                   >
-                                    {nivel}
+                                    {nivel.nombre_nivel}
                                   </label>
                                 </div>
                               ))}
@@ -267,26 +317,26 @@ export default function RutinasPage() {
                             <div className="space-y-2">
                               {objetivos.map((objetivo) => (
                                 <div
-                                  key={objetivo}
+                                  key={objetivo.id_objetivo}
                                   className="flex items-center space-x-2"
                                 >
                                   <Checkbox
-                                    id={`objetivo-${objetivo}`}
+                                    id={`objetivo-${objetivo.id_objetivo}`}
                                     checked={selectedObjetivos.includes(
-                                      objetivo
+                                      objetivo.nombre_objetivo
                                     )}
                                     onCheckedChange={(checked) =>
                                       handleObjetivoChange(
-                                        objetivo,
+                                        objetivo.nombre_objetivo,
                                         checked as boolean
                                       )
                                     }
                                   />
                                   <label
-                                    htmlFor={`objetivo-${objetivo}`}
+                                    htmlFor={`objetivo-${objetivo.id_objetivo}`}
                                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                   >
-                                    {objetivo}
+                                    {objetivo.nombre_objetivo}
                                   </label>
                                 </div>
                               ))}
@@ -299,7 +349,7 @@ export default function RutinasPage() {
                       <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                       <Input
                         type="search"
-                        placeholder="Buscar por socio, objetivo, nivel..."
+                        placeholder="Buscar rutinas..."
                         className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] w-full"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -326,8 +376,8 @@ export default function RutinasPage() {
                     onClick={() => setOpenModal(true)}
                     className="bg-[#02a8e1] hover:bg-[#0288b1]"
                   >
-                    <span className="hidden sm:inline">Añadir Rutina</span>
-                    <span className="sm:hidden">Añadir</span>
+                    <span className="hidden sm:inline">Generar Rutina</span>
+                    <span className="sm:hidden">Generar</span>
                   </Button>
                 </div>
               </CardHeader>
@@ -368,6 +418,8 @@ export default function RutinasPage() {
         }}
         onCreated={fetchRutinas}
         rutina={selectedRutina}
+        objetivos={objetivos}
+        niveles={niveles}
       />
       <RutinaModalView
         open={openModalVer}

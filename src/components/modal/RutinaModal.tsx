@@ -8,17 +8,23 @@ import {
 } from "@/components/ui/dialog";
 import RutinasForm from "../forms/RutinasForm";
 import FechaHora from "@/components/ui/FechaHora";
+import { Objetivo } from "@/interfaces/objetivo.interface";
+import { Nivel } from "@/interfaces/niveles.interface";
 
 export default function RutinaModal({
   open,
   onClose,
   onCreated,
   rutina,
+  objetivos,
+  niveles,
 }: {
   open: boolean;
   onClose: () => void;
   onCreated: () => void;
   rutina?: any | null;
+  objetivos: Objetivo[];
+  niveles: Nivel[];
 }) {
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -26,7 +32,7 @@ export default function RutinaModal({
         <DialogHeader>
           <div className="flex items-center justify-between w-full gap-4">
             <DialogTitle>
-              {rutina ? "Editar Rutina" : "Nueva Rutina"}
+              {rutina ? "Editar Rutina" : "Generar Nueva Rutina"}
             </DialogTitle>
             <FechaHora />
           </div>
@@ -37,6 +43,8 @@ export default function RutinaModal({
             await onCreated();
             onClose();
           }}
+          objetivos={objetivos}
+          niveles={niveles}
         />
       </DialogContent>
     </Dialog>
