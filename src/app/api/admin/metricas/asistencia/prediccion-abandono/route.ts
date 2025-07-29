@@ -3,17 +3,23 @@ import { rolAdminMiddleware } from "@/middlewares/rolAdmin.middleware";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
-    const { user } = await authMiddleware(req);
+    try {
+        const { user } = await authMiddleware(req);
 
-    if (!user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const rolAdmin = rolAdminMiddleware(user);
+        if (!rolAdmin) {
+            return NextResponse.json({ error: "Unauthorized: User no tiene rol de admin" }, { status: 403 });
+        }
+
+        //TODO IMPLEMENTAR LÓGICA DE PREDICCIÓN DE ABANDONO
+
+        return NextResponse.json({ error: "Endpoint no implementado" }, { status: 501 });
+    } catch (error: any) {
+        console.error("Error en la predicción de abandono:", error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
-
-    const rolAdmin = rolAdminMiddleware(user);
-            if (!rolAdmin) {
-                return NextResponse.json({ error: "Unauthorized: User no tiene rol de admin" }, { status: 403 });
-            }
-    //TODO IMPLEMENTAR LÓGICA DE PREDICCIÓN DE ABANDONO
-
-    return NextResponse.json({ error: "Endpoint no implementado" }, { status: 501 });
 }
