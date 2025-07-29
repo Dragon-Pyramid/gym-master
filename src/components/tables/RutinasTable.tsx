@@ -16,11 +16,11 @@ import {
 
 export interface Rutina {
   id_rutina: string;
-  socio: string;
   objetivo: string;
   nivel: string;
   fecha: string;
   dias: string;
+  creado_en: string;
 }
 
 export default function RutinasTable({
@@ -58,9 +58,9 @@ export default function RutinasTable({
     <Table className="w-full overflow-hidden text-sm border rounded-md border-border">
       <TableHeader>
         <TableRow className="bg-muted/50 text-muted-foreground">
-          <TableHead>Socio</TableHead>
           <TableHead>Objetivo</TableHead>
           <TableHead>Nivel</TableHead>
+          <TableHead>Creado en</TableHead>
           <TableHead>Fecha</TableHead>
           <TableHead>Días</TableHead>
           <TableHead>Acciones</TableHead>
@@ -72,9 +72,9 @@ export default function RutinasTable({
             key={i}
             className="odd:bg-muted/40 hover:bg-[#a8d9f9] transition-colors"
           >
-            <TableCell>{r.socio}</TableCell>
             <TableCell>{r.objetivo}</TableCell>
             <TableCell>{r.nivel}</TableCell>
+            <TableCell>{r.creado_en}</TableCell>
             <TableCell>{r.fecha}</TableCell>
             <TableCell>{r.dias}</TableCell>
             <TableCell className="flex gap-2">
