@@ -1,3 +1,4 @@
+import { GeneracionRutina, Rutina } from "@/interfaces/rutina.interface";
 import { getSupabaseClient } from "./supabaseClient";
 
 // Funciones para métricas de rutinas IA
@@ -17,13 +18,10 @@ export const dataEvolucionPromedioPorObjetivo = async (user: any) => {
     return data;
 }
 
-export const dataGeneracionRutina = async (user: any,rutina:{ 
-    nivel: number,
-    objetivo:number,
-    dias :number}) => {
+export const dataGeneracionRutina = async (user: any,rutina: GeneracionRutina) => {
     const supabase = getSupabaseClient(user.dbName);
-
-
+    
+  // Llamada al procedimiento almacenado para generar la rutina
     const { data, error } = await supabase.rpc('generar_rutina_socio', {
     p_id_socio: user.id_socio,
     p_id_objetivo: rutina.objetivo,
@@ -61,4 +59,38 @@ export const dataGeneracionRutinaPersonalizada = async (user: any,rutina:{
   
    if (error) throw new Error(error.message);
   return data;
+}
+
+export const historialRutinaSocioLogueado = async (user: any) : Promise<Rutina[]>  => {
+    const supabase = getSupabaseClient(user.dbName);
+    const { data, error } = await supabase
+        .from('rutina')
+        .select()
+        .eq('id_socio', user.id_socio)
+        .order('creado_en', { ascending: false });
+
+    if (error) {
+      console.log("Error al obtener el historial de rutinas: ", error.message);
+      throw new Error("Error al obtener el historial de rutinas del socio")
+    };
+
+    return data;
+
+}
+
+export const historialRutinaSocio = async (user: any,id_socio: string) : Promise<Rutina[]>  => {
+    const supabase = getSupabaseClient(user.dbName);
+    const { data, error } = await supabase
+        .from('rutina')
+        .select()
+        .eq('id_socio', id_socio)
+        .order('creado_en', { ascending: false });
+
+    if (error) {
+      console.log("Error al obtener el historial de rutinas: ", error.message);
+      throw new Error("Error al obtener el historial de rutinas del socio")
+    };
+
+    return data;
+
 }
