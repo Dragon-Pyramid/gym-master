@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
 import { AppHeader } from "@/components/header/AppHeader";
@@ -26,6 +26,11 @@ import {
 import { Rutina } from "@/interfaces/rutina.interface";
 import { Objetivo } from "@/interfaces/objetivo.interface";
 import { Nivel } from "@/interfaces/niveles.interface";
+import {
+  getHistorialRutinas,
+  getObjetivos,
+  getNiveles,
+} from "@/services/apiClient";
 
 pdfMake.vfs = pdfFonts.vfs;
 
@@ -57,22 +62,18 @@ export default function RutinasPage() {
   const [niveles, setNiveles] = useState<Nivel[]>([]);
   const [objetivos, setObjetivos] = useState<Objetivo[]>([]);
 
-  const fetchRutinas = async () => {
+  const fetchRutinas = useCallback(async () => {
     if (!user || !token) return;
 
     setLoading(true);
     try {
-      const response = await fetch("/api/rutina/historial", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await getHistorialRutinas();
 
       if (!response.ok) {
         throw new Error("Error al cargar rutinas");
       }
 
-      const rutinasData: Rutina[] = await response.json();
+      const rutinasData: Rutina[] = response.data;
 
       const rutinasDisplay: RutinaDisplay[] = rutinasData.map((rutina) => ({
         id_rutina: rutina.id_rutina,
@@ -93,45 +94,35 @@ export default function RutinasPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, token]);
 
-  const fetchObjetivos = async () => {
+  const fetchObjetivos = useCallback(async () => {
     if (!user || !token) return;
 
     try {
-      const response = await fetch("/api/objetivos", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await getObjetivos();
 
       if (response.ok) {
-        const data = await response.json();
-        setObjetivos(data);
+        setObjetivos(response.data);
       }
     } catch (error) {
       console.error("Error al cargar objetivos:", error);
     }
-  };
+  }, [user, token]);
 
-  const fetchNiveles = async () => {
+  const fetchNiveles = useCallback(async () => {
     if (!user || !token) return;
 
     try {
-      const response = await fetch("/api/niveles", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await getNiveles();
 
       if (response.ok) {
-        const data = await response.json();
-        setNiveles(data);
+        setNiveles(response.data);
       }
     } catch (error) {
       console.error("Error al cargar niveles:", error);
     }
-  };
+  }, [user, token]);
 
   useEffect(() => {
     initializeAuth();
@@ -149,8 +140,15 @@ export default function RutinasPage() {
       fetchObjetivos();
       fetchNiveles();
     }
-  }, [isInitialized, isAuthenticated, user, token]);
-
+  }, [
+    isInitialized,
+    isAuthenticated,
+    user,
+    token,
+    fetchRutinas,
+    fetchObjetivos,
+    fetchNiveles,
+  ]);
   const handlePrint = () => {
     window.print();
   };
@@ -215,16 +213,7 @@ export default function RutinasPage() {
   };
 
   useEffect(() => {
-    if (isInitialized && isAuthenticated && user) {
-      fetchRutinas();
-      fetchObjetivos();
-      fetchNiveles();
-    }
-  }, [isInitialized, isAuthenticated, user]);
-
-  useEffect(() => {
     let rutinasFiltradas = rutinas;
-
     if (selectedNiveles.length > 0) {
       rutinasFiltradas = rutinasFiltradas.filter((r) =>
         selectedNiveles.includes(r.nivel)
