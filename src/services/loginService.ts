@@ -3,6 +3,7 @@ import { getSupabaseClient } from "./supabaseClient";
 import * as bcrypt from "bcryptjs";
 import * as jwt from "jsonwebtoken";
 import { getSocioByIdUsuario } from "./socioService";
+import { JwtUser } from "@/interfaces/jwtUser.interface";
 
 export const signIn = async (login: SignInDto) => {
   const { email, password, rol, dbName } = login;

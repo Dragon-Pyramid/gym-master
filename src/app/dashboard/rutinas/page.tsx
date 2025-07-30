@@ -44,9 +44,11 @@ export default function RutinasPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
-  const [selectedRutina, setSelectedRutina] = useState<Rutina | null>(null);
+  const [selectedRutina, setSelectedRutina] = useState<RutinaDisplay | null>(
+    null
+  );
   const [openModalVer, setOpenModalVer] = useState(false);
-  const [rutinaVer, setRutinaVer] = useState<Rutina | null>(null);
+  const [rutinaVer, setRutinaVer] = useState<RutinaDisplay | null>(null);
   const [selectedNiveles, setSelectedNiveles] = useState<string[]>([]);
   const [selectedObjetivos, setSelectedObjetivos] = useState<string[]>([]);
   const [niveles, setNiveles] = useState<Nivel[]>([]);
