@@ -9,15 +9,12 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Printer, FileSpreadsheet, Filter } from "lucide-react";
+import { Search, Printer, Filter } from "lucide-react";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
-import RutinasTable from "@/components/tables/RutinasTable";
 import RutinaModal from "@/components/modal/RutinaModal";
 import RutinaModalView from "@/components/modal/RutinaModalView";
-import pdfMake from "pdfmake/build/pdfmake";
-import pdfFonts from "pdfmake/build/vfs_fonts";
 import {
   Popover,
   PopoverContent,
@@ -31,15 +28,11 @@ import {
   getObjetivos,
   getNiveles,
 } from "@/services/apiClient";
-
-pdfMake.vfs = pdfFonts.vfs;
+import RutinaDisplay from "@/components/dashboard/rutinas/RutinaDisplay";
 
 interface RutinaDisplay {
   id_rutina: string;
-  objetivo: string;
-  nivel: string;
-  fecha: string;
-  dias: string;
+  rutina_desc?: any;
   creado_en: string;
 }
 
@@ -48,15 +41,12 @@ export default function RutinasPage() {
     useAuthStore();
   const router = useRouter();
   const [rutinas, setRutinas] = useState<RutinaDisplay[]>([]);
-  const [filteredRutinas, setFilteredRutinas] = useState<RutinaDisplay[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
-  const [selectedRutina, setSelectedRutina] = useState<RutinaDisplay | null>(
-    null
-  );
+  const [selectedRutina, setSelectedRutina] = useState<Rutina | null>(null);
   const [openModalVer, setOpenModalVer] = useState(false);
-  const [rutinaVer, setRutinaVer] = useState<RutinaDisplay | null>(null);
+  const [rutinaVer, setRutinaVer] = useState<Rutina | null>(null);
   const [selectedNiveles, setSelectedNiveles] = useState<string[]>([]);
   const [selectedObjetivos, setSelectedObjetivos] = useState<string[]>([]);
   const [niveles, setNiveles] = useState<Nivel[]>([]);
@@ -76,50 +66,28 @@ export default function RutinasPage() {
       const rutinasData: Rutina[] = response.data;
 
       const rutinasDisplay: RutinaDisplay[] = rutinasData.map((rutina) => {
-        let diasCalculados = "Sin definir";
+        let rutinaDesc = rutina.rutina_desc;
 
-        if (rutina.rutina_desc) {
-          let rutinaDesc = rutina.rutina_desc;
-
-          if (typeof rutina.rutina_desc === "string") {
-            try {
-              rutinaDesc = JSON.parse(rutina.rutina_desc);
-            } catch (e) {
-              console.warn("Error parsing rutina_desc JSON:", e);
-            }
-          }
-
-          if (rutinaDesc && rutinaDesc.semana) {
-            const diasSemana = Object.keys(rutinaDesc.semana);
-            const diasFormateados = diasSemana.map(
-              (dia) => dia.charAt(0).toUpperCase() + dia.slice(1)
-            );
-            diasCalculados = `${diasSemana.length} días (${diasFormateados.join(
-              ", "
-            )})`;
+        if (typeof rutina.rutina_desc === "string") {
+          try {
+            rutinaDesc = JSON.parse(rutina.rutina_desc);
+          } catch (e) {
+            console.warn("Error parsing rutina_desc JSON:", e);
           }
         }
 
         return {
           id_rutina: rutina.id_rutina,
-          socio: user.nombre || "Socio",
-          objetivo: "Objetivo por definir",
-          nivel: "Nivel por definir",
-          fecha: rutina.creado_en
-            ? new Date(rutina.creado_en).toLocaleDateString()
-            : new Date().toLocaleDateString(),
-          dias: diasCalculados,
+          rutina_desc: rutinaDesc,
           creado_en: rutina.creado_en || new Date().toISOString(),
         };
       });
 
       setRutinas(rutinasDisplay);
-      setFilteredRutinas(rutinasDisplay);
     } catch (error) {
       console.error("Error al cargar rutinas:", error);
       toast.error("Error al cargar rutinas");
       setRutinas([]);
-      setFilteredRutinas([]);
     } finally {
       setLoading(false);
     }
@@ -182,49 +150,6 @@ export default function RutinasPage() {
     window.print();
   };
 
-  const handleExportPDF = () => {
-    const tableBody = [
-      ["Socio", "Objetivo", "Nivel", "Fecha", "Días"],
-      ...filteredRutinas.map((r) => [
-        r.socio,
-        r.objetivo,
-        r.nivel,
-        r.fecha,
-        r.dias,
-      ]),
-    ];
-
-    const docDefinition: import("pdfmake/interfaces").TDocumentDefinitions = {
-      content: [
-        {
-          text: "Listado de Rutinas",
-          style: "header",
-          margin: [0, 0, 0, 12] as [number, number, number, number],
-        },
-        {
-          table: {
-            headerRows: 1,
-            widths: ["*", "*", "*", "*", "*"],
-            body: tableBody,
-          },
-          layout: "lightHorizontalLines",
-        },
-      ],
-      styles: {
-        header: {
-          fontSize: 18,
-          bold: true,
-        },
-      },
-      defaultStyle: {
-        fontSize: 10,
-      },
-      pageOrientation: "landscape",
-    };
-
-    pdfMake.createPdf(docDefinition).download("Listado_Rutinas.pdf");
-  };
-
   const handleNivelChange = (nivel: string, checked: boolean) => {
     if (checked) {
       setSelectedNiveles([...selectedNiveles, nivel]);
@@ -241,33 +166,6 @@ export default function RutinasPage() {
     }
   };
 
-  useEffect(() => {
-    let rutinasFiltradas = rutinas;
-    if (selectedNiveles.length > 0) {
-      rutinasFiltradas = rutinasFiltradas.filter((r) =>
-        selectedNiveles.includes(r.nivel)
-      );
-    }
-
-    if (selectedObjetivos.length > 0) {
-      rutinasFiltradas = rutinasFiltradas.filter((r) =>
-        selectedObjetivos.includes(r.objetivo)
-      );
-    }
-
-    if (searchTerm.trim() !== "") {
-      const lowercaseSearch = searchTerm.toLowerCase();
-      rutinasFiltradas = rutinasFiltradas.filter(
-        (r) =>
-          r.socio.toLowerCase().includes(lowercaseSearch) ||
-          r.objetivo.toLowerCase().includes(lowercaseSearch) ||
-          r.nivel.toLowerCase().includes(lowercaseSearch)
-      );
-    }
-
-    setFilteredRutinas(rutinasFiltradas);
-  }, [searchTerm, rutinas, selectedNiveles, selectedObjetivos]);
-
   if (!isInitialized) {
     return <div>Cargando...</div>;
   }
@@ -282,7 +180,7 @@ export default function RutinasPage() {
         <AppSidebar />
         <SidebarInset>
           <AppHeader title="Rutinas" />
-          <main className="flex-1 p-6 space-y-6">
+          <main className="flex-1">
             <Card className="w-full">
               <CardHeader className="flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap">
                 <h2 className="text-xl font-bold">Mis Rutinas</h2>
@@ -383,14 +281,6 @@ export default function RutinasPage() {
                     <span className="hidden sm:inline">Imprimir</span>
                   </Button>
                   <Button
-                    variant="outline"
-                    onClick={handleExportPDF}
-                    className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
-                  >
-                    <FileSpreadsheet className="w-4 h-4" />
-                    <span className="hidden sm:inline">Exportar</span>
-                  </Button>
-                  <Button
                     onClick={() => setOpenModal(true)}
                     className="bg-[#02a8e1] hover:bg-[#0288b1]"
                   >
@@ -399,29 +289,24 @@ export default function RutinasPage() {
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent className="p-4 space-y-4">
-                <div className="overflow-x-auto">
-                  <RutinasTable
-                    rutinas={filteredRutinas}
-                    loading={loading}
-                    onEdit={(rutina) => {
-                      setSelectedRutina(rutina);
-                      setOpenModal(true);
-                    }}
-                    onView={(rutina) => {
-                      setRutinaVer(rutina);
-                      setOpenModalVer(true);
-                    }}
-                    onDelete={async () => {
-                      const confirmar = window.confirm(
-                        "¿Está seguro de eliminar la rutina?"
-                      );
-                      if (!confirmar) return;
-                      toast.success("Rutina eliminada correctamente");
-                      fetchRutinas();
-                    }}
-                  />
-                </div>
+              <CardContent className="p-4">
+                <RutinaDisplay
+                  onView={(rutina) => {
+                    setRutinaVer(rutina);
+                    setOpenModalVer(true);
+                  }}
+                  onEdit={(rutina) => {
+                    setSelectedRutina(rutina);
+                    setOpenModal(true);
+                  }}
+                  onDelete={async () => {
+                    const confirmar = window.confirm(
+                      "¿Está seguro de eliminar la rutina?"
+                    );
+                    if (!confirmar) return;
+                    await fetchRutinas();
+                  }}
+                />
               </CardContent>
             </Card>
           </main>

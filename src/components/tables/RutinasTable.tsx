@@ -13,15 +13,7 @@ import {
   TableRow,
   TableCaption,
 } from "@/components/ui/table";
-
-export interface Rutina {
-  id_rutina: string;
-  objetivo: string;
-  nivel: string;
-  fecha: string;
-  dias: string;
-  creado_en: string;
-}
+import { Rutina } from "@/interfaces/rutina.interface";
 
 export default function RutinasTable({
   rutinas,
