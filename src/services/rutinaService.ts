@@ -94,3 +94,16 @@ export const historialRutinaSocio = async (user: any,id_socio: string) : Promise
     return data;
 
 }
+
+export const dataRetencionPorCombinacion = async (user: any) => {
+    const supabase = getSupabaseClient(user.dbName);
+    const { data, error } = await supabase
+        .rpc('calcular_retencion_por_combinacion');
+
+    if (error) {
+        console.log("Error en la obtención de retención por combinación:", error.message);
+        throw new Error(error.message);
+    }
+
+    return data;
+}
