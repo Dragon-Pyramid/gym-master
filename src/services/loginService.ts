@@ -3,6 +3,7 @@ import { getSupabaseClient } from "./supabaseClient";
 import * as bcrypt from "bcryptjs";
 import * as jwt from "jsonwebtoken";
 import { getSocioByIdUsuario } from "./socioService";
+import { JwtUser } from "@/interfaces/jwtUser.interface";
 
 export const signIn = async (login: SignInDto) => {
   const { email, password, rol, dbName } = login;
@@ -52,15 +53,7 @@ export const signIn = async (login: SignInDto) => {
     throw new Error("Usuario inactivo");
   }
 
-  const basePayload: {
-    sub: string;
-    id: string;
-    email: string;
-    rol: string;
-    dbName: string;
-    nombre: string;
-    id_socio?: string;
-  } = {
+  const basePayload: JwtUser = {
     sub: data.id,
     id: data.id,
     id_socio: "",
