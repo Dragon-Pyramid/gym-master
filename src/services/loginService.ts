@@ -53,10 +53,17 @@ export const signIn = async (login: SignInDto) => {
     throw new Error("Usuario inactivo");
   }
 
-  const basePayload: JwtUser = {
+  const basePayload: {
+    sub: string;
+    id: string;
+    email: string;
+    rol: string;
+    dbName: string;
+    nombre: string;
+    id_socio?: string;
+  } = {
     sub: data.id,
     id: data.id,
-    id_socio: "",
     email: data.email,
     rol: data.rol,
     dbName,
