@@ -5,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Rutina } from "@/components/tables/RutinasTable";
+import { Rutina } from "@/interfaces/rutina.interface";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Eye } from "lucide-react";
@@ -20,108 +20,31 @@ import pdfFonts from "pdfmake/build/vfs_fonts";
 
 pdfMake.vfs = pdfFonts.vfs;
 
-const ejerciciosPorDia: Record<
-  string,
-  { name: string; sets: number; reps: number | string; gif?: string }[]
-> = {
-  Lunes: [
-    {
-      name: "Bench Press",
-      sets: 4,
-      reps: 10,
-      gif: "https://i.pinimg.com/originals/f1/52/16/f15216ce06438b9ee776941c4f74dc6e.gif",
-    },
-    {
-      name: "Incline Dumbbell Press",
-      sets: 3,
-      reps: 12,
-      gif: "https://i.pinimg.com/originals/6e/8e/2b/6e8e2b3e2b1e4b8e8e2b3e2b1e4b8e8e.gif",
-    },
-  ],
-  Martes: [
-    {
-      name: "Deadlift",
-      sets: 4,
-      reps: 8,
-      gif: "https://i.pinimg.com/originals/7b/6e/2e/7b6e2e2b1e4b8e8e2b3e2b1e4b8e8e2b.gif",
-    },
-    {
-      name: "Lat Pulldown",
-      sets: 3,
-      reps: 10,
-      gif: "https://i.pinimg.com/originals/8c/8e/2b/8c8e2b3e2b1e4b8e8e2b3e2b1e4b8e8e.gif",
-    },
-  ],
-  Miércoles: [
-    {
-      name: "Squats",
-      sets: 4,
-      reps: 10,
-      gif: "https://i.pinimg.com/originals/9d/8e/2b/9d8e2b3e2b1e4b8e8e2b3e2b1e4b8e8e.gif",
-    },
-    {
-      name: "Leg Press",
-      sets: 3,
-      reps: 12,
-      gif: "https://i.pinimg.com/originals/1a/8e/2b/1a8e2b3e2b1e4b8e8e2b3e2b1e4b8e8e.gif",
-    },
-  ],
-  Jueves: [
-    {
-      name: "Overhead Press",
-      sets: 4,
-      reps: 10,
-      gif: "https://i.pinimg.com/originals/2b/8e/2b/2b8e2b3e2b1e4b8e8e2b3e2b1e4b8e8e.gif",
-    },
-    {
-      name: "Lateral Raises",
-      sets: 3,
-      reps: 15,
-      gif: "https://i.pinimg.com/originals/3c/8e/2b/3c8e2b3e2b1e4b8e8e2b3e2b1e4b8e8e.gif",
-    },
-  ],
-  Viernes: [
-    {
-      name: "Bicep Curls",
-      sets: 3,
-      reps: 12,
-      gif: "https://i.pinimg.com/originals/4d/8e/2b/4d8e2b3e2b1e4b8e8e2b3e2b1e4b8e8e.gif",
-    },
-    {
-      name: "Tricep Extensions",
-      sets: 3,
-      reps: 12,
-      gif: "https://i.pinimg.com/originals/5e/8e/2b/5e8e2b3e2b1e4b8e8e2b3e2b1e4b8e8e.gif",
-    },
-  ],
-  Sábado: [
-    {
-      name: "Plank",
-      sets: 3,
-      reps: "60s",
-      gif: "https://i.pinimg.com/originals/6f/8e/2b/6f8e2b3e2b1e4b8e8e2b3e2b1e4b8e8e.gif",
-    },
-    {
-      name: "Russian Twists",
-      sets: 3,
-      reps: 20,
-      gif: "https://i.pinimg.com/originals/7a/8e/2b/7a8e2b3e2b1e4b8e8e2b3e2b1e4b8e8e.gif",
-    },
-  ],
-  Domingo: [],
-};
-
 function EjerciciosModal({
   open,
   onClose,
-  dias,
+  rutina,
 }: {
   open: boolean;
   onClose: () => void;
-  dias: string[];
+  rutina: Rutina;
 }) {
   const [gifEjercicio, setGifEjercicio] = useState<string | null>(null);
   const [exportando, setExportando] = useState(false);
+
+  const obtenerEjerciciosPorDia = () => {
+    try {
+      if (rutina.rutina_desc && rutina.rutina_desc.semana) {
+        return rutina.rutina_desc.semana;
+      }
+      return {};
+    } catch {
+      return {};
+    }
+  };
+
+  const ejerciciosPorDia = obtenerEjerciciosPorDia();
+  const dias = Object.keys(ejerciciosPorDia);
 
   const handleExportarPDF = async () => {
     setExportando(true);
@@ -133,10 +56,10 @@ function EjerciciosModal({
       if (ejerciciosPorDia[dia] && ejerciciosPorDia[dia].length > 0) {
         const tableBody = [
           ["Ejercicio", "Series", "Repeticiones"],
-          ...ejerciciosPorDia[dia].map((ej) => [
-            ej.name,
-            ej.sets.toString(),
-            ej.reps.toString(),
+          ...ejerciciosPorDia[dia].map((ej: any) => [
+            ej.ejercicio,
+            ej.series.toString(),
+            ej.repeticiones.toString(),
           ]),
         ];
         content.push({
@@ -155,14 +78,6 @@ function EjerciciosModal({
           subheader: { fontSize: 14, bold: true },
         },
         defaultStyle: { font: "Roboto" },
-        fonts: {
-          Roboto: {
-            normal: "Roboto-Regular.ttf",
-            bold: "Roboto-Medium.ttf",
-            italics: "Roboto-Italic.ttf",
-            bolditalics: "Roboto-MediumItalic.ttf",
-          },
-        },
       })
       .download("ejercicios.pdf");
     setExportando(false);
@@ -191,20 +106,23 @@ function EjerciciosModal({
                 <AccordionContent>
                   {ejerciciosPorDia[dia] && ejerciciosPorDia[dia].length > 0 ? (
                     <ul className="space-y-3">
-                      {ejerciciosPorDia[dia].map((ej, idx) => (
+                      {ejerciciosPorDia[dia].map((ej: any, idx: number) => (
                         <li
                           key={idx}
                           className="flex items-center justify-between gap-2"
                         >
                           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                             <span className="font-medium text-foreground">
-                              {ej.name}
+                              {ej.ejercicio}
                             </span>
                             <span className="text-sm text-foreground">
-                              Series: {ej.sets}
+                              Series: {ej.series}
                             </span>
                             <span className="text-sm text-foreground">
-                              Reps: {ej.reps}
+                              Reps: {ej.repeticiones}
+                            </span>
+                            <span className="text-sm text-foreground">
+                              Descanso: {ej.descanso}
                             </span>
                           </div>
                           <Button
@@ -217,7 +135,7 @@ function EjerciciosModal({
                           {gifEjercicio === `${dia}-${idx}` && (
                             <div className="flex flex-col items-center w-full mt-2">
                               <img
-                                src={ej.gif}
+                                src={ej.imagen}
                                 alt="gif ejercicio"
                                 className="w-full h-auto max-w-xs rounded-md"
                               />
@@ -230,8 +148,8 @@ function EjerciciosModal({
                                   Cerrar
                                 </Button>
                                 <a
-                                  href={ej.gif}
-                                  download={`ejercicio-${ej.name}.gif`}
+                                  href={ej.imagen}
+                                  download={`ejercicio-${ej.ejercicio}.gif`}
                                   className="inline-block"
                                 >
                                   <Button size="sm" variant="outline">
@@ -270,7 +188,18 @@ export default function RutinaModalView({
 
   if (!rutina) return null;
 
-  const diasRutina = rutina.dias.split(",").map((d) => d.trim());
+  const obtenerDiasRutina = () => {
+    try {
+      if (rutina.rutina_desc && rutina.rutina_desc.semana) {
+        return Object.keys(rutina.rutina_desc.semana);
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  };
+
+  const diasRutina = obtenerDiasRutina();
 
   return (
     <>
@@ -288,36 +217,30 @@ export default function RutinaModalView({
             <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">
-                  Socio
+                  Nombre
                 </label>
                 <div className="p-2 border rounded-md bg-muted text-foreground border-border">
-                  {rutina.socio || "-"}
+                  {rutina.nombre || "-"}
                 </div>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">
-                  Objetivo
+                  Semana
                 </label>
                 <div className="p-2 border rounded-md bg-muted text-foreground border-border">
-                  {rutina.objetivo || "-"}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">
-                  Nivel
-                </label>
-                <div className="p-2 border rounded-md bg-muted text-foreground border-border">
-                  {rutina.nivel || "-"}
+                  {rutina.semana || "-"}
                 </div>
               </div>
             </div>
             <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">
-                  Fecha
+                  Creado en
                 </label>
                 <div className="p-2 border rounded-md bg-muted text-foreground border-border">
-                  {rutina.fecha || "-"}
+                  {rutina.creado_en
+                    ? new Date(rutina.creado_en).toLocaleDateString()
+                    : "-"}
                 </div>
               </div>
               <div className="space-y-2">
@@ -325,7 +248,9 @@ export default function RutinaModalView({
                   Días
                 </label>
                 <div className="flex flex-wrap items-center gap-2 p-2 border rounded-md bg-muted text-foreground border-border">
-                  <span className="truncate">{rutina.dias || "-"}</span>
+                  <span className="truncate">
+                    {diasRutina.join(", ") || "-"}
+                  </span>
                   <Button
                     variant="outline"
                     size="sm"
@@ -342,7 +267,7 @@ export default function RutinaModalView({
       <EjerciciosModal
         open={modalEjercicios}
         onClose={() => setModalEjercicios(false)}
-        dias={diasRutina}
+        rutina={rutina}
       />
     </>
   );

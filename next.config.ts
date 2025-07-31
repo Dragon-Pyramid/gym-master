@@ -11,6 +11,34 @@ const nextConfig = {
   experimental: {
     serverActions: {},
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "www.aesthetics-blog.com",
+      },
+      {
+        protocol: "https",
+        hostname: "i.pinimg.com",
+      },
+      {
+        protocol: "https",
+        hostname: "vitruve.fit",
+      },
+      {
+        protocol: "https",
+        hostname: "boxlifemagazine.com",
+      },
+      {
+        protocol: "https",
+        hostname: "fitcron.com",
+      },
+      {
+        protocol: "https",
+        hostname: "menspower.nl",
+      },
+    ],
+  },
 };
 
 module.exports = withPWA(nextConfig);

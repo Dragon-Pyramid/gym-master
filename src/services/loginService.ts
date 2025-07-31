@@ -3,6 +3,7 @@ import { getSupabaseClient } from "./supabaseClient";
 import * as bcrypt from "bcryptjs";
 import * as jwt from "jsonwebtoken";
 import { getSocioByIdUsuario } from "./socioService";
+import { JwtUser } from "@/interfaces/jwtUser.interface";
 
 export const signIn = async (login: SignInDto) => {
   const { email, password, rol, dbName } = login;
@@ -52,21 +53,33 @@ export const signIn = async (login: SignInDto) => {
     throw new Error("Usuario inactivo");
   }
 
-  const socio = await getSocioByIdUsuario(data.id);
-  if (!socio) {
-    console.log("No se encontró el socio asociado al usuario");
-    throw new Error("No se encontró el socio asociado al usuario");
-  }
-
-  const payload = {
+  const basePayload: {
+    sub: string;
+    id: string;
+    email: string;
+    rol: string;
+    dbName: string;
+    nombre: string;
+    id_socio?: string;
+  } = {
     sub: data.id,
     id: data.id,
-    id_socio: socio.id_socio,
     email: data.email,
     rol: data.rol,
     dbName,
     nombre: data.nombre,
   };
+
+  if (rol === "socio") {
+    const socio = await getSocioByIdUsuario(data.id);
+    if (!socio) {
+      console.log("No se encontró el socio asociado al usuario");
+      throw new Error("No se encontró el socio asociado al usuario");
+    }
+    basePayload.id_socio = socio.id_socio;
+  }
+
+  const payload = basePayload;
   if (!process.env.JWT_SECRET) {
     throw new Error("JWT_SECRET no está definido en las variables de entorno");
   }
