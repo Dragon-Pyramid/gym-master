@@ -53,17 +53,10 @@ export const signIn = async (login: SignInDto) => {
     throw new Error("Usuario inactivo");
   }
 
-  const basePayload: {
-    sub: string;
-    id: string;
-    email: string;
-    rol: string;
-    dbName: string;
-    nombre: string;
-    id_socio?: string;
-  } = {
+  const basePayload: JwtUser = {
     sub: data.id,
     id: data.id,
+    id_socio: "",
     email: data.email,
     rol: data.rol,
     dbName,
@@ -71,7 +64,7 @@ export const signIn = async (login: SignInDto) => {
   };
 
   if (rol === "socio") {
-    const socio = await getSocioByIdUsuario(data.id);
+    const socio = await getSocioByIdUsuario(data.id, dbName);
     if (!socio) {
       console.log("No se encontró el socio asociado al usuario");
       throw new Error("No se encontró el socio asociado al usuario");

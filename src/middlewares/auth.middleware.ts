@@ -1,6 +1,7 @@
+import { JwtUser } from '@/interfaces/jwtUser.interface';
 import * as jwt  from 'jsonwebtoken';
 
-export async function authMiddleware(req: Request) {
+export async function authMiddleware(req: Request) : Promise<{ user: JwtUser }> {
     const token = req.headers.get("authorization")?.split(' ')[1];
     
     if (!token) {
@@ -12,9 +13,10 @@ export async function authMiddleware(req: Request) {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if(!decoded){
+    if (!decoded || typeof decoded === 'string') {
         throw new Error("Token inválido");
     }
-    return { user: decoded };
+    const user: JwtUser = decoded as JwtUser;
+    return { user };
 
     }
