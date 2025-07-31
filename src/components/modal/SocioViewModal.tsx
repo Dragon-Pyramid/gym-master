@@ -71,7 +71,7 @@ export default function SocioViewModal({
             <div className="space-y-2">
               <label className="text-sm font-medium">Fecha Alta</label>
               <div className="p-2 border rounded-md bg-muted text-foreground">
-                {socio.fecha_baja || "-"}
+                {socio.fecha_alta || "-"}
               </div>
             </div>
           </div>
