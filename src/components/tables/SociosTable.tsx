@@ -13,17 +13,7 @@ import {
   TableRow,
   TableCaption,
 } from "@/components/ui/table";
-
-export interface Socio {
-  id_socio: string;
-  nombre_completo: string;
-  dni: string;
-  direccion: string;
-  telefono: string;
-  email: string;
-  fecha_alta: string;
-  activo: boolean;
-}
+import { Socio } from "@/interfaces/socio.interface";
 
 export default function SociosTable({
   socios,
@@ -42,7 +32,7 @@ export default function SociosTable({
     return (
       <div className="space-y-2">
         {[...Array(5)].map((_, i) => (
-          <Skeleton key={i} className="h-9 w-full rounded-md" />
+          <Skeleton key={i} className="w-full rounded-md h-9" />
         ))}
       </div>
     );
@@ -50,14 +40,14 @@ export default function SociosTable({
 
   if (socios.length === 0 && !loading) {
     return (
-      <div className="text-center text-muted-foreground py-10">
+      <div className="py-10 text-center text-muted-foreground">
         No hay socios registrados aún.
       </div>
     );
   }
 
   return (
-    <Table className="w-full text-sm border border-border rounded-md overflow-hidden">
+    <Table className="w-full overflow-hidden text-sm border rounded-md border-border">
       <TableHeader>
         <TableRow className="bg-muted/50 text-muted-foreground">
           <TableHead>DNI</TableHead>
