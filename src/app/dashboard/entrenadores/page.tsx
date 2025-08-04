@@ -17,6 +17,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 import ExcelJS from "exceljs";
 import { Entrenador } from "@/interfaces/entrenador.interface";
+import { getEntrenadores } from "@/services/apiClient";
 
 export default function EntrenadoresPage() {
   const { isAuthenticated, initializeAuth, isInitialized } = useAuthStore();
@@ -45,19 +46,16 @@ export default function EntrenadoresPage() {
 
   const loadEntrenadores = async () => {
     setLoading(true);
-    const mockData: Entrenador[] = [
-      {
-        id: "1",
-        nombre_completo: "Juan Pérez",
-        dni: "12345678",
-        fecha_alta: "2024-01-15",
-        horarios_texto: "Lun-Vie: 08:00-12:00, 14:00-18:00",
-        created_at: "2024-01-15T10:00:00Z",
-        updated_at: "2024-01-15T10:00:00Z",
-      },
-    ];
-    setEntrenadores(mockData);
-    setFilteredEntrenadores(mockData);
+    try {
+      const res = await getEntrenadores();
+      const data = res.data || [];
+      setEntrenadores(data);
+      setFilteredEntrenadores(data);
+    } catch {
+      setEntrenadores([]);
+      setFilteredEntrenadores([]);
+      toast.error("Error al cargar entrenadores");
+    }
     setLoading(false);
   };
 

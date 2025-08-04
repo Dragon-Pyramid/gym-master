@@ -240,3 +240,61 @@ export async function generarNuevaRutina(body: {
   const data = await res.json();
   return { ok: res.ok, data };
 }
+
+export async function crearEntrenador(body: any) {
+  const token = getToken();
+  const res = await fetch("/api/entrenadores", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
+export async function getEntrenador(id: number | string) {
+  const token = getToken();
+  const res = await fetch(`/api/entrenadores/${id}`, {
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
+export async function getEntrenadores() {
+  const token = getToken();
+  const res = await fetch(`/api/entrenadores`, {
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
+export async function getHorariosEntrenador(id: number | string) {
+  const token = getToken();
+  const res = await fetch(`/api/entrenadores/${id}/horarios`, {
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
+export async function actualizarEntrenador(id: number | string, body: any) {
+  const token = getToken();
+  const res = await fetch(`/api/entrenadores/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}

@@ -3,18 +3,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Minus } from "lucide-react";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { toast } from "sonner";
-import {
-  Entrenador,
-  CreateEntrenadorDto,
-  UpdateEntrenadorDto,
-  DiaHorario,
-  BloqueHorario,
-} from "@/interfaces/entrenador.interface";
+import { crearEntrenador, actualizarEntrenador } from "@/services/apiClient";
+import { Entrenador } from "@/interfaces/entrenador.interface";
 
 export interface EntrenadorFormProps {
   entrenador?: Entrenador | null;
@@ -22,13 +14,13 @@ export interface EntrenadorFormProps {
 }
 
 const diasSemana = [
-  { id: "lunes", label: "Lunes" },
-  { id: "martes", label: "Martes" },
-  { id: "miercoles", label: "Miércoles" },
-  { id: "jueves", label: "Jueves" },
-  { id: "viernes", label: "Viernes" },
-  { id: "sabado", label: "Sábado" },
-  { id: "domingo", label: "Domingo" },
+  { id: "Lunes", label: "Lunes" },
+  { id: "Martes", label: "Martes" },
+  { id: "Miércoles", label: "Miércoles" },
+  { id: "Jueves", label: "Jueves" },
+  { id: "Viernes", label: "Viernes" },
+  { id: "Sábado", label: "Sábado" },
+  { id: "Domingo", label: "Domingo" },
 ];
 
 const emptyForm = {
@@ -40,11 +32,18 @@ export default function EntrenadorForm({
   entrenador,
   onCreated,
 }: EntrenadorFormProps) {
-  const [form, setForm] = useState(emptyForm);
-  const [diasSeleccionados, setDiasSeleccionados] = useState<string[]>([]);
-  const [horarios, setHorarios] = useState<{ [dia: string]: BloqueHorario[] }>(
-    {}
+  const [form, setForm] = useState(
+    entrenador
+      ? {
+          nombre_completo: entrenador.nombre_completo,
+          dni: entrenador.dni,
+        }
+      : emptyForm
   );
+  const [diasSeleccionados, setDiasSeleccionados] = useState<string[]>([]);
+  const [horarios, setHorarios] = useState<{
+    [dia: string]: { hora_desde: string; hora_hasta: string }[];
+  }>({});
   const [loading, setLoading] = useState(false);
 
   const agregarBloque = (dia: string) => {
@@ -94,81 +93,55 @@ export default function EntrenadorForm({
     }
   };
 
-  const validarHorarios = (): boolean => {
-    for (const dia of diasSeleccionados) {
-      const bloques = horarios[dia] || [];
-
-      for (let i = 0; i < bloques.length; i++) {
-        const bloque = bloques[i];
-
-        if (!bloque.hora_desde || !bloque.hora_hasta) {
-          toast.error(`Complete todos los horarios para ${dia}`);
-          return false;
-        }
-
-        if (bloque.hora_desde >= bloque.hora_hasta) {
-          toast.error(
-            `La hora de inicio debe ser menor a la hora de fin en ${dia}`
-          );
-          return false;
-        }
-
-        for (let j = i + 1; j < bloques.length; j++) {
-          const otroBloque = bloques[j];
-          if (
-            (bloque.hora_desde < otroBloque.hora_hasta &&
-              bloque.hora_hasta > otroBloque.hora_desde) ||
-            (otroBloque.hora_desde < bloque.hora_hasta &&
-              otroBloque.hora_hasta > bloque.hora_desde)
-          ) {
-            toast.error(`Hay solapamiento de horarios en ${dia}`);
-            return false;
-          }
-        }
-      }
-    }
-    return true;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     if (!form.nombre_completo.trim() || !form.dni.trim()) {
       toast.error("Complete todos los campos obligatorios");
       setLoading(false);
       return;
     }
 
-    if (diasSeleccionados.length === 0) {
-      toast.error("Seleccione al menos un día de la semana");
-      setLoading(false);
-      return;
-    }
-
-    if (!validarHorarios()) {
-      setLoading(false);
-      return;
-    }
-
-    const horariosArray: DiaHorario[] = diasSeleccionados.map((dia) => ({
-      dia,
-      bloques: horarios[dia] || [],
-    }));
-
     try {
-      const payload: CreateEntrenadorDto | UpdateEntrenadorDto = {
-        ...form,
-        horarios: horariosArray,
+      const horariosTexto = diasSeleccionados
+        .map((dia) => {
+          const bloques = horarios[dia] || [];
+          const horariosDelDia = bloques
+            .map((b) => `${b.hora_desde}-${b.hora_hasta}`)
+            .join(", ");
+          return `${
+            diasSemana.find((d) => d.id === dia)?.label
+          }: ${horariosDelDia}`;
+        })
+        .join(" | ");
+
+      const formData = {
+        nombre_completo: form.nombre_completo,
+        dni: form.dni,
+        horarios: diasSeleccionados.map((dia) => ({
+          dia_semana: dia,
+          bloques: horarios[dia] || [],
+        })),
+        horarios_texto: horariosTexto,
       };
 
-      console.log("Payload:", payload);
-      toast.success(
-        entrenador
-          ? "Entrenador actualizado correctamente"
-          : "Entrenador creado correctamente"
-      );
-      onCreated();
+      if (entrenador && entrenador.id) {
+        const { ok } = await actualizarEntrenador(entrenador.id, formData);
+        if (ok) {
+          toast.success("Entrenador actualizado correctamente");
+          onCreated();
+        } else {
+          throw new Error();
+        }
+      } else {
+        const { ok } = await crearEntrenador(formData);
+        if (ok) {
+          toast.success("Entrenador creado correctamente");
+          onCreated();
+        } else {
+          throw new Error();
+        }
+      }
     } catch {
       toast.error("Error al guardar entrenador");
     } finally {
@@ -180,10 +153,16 @@ export default function EntrenadorForm({
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="nombre_completo">Nombre completo *</Label>
+          <label
+            htmlFor="nombre_completo"
+            className="block text-sm font-medium"
+          >
+            Nombre completo
+          </label>
           <Input
             id="nombre_completo"
             type="text"
+            placeholder="Ej: Juan Pérez"
             value={form.nombre_completo}
             onChange={(e) =>
               setForm({ ...form, nombre_completo: e.target.value })
@@ -192,97 +171,79 @@ export default function EntrenadorForm({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="dni">DNI *</Label>
+          <label htmlFor="dni" className="block text-sm font-medium">
+            DNI
+          </label>
           <Input
             id="dni"
             type="text"
+            placeholder="Ej: 12345678"
             value={form.dni}
             onChange={(e) => setForm({ ...form, dni: e.target.value })}
             required
           />
         </div>
       </div>
-
       <Card>
-        <CardHeader>
-          <CardTitle>Horarios de trabajo</CardTitle>
-        </CardHeader>
+        <CardHeader>Días y horarios</CardHeader>
         <CardContent className="space-y-4">
-          {diasSemana.map((dia) => (
-            <div key={dia.id} className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id={dia.id}
+          <div className="flex flex-wrap gap-4">
+            {diasSemana.map((dia) => (
+              <label key={dia.id} className="flex items-center gap-2">
+                <input
+                  type="checkbox"
                   checked={diasSeleccionados.includes(dia.id)}
-                  onCheckedChange={(checked) =>
-                    toggleDia(dia.id, checked as boolean)
-                  }
+                  onChange={(e) => toggleDia(dia.id, e.target.checked)}
                 />
-                <Label htmlFor={dia.id} className="font-medium">
-                  {dia.label}
-                </Label>
+                {dia.label}
+              </label>
+            ))}
+          </div>
+          {diasSeleccionados.map((dia) => (
+            <div key={dia} className="p-3 mt-4 border rounded">
+              <div className="mb-2 font-semibold">
+                {diasSemana.find((d) => d.id === dia)?.label}
               </div>
-
-              {diasSeleccionados.includes(dia.id) && (
-                <div className="ml-6 space-y-2">
-                  {(horarios[dia.id] || []).map((bloque, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <Input
-                        type="time"
-                        value={bloque.hora_desde}
-                        onChange={(e) =>
-                          actualizarBloque(
-                            dia.id,
-                            index,
-                            "hora_desde",
-                            e.target.value
-                          )
-                        }
-                        className="w-32"
-                        placeholder="Desde"
-                      />
-                      <span>-</span>
-                      <Input
-                        type="time"
-                        value={bloque.hora_hasta}
-                        onChange={(e) =>
-                          actualizarBloque(
-                            dia.id,
-                            index,
-                            "hora_hasta",
-                            e.target.value
-                          )
-                        }
-                        className="w-32"
-                        placeholder="Hasta"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => eliminarBloque(dia.id, index)}
-                        disabled={horarios[dia.id].length === 1}
-                      >
-                        <Minus className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
+              {(horarios[dia] || []).map((bloque, idx) => (
+                <div key={idx} className="flex items-center gap-2 mb-2">
+                  <input
+                    type="time"
+                    value={bloque.hora_desde}
+                    onChange={(e) =>
+                      actualizarBloque(dia, idx, "hora_desde", e.target.value)
+                    }
+                    className="px-2 py-1 border rounded"
+                  />
+                  <span>a</span>
+                  <input
+                    type="time"
+                    value={bloque.hora_hasta}
+                    onChange={(e) =>
+                      actualizarBloque(dia, idx, "hora_hasta", e.target.value)
+                    }
+                    className="px-2 py-1 border rounded"
+                  />
                   <Button
                     type="button"
-                    variant="outline"
                     size="sm"
-                    onClick={() => agregarBloque(dia.id)}
+                    variant="destructive"
+                    onClick={() => eliminarBloque(dia, idx)}
                   >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Agregar horario
+                    Eliminar
                   </Button>
                 </div>
-              )}
+              ))}
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => agregarBloque(dia)}
+              >
+                Agregar bloque horario
+              </Button>
             </div>
           ))}
         </CardContent>
       </Card>
-
       <div className="flex justify-end gap-4">
         <Button
           type="submit"
