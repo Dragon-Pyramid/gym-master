@@ -4,7 +4,6 @@ import * as jwt from "jsonwebtoken";
 import { getSocioByIdUsuario } from "./socioService";
 import { JwtUser } from "@/interfaces/jwtUser.interface";
 import { conexionBD } from "@/middlewares/conexionBd.middleware";
-import { conexionBD } from "@/middlewares/conexionBd.middleware";
 
 export const signIn = async (login: SignInDto) => {
   const { email, password, rol, dbName } = login;
@@ -14,7 +13,6 @@ export const signIn = async (login: SignInDto) => {
     );
   }
   //ME CONECTO A LA BD DINAMICAMENTE, CON SU NOMBRE
-  const supabase = conexionBD(dbName);
   const supabase = conexionBD(dbName);
   //BUSCO EN ESA BD, EL USUARIO
   const { data, error } = await supabase
@@ -33,14 +31,14 @@ export const signIn = async (login: SignInDto) => {
     throw new Error("Usuario no encontrado o contraseña incorrecta");
   }
 
-  // const validatePassword = bcrypt.compareSync(password, data.password_hash);
+   const validatePassword = bcrypt.compareSync(password, data.password_hash);
 
-  // if (!validatePassword) {
-  //   console.log("Contraseña incorrecta");
-  //   throw new Error("Usuario no encontrado o contraseña incorrecta");
-  // }
+ if (!validatePassword) {
+     console.log("Contraseña incorrecta");
+     throw new Error("Usuario no encontrado o contraseña incorrecta");
+   }
 
-  console.log("SALTANDO VALIDACIÓN DE CONTRASEÑA TEMPORALMENTE");
+  //console.log("SALTANDO VALIDACIÓN DE CONTRASEÑA TEMPORALMENTE");
 
   if (data.rol !== rol) {
     console.log("Rol no autorizado");
@@ -52,10 +50,8 @@ export const signIn = async (login: SignInDto) => {
   }
 
   const basePayload: JwtUser = {
-  const basePayload: JwtUser = {
     sub: data.id,
     id: data.id,
-    id_socio: "",
     id_socio: "",
     email: data.email,
     rol: data.rol,
@@ -64,8 +60,8 @@ export const signIn = async (login: SignInDto) => {
   };
 
   if (rol === "socio") {
-    //const socio = await getSocioByIdUsuario(data.id, dbName);
-    const socio = await getSocioByIdUsuario(data.id);
+    const socio = await getSocioByIdUsuario(data.id, dbName);
+   // const socio = await getSocioByIdUsuario(data.id);
 
     if (!socio) {
       console.log("No se encontró el socio asociado al usuario");
