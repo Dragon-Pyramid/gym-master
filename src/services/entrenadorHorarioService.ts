@@ -74,3 +74,19 @@ export const createEntrenadorHorario = async (
         }
     }
 };
+
+export const getHorariosByEntrenadorId = async (id: string, user: JwtUser) => {
+    const supabase = conexionBD(user.dbName);
+    const { data, error } = await supabase
+        .from('entrenador_horarios')
+        .select('*')
+        .eq('entrenador_id', id)
+        .eq('activo', true);
+
+    if (error) {
+        console.error("Error al obtener los horarios del entrenador:", error);
+        throw new Error(error.message);
+    }
+
+    return data ;
+};
