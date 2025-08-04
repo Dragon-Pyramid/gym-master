@@ -12,7 +12,8 @@ import { Search, Printer, FileSpreadsheet } from "lucide-react";
 import { getAllCuotas, deleteCuota } from "@/services/cuotaService";
 import CuotasModal from "@/components/modal/CuotasModal";
 import CuotasViewModal from "@/components/modal/CuotasViewModal";
-import CuotaTable, { Cuota } from "@/components/tables/CuotaTable";
+import CuotaTable from "@/components/tables/CuotaTable";
+import { Cuota } from "@/interfaces/cuota.interface";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
@@ -37,6 +38,9 @@ export default function CuotasPage() {
   const [openModalVer, setOpenModalVer] = useState(false);
   const [cuotaVer, setCuotaVer] = useState<Cuota | null>(null);
   const [filtroActivo, setFiltroActivo] = useState("todos");
+  const [ordenamiento, setOrdenamiento] = useState("reciente");
+  const userRole = user?.rol;
+  const isAdminOnly = userRole === "admin";
 
   useEffect(() => {
     initializeAuth();
@@ -115,15 +119,28 @@ export default function CuotasPage() {
           c.periodo.toLowerCase().includes(lowercaseSearch)
       );
     }
-    setFilteredCuotas(cuotasFiltradas);
-  }, [searchTerm, cuotas, filtroActivo]);
 
+    cuotasFiltradas = cuotasFiltradas.sort((a, b) => {
+      const fechaA = new Date(a.fecha_inicio || "");
+      const fechaB = new Date(b.fecha_inicio || "");
+      return ordenamiento === "reciente"
+        ? fechaB.getTime() - fechaA.getTime()
+        : fechaA.getTime() - fechaB.getTime();
+    });
+
+    setFilteredCuotas(cuotasFiltradas);
+  }, [searchTerm, cuotas, filtroActivo, ordenamiento]);
   const filtroLabel =
     filtroActivo === "todos"
       ? "Todos"
       : filtroActivo === "activos"
       ? "Activos"
       : "Inactivos";
+
+  const ordenamientoLabel =
+    ordenamiento === "reciente"
+      ? "Más reciente a antigua"
+      : "Más antigua a reciente";
 
   if (!isInitialized) {
     return <div>Cargando...</div>;
@@ -178,6 +195,31 @@ export default function CuotasPage() {
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="min-w-[180px]">
+                          {ordenamientoLabel}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuItem
+                          onSelect={() => setOrdenamiento("reciente")}
+                          className={
+                            ordenamiento === "reciente" ? "font-bold" : ""
+                          }
+                        >
+                          Más reciente a antigua
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onSelect={() => setOrdenamiento("antigua")}
+                          className={
+                            ordenamiento === "antigua" ? "font-bold" : ""
+                          }
+                        >
+                          Más antigua a reciente
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                     <div className="relative flex-grow md:flex-grow-0">
                       <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -205,13 +247,15 @@ export default function CuotasPage() {
                     <FileSpreadsheet className="w-4 h-4" />
                     <span className="hidden sm:inline">Exportar</span>
                   </Button>
-                  <Button
-                    onClick={() => setOpenModal(true)}
-                    className="bg-[#02a8e1] hover:bg-[#0288b1]"
-                  >
-                    <span className="hidden sm:inline">Añadir Cuota</span>
-                    <span className="sm:hidden">Añadir</span>
-                  </Button>
+                  {isAdminOnly && (
+                    <Button
+                      onClick={() => setOpenModal(true)}
+                      className="bg-[#02a8e1] hover:bg-[#0288b1]"
+                    >
+                      <span className="hidden sm:inline">Añadir Cuota</span>
+                      <span className="sm:hidden">Añadir</span>
+                    </Button>
+                  )}
                 </div>
               </CardHeader>
               <CardContent className="p-4 space-y-4">

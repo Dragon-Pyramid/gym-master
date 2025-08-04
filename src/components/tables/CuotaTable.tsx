@@ -14,6 +14,7 @@ import {
   TableCaption,
 } from "@/components/ui/table";
 import { Cuota } from "@/interfaces/cuota.interface";
+import { useAuthStore } from "@/stores/authStore";
 
 export default function CuotaTable({
   cuotas,
@@ -30,6 +31,10 @@ export default function CuotaTable({
   onDelete?: (cuota: Cuota) => void;
   onToggleActivo?: (cuota: Cuota) => void;
 }) {
+  const { user } = useAuthStore();
+  const userRole = user?.rol;
+  const isAdminOnly = userRole === "admin";
+
   if (loading) {
     return (
       <div className="space-y-2">
@@ -81,33 +86,37 @@ export default function CuotaTable({
               >
                 Ver
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onEdit(c)}
-                title="Editar"
-              >
-                <Pencil className="w-4 h-4" />
-              </Button>
-              <Button
-                size="sm"
-                className={
-                  (c.activo
-                    ? "bg-red-500 hover:bg-red-600"
-                    : "bg-green-500 hover:bg-green-600") +
-                  " text-white w-[100px]"
-                }
-                onClick={() => onToggleActivo && onToggleActivo(c)}
-              >
-                {c.activo ? "Desactivar" : "Activar"}
-              </Button>
-              <Button
-                size="sm"
-                className="bg-red-500 hover:bg-red-600 text-white w-[100px]"
-                onClick={() => onDelete && onDelete(c)}
-              >
-                Eliminar
-              </Button>
+              {isAdminOnly && (
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onEdit(c)}
+                    title="Editar"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    className={
+                      (c.activo
+                        ? "bg-red-500 hover:bg-red-600"
+                        : "bg-green-500 hover:bg-green-600") +
+                      " text-white w-[100px]"
+                    }
+                    onClick={() => onToggleActivo && onToggleActivo(c)}
+                  >
+                    {c.activo ? "Desactivar" : "Activar"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-red-500 hover:bg-red-600 text-white w-[100px]"
+                    onClick={() => onDelete && onDelete(c)}
+                  >
+                    Eliminar
+                  </Button>
+                </>
+              )}
             </TableCell>
           </TableRow>
         ))}

@@ -217,22 +217,12 @@ export default function RutinaModalView({
             <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">
-                  Nombre
-                </label>
-                <div className="p-2 border rounded-md bg-muted text-foreground border-border">
-                  {rutina.nombre || "-"}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">
                   Semana
                 </label>
                 <div className="p-2 border rounded-md bg-muted text-foreground border-border">
                   {rutina.semana || "-"}
                 </div>
               </div>
-            </div>
-            <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">
                   Creado en
@@ -243,6 +233,8 @@ export default function RutinaModalView({
                     : "-"}
                 </div>
               </div>
+            </div>
+            <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">
                   Días

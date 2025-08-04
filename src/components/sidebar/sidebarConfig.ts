@@ -47,6 +47,7 @@ export const sections: SidebarSectionType[] = [
     icon: ShieldBan,
     items: [
       { title: "Asistencias", link: "/dashboard/asistencias", level: 2 },
+      { title: "Gestión de Rutinas", link: "/dashboard/gestor-rutinas", level: 2 },
       { title: "Pagos", link: "/dashboard/pagos", level: 2 },
       { title: "Ventas", link: "/dashboard/ventas", level: 2 },
       { title: "Cuotas", link: "/dashboard/cuotas", level: 2 },
