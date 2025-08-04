@@ -75,6 +75,7 @@ export const useSidebarMenu = (
     const adminAllowedTitles = [
       "Inicio",
       "Asistencias",
+      "Gestión de Rutinas",
       "Socios",
       "Pagos",
       "Ventas",

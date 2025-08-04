@@ -241,6 +241,16 @@ export async function generarNuevaRutina(body: {
   return { ok: res.ok, data };
 }
 
+export async function getRutinasPorSocio(idSocio: number | string) {
+  const token = getToken();
+  const res = await fetch(`/api/rutina/${idSocio}`, {
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
 export async function crearEntrenador(body: any) {
   const token = getToken();
   const res = await fetch("/api/entrenadores", {

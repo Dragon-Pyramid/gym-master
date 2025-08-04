@@ -32,11 +32,19 @@ export default function SociosRutinasGrid({
       const response = await getRutinasPorSocio(socioId);
 
       if (!response.ok) {
-        throw new Error("Error al obtener rutinas");
+        console.error(
+          `Error al obtener rutinas del socio ${socioId}:`,
+          response
+        );
+        return null;
       }
 
-      const rutinas: Rutina[] = response.data;
-      return rutinas.length > 0 ? rutinas[0] : null;
+      const rutinas: Rutina[] = Array.isArray(response.data)
+        ? response.data
+        : [];
+      if (rutinas.length === 0) return null;
+
+      return rutinas[0];
     } catch (error) {
       console.error(`Error al obtener rutina del socio ${socioId}:`, error);
       return null;
