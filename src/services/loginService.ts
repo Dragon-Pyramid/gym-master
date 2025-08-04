@@ -1,9 +1,9 @@
 import { SignInDto } from "@/interfaces/credentials.interface";
-import { getSupabaseClient } from "./supabaseClient";
 import * as bcrypt from "bcryptjs";
 import * as jwt from "jsonwebtoken";
 import { getSocioByIdUsuario } from "./socioService";
 import { JwtUser } from "@/interfaces/jwtUser.interface";
+import { conexionBD } from "@/middlewares/conexionBd.middleware";
 
 export const signIn = async (login: SignInDto) => {
   const { email, password, rol, dbName } = login;
@@ -13,13 +13,7 @@ export const signIn = async (login: SignInDto) => {
     );
   }
   //ME CONECTO A LA BD DINAMICAMENTE, CON SU NOMBRE
-  const supabase = getSupabaseClient(dbName);
-  if (!supabase) {
-    throw new Error(
-      `No se pudo obtener el cliente de Supabase para la base de datos: ${dbName}`
-    );
-  }
-
+  const supabase = conexionBD(dbName);
   //BUSCO EN ESA BD, EL USUARIO
   const { data, error } = await supabase
     .from("usuario")
@@ -53,17 +47,10 @@ export const signIn = async (login: SignInDto) => {
     throw new Error("Usuario inactivo");
   }
 
-  const basePayload: {
-    sub: string;
-    id: string;
-    email: string;
-    rol: string;
-    dbName: string;
-    nombre: string;
-    id_socio?: string;
-  } = {
+  const basePayload: JwtUser = {
     sub: data.id,
     id: data.id,
+    id_socio: "",
     email: data.email,
     rol: data.rol,
     dbName,
@@ -71,7 +58,9 @@ export const signIn = async (login: SignInDto) => {
   };
 
   if (rol === "socio") {
+    //const socio = await getSocioByIdUsuario(data.id, dbName);
     const socio = await getSocioByIdUsuario(data.id);
+
     if (!socio) {
       console.log("No se encontró el socio asociado al usuario");
       throw new Error("No se encontró el socio asociado al usuario");

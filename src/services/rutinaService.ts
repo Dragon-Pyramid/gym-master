@@ -1,8 +1,9 @@
 import { GeneracionRutina, Rutina } from "@/interfaces/rutina.interface";
 import { getSupabaseClient } from "./supabaseClient";
+import { JwtUser } from "@/interfaces/jwtUser.interface";
 
 // Funciones para métricas de rutinas IA
-export const dataAdherenciaMensualRutinas = async (user: any) => {
+export const dataAdherenciaMensualRutinas = async (user: JwtUser) => {
     const supabase = getSupabaseClient(user.dbName);
     const { data, error } = await supabase
         .rpc('sp_adherencia_mensual_rutinas');
@@ -10,7 +11,7 @@ export const dataAdherenciaMensualRutinas = async (user: any) => {
     return data;
 }
 
-export const dataEvolucionPromedioPorObjetivo = async (user: any) => {
+export const dataEvolucionPromedioPorObjetivo = async (user: JwtUser) => {
     const supabase = getSupabaseClient(user.dbName);
     const { data, error } = await supabase
         .rpc('sp_evolucion_promedio_por_objetivo');
@@ -18,7 +19,7 @@ export const dataEvolucionPromedioPorObjetivo = async (user: any) => {
     return data;
 }
 
-export const dataGeneracionRutina = async (user: any,rutina: GeneracionRutina) => {
+export const dataGeneracionRutina = async (user: JwtUser,rutina: GeneracionRutina) => {
     const supabase = getSupabaseClient(user.dbName);
     
   // Llamada al procedimiento almacenado para generar la rutina
@@ -39,7 +40,7 @@ export const dataGeneracionRutina = async (user: any,rutina: GeneracionRutina) =
 }
 
 
-export const dataGeneracionRutinaPersonalizada = async (user: any,rutina:{ 
+export const dataGeneracionRutinaPersonalizada = async (user: JwtUser,rutina:{ 
     nivel: number,
     objetivo:number,
     dias :number}) => {
@@ -61,7 +62,7 @@ export const dataGeneracionRutinaPersonalizada = async (user: any,rutina:{
   return data;
 }
 
-export const historialRutinaSocioLogueado = async (user: any) : Promise<Rutina[]>  => {
+export const historialRutinaSocioLogueado = async (user: JwtUser) : Promise<Rutina[]>  => {
     const supabase = getSupabaseClient(user.dbName);
     const { data, error } = await supabase
         .from('rutina')
@@ -78,7 +79,7 @@ export const historialRutinaSocioLogueado = async (user: any) : Promise<Rutina[]
 
 }
 
-export const historialRutinaSocio = async (user: any,id_socio: string) : Promise<Rutina[]>  => {
+export const historialRutinaSocio = async (user: JwtUser,id_socio: string) : Promise<Rutina[]>  => {
     const supabase = getSupabaseClient(user.dbName);
     const { data, error } = await supabase
         .from('rutina')

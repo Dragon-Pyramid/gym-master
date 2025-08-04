@@ -1,31 +1,23 @@
+import { CreateEntrenadorHorarioDTO } from "./entrenadorHorario.interface";
+
 export interface Entrenador {
   id: string;
   nombre_completo: string;
   dni: string;
   fecha_alta: string;
+  activo: boolean;
   horarios_texto: string;
-  created_at: string;
-  updated_at: string;
 }
 
-export interface CreateEntrenadorDto {
+export interface CreateEntrenadorDTO {
   nombre_completo: string;
   dni: string;
-  horarios: DiaHorario[];
+  horarios: CreateEntrenadorHorarioDTO[];
 }
 
-export interface UpdateEntrenadorDto {
+export interface UpdateEntrenadorDTO {
   nombre_completo?: string;
   dni?: string;
-  horarios?: DiaHorario[];
-}
-
-export interface DiaHorario {
-  dia: string;
-  bloques: BloqueHorario[];
-}
-
-export interface BloqueHorario {
-  hora_desde: string;
-  hora_hasta: string;
+  horarios?: CreateEntrenadorHorarioDTO[];
+  horarios_texto?: string;
 }

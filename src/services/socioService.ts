@@ -1,5 +1,6 @@
 import { CreateSocioDto, Socio, UpdateSocioDto } from '@/interfaces/socio.interface';
 import { supabase } from './supabaseClient'
+import { conexionBD } from '@/middlewares/conexionBd.middleware';
 
 export const fetchSocios = async () : Promise<Socio[]>=> {
   const { data, error } = await supabase
@@ -74,7 +75,8 @@ export const toggleSocioActivo = async (socio: { id_socio: string; activo: boole
   return data;
 };
 
-export const getSocioById = async (id: string): Promise<Socio> => {
+export const getSocioById = async (id: string, dbName:string): Promise<Socio> => {
+  const supabase = conexionBD(dbName);
   const { data, error } = await supabase
     .from("socio")
     .select()
