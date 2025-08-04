@@ -14,3 +14,10 @@ export interface CreateEntrenadorDTO {
     dni: string;
     horarios: CreateEntrenadorHorarioDTO[];
 }
+
+export interface UpdateEntrenadorDTO {
+    nombre_completo?: string;
+    dni?: string;
+    horarios?: CreateEntrenadorHorarioDTO[];
+    horarios_texto?: string;
+}

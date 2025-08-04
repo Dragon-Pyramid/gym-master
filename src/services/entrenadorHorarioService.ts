@@ -1,6 +1,6 @@
 
 
-import { CreateEntrenadorHorarioDTO, EntrenadorHorario } from "@/interfaces/entrenadorHorario.interface";
+import { CreateEntrenadorHorarioDTO } from "@/interfaces/entrenadorHorario.interface";
 import { JwtUser } from "@/interfaces/jwtUser.interface";
 import { conexionBD } from "@/middlewares/conexionBd.middleware";
 
@@ -29,6 +29,7 @@ export const createEntrenadorHorario = async (
             .eq("dia_semana", dia_semana)
             .eq("hora_desde", bloque.hora_desde)
             .eq("hora_hasta", bloque.hora_hasta)
+            .eq("activo", true)
             .single();
 
         if (errorVerificacion && errorVerificacion.code !== "PGRST116") {
