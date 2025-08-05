@@ -5,7 +5,7 @@ import {
 } from "@/interfaces/entrenador.interface";
 import { JwtUser } from "@/interfaces/jwtUser.interface";
 import { conexionBD } from "@/middlewares/conexionBd.middleware";
-import { createEntrenadorHorario } from "./entrenadorHorarioService";
+import { createEntrenadorHorario, updateEntrenadorHorario } from "./entrenadorHorarioService";
 
 export const getEntrenadores = async (user: JwtUser): Promise<Entrenador[]> => {
   const supabase = conexionBD(user.dbName);
@@ -108,7 +108,7 @@ export const updateEntrenador = async (
   let horarios_texto = "";
   if (horarios) {
     // Si se proporcionan horarios, llamamos a la función para crear o actualizar los horarios del entrenador
-    await createEntrenadorHorario(id, horarios, user);
+    await updateEntrenadorHorario(id, horarios, user);
     const { data, error } = await supabase.rpc("generar_horarios_texto", {
       p_entrenador_id: id,
     });

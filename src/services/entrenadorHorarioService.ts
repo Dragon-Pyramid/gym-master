@@ -4,21 +4,11 @@ import { CreateEntrenadorHorarioDTO } from "@/interfaces/entrenadorHorario.inter
 import { JwtUser } from "@/interfaces/jwtUser.interface";
 import { conexionBD } from "@/middlewares/conexionBd.middleware";
 
-export const createEntrenadorHorario = async (
-    entrenador_id: string,
-    entrenadorHorarios: CreateEntrenadorHorarioDTO[],
-    user: JwtUser
-): Promise<void> => {
-    const supabase = conexionBD(user.dbName);
-    
-    // Validar que entrenadorHorarios sea un array válido
-    if (!Array.isArray(entrenadorHorarios) || entrenadorHorarios.length === 0) {
-        throw new Error("El array de horarios es inválido o está vacío.");
-    }
 
-    // Función para validar e insertar un bloque
-    const validarEInsertarBloque = async (dia_semana: string, bloque: { hora_desde: string; hora_hasta: string }) => {
-        if (!bloque.hora_desde || !bloque.hora_hasta) {
+const validarEInsertarBloque = async (dia_semana: string, bloque: { hora_desde: string; hora_hasta: string }, dbName: string, entrenador_id: string) => {
+    const supabase = conexionBD(dbName);   
+    
+    if (!bloque.hora_desde || !bloque.hora_hasta) {
             throw new Error("Cada bloque debe tener hora_desde y hora_hasta.");
         }
 
@@ -29,7 +19,7 @@ export const createEntrenadorHorario = async (
             .eq("dia_semana", dia_semana)
             .eq("hora_desde", bloque.hora_desde)
             .eq("hora_hasta", bloque.hora_hasta)
-            .eq("activo", true)
+            //.eq("activo", true)
             .single();
 
         if (errorVerificacion && errorVerificacion.code !== "PGRST116") {
@@ -59,6 +49,17 @@ export const createEntrenadorHorario = async (
         }
     };
 
+export const createEntrenadorHorario = async (
+    entrenador_id: string,
+    entrenadorHorarios: CreateEntrenadorHorarioDTO[],
+    user: JwtUser
+): Promise<void> => {
+    
+    // Validar que entrenadorHorarios sea un array válido
+    if (!Array.isArray(entrenadorHorarios) || entrenadorHorarios.length === 0) {
+        throw new Error("El array de horarios es inválido o está vacío.");
+    }
+
     // Procesar cada horario
     for (const horario of entrenadorHorarios) {
         const { dia_semana, bloques } = horario;
@@ -70,7 +71,7 @@ export const createEntrenadorHorario = async (
 
         // Procesar cada bloque
         for (const bloque of bloques) {
-            await validarEInsertarBloque(dia_semana, bloque);
+            await validarEInsertarBloque(dia_semana, bloque, user.dbName, entrenador_id);
         }
     }
 };
@@ -81,7 +82,7 @@ export const getHorariosByEntrenadorId = async (id: string, user: JwtUser) => {
         .from('entrenador_horarios')
         .select('*')
         .eq('entrenador_id', id)
-        .eq('activo', true);
+        //.eq('activo', true);
 
     if (error) {
         console.error("Error al obtener los horarios del entrenador:", error);
@@ -90,3 +91,39 @@ export const getHorariosByEntrenadorId = async (id: string, user: JwtUser) => {
 
     return data ;
 };
+
+
+export const updateEntrenadorHorario = async (
+    entrenador_id: string,
+    entrenadorHorarios: CreateEntrenadorHorarioDTO[],
+    user: JwtUser
+): Promise<void> => {
+    const supabase = conexionBD(user.dbName);
+
+    // 1. Desactivar todos los horarios actuales del entrenador
+    const { error: errorSoftDelete } = await supabase
+        .from("entrenador_horarios")
+       // .update({ activo: false })
+       .delete()
+       .eq("entrenador_id", entrenador_id)
+        //.eq("activo", true);  // solo los activos
+
+    if (errorSoftDelete) {
+        console.error("Error al desactivar horarios anteriores:", errorSoftDelete);
+        throw new Error("No se pudieron desactivar los horarios anteriores.");
+    }
+
+    // 2. Insertar los nuevos horarios
+    for (const horario of entrenadorHorarios) {
+        const { dia_semana, bloques } = horario;
+
+        if (!Array.isArray(bloques)) {
+            throw new Error(`El día ${dia_semana} no tiene bloques válidos.`);
+        }
+
+        for (const bloque of bloques) {
+            await validarEInsertarBloque(dia_semana, bloque, user.dbName, entrenador_id);
+        }
+    }
+};
+

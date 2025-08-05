@@ -1,5 +1,5 @@
 import { SignInDto } from "@/interfaces/credentials.interface";
-import bcrypt from "bcryptjs";
+import * as bcrypt from "bcryptjs";
 import * as jwt from "jsonwebtoken";
 import { getSocioByIdUsuario } from "./socioService";
 import { JwtUser } from "@/interfaces/jwtUser.interface";
@@ -31,14 +31,14 @@ export const signIn = async (login: SignInDto) => {
     throw new Error("Usuario no encontrado o contraseña incorrecta");
   }
 
-  // const validatePassword = bcrypt.compareSync(password, data.password_hash);
+   const validatePassword = bcrypt.compareSync(password, data.password_hash);
 
-  // if (!validatePassword) {
-  //   console.log("Contraseña incorrecta");
-  //   throw new Error("Usuario no encontrado o contraseña incorrecta");
-  // }
+ if (!validatePassword) {
+     console.log("Contraseña incorrecta");
+     throw new Error("Usuario no encontrado o contraseña incorrecta");
+   }
 
-  console.log("SALTANDO VALIDACIÓN DE CONTRASEÑA TEMPORALMENTE");
+  //console.log("SALTANDO VALIDACIÓN DE CONTRASEÑA TEMPORALMENTE");
 
   if (data.rol !== rol) {
     console.log("Rol no autorizado");
@@ -61,7 +61,7 @@ export const signIn = async (login: SignInDto) => {
 
   if (rol === "socio") {
     const socio = await getSocioByIdUsuario(data.id, dbName);
-    // const socio = await getSocioByIdUsuario(data.id);
+   // const socio = await getSocioByIdUsuario(data.id);
 
     if (!socio) {
       console.log("No se encontró el socio asociado al usuario");
