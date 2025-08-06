@@ -1,5 +1,5 @@
 import { authMiddleware } from "@/middlewares/auth.middleware";
-import { getAllDietaSocio } from "@/services/dietaService";
+import { getAllDietasSocio } from "@/services/dietaService";
 import { NextResponse } from "next/server";
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
@@ -20,7 +20,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
             );
         }
 
-        const dietas = await getAllDietaSocio(id, user);
+        const dietas = await getAllDietasSocio(id, user);
         if (!dietas || dietas.length === 0) {
             return NextResponse.json(
                 { message: "No se encontraron dietas para el socio" },

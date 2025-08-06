@@ -14,8 +14,7 @@ export async function POST (req: Request){
 
     const body = await req.json();
 
-    if(!body.socio_id || !body.objetivo || !body.fecha_inicio || !body.fecha_fin 
-        || !body.nombre_plan || !body.observaciones) {
+    if(!body.socio_id || !body.objetivo || !body.fecha_inicio || !body.fecha_fin ) {
         return NextResponse.json(
             { error: "Debe enviar todos los campos requeridos" }, 
             { status: 400 }
@@ -23,12 +22,8 @@ export async function POST (req: Request){
     }
 
     const dieta = await createDietaSocio( body, user )
-    if(!dieta) {
-        return NextResponse.json(
-            { error: "Error al crear la dieta" }, 
-            { status: 500 }
-        );
-    }
+
+    return NextResponse.json(dieta, { status: 201 });
 
 
 } catch (error:any) {
