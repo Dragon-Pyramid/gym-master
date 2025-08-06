@@ -30,21 +30,10 @@ if (error) {
     throw new Error("Error al generar la dieta: " + error.message);
 }
 
+// como el procedimiento almacenado genera la dieta, no retorna la nueva dieta
+const ultimaDieta = await getUltimaDietaSocio(createDieta.socio_id, user);
 
-
-const {data:ultimaDietaData,error:ultimaDietaError} = await supabase
-    .from("dieta")
-    .select("*")
-    .eq("socio_id", createDieta.socio_id)
-    .order("created_at", { ascending: false })
-    .single();
-
-    if(ultimaDietaError) {
-        throw new Error("Error al crear la dieta: " + ultimaDietaError.message);
-    }
-
-    return ultimaDietaData;
-
+return ultimaDieta;
 
     }
 
@@ -75,4 +64,22 @@ export const getAllDietas = async (user: JwtUser): Promise<Dieta[]> => {
     }
 
     return data;
+}
+
+export const getUltimaDietaSocio = async (id: string, user: JwtUser): Promise<Dieta> => {
+    const supabase = conexionBD(user.dbName);
+    const {data:ultimaDietaData,error:ultimaDietaError} = await supabase
+    .from("dieta")
+    .select("*")
+    .eq("socio_id", id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+    if(ultimaDietaError) {
+        throw new Error("Error al crear la dieta: " + ultimaDietaError.message);
+    }
+
+    return ultimaDietaData;
+
 }
