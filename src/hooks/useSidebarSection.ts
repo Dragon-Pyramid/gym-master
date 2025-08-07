@@ -16,9 +16,8 @@ export const useSidebarMenu = (
   const menuTitlesMap: { [key: string]: string } = {
     Rutinas: "Rutina",
     Dietas: "Dieta",
-    Cuotas: "Pago de Cuota",
+    Cuotas: "Cuota - Precio",
   };
-
   if (userType === "socio") {
     const socioAllowedTitles = [
       "Inicio",
@@ -76,6 +75,7 @@ export const useSidebarMenu = (
     const adminAllowedTitles = [
       "Inicio",
       "Asistencias",
+      "Gestión de Rutinas",
       "Socios",
       "Pagos",
       "Ventas",

@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil } from "lucide-react";
+import { Pencil, Eye, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -13,20 +13,20 @@ import {
   TableRow,
   TableCaption,
 } from "@/components/ui/table";
-import { Socio } from "@/interfaces/socio.interface";
+import { Entrenador } from "@/interfaces/entrenador.interface";
 
-export default function SociosTable({
-  socios,
+export default function EntrenadoresTable({
+  entrenadores,
   loading,
   onEdit,
   onView,
   onDelete,
 }: {
-  socios: Socio[];
+  entrenadores: Entrenador[];
   loading?: boolean;
-  onEdit: (socio: Socio) => void;
-  onView?: (socio: Socio) => void;
-  onDelete?: (socio: Socio) => void;
+  onEdit: (entrenador: Entrenador) => void;
+  onView?: (entrenador: Entrenador) => void;
+  onDelete?: (entrenador: Entrenador) => void;
 }) {
   if (loading) {
     return (
@@ -38,10 +38,10 @@ export default function SociosTable({
     );
   }
 
-  if (socios.length === 0 && !loading) {
+  if (entrenadores.length === 0 && !loading) {
     return (
       <div className="py-10 text-center text-muted-foreground">
-        No hay socios registrados aún.
+        No hay entrenadores registrados aún.
       </div>
     );
   }
@@ -52,53 +52,48 @@ export default function SociosTable({
         <TableRow className="bg-muted/50 text-muted-foreground">
           <TableHead>DNI</TableHead>
           <TableHead>Nombre</TableHead>
-          <TableHead>Teléfono</TableHead>
-          <TableHead>Email</TableHead>
           <TableHead>Fecha Alta</TableHead>
-          <TableHead>Activo</TableHead>
+          <TableHead>Horarios</TableHead>
           <TableHead>Acciones</TableHead>
         </TableRow>
       </TableHeader>
 
       <TableBody>
-        {socios.map((s, i) => (
+        {entrenadores.map((e, i) => (
           <TableRow
             key={i}
             className="odd:bg-muted/40 hover:bg-[#a8d9f9] transition-colors"
           >
-            <TableCell className="font-medium">{s.dni}</TableCell>
-            <TableCell>{s.nombre_completo}</TableCell>
-            <TableCell>{s.telefono}</TableCell>
-            <TableCell>{s.email}</TableCell>
-            <TableCell>{s.fecha_alta}</TableCell>
-            <TableCell>{s.activo ? "✅" : "❌"}</TableCell>
+            <TableCell className="font-medium">{e.dni}</TableCell>
+            <TableCell>{e.nombre_completo}</TableCell>
+            <TableCell>{e.fecha_alta}</TableCell>
+            <TableCell className="max-w-xs truncate">
+              {e.horarios_texto}
+            </TableCell>
             <TableCell className="flex gap-2">
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => onView && onView(s)}
+                onClick={() => onView && onView(e)}
+                title="Ver"
               >
-                Ver
+                <Eye className="w-4 h-4" />
               </Button>
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => onEdit(s)}
+                onClick={() => onEdit(e)}
                 title="Editar"
               >
                 <Pencil className="w-4 h-4" />
               </Button>
               <Button
                 size="sm"
-                className={
-                  (s.activo
-                    ? "bg-red-500 hover:bg-red-600"
-                    : "bg-green-500 hover:bg-green-600") +
-                  " text-white w-[100px]" // 👈 fuerza el ancho exacto
-                }
-                onClick={() => onDelete && onDelete(s)}
+                variant="destructive"
+                onClick={() => onDelete && onDelete(e)}
+                title="Eliminar"
               >
-                {s.activo ? "Desactivar" : "Activar"}
+                <Trash2 className="w-4 h-4" />
               </Button>
             </TableCell>
           </TableRow>
@@ -107,12 +102,12 @@ export default function SociosTable({
 
       <TableFooter>
         <TableRow>
-          <TableCell colSpan={6}>Total de socios</TableCell>
-          <TableCell className="text-right">{socios.length}</TableCell>
+          <TableCell colSpan={4}>Total de entrenadores</TableCell>
+          <TableCell className="text-right">{entrenadores.length}</TableCell>
         </TableRow>
       </TableFooter>
 
-      <TableCaption>Listado de socios registrados.</TableCaption>
+      <TableCaption>Listado de entrenadores registrados.</TableCaption>
     </Table>
   );
 }

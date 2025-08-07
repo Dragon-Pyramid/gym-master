@@ -9,6 +9,7 @@ export interface Socio {
   foto?: string;
   activo: boolean;
   fecha_baja?: string;
+  fecha_alta?: string;
 }
 
 export interface CreateSocioDto {
@@ -31,4 +32,5 @@ export interface UpdateSocioDto {
   foto?: string;
   activo?: boolean;
   fecha_baja?: string;
+  fecha_alta?: string;
 }
