@@ -39,7 +39,7 @@ export const sections: SidebarSectionType[] = [
       { title: "Entrenadores", link: "/dashboard/entrenadores", level: 2 },
       { title: "Rutinas", link: "/dashboard/rutinas", level: 2 },
       { title: "Dietas", link: "/dashboard/dietas", level: 2 },
-      { title: "Evolución", link: "/dashboard/evolucion", level: 2 },
+      { title: "Evolución Física", link: "/dashboard/evolucion-fisica", level: 2 },
     ],
   },
   {
@@ -48,6 +48,7 @@ export const sections: SidebarSectionType[] = [
     items: [
       { title: "Asistencias", link: "/dashboard/asistencias", level: 2 },
       { title: "Gestión de Rutinas", link: "/dashboard/gestor-rutinas", level: 2 },
+      { title: "Gestión de Dietas", link: "/dashboard/gestor-dietas", level: 2 },
       { title: "Pagos", link: "/dashboard/pagos", level: 2 },
       { title: "Ventas", link: "/dashboard/ventas", level: 2 },
       { title: "Cuotas", link: "/dashboard/cuotas", level: 2 },
