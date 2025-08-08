@@ -49,6 +49,21 @@ export default function DietaHistorial({
     }
   };
 
+  const ordenarComidas = (comidas: Record<string, unknown>) => {
+    const orden = [
+      "Desayuno",
+      "Colación media mañana",
+      "Almuerzo",
+      "Colación siesta",
+      "Merienda",
+      "Colación tarde",
+      "Cena",
+    ];
+    return Object.entries(comidas).sort(
+      ([a], [b]) => orden.indexOf(a) - orden.indexOf(b)
+    );
+  };
+
   useEffect(() => {
     const fetchDietas = async () => {
       const socio = await getSocioByUsuarioId(userId.toString());
@@ -93,7 +108,7 @@ export default function DietaHistorial({
           </DialogHeader>
           {detalleComidas && !(detalleComidas as { error?: string }).error ? (
             <div className="space-y-3 max-h-[70vh] overflow-y-auto p-1">
-              {Object.entries(detalleComidas).map(([comida, info]) => (
+              {ordenarComidas(detalleComidas).map(([comida, info]) => (
                 <div key={comida} className="p-3 border rounded-lg bg-muted/50">
                   <h4 className="mb-2 text-sm font-medium text-primary">
                     {comida}
