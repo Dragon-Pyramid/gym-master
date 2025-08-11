@@ -159,7 +159,7 @@ export const updateFotoSocioById = async (id_socio: string, dbName:string , url:
     throw new Error("No se encontró el socio con ese ID");
   }
 
-  console.log("Foto de socio actualizada:");
+  console.log("profile_photo_updated: Foto de socio actualizada:");
 
   return data;
 };

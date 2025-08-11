@@ -122,7 +122,7 @@ const supabase = conexionBD(user.dbName);
   if(user.rol === "socio"){
     await updateFotoSocioById(user.id_socio, user.dbName, url);
   }
-console.log("Foto de usuario actualizada:");
+console.log("profile_photo_updated: Foto de usuario actualizada:");
 
   return data;
 };
