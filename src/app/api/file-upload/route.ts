@@ -1,9 +1,16 @@
 import { FileUploadDTO } from "@/interfaces/fileUpload.interface";
+import { authMiddleware } from "@/middlewares/auth.middleware";
 import { uploadFile } from "@/services/fileUploadService";
+import { updateFotoUsuarioById } from "@/services/usuarioService";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
-    try{
+    try {
+        const { user } = await authMiddleware(request);
+        if(!user){
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
     const formData = await request.formData();
     const file = formData.get("file") as File;
 
@@ -21,10 +28,13 @@ const fileDto : FileUploadDTO = {
     size: file.size,
     buffer: buffer
 };
-    const result = await uploadFile(fileDto);
+    const result = await uploadFile(fileDto, user.dbName, user.rol);
+    if (!result) {
+        return NextResponse.json({ error: "Error al subir el archivo" }, { status: 500 });
+    }
+    await updateFotoUsuarioById(user, result);
+    return NextResponse.json({message: "Foto de usuario actualizada", url: result}, { status: 200 });
 
-    return NextResponse.json({url:result}, { status: 200 });
-    
 }catch (error:any) {
     console.error("error file:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });

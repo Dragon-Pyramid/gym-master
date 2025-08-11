@@ -141,3 +141,25 @@ export const getSocioByIdUsuario = async (
   }
   return dataSocio;
 };
+
+export const updateFotoSocioById = async (id_socio: string, dbName:string , url: string): Promise<Socio> => {
+  const supabase = conexionBD(dbName);
+  const { data, error } = await supabase
+    .from("socio")
+    .update({ foto: url })
+    .eq("id_socio", id_socio)
+    .select()
+    .single();
+
+  if (error) {
+    console.log(error.message);
+    throw new Error(error.message);
+  }
+  if (!data || data.length === 0) {
+    throw new Error("No se encontró el socio con ese ID");
+  }
+
+  console.log("Foto de socio actualizada:");
+
+  return data;
+};

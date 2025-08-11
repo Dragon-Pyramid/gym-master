@@ -12,10 +12,11 @@ if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_CLOUD_API_KEY 
         })
 
 
-    export async function uploadFileCloudinary(buffer:Buffer, originalName?:string) :Promise<string>{
+    export async function uploadFileCloudinary(buffer:Buffer, originalName:string,dbName: string,rol:string) :Promise<string>{
+     const timestamp = Date.now();
         const options: UploadApiOptions = {
-        folder : "saphire",
-        public_id: originalName,
+        folder : `${dbName}/${rol}/profile`,
+        public_id: `${timestamp}_${originalName}`,
         RESOURCE_TYPE:"AUTO",
         };
         
