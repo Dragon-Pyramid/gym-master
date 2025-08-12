@@ -31,12 +31,14 @@ export const signIn = async (login: SignInDto) => {
     throw new Error("Usuario no encontrado o contraseña incorrecta");
   }
 
+// TODO: Arreglar el servicio de login para que valide bien al socio. Sigue sin funcionar.
+
    const validatePassword = bcrypt.compareSync(password, data.password_hash);
 
  if (!validatePassword) {
      console.log("Contraseña incorrecta");
      throw new Error("Usuario no encontrado o contraseña incorrecta");
-   }
+   } 
 
   //console.log("SALTANDO VALIDACIÓN DE CONTRASEÑA TEMPORALMENTE");
 
@@ -57,6 +59,7 @@ export const signIn = async (login: SignInDto) => {
     rol: data.rol,
     dbName,
     nombre: data.nombre,
+    foto: data.foto ? data.foto : null
   };
 
   if (rol === "socio") {

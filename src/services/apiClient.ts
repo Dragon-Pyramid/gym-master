@@ -308,3 +308,128 @@ export async function actualizarEntrenador(id: number | string, body: any) {
   const data = await res.json();
   return { ok: res.ok, data };
 }
+
+// TODO: Eliminar las que no se usan, se implementaron algunas que no existen.
+
+export async function getDietas() {
+  const token = getToken();
+  const res = await fetch(`/api/dieta/todas`, {
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
+export async function getDieta(id: number | string) {
+  const token = getToken();
+  const res = await fetch(`/api/dieta/${id}`, {
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
+export async function crearDieta(body: any) {
+  const token = getToken();
+  const res = await fetch(`/api/dieta/generar`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
+export async function actualizarDieta(id: number | string, body: any) {
+  const token = getToken();
+  const res = await fetch(`/api/dieta/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
+export async function eliminarDieta(id: number | string) {
+  const token = getToken();
+  const res = await fetch(`/api/dieta/${id}`, {
+    method: "DELETE",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
+export async function asignarDieta(
+  socioId: number | string,
+  dietaId: number | string
+) {
+  const token = getToken();
+  const res = await fetch(`/api/dieta/socio/${socioId}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ dietaId }),
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
+export async function getDietasPorSocio(socioId: number | string) {
+  const token = getToken();
+  const res = await fetch(`/api/dieta/socio/${socioId}`, {
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
+export async function eliminarDietaDeSocio(
+  socioId: number | string,
+  dietaId: number | string
+) {
+  const token = getToken();
+  const res = await fetch(`/api/dieta/socio/${socioId}/dietas/${dietaId}`, {
+    method: "DELETE",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
+export async function generarDietaPersonalizada(body: any) {
+  const token = getToken();
+  const res = await fetch(`/api/dieta/generar-personalizada`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  return { ok: res.ok, data };
+}
+
+export async function getSocioByUsuarioId(usuarioId: string) {
+  const token = getToken();
+  const res = await fetch(`/api/socios`, {
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  if (!res.ok || !Array.isArray(data)) return null;
+  return data.find((socio) => socio.usuario_id === usuarioId) || null;
+}
