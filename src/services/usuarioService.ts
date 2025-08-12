@@ -1,8 +1,11 @@
 import bcrypt from 'bcryptjs';
-import { getSupabaseClient, supabase } from './supabaseClient';
 import { Usuario, CreateUsuarioDto, UpdateUsuarioDto, ResponseUsuario } from "../interfaces/usuario.interface";
+import { JwtUser } from '@/interfaces/jwtUser.interface';
+import { supabase,getSupabaseClient } from '@/services/supabaseClient';
+import { conexionBD } from '@/middlewares/conexionBd.middleware';
+import { updateFotoSocioById } from './socioService';
 
-export const fetchUsuarios = async (user): Promise<ResponseUsuario[]> => {
+export const fetchUsuarios = async (user: JwtUser): Promise<ResponseUsuario[]> => {
   //EXTRAIGO EL NOMBRE DE LA BASE DE DATOS DEL USUARIO LOGUEADO
 const dbName = user?.dbName 
 if (!dbName) {
@@ -98,3 +101,28 @@ const response : ResponseUsuario = {
 } 
 return response;
 } 
+
+export const updateFotoUsuarioById = async (user: JwtUser, url: string): Promise<Usuario> => {
+const supabase = conexionBD(user.dbName);
+
+  const { data, error } = await supabase
+    .from('usuario')
+    .update({ foto: url })
+    .eq('id', user.id)
+    .select()
+    .single();
+  if (error) {
+    console.log(error.message);
+    throw new Error(error.message);
+  }
+  if (!data || data.length === 0) {
+    throw new Error('No se encontró el usuario con ese ID');
+  }
+
+  if(user.rol === "socio"){
+    await updateFotoSocioById(user.id_socio, user.dbName, url);
+  }
+console.log("profile_photo_updated: Foto de usuario actualizada:");
+
+  return data;
+};
