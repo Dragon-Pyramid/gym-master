@@ -5,8 +5,19 @@ import { NextResponse } from "next/server";
 export async function GET(req:Request, {params} : {params : {id: string, id_ficha: string }}){
    try{
  const {user} = await authMiddleware(req);
+  if(!user){
+        return NextResponse.json({error: "Usuario no autorizado"}, {status: 401});
+    }
     const {id} = params;
     const {id_ficha} = params;
+
+      if (!id) {
+        return NextResponse.json({error: "ID de socio no proporcionado"}, {status: 400});
+    }
+
+    if (!id_ficha) {
+        return NextResponse.json({error: "ID de ficha médica no proporcionado"}, {status: 400});
+    }
 
     const ficha = await FindOneFichaMedicaSocio(user, id, id_ficha);
 

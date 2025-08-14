@@ -4,14 +4,16 @@ import { authMiddleware } from "@/middlewares/auth.middleware";
 import { FindAllFichaMedicaSocio } from "@/services/fichaMedicaService";
 
 export async function GET(req: Request, {params} : {params: {id:string}}) {
-    try{
-    //validar usuario
+    try{   
     const {user} = await authMiddleware(req);
-   // if(!user){
-    ///    return NextResponse.json({error: "Usuario no autorizado"}, {status: 401});
-    //}
+    if(!user){
+        return NextResponse.json({error: "Usuario no autorizado"}, {status: 401});
+    }
 
     const {id} = params;
+      if (!id) {
+        return NextResponse.json({error: "ID de socio no proporcionado"}, {status: 400});
+    }
 
     const ficha = await FindAllFichaMedicaSocio(user, id);
 
