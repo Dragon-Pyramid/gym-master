@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { authMiddleware } from "@/middlewares/auth.middleware";
 import { createFichaMedicaSocio } from "@/services/fichaMedicaService";
+import { FileUploadDTO } from "@/interfaces/fileUpload.interface";
 
 export async function POST(req: Request, {params} : {params: {id:string}}) {
     try{
@@ -16,11 +17,35 @@ export async function POST(req: Request, {params} : {params: {id:string}}) {
         return NextResponse.json({error: "ID de socio no proporcionado"}, {status: 400});
     }
 
-    const body = await req.json();
+    const formdata = await req.formData();
+   const fichaRaw = formdata.get("ficha");
+    const file = formdata.get("file") as File;
 
-    const ficha = await createFichaMedicaSocio(user, id, body);
+       if (!fichaRaw) {
+           return new Response("No se encuentra la ficha", { status: 400 });
+       }
+       if (!file) {
+           return new Response("No se encuentra el archivo file", { status: 400 });
+       }
+       // Convierto el archivo en un ArrayBuffer y desp en un Buffer
+       const arrayBuffer = await file.arrayBuffer();
+       const buffer = Buffer.from(arrayBuffer);
+   
+   const fileDto : FileUploadDTO = {
+       fieldName: file.name,
+       originalName: file.name,
+       mimeType: file.type,
+       size: file.size,
+       buffer: buffer
+   };
 
-    return NextResponse.json({message:"ficha cargada con exito", data: ficha}, {status: 201});
+    
+   const ficha = JSON.parse(fichaRaw.toString());
+
+
+    const fichaMedica = await createFichaMedicaSocio(user, id, ficha, fileDto);
+
+    return NextResponse.json({message:"ficha cargada con exito", data: fichaMedica}, {status: 201});
 
     }catch(error:any){
         console.log(error);

@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     const file = formData.get("file") as File;
 
     if (!file) {
-        return new Response("No file uploaded", { status: 400 });
+        return NextResponse.json({ error: "No file uploaded"}, { status: 400 });
     }
     // Convierto el archivo en un ArrayBuffer y desp en un Buffer
     const arrayBuffer = await file.arrayBuffer();
@@ -28,7 +28,9 @@ const fileDto : FileUploadDTO = {
     size: file.size,
     buffer: buffer
 };
-    const result = await uploadFile(fileDto, user.dbName, user.rol);
+
+    const folder = `${user.dbName}/${user.rol}/profile`;
+    const result = await uploadFile(fileDto, folder);
     if (!result) {
         return NextResponse.json({ error: "Error al subir el archivo" }, { status: 500 });
     }

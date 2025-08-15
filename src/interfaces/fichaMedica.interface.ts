@@ -36,13 +36,13 @@ export interface FichaMedica {
     problemas_cardiacos: boolean;
     problemas_respiratorios: boolean;
     aprobacion_medica: boolean;
+    archivo_aprobacion: string ; // URL Cloudinary
 
     alergias?: string | null;
     medicacion?: string | null;
     lesiones_previas?: string | null;
     enfermedades_cronicas?: string | null;
     cirugias_previas?: string | null;
-    archivo_aprobacion?: string | null; // URL Cloudinary
     fecha_ultimo_control?: Date | null;
     observaciones_entrenador?: string | null;
     observaciones_medico?: string | null;
@@ -60,13 +60,13 @@ export interface CreateFichaMedicaDto {
     problemas_cardiacos: boolean;
     problemas_respiratorios: boolean;
     aprobacion_medica: boolean;
+    archivo_aprobacion: string ; // URL Cloudinary
 
     alergias?: string | null;
     medicacion?: string | null;
     lesiones_previas?: string | null;
     enfermedades_cronicas?: string | null;
     cirugias_previas?: string | null;
-    archivo_aprobacion?: string | null; // URL Cloudinary
     fecha_ultimo_control?: Date | null;
     observaciones_entrenador?: string | null;
     observaciones_medico?: string | null;
