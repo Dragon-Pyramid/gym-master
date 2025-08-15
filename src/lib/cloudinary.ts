@@ -12,10 +12,10 @@ if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_CLOUD_API_KEY 
         })
 
 
-    export async function uploadFileCloudinary(buffer:Buffer, originalName:string,dbName: string,rol:string) :Promise<string>{
+    export async function uploadFileCloudinary(buffer:Buffer, originalName:string,folder: string) :Promise<string>{
      const timestamp = Date.now();
         const options: UploadApiOptions = {
-        folder : `${dbName}/${rol}/profile`,
+        folder: folder,
         public_id: `${timestamp}_${originalName}`,
         RESOURCE_TYPE:"AUTO",
         };
