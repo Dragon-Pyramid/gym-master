@@ -1,4 +1,4 @@
-import { getToken, loginSession, logoutSession } from "./storageService";
+import { getToken, loginSession, logoutSession } from './storageService';
 
 export async function login({
   email,
@@ -11,9 +11,9 @@ export async function login({
   rol: string;
   dbName: string;
 }) {
-  const res = await fetch("/api/custom-login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+  const res = await fetch('/api/custom-login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password, rol, dbName }),
   });
   const data = await res.json();
@@ -25,8 +25,8 @@ export async function login({
 
 export async function pagarCuotaConStripe() {
   const token = getToken();
-  const res = await fetch("/api/pagar-cuota", {
-    method: "POST",
+  const res = await fetch('/api/pagar-cuota', {
+    method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const data = await res.json();
@@ -39,8 +39,8 @@ export function logout() {
 
 export async function getEvolucionPromedioRutinas() {
   const token = getToken();
-  const res = await fetch("/api/admin/metricas/rutinas/evolucion-promedio", {
-    method: "GET",
+  const res = await fetch('/api/admin/metricas/rutinas/evolucion-promedio', {
+    method: 'GET',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const data = await res.json();
@@ -49,8 +49,8 @@ export async function getEvolucionPromedioRutinas() {
 
 export async function getAdherenciaRutinas() {
   const token = getToken();
-  const res = await fetch("/api/admin/metricas/rutinas/adherencia", {
-    method: "GET",
+  const res = await fetch('/api/admin/metricas/rutinas/adherencia', {
+    method: 'GET',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const data = await res.json();
@@ -59,10 +59,10 @@ export async function getAdherenciaRutinas() {
 
 export async function generarRutina(body: any) {
   const token = getToken();
-  const res = await fetch("/api/admin/metricas/rutinas/generar-rutina", {
-    method: "POST",
+  const res = await fetch('/api/admin/metricas/rutinas/generar-rutina', {
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify(body),
@@ -74,11 +74,11 @@ export async function generarRutina(body: any) {
 export async function generarRutinaPersonalizada(body: any) {
   const token = getToken();
   const res = await fetch(
-    "/api/admin/metricas/rutinas/generar-rutina-personalizada",
+    '/api/admin/metricas/rutinas/generar-rutina-personalizada',
     {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: JSON.stringify(body),
@@ -90,8 +90,8 @@ export async function generarRutinaPersonalizada(body: any) {
 
 export async function getSegmentacionPagos() {
   const token = getToken();
-  const res = await fetch("/api/admin/metricas/pagos/segmentacion", {
-    method: "GET",
+  const res = await fetch('/api/admin/metricas/pagos/segmentacion', {
+    method: 'GET',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const data = await res.json();
@@ -100,8 +100,8 @@ export async function getSegmentacionPagos() {
 
 export async function getProyeccionIngresos() {
   const token = getToken();
-  const res = await fetch("/api/admin/metricas/pagos/proyeccion-ingresos", {
-    method: "GET",
+  const res = await fetch('/api/admin/metricas/pagos/proyeccion-ingresos', {
+    method: 'GET',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const data = await res.json();
@@ -110,8 +110,8 @@ export async function getProyeccionIngresos() {
 
 export async function getHistogramaPagos() {
   const token = getToken();
-  const res = await fetch("/api/admin/metricas/pagos/histograma", {
-    method: "GET",
+  const res = await fetch('/api/admin/metricas/pagos/histograma', {
+    method: 'GET',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const data = await res.json();
@@ -120,8 +120,8 @@ export async function getHistogramaPagos() {
 
 export async function getTopFallosEquipamiento() {
   const token = getToken();
-  const res = await fetch("/api/admin/metricas/equipamiento/top-fallos", {
-    method: "GET",
+  const res = await fetch('/api/admin/metricas/equipamiento/top-fallos', {
+    method: 'GET',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const data = await res.json();
@@ -130,8 +130,8 @@ export async function getTopFallosEquipamiento() {
 
 export async function getPrediccionFalloEquipamiento() {
   const token = getToken();
-  const res = await fetch("/api/admin/metricas/equipamiento/prediccion-fallo", {
-    method: "GET",
+  const res = await fetch('/api/admin/metricas/equipamiento/prediccion-fallo', {
+    method: 'GET',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const data = await res.json();
@@ -140,8 +140,8 @@ export async function getPrediccionFalloEquipamiento() {
 
 export async function getEstadoActualEquipamiento() {
   const token = getToken();
-  const res = await fetch("/api/admin/metricas/equipamiento/estado-actual", {
-    method: "GET",
+  const res = await fetch('/api/admin/metricas/equipamiento/estado-actual', {
+    method: 'GET',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const data = await res.json();
@@ -150,8 +150,8 @@ export async function getEstadoActualEquipamiento() {
 
 export async function getCostoBeneficioEquipamiento() {
   const token = getToken();
-  const res = await fetch("/api/admin/metricas/equipamiento/costo-beneficio", {
-    method: "GET",
+  const res = await fetch('/api/admin/metricas/equipamiento/costo-beneficio', {
+    method: 'GET',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const data = await res.json();
@@ -160,8 +160,8 @@ export async function getCostoBeneficioEquipamiento() {
 
 export async function getTopInactivosAsistencia() {
   const token = getToken();
-  const res = await fetch("/api/admin/metricas/asistencia/top-inactivos", {
-    method: "GET",
+  const res = await fetch('/api/admin/metricas/asistencia/top-inactivos', {
+    method: 'GET',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const data = await res.json();
@@ -171,9 +171,9 @@ export async function getTopInactivosAsistencia() {
 export async function getPrediccionAbandonoAsistencia() {
   const token = getToken();
   const res = await fetch(
-    "/api/admin/metricas/asistencia/prediccion-abandono",
+    '/api/admin/metricas/asistencia/prediccion-abandono',
     {
-      method: "GET",
+      method: 'GET',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     }
   );
@@ -182,11 +182,11 @@ export async function getPrediccionAbandonoAsistencia() {
 }
 
 export async function getConcurrenciaAsistencia(
-  tipo: "semanal" | "mensual" | "anual"
+  tipo: 'semanal' | 'mensual' | 'anual'
 ) {
   const token = getToken();
   const res = await fetch(`/api/admin/metricas/asistencia/${tipo}`, {
-    method: "GET",
+    method: 'GET',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const data = await res.json();
@@ -195,8 +195,8 @@ export async function getConcurrenciaAsistencia(
 
 export async function getHistorialRutinas() {
   const token = getToken();
-  const res = await fetch("/api/rutina/historial", {
-    method: "GET",
+  const res = await fetch('/api/rutina/historial', {
+    method: 'GET',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const data = await res.json();
@@ -205,8 +205,8 @@ export async function getHistorialRutinas() {
 
 export async function getObjetivos() {
   const token = getToken();
-  const res = await fetch("/api/objetivos", {
-    method: "GET",
+  const res = await fetch('/api/objetivos', {
+    method: 'GET',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const data = await res.json();
@@ -215,8 +215,8 @@ export async function getObjetivos() {
 
 export async function getNiveles() {
   const token = getToken();
-  const res = await fetch("/api/niveles", {
-    method: "GET",
+  const res = await fetch('/api/niveles', {
+    method: 'GET',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const data = await res.json();
@@ -229,10 +229,10 @@ export async function generarNuevaRutina(body: {
   dias: number;
 }) {
   const token = getToken();
-  const res = await fetch("/api/rutina/generar", {
-    method: "POST",
+  const res = await fetch('/api/rutina/generar', {
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify(body),
@@ -244,7 +244,7 @@ export async function generarNuevaRutina(body: {
 export async function getRutinasPorSocio(idSocio: number | string) {
   const token = getToken();
   const res = await fetch(`/api/rutina/${idSocio}`, {
-    method: "GET",
+    method: 'GET',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const data = await res.json();
@@ -253,10 +253,10 @@ export async function getRutinasPorSocio(idSocio: number | string) {
 
 export async function crearEntrenador(body: any) {
   const token = getToken();
-  const res = await fetch("/api/entrenadores", {
-    method: "POST",
+  const res = await fetch('/api/entrenadores', {
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify(body),
@@ -268,7 +268,7 @@ export async function crearEntrenador(body: any) {
 export async function getEntrenador(id: number | string) {
   const token = getToken();
   const res = await fetch(`/api/entrenadores/${id}`, {
-    method: "GET",
+    method: 'GET',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const data = await res.json();
@@ -278,7 +278,7 @@ export async function getEntrenador(id: number | string) {
 export async function getEntrenadores() {
   const token = getToken();
   const res = await fetch(`/api/entrenadores`, {
-    method: "GET",
+    method: 'GET',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const data = await res.json();
@@ -288,7 +288,7 @@ export async function getEntrenadores() {
 export async function getHorariosEntrenador(id: number | string) {
   const token = getToken();
   const res = await fetch(`/api/entrenadores/${id}/horarios`, {
-    method: "GET",
+    method: 'GET',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const data = await res.json();
@@ -298,9 +298,9 @@ export async function getHorariosEntrenador(id: number | string) {
 export async function actualizarEntrenador(id: number | string, body: any) {
   const token = getToken();
   const res = await fetch(`/api/entrenadores/${id}`, {
-    method: "PUT",
+    method: 'PUT',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify(body),
@@ -314,7 +314,7 @@ export async function actualizarEntrenador(id: number | string, body: any) {
 export async function getDietas() {
   const token = getToken();
   const res = await fetch(`/api/dieta/todas`, {
-    method: "GET",
+    method: 'GET',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const data = await res.json();
@@ -324,7 +324,7 @@ export async function getDietas() {
 export async function getDieta(id: number | string) {
   const token = getToken();
   const res = await fetch(`/api/dieta/${id}`, {
-    method: "GET",
+    method: 'GET',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const data = await res.json();
@@ -334,9 +334,9 @@ export async function getDieta(id: number | string) {
 export async function crearDieta(body: any) {
   const token = getToken();
   const res = await fetch(`/api/dieta/generar`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify(body),
@@ -348,9 +348,9 @@ export async function crearDieta(body: any) {
 export async function actualizarDieta(id: number | string, body: any) {
   const token = getToken();
   const res = await fetch(`/api/dieta/${id}`, {
-    method: "PUT",
+    method: 'PUT',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify(body),
@@ -362,7 +362,7 @@ export async function actualizarDieta(id: number | string, body: any) {
 export async function eliminarDieta(id: number | string) {
   const token = getToken();
   const res = await fetch(`/api/dieta/${id}`, {
-    method: "DELETE",
+    method: 'DELETE',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const data = await res.json();
@@ -375,9 +375,9 @@ export async function asignarDieta(
 ) {
   const token = getToken();
   const res = await fetch(`/api/dieta/socio/${socioId}`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify({ dietaId }),
@@ -389,7 +389,7 @@ export async function asignarDieta(
 export async function getDietasPorSocio(socioId: number | string) {
   const token = getToken();
   const res = await fetch(`/api/dieta/socio/${socioId}`, {
-    method: "GET",
+    method: 'GET',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const data = await res.json();
@@ -402,7 +402,7 @@ export async function eliminarDietaDeSocio(
 ) {
   const token = getToken();
   const res = await fetch(`/api/dieta/socio/${socioId}/dietas/${dietaId}`, {
-    method: "DELETE",
+    method: 'DELETE',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const data = await res.json();
@@ -412,9 +412,9 @@ export async function eliminarDietaDeSocio(
 export async function generarDietaPersonalizada(body: any) {
   const token = getToken();
   const res = await fetch(`/api/dieta/generar-personalizada`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify(body),
@@ -426,7 +426,7 @@ export async function generarDietaPersonalizada(body: any) {
 export async function getSocioByUsuarioId(usuarioId: string) {
   const token = getToken();
   const res = await fetch(`/api/socios`, {
-    method: "GET",
+    method: 'GET',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const data = await res.json();
@@ -448,10 +448,10 @@ export async function registrarEvolucionSocio(body: {
   observaciones: string;
 }) {
   const token = getToken();
-  const res = await fetch("/api/evolucion_socio/registro", {
-    method: "POST",
+  const res = await fetch('/api/evolucion_socio/registro', {
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify(body),
@@ -463,10 +463,31 @@ export async function registrarEvolucionSocio(body: {
 export async function getEvolucionesSocio(socio_id: string) {
   const token = getToken();
   const res = await fetch(`/api/evolucion_socio/${socio_id}`, {
-    method: "GET",
+    method: 'GET',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const data = await res.json();
   return { ok: res.ok, ...data };
 }
 
+export async function uploadFile(
+  file: File,
+  fieldName = 'file',
+  endpoint = '/api/file-upload'
+) {
+  const token = getToken();
+  const form = new FormData();
+  form.append(fieldName, file);
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: form,
+  });
+  let data = null;
+  try {
+    data = await res.json();
+  } catch {
+    data = null;
+  }
+  return { ok: res.ok, data };
+}
