@@ -23,27 +23,7 @@ export const AppSidebar = () => {
     initializeAuth();
   }, [initializeAuth]);
 
-  if (!isInitialized) {
-    return (
-      <aside
-        style={{
-          width: "240px",
-          background: "#2c3e50",
-          color: "#ecf0f1",
-          padding: "20px",
-          boxShadow: "2px 0 5px rgba(0,0,0,0.2)",
-        }}
-      >
-        <div
-          style={{ textAlign: "center", color: "#1abc9c", fontSize: "1.2em" }}
-        >
-          Cargando menú...
-        </div>
-      </aside>
-    );
-  }
-
-  if (!isAuthenticated || !user) {
+  if (!isInitialized || !isAuthenticated || !user) {
     return null;
   }
 

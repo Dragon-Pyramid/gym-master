@@ -433,3 +433,40 @@ export async function getSocioByUsuarioId(usuarioId: string) {
   if (!res.ok || !Array.isArray(data)) return null;
   return data.find((socio) => socio.usuario_id === usuarioId) || null;
 }
+
+// LLamadas API para Evolucion Fisica del Socio
+
+export async function registrarEvolucionSocio(body: {
+  peso: number;
+  cintura: number;
+  bicep: number;
+  tricep: number;
+  pierna: number;
+  gluteos: number;
+  pantorrilla: number;
+  altura: number;
+  observaciones: string;
+}) {
+  const token = getToken();
+  const res = await fetch("/api/evolucion_socio/registro", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data };
+}
+
+export async function getEvolucionesSocio(socio_id: string) {
+  const token = getToken();
+  const res = await fetch(`/api/evolucion_socio/${socio_id}`, {
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data };
+}
+
