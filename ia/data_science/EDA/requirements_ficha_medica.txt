@@ -1,0 +1,6 @@
+supabase==2.7.4
+postgrest
+pandas
+python-dateutil
+matplotlib
+pyarrow
