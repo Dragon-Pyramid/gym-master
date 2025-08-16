@@ -9,12 +9,16 @@ export default function ProfileImage({
   alt,
   size = 96,
   onUpload,
+  showButton = true,
+  onClick,
 }: {
   foto?: string | null;
   src?: string | null;
   alt?: string;
   size?: number;
   onUpload?: (data: any) => void;
+  showButton?: boolean;
+  onClick?: () => void;
 }) {
   const [currentSrc, setCurrentSrc] = useState<string | null>(
     foto ?? src ?? '/default-avatar.png'
@@ -74,7 +78,7 @@ export default function ProfileImage({
     typeof imageSrc === 'string' && /^https?:\/\//i.test(imageSrc);
 
   return (
-    <div className='flex flex-col items-center gap-2'>
+    <div className='flex flex-col items-center gap-2' onClick={onClick}>
       <div
         className='relative flex-shrink-0 overflow-hidden rounded-full ring-1 ring-border/60 dark:ring-border/40'
         style={{ width: size, height: size }}
@@ -95,15 +99,17 @@ export default function ProfileImage({
         className='hidden'
         onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
       />
-      <button
-        type='button'
-        onClick={() => inputRef.current?.click()}
-        className='px-3 py-1 text-sm border rounded-md border-border bg-background/80 hover:bg-background/90 disabled:opacity-60'
-        aria-label='Cambiar imagen'
-        disabled={loading}
-      >
-        {loading ? '...' : 'Cambiar imagen'}
-      </button>
+      {showButton && (
+        <button
+          type='button'
+          onClick={() => inputRef.current?.click()}
+          className='px-3 py-1 text-sm border rounded-md border-border bg-background/80 hover:bg-background/90 disabled:opacity-60'
+          aria-label='Cambiar imagen'
+          disabled={loading}
+        >
+          {loading ? '...' : 'Cambiar imagen'}
+        </button>
+      )}
       {message && (
         <div
           className={`text-xs ${
