@@ -22,6 +22,7 @@ export const useSidebarMenu = (
     const socioAllowedTitles = [
       "Inicio",
       "Control de Asistencia",
+      "Ficha Médica",
       "Rutinas",
       "Dietas",
       "Evolución Física",
