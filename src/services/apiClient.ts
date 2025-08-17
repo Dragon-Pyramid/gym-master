@@ -491,3 +491,18 @@ export async function uploadFile(
   }
   return { ok: res.ok, data };
 }
+
+export async function getFichaMedicaActual(socioId: number | string) {
+  const token = getToken();
+  const res = await fetch(`/api/socios/${socioId}/ficha-medica/actual`, {
+    method: 'GET',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  let data = null;
+  try {
+    data = await res.json();
+  } catch {
+    data = null;
+  }
+  return { ok: res.ok, data };
+}
