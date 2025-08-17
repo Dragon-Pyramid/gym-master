@@ -1,25 +1,25 @@
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import { login } from "@/services/apiClient";
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { login } from '@/services/apiClient';
 import {
-  loginSession,
-  logoutSession,
   getSessionFromCookie,
   getToken,
-} from "@/services/storageService";
-import { jwtDecode } from "jwt-decode";
+  loginSession,
+  logoutSession,
+} from '@/services/storageService';
+import { jwtDecode } from 'jwt-decode';
 
-import type { Usuario } from "@/interfaces/usuario.interface";
+import type { Usuario } from '@/interfaces/usuario.interface';
 
-interface User extends Partial<Usuario> {
-  id: string;
-  email: string;
-  rol: string;
+type StoreUser = Partial<Usuario> & {
+  id?: string;
+  email?: string;
+  rol?: string;
   dbName?: string;
-}
+};
 
 interface AuthState {
-  user: User | null;
+  user: StoreUser | null;
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -45,18 +45,13 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       error: null,
       isInitialized: false,
-
       login: async (credentials) => {
         set({ isLoading: true, error: null });
-
         try {
           const result = await login(credentials);
-
           if (result.ok && result.token) {
-            const decoded = jwtDecode(result.token) as User;
-
+            const decoded = jwtDecode<StoreUser>(result.token);
             loginSession(result.token);
-
             set({
               user: decoded,
               token: result.token,
@@ -65,24 +60,22 @@ export const useAuthStore = create<AuthState>()(
               error: null,
               isInitialized: true,
             });
-
             return true;
           } else {
             set({
-              error: result.message || "Error de autenticación",
+              error: result.message || 'Error de autenticación',
               isLoading: false,
             });
             return false;
           }
         } catch {
           set({
-            error: "Error de conexión",
+            error: 'Error de conexión',
             isLoading: false,
           });
           return false;
         }
       },
-
       logout: () => {
         logoutSession();
         set({
@@ -93,16 +86,13 @@ export const useAuthStore = create<AuthState>()(
           isInitialized: true,
         });
       },
-
       initializeAuth: () => {
         if (get().isInitialized) return;
-
         const token = getToken();
         const session = getSessionFromCookie();
-
         if (token && session) {
           set({
-            user: session as User,
+            user: session as StoreUser,
             token,
             isAuthenticated: true,
             isInitialized: true,
@@ -116,13 +106,12 @@ export const useAuthStore = create<AuthState>()(
           });
         }
       },
-
       clearError: () => {
         set({ error: null });
       },
     }),
     {
-      name: "auth-storage",
+      name: 'auth-storage',
       partialize: (state) => ({
         user: state.user,
         token: state.token,

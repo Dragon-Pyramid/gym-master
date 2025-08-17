@@ -493,16 +493,118 @@ export async function uploadFile(
 }
 
 export async function getFichaMedicaActual(socioId: number | string) {
+    const token = getToken();
+    let resolved: number | string | null = null;
+    if (typeof socioId === 'string') {
+        const posible = await getSocioByUsuarioId(socioId);
+        if (posible && posible.id_socio) {
+            resolved = posible.id_socio;
+        } else {
+            const checkRes = await fetch(`/api/socios/${socioId}`, {
+                method: 'GET',
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
+            });
+            if (checkRes.ok) {
+                resolved = socioId;
+            } else {
+                return { ok: false, data: { error: 'Socio no encontrado', code: 'socio_not_found' } };
+            }
+        }
+    } else {
+        resolved = socioId;
+    }
+    const res = await fetch(`/api/socios/${resolved}/ficha-medica/actual`, {
+        method: 'GET',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    let data = null;
+    try {
+        data = await res.json();
+    } catch {
+        data = null;
+    }
+    return { ok: res.ok, data };
+}
+
+export async function crearFichaMedica(
+  socioId: number | string,
+  data: Record<string, any>,
+  files?: (File | { fieldName?: string; file: File })[]
+) {
   const token = getToken();
-  const res = await fetch(`/api/socios/${socioId}/ficha-medica/actual`, {
-    method: 'GET',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-  let data = null;
-  try {
-    data = await res.json();
-  } catch {
-    data = null;
+  const form = new FormData();
+  if (data) {
+    form.append('ficha', JSON.stringify(data));
   }
-  return { ok: res.ok, data };
+  if (files && files.length) {
+    for (let i = 0; i < files.length; i++) {
+      const item = files[i];
+      if (item instanceof File) {
+        form.append('file', item);
+      } else if (item && item.file instanceof File) {
+        form.append(item.fieldName || 'file', item.file);
+      }
+    }
+  }
+  let resolvedSocioId = socioId;
+  if (typeof socioId === 'string') {
+    const posible = await getSocioByUsuarioId(socioId);
+    if (posible && posible.id_socio) {
+      resolvedSocioId = posible.id_socio;
+    } else {
+      const checkRes = await fetch(`/api/socios/${socioId}`, {
+        method: 'GET',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!checkRes.ok) {
+        return {
+          ok: false,
+          data: { error: 'Socio no encontrado', code: 'socio_not_found' },
+        };
+      }
+    }
+  }
+
+  const filesSummary =
+    files
+      ?.map((item) => {
+        if (item instanceof File) {
+          return {
+            fieldName: 'file',
+            name: item.name,
+            size: item.size,
+            type: item.type,
+          };
+        }
+        if (item && item.file instanceof File) {
+          return {
+            fieldName: item.fieldName || 'file',
+            name: item.file.name,
+            size: item.file.size,
+            type: item.file.type,
+          };
+        }
+        return null;
+      })
+      .filter(Boolean) ?? [];
+
+  console.log('crearFichaMedica -> enviar', {
+    socioId,
+    resolvedSocioId,
+    ficha: data,
+    files: filesSummary,
+  });
+
+  const res = await fetch(`/api/socios/${resolvedSocioId}/ficha-medica`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: form,
+  });
+  let resData = null;
+  try {
+    resData = await res.json();
+  } catch {
+    resData = null;
+  }
+  return { ok: res.ok, data: resData };
 }
