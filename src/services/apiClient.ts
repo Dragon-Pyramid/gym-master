@@ -582,3 +582,46 @@ export async function crearFichaMedica(
   }
   return { ok: res.ok, data: resData };
 }
+
+export async function getFichaMedicaHistorial(
+  socioId: number | string,
+  page = 1
+) {
+  const token = getToken();
+  let resolved: number | string | null = null;
+  if (typeof socioId === 'string') {
+    const posible = await getSocioByUsuarioId(socioId);
+    if (posible && posible.id_socio) {
+      resolved = posible.id_socio;
+    } else {
+      const checkRes = await fetch(`/api/socios/${socioId}`, {
+        method: 'GET',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (checkRes.ok) {
+        resolved = socioId;
+      } else {
+        return {
+          ok: false,
+          data: { error: 'Socio no encontrado', code: 'socio_not_found' },
+        };
+      }
+    }
+  } else {
+    resolved = socioId;
+  }
+  const url = `/api/socios/${resolved}/ficha-medica/historial?page=${encodeURIComponent(
+    String(page)
+  )}`;
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  let data = null;
+  try {
+    data = await res.json();
+  } catch {
+    data = null;
+  }
+  return { ok: res.ok, data };
+}
