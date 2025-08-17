@@ -259,7 +259,7 @@ export default function Tabs({ socioId }: { socioId?: number | string }) {
             .integer('Entero')
             .required('Frecuencia cardíaca obligatoria'),
         alergias: yup.string().nullable(),
-        medicacion_actual: yup.string().nullable(),
+        medicacion: yup.string().nullable(),
         lesiones_previas: yup.string().nullable(),
         enfermedades_cronicas: yup.string().nullable(),
         cirugias_previas: yup.string().nullable(),
