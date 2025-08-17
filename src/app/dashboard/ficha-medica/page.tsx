@@ -8,7 +8,6 @@ import { AppFooter } from '@/components/footer/AppFooter';
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import Tabs from '@/components/ficha-medica/Tabs';
-import type { Usuario } from '@/interfaces/usuario.interface';
 
 export default function FichaMedicaPage() {
   const { isAuthenticated, initializeAuth, isInitialized, user } =
@@ -28,14 +27,6 @@ export default function FichaMedicaPage() {
   if (!isInitialized || !isAuthenticated) {
     return null;
   }
-
-  const profileUser: Partial<Usuario> = {
-    nombre: user?.nombre || user?.nombre_completo || '',
-    email: user?.email || user?.correo || '',
-    creado_en: user?.creado_en || user?.created_at || user?.createdAt || '',
-    foto: user?.foto || user?.avatar || user?.image || null,
-    rol: user?.rol || user?.role || '',
-  };
 
   const socioId = user?.id ?? user?.usuario_id ?? user?.usuario ?? undefined;
 

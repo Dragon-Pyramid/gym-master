@@ -526,7 +526,9 @@ export async function getFichaMedicaActual(socioId: number | string) {
   } catch (err) {
     data = null;
   }
-
+  if (data && typeof data === 'object' && 'data' in data) {
+    return { ok: res.ok, data: (data as any).data };
+  }
   return { ok: res.ok, data };
 }
 
