@@ -10,7 +10,7 @@ export async function GET(req: Request, {params} : {params: {id:string}}) {
         return NextResponse.json({error: "Usuario no autorizado"}, {status: 401});
     }
 
-    const {id} = params;
+    const {id} = await params;
     if (!id) {
         return NextResponse.json({error: "ID de socio no proporcionado"}, {status: 400});
     }

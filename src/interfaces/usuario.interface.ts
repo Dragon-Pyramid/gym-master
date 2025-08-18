@@ -5,12 +5,15 @@ export interface Usuario {
   password_hash: string;
   rol: string;
   activo: boolean;
+  creado_en?: Date;
+  foto?: string;
 }
 
 export interface CreateUsuarioDto {
   nombre: string;
   email: string;
   password: string;
+  foto?: string;
 }
 
 export interface UpdateUsuarioDto {
@@ -19,12 +22,15 @@ export interface UpdateUsuarioDto {
   password_hash?: string;
   rol?: string;
   activo?: boolean;
+  foto?: string;
 }
 
-export interface ResponseUsuario{
+export interface ResponseUsuario {
   id: string;
   nombre: string;
   email: string;
   rol: string;
   activo: boolean;
+  foto?: string;
+  creado_en?: Date;
 }

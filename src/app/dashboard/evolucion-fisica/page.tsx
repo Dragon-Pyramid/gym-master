@@ -4,61 +4,67 @@ import { useState } from "react";
 import { AppHeader } from "@/components/header/AppHeader";
 import { AppFooter } from "@/components/footer/AppFooter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
-
-const MOCK_MEDIDAS = [
-  { fecha: "2024-01-01", peso: 80, cintura: 90, cadera: 100, altura: 175 },
-  { fecha: "2024-02-01", peso: 78, cintura: 88, cadera: 99, altura: 175 },
-  { fecha: "2024-03-01", peso: 77, cintura: 87, cadera: 98, altura: 175 },
-  { fecha: "2024-04-01", peso: 76, cintura: 86, cadera: 97, altura: 175 },
-];
-
-function calcularIMC(peso: number, altura: number) {
-  if (!peso || !altura) return 0;
-  return +(peso / Math.pow(altura / 100, 2)).toFixed(2);
-}
-
-function getIMCStatus(imc: number) {
-  if (imc < 18.5) return "Bajo peso";
-  if (imc < 25) return "Normal";
-  if (imc < 30) return "Sobrepeso";
-  return "Obesidad";
-}
+import EvolucionSocioForm from "@/components/forms/EvolucionSocioForm";
+import EvolucionSocioTable from "@/components/tables/EvolucionSocioTable";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Search, Printer, FileSpreadsheet } from "lucide-react";
+import ExcelJS from "exceljs";
+import { EvolucionSocio } from "@/interfaces/evolucionSocio.interface";
 
 export default function EvolucionFisicaPage() {
-  const [medidas, setMedidas] = useState(MOCK_MEDIDAS);
-  const [form, setForm] = useState({
-    fecha: "",
-    peso: "",
-    cintura: "",
-    cadera: "",
-    altura: "",
-  });
+  const [showForm, setShowForm] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [exportRows, setExportRows] = useState<EvolucionSocio[]>([]);
 
-  const ultima = medidas[medidas.length - 1];
-  const imc = calcularIMC(Number(ultima.peso), Number(ultima.altura));
-  const imcStatus = getIMCStatus(imc);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const handlePrint = () => {
+    window.print();
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setMedidas([
-      ...medidas,
-      {
-        fecha: form.fecha,
-        peso: Number(form.peso),
-        cintura: Number(form.cintura),
-        cadera: Number(form.cadera),
-        altura: Number(form.altura),
-      },
-    ]);
-    setForm({ fecha: "", peso: "", cintura: "", cadera: "", altura: "" });
+  const handleExportExcel = async () => {
+    if (!exportRows.length) return;
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Evoluciones");
+    worksheet.columns = [
+      { header: "Fecha", key: "fecha", width: 15 },
+      { header: "Peso", key: "peso", width: 10 },
+      { header: "Cintura", key: "cintura", width: 12 },
+      { header: "Bíceps", key: "bicep", width: 10 },
+      { header: "Tríceps", key: "tricep", width: 10 },
+      { header: "Pierna", key: "pierna", width: 10 },
+      { header: "Glúteos", key: "gluteos", width: 10 },
+      { header: "Pantorrilla", key: "pantorrilla", width: 14 },
+      { header: "Altura", key: "altura", width: 10 },
+      { header: "IMC", key: "imc", width: 10 },
+      { header: "Observaciones", key: "observaciones", width: 40 },
+    ];
+    exportRows.forEach((e) => {
+      worksheet.addRow({
+        fecha: e.fecha ? new Date(e.fecha).toLocaleDateString() : "",
+        peso: e.peso,
+        cintura: e.cintura,
+        bicep: e.bicep,
+        tricep: e.tricep,
+        pierna: e.pierna,
+        gluteos: e.gluteos,
+        pantorrilla: e.pantorrilla,
+        altura: e.altura,
+        imc: e.imc,
+        observaciones: e.observaciones,
+      });
+    });
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "Evolucion_Fisica.xlsx";
+    a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   return (
@@ -68,117 +74,66 @@ export default function EvolucionFisicaPage() {
         <SidebarInset>
           <AppHeader title="Evolución física" />
           <main className="flex-1 p-6 space-y-8">
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-              <Card className="col-span-1 md:col-span-2">
-                <CardHeader className="text-xl font-bold">
-                  Registrar medidas
+            {showForm && (
+              <Card className="w-full">
+                <CardHeader className="flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap">
+                  <h2 className="text-xl font-bold">Registrar medidas</h2>
+                  <Button variant="outline" onClick={() => setShowForm(false)}>
+                    Cerrar
+                  </Button>
                 </CardHeader>
-                <CardContent>
-                  <form
-                    className="grid grid-cols-2 gap-4"
-                    onSubmit={handleSubmit}
-                  >
-                    <Input
-                      name="fecha"
-                      type="date"
-                      value={form.fecha}
-                      onChange={handleChange}
-                      required
-                      placeholder="Fecha"
-                    />
-                    <Input
-                      name="peso"
-                      type="number"
-                      value={form.peso}
-                      onChange={handleChange}
-                      required
-                      placeholder="Peso (kg)"
-                    />
-                    <Input
-                      name="cintura"
-                      type="number"
-                      value={form.cintura}
-                      onChange={handleChange}
-                      required
-                      placeholder="Cintura (cm)"
-                    />
-                    <Input
-                      name="cadera"
-                      type="number"
-                      value={form.cadera}
-                      onChange={handleChange}
-                      required
-                      placeholder="Cadera (cm)"
-                    />
-                    <Input
-                      name="altura"
-                      type="number"
-                      value={form.altura}
-                      onChange={handleChange}
-                      required
-                      placeholder="Altura (cm)"
-                    />
-                    <div className="flex justify-end col-span-2">
-                      <Button type="submit">Agregar</Button>
-                    </div>
-                  </form>
+                <CardContent className="p-4">
+                  <EvolucionSocioForm
+                    onCreated={() => setShowForm(false)}
+                    onCancel={() => setShowForm(false)}
+                  />
                 </CardContent>
               </Card>
-              <Card className="flex flex-col items-center justify-center gap-4 p-4">
-                <div className="flex items-center justify-center h-40 rounded w-28 bg-muted">
-                  <img
-                    src="/male_silhouette.svg"
-                    alt="male"
-                    className="object-contain w-full h-full"
-                  />
+            )}
+            <Card className="w-full">
+              <CardHeader className="flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap">
+                <h2 className="text-xl font-bold">Historial de medidas</h2>
+                <div className="flex flex-wrap items-center w-full gap-2 md:w-auto">
+                  <div className="relative flex-grow md:flex-grow-0">
+                    <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="search"
+                      placeholder="Buscar por peso, cintura, altura, observación..."
+                      className="pl-8 sm:w-[300px] md:w-[240px] lg:w-[300px] w-full"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                  <Button
+                    onClick={handlePrint}
+                    variant="outline"
+                    className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span className="hidden sm:inline">Imprimir</span>
+                  </Button>
+                  <Button
+                    onClick={handleExportExcel}
+                    variant="outline"
+                    className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
+                  >
+                    <FileSpreadsheet className="w-4 h-4" />
+                    <span className="hidden sm:inline">Exportar</span>
+                  </Button>
+                  <Button
+                    onClick={() => setShowForm(true)}
+                    className="bg-[#02a8e1] hover:bg-[#0288b1]"
+                  >
+                    <span className="hidden sm:inline">Nueva Evolución</span>
+                    <span className="sm:hidden">Nuevo</span>
+                  </Button>
                 </div>
-                <div className="flex items-center justify-center h-40 rounded w-28 bg-muted">
-                  <img
-                    src="/female_silhouette.svg"
-                    alt="female"
-                    className="object-contain w-full h-full"
-                  />
-                </div>
-                <div className="mt-2 text-center">
-                  <div className="font-bold">IMC actual</div>
-                  <div className="text-2xl font-bold text-[#02a8e1]">{imc}</div>
-                  <div className="mt-1 text-sm">{imcStatus}</div>
-                </div>
-              </Card>
-            </div>
-            <Card className="w-full max-w-4xl mx-auto">
-              <CardHeader className="text-xl font-bold">
-                Historial de medidas
               </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-sm border rounded-md">
-                    <thead className="bg-muted/50">
-                      <tr>
-                        <th className="px-3 py-2">Fecha</th>
-                        <th className="px-3 py-2">Peso (kg)</th>
-                        <th className="px-3 py-2">Cintura (cm)</th>
-                        <th className="px-3 py-2">Cadera (cm)</th>
-                        <th className="px-3 py-2">Altura (cm)</th>
-                        <th className="px-3 py-2">IMC</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {medidas.map((m, i) => (
-                        <tr key={i} className="odd:bg-muted/40">
-                          <td className="px-3 py-2">{m.fecha}</td>
-                          <td className="px-3 py-2">{m.peso}</td>
-                          <td className="px-3 py-2">{m.cintura}</td>
-                          <td className="px-3 py-2">{m.cadera}</td>
-                          <td className="px-3 py-2">{m.altura}</td>
-                          <td className="px-3 py-2">
-                            {calcularIMC(m.peso, m.altura)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+              <CardContent className="p-4">
+                <EvolucionSocioTable
+                  searchTerm={searchTerm}
+                  onDataChange={(rows) => setExportRows(rows)}
+                />
               </CardContent>
             </Card>
           </main>
