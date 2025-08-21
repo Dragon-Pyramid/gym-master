@@ -1,7 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { Usuario, CreateUsuarioDto, UpdateUsuarioDto, ResponseUsuario } from "../interfaces/usuario.interface";
 import { JwtUser } from '@/interfaces/jwtUser.interface';
-import { supabase,getSupabaseClient } from '@/services/supabaseClient';
 import { conexionBD } from '@/middlewares/conexionBd.middleware';
 import { updateFotoSocioById } from './socioService';
 
@@ -12,7 +11,7 @@ if (!dbName) {
   throw new Error("No se encontró el nombre de la base de datos en el usuario");
 }
 //ME CONECTO A LA BD DEL USUARIO LOGUEADO
-  const supabase = getSupabaseClient(dbName);
+  const supabase = conexionBD(dbName);
   if (!supabase) {
     throw new Error(`No se pudo obtener el cliente de Supabase para la base de datos: ${dbName}`);
   }
@@ -31,11 +30,14 @@ const responseUsuario = (data : Usuario[]) : ResponseUsuario[]=>{
     nombre: usuario.nombre,
     email: usuario.email,
     rol: usuario.rol,
-    activo: usuario.activo
+    activo: usuario.activo,
+    foto: usuario.foto 
   }))
 }
 
-export const createUsuarios = async (payload: CreateUsuarioDto): Promise<Usuario> => {
+export const createUsuarios = async (user: JwtUser, payload: CreateUsuarioDto): Promise<Usuario> => {
+  const supabase = conexionBD(user.dbName);
+
   const password_hash = await bcrypt.hash(payload.password, 10);
   const { data, error } = await supabase
     .from('usuario')
@@ -47,10 +49,13 @@ export const createUsuarios = async (payload: CreateUsuarioDto): Promise<Usuario
 };
 
 export const updateUsuarios = async (
+  user: JwtUser,
   id: string,
   updateData: UpdateUsuarioDto
 ): Promise<Usuario> => {
-  
+
+  const supabase = conexionBD(user.dbName);
+
   const { data, error } = await supabase
     .from('usuario')
     .update(updateData)
@@ -68,7 +73,8 @@ export const updateUsuarios = async (
   return data as Usuario;
 };
 
-export const deleteUsuarios = async (id: string): Promise<Usuario[]> => {
+export const deleteUsuarios = async (user: JwtUser,id: string): Promise<Usuario[]> => {
+  const supabase = conexionBD(user.dbName);
   const { data, error } = await supabase
     .from('usuario')
     .update({ activo: false })
@@ -81,7 +87,8 @@ export const deleteUsuarios = async (id: string): Promise<Usuario[]> => {
   return data as Usuario[];
 };
 
-export const getUsuarioById = async(id:string): Promise <ResponseUsuario> => {
+export const getUsuarioById = async(user:JwtUser, id:string): Promise <ResponseUsuario> => {
+  const supabase = conexionBD(user.dbName);
   const{data,error} = await supabase
   .from("usuario")
   .select()
@@ -97,8 +104,9 @@ const response : ResponseUsuario = {
   nombre: data.nombre,
   email: data.email,
   rol: data.rol,
-  activo: data.activo
-} 
+  activo: data.activo,
+  foto: data.foto ? data.foto : "https://res.cloudinary.com/dxt4qdckz/image/upload/v1754954109/gym_master/socio/profile/1754954108698_imagen-generica.jpeg.jpg"
+}
 return response;
 } 
 

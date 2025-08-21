@@ -6,10 +6,15 @@ import {
   updateSocio,
   deleteSocio
 } from '@/services/socioService'
+import { authMiddleware } from '@/middlewares/auth.middleware';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const socios = await fetchSocios()
+    const {user} = await authMiddleware(req);
+        if(!user){
+          return NextResponse.json({error: "No autorizado"}, {status: 401});
+        }
+    const socios = await fetchSocios(user)
     return NextResponse.json(socios, { status: 200 })
   } catch (error: any) {
     console.error('ERROR al obtener socios:', error.message || error)
@@ -20,18 +25,13 @@ export async function GET() {
 
 export async function POST(req: Request) {
 
-  
   console.log(req);
   try {
-    const body = await req.json()
-
-    // 🔍 Log para verificar el contenido recibido desde Postman
-    console.log('📝 Datos recibidos para crear socio:', body)
-
-    if (!body.nombre_completo || !body.dni) {
-      return NextResponse.json({ error: 'Nombre completo y DNI son obligatorios' }, { status: 400 })
+    const {user} = await authMiddleware(req);
+    if(!user){
+      return NextResponse.json({error: "No autorizado"}, {status: 401});
     }
-
+    const body = await req.json()
     
     // ✅ Validar si usuario_id existe (si se envía)
     if (body.usuario_id) {
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const creado = await createSocio(body)
+    const creado = await createSocio(user,body)
 
     return NextResponse.json({
       message: 'Socio creado con éxito',
@@ -59,13 +59,17 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   try {
+    const {user} = await authMiddleware(req);
+    if(!user){
+      return NextResponse.json({error: "No autorizado"}, {status: 401});
+    }
     const { id, ...updateData } = await req.json()
 
     if (!id || typeof id !== 'string') {
       return NextResponse.json({ error: 'ID inválido para actualizar' }, { status: 400 })
     }
 
-    const actualizado = await updateSocio(id, updateData)
+    const actualizado = await updateSocio(user,id, updateData)
     return NextResponse.json({
       message: 'Socio actualizado con éxito',
       data: actualizado
@@ -78,13 +82,17 @@ export async function PUT(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
+    const {user} = await authMiddleware(req);
+    if(!user){
+      return NextResponse.json({error: "No autorizado"}, {status: 401});
+    }
     const { id } = await req.json()
 
     if (!id || typeof id !== 'string') {
       return NextResponse.json({ error: 'ID requerido para eliminar' }, { status: 400 })
     }
 
-    await deleteSocio(id)
+    await deleteSocio(user,id)
     return NextResponse.json({ message: 'Socio desactivado con éxito' }, { status: 200 })
   } catch (error: any) {
     const msg = error.message || 'Error al desactivar socio'
