@@ -1,15 +1,19 @@
-import { supabase } from "./supabaseClient";
+
 import { VentaDetalle, CreateVentaDetalleDto, UpdateVentaDetalleDto } from "../interfaces/venta_detalle.interface";
 import { verificoStock } from "./productoService";
+import { JwtUser } from "@/interfaces/jwtUser.interface";
+import { conexionBD } from "@/middlewares/conexionBd.middleware";
 
-export const getAllVentaDetalles = async (): Promise<VentaDetalle[]> => {
+export const getAllVentaDetalles = async (user:JwtUser): Promise<VentaDetalle[]> => {
+  const supabase = conexionBD(user.dbName);
   const { data, error } = await supabase.from("venta_detalle").select();
   if (error) throw new Error(error.message);
   return data as VentaDetalle[];
 };
 
-export const createVentaDetalle = async (payload: CreateVentaDetalleDto, venta_id : string): Promise<VentaDetalle|false> => {
-    //valido stock y traigo precio 
+export const createVentaDetalle = async (user: JwtUser, payload: CreateVentaDetalleDto, venta_id : string): Promise<VentaDetalle|false> => {
+  const supabase = conexionBD(user.dbName); 
+  //valido stock y traigo precio 
   const { precio_unitario, tieneStock } = await verificoStock(payload.producto_id, payload.cantidad);
   
   if (!tieneStock) {
@@ -29,20 +33,22 @@ export const createVentaDetalle = async (payload: CreateVentaDetalleDto, venta_i
   if (error) {
    console.log(error.message);
    //devuelvo las productos al stock
-   await updateVentaDetalle(payload.producto_id, { cantidad: payload.cantidad });
+   await updateVentaDetalle(user,payload.producto_id, { cantidad: payload.cantidad });
     return false;
   }
   return data as VentaDetalle;
 };
 
-export const updateVentaDetalle = async (id: string, updateData: UpdateVentaDetalleDto): Promise<VentaDetalle> => {
+export const updateVentaDetalle = async (user: JwtUser, id: string, updateData: UpdateVentaDetalleDto): Promise<VentaDetalle> => {
+  const supabase = conexionBD(user.dbName);
   const { data, error } = await supabase.from("venta_detalle").update(updateData).eq("id", id).select().single();
   if (error) throw new Error(error.message);
   if (!data || data.length === 0) throw new Error("No se encontró detalle de venta con ese id");
   return data as VentaDetalle;
 };
 
-export const deleteVentaDetalle = async (id: string): Promise<VentaDetalle[]> => {
+export const deleteVentaDetalle = async (user: JwtUser, id: string): Promise<VentaDetalle[]> => {
+  const supabase = conexionBD(user.dbName);
   const { data, error } = await supabase.from("venta_detalle").delete().eq("id", id).select();
   if (error) throw new Error(error.message);
   if (!data || data.length === 0) throw new Error("No se encontró detalle de venta con ese id");

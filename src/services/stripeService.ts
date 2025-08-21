@@ -1,9 +1,10 @@
 import { stripe } from "@/lib/stripe";
 import { getSocioByIdUsuario } from "./socioService";
-import { getSupabaseClient } from "./supabaseClient";
+import { JwtUser } from "@/interfaces/jwtUser.interface";
+import { conexionBD } from "@/middlewares/conexionBd.middleware";
 
-export const createSessionPago = async (user) : Promise<{ url: string }> => {
-      const supabase = getSupabaseClient(user.dbName);
+export const createSessionPago = async (user:JwtUser) : Promise<{ url: string }> => {
+      const supabase = conexionBD(user.dbName);
     
         //TRAIGO LA CUOTA MAS RECIENTE
         const { data: cuota, error: cuotaError } = await supabase
@@ -18,7 +19,7 @@ export const createSessionPago = async (user) : Promise<{ url: string }> => {
           throw new Error("Error al traer la cuota");
         }
     
-          const socio = await getSocioByIdUsuario(user.id);
+          const socio = await getSocioByIdUsuario(user.id,user.dbName);
     
           //VERIFICO SI EL SOCIO YA TIENE UN PAGO DE ESTA CUOTA
          const {data: ultimoPago,error:ultimoPagoError} = await supabase

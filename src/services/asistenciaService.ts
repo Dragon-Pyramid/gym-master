@@ -1,11 +1,14 @@
-import { getSupabaseClient, supabase } from "./supabaseClient";
-import { existeSocioActivo, getSocioByIdUsuario } from "./socioService";
+
+import { existeSocioActivo } from "./socioService";
 import { Asistencia, CreateAsistenciaDto, UpdateAsistenciaDto } from "../interfaces/asistencia.interface"; 
 import dayjs from "dayjs";
 import  jwt  from 'jsonwebtoken';
 import  QRCode  from 'qrcode';
+import { JwtUser } from "@/interfaces/jwtUser.interface";
+import { conexionBD } from "@/middlewares/conexionBd.middleware";
 
-export const getAllAsistencias = async (): Promise<Asistencia[]>=> {
+export const getAllAsistencias = async (user: JwtUser): Promise<Asistencia[]>=> {
+  const supabase = conexionBD(user.dbName)
   const { data, error } = await supabase
     .from("asistencia")
     .select(`*,
@@ -17,9 +20,10 @@ export const getAllAsistencias = async (): Promise<Asistencia[]>=> {
  return data;
 };
 
-export const createAsistencia = async (payload: CreateAsistenciaDto): Promise<Asistencia> => {
+export const createAsistencia = async (user:JwtUser,payload: CreateAsistenciaDto): Promise<Asistencia> => {
+  const supabase = conexionBD(user.dbName)
   // Verificar si el socio existe antes de crear la asistencia
-  const socioActivo = await existeSocioActivo(payload.socio_id);
+  const socioActivo = await existeSocioActivo(user,payload.socio_id);
   if (!socioActivo) {
     throw new Error("El socio no existe o está inactivo");
   }
@@ -37,7 +41,8 @@ export const createAsistencia = async (payload: CreateAsistenciaDto): Promise<As
 
 //TODO: Agregar validacion que el id del socio sea el id que se encuentra en la sesion
 // o que el id de la sesion tenga rol de administradors
-export const updateAsistencia = async (id: string, updateData: UpdateAsistenciaDto): Promise<Asistencia> => {
+export const updateAsistencia = async (user: JwtUser, id: string, updateData: UpdateAsistenciaDto): Promise<Asistencia> => {
+    const supabase = conexionBD(user.dbName)
     const { data, error } = await supabase
     .from("asistencia")
     .update(updateData)
@@ -51,7 +56,8 @@ export const updateAsistencia = async (id: string, updateData: UpdateAsistenciaD
 
 //TODO: Agregar validacion que el id del socio sea el id que se encuentra en la sesion
 // o que el id de la sesion tenga rol de administradors
-export const deleteAsistencia = async (id: string): Promise<Asistencia[]> => {
+export const deleteAsistencia = async (user: JwtUser,id: string): Promise<Asistencia[]> => {
+  const supabase = conexionBD(user.dbName)
   const { data, error } = await supabase
     .from("asistencia")
     .delete()
@@ -92,7 +98,7 @@ export const createQRDiario = async()=>{
     return { qrCode, url, token }
 }
 
-export const registrarAsistenciaDesdeQR = async (tokenAsistencia: string,user:any) => {
+export const registrarAsistenciaDesdeQR = async (tokenAsistencia: string,user:JwtUser) => {
   
   if(!process.env.JWT_SECRET){
     throw new Error("No existe la variable de entorno JWT_SECRET");
@@ -102,17 +108,17 @@ export const registrarAsistenciaDesdeQR = async (tokenAsistencia: string,user:an
     const decoded = jwt.verify(tokenAsistencia, process.env.JWT_SECRET)
     
     // Registrar la asistencia del usuario logueado en su gimnasio
-    const supabase = getSupabaseClient(user.dbName);
+    const supabase = conexionBD(user.dbName)
 
     //TRAIGO EL SOCIO QUE  ESTA RELACIONADO A ESE USUARIO
-  const socio = await getSocioByIdUsuario(user.id);
+  const socio = user.id_socio
 
 
   // verifico si el socio ya registro su asistencia en el dia de hoy
     const {data:dataSocioAsistencia} = await supabase
       .from("asistencia")
       .select("*")
-      .eq("socio_id", socio.id_socio)
+      .eq("socio_id", socio)
       .eq("fecha", decoded.fecha)
       .single();
 
@@ -125,8 +131,8 @@ export const registrarAsistenciaDesdeQR = async (tokenAsistencia: string,user:an
     const horaIngreso = dayjs().format('HH:mm:ss');
     const horaEgreso = dayjs().add(2, 'hour').format('HH:mm:ss');
 
-    const createAsistenciaResult = await createAsistencia({
-      socio_id: socio.id_socio,
+    const createAsistenciaResult = await createAsistencia(user,{
+      socio_id: socio,
       fecha: decoded.fecha,
       hora_ingreso: horaIngreso,
       hora_egreso: horaEgreso
@@ -136,42 +142,40 @@ export const registrarAsistenciaDesdeQR = async (tokenAsistencia: string,user:an
 
 }
 
-export const dataConcurrenciaSemanal = async (user: any) => {
-    const supabase = getSupabaseClient(user.dbName);
+export const dataConcurrenciaSemanal = async (user: JwtUser) => {
+    const supabase = conexionBD(user.dbName);
     const { data, error } = await supabase
         .rpc('sp_concurrencia_semanal');
     if (error) throw new Error(error.message);
     return data;
 }
 
-export const dataConcurrenciaMensual = async (user: any) => {
-    const supabase = getSupabaseClient(user.dbName);
+export const dataConcurrenciaMensual = async (user: JwtUser) => {
+    const supabase = conexionBD(user.dbName);
     const { data, error } = await supabase
         .rpc('sp_concurrencia_mensual');
     if (error) throw new Error(error.message);
     return data;
 }
 
-export const dataConcurrenciaAnual = async (user: any) => {
-    const supabase = getSupabaseClient(user.dbName);
+export const dataConcurrenciaAnual = async (user: JwtUser) => {
+    const supabase = conexionBD(user.dbName);
     const { data, error } = await supabase
         .rpc('sp_concurrencia_anual');
     if (error) throw new Error(error.message);
     return data;
 }
 
-//TODO FALTA AGREGAR LA FUNCION A SUPABASE
-export const dataPrediccionAbandono = async (user: any) => {
-    const supabase = getSupabaseClient(user.dbName);
+export const dataPrediccionAbandono = async (user: JwtUser) => {
+    const supabase = conexionBD(user.dbName)
     const { data, error } = await supabase
         .rpc('sp_prediccion_abandono');
     if (error) throw new Error(error.message);
     return data;
 } 
 
-//TODO FALTA AGREGAR LA FUNCION A SUPABASE
-export const dataTopInactivos = async (user: any) => {
-    const supabase = getSupabaseClient(user.dbName);
+export const dataTopInactivos = async (user: JwtUser) => {
+    const supabase = conexionBD(user.dbName);
     const { data, error } = await supabase
         .rpc('sp_top_inactivos');
     if (error) throw new Error(error.message);

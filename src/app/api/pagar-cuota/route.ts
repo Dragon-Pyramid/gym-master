@@ -1,8 +1,5 @@
 import { authMiddleware } from '@/middlewares/auth.middleware';
 import { NextRequest, NextResponse } from 'next/server';
-import { stripe } from '@/lib/stripe';
-import { getSupabaseClient } from './../../../services/supabaseClient';
-import { getSocioByIdUsuario } from '@/services/socioService';
 import { createSessionPago } from '@/services/stripeService';
 
 export async function POST(req: NextRequest) {

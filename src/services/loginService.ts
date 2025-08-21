@@ -12,6 +12,7 @@ export const signIn = async (login: SignInDto) => {
       'No se encontró el nombre de la base de datos en el usuario'
     );
   }
+  
   //ME CONECTO A LA BD DINAMICAMENTE, CON SU NOMBRE
   const supabase = conexionBD(dbName);
   //BUSCO EN ESA BD, EL USUARIO
@@ -60,6 +61,7 @@ export const signIn = async (login: SignInDto) => {
 
   if (rol === 'socio') {
     const socio = await getSocioByIdUsuario(data.id, dbName);
+    
     // const socio = await getSocioByIdUsuario(data.id);
 
     if (!socio) {
