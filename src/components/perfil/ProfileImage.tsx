@@ -21,7 +21,7 @@ export default function ProfileImage({
   onClick?: () => void;
 }) {
   const [currentSrc, setCurrentSrc] = useState<string | null>(
-    foto ?? src ?? '/default-avatar.png'
+    foto ?? src ?? null
   );
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{
@@ -62,10 +62,17 @@ export default function ProfileImage({
           text: res.data?.message || 'Error al subir archivo',
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errObj =
+        error && typeof error === 'object'
+          ? (error as Record<string, unknown>)
+          : null;
+      const text =
+        (errObj && typeof errObj.message === 'string' && errObj.message) ||
+        'Error al subir archivo';
       setMessage({
         type: 'error',
-        text: error?.message || 'Error al subir archivo',
+        text,
       });
     } finally {
       setLoading(false);
@@ -73,24 +80,37 @@ export default function ProfileImage({
     }
   };
 
-  const imageSrc = currentSrc ?? '/default-avatar.png';
+  const imageSrc = currentSrc;
   const isExternal =
-    typeof imageSrc === 'string' && /^https?:\/\//i.test(imageSrc);
+    typeof imageSrc === 'string' && /^https?:\/\//i.test(imageSrc ?? '');
+
+  const getInitial = () => {
+    const name = alt || '';
+    const trimmed = name.trim();
+    if (!trimmed) return '';
+    return trimmed.charAt(0).toUpperCase();
+  };
 
   return (
     <div className='flex flex-col items-center gap-2' onClick={onClick}>
       <div
-        className='relative flex-shrink-0 overflow-hidden rounded-full ring-1 ring-border/60 dark:ring-border/40'
+        className='relative flex items-center justify-center flex-shrink-0 overflow-hidden rounded-full ring-1 ring-border/60 dark:ring-border/40'
         style={{ width: size, height: size }}
       >
-        <Image
-          src={imageSrc}
-          alt={alt ?? 'Avatar'}
-          width={size}
-          height={size}
-          className='object-cover w-full h-full rounded-full bg-muted'
-          unoptimized={isExternal}
-        />
+        {imageSrc ? (
+          <Image
+            src={imageSrc}
+            alt={alt ?? 'Avatar'}
+            width={size}
+            height={size}
+            className='object-cover w-full h-full rounded-full bg-muted'
+            unoptimized={isExternal}
+          />
+        ) : (
+          <div className='flex items-center justify-center w-full h-full text-xl font-semibold text-white bg-indigo-600 rounded-full'>
+            {getInitial()}
+          </div>
+        )}
       </div>
       <input
         ref={inputRef}
