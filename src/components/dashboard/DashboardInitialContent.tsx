@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/authStore';
 import Image from 'next/image';
 import { Card } from '@/components/ui/card';
 import { Clock, Dumbbell, Star } from 'lucide-react';
+import ProfileImage from '@/components/perfil/ProfileImage';
 
 const DashboardInitialContent = () => {
   const { user } = useAuthStore();
@@ -155,21 +156,12 @@ const DashboardInitialContent = () => {
                   {timeOfDay}
                 </h1>
                 <div className='flex items-center gap-4 mb-6'>
-                  <div className='flex items-center justify-center w-16 h-16 overflow-hidden rounded-full bg-slate-100 text-slate-700'>
-                    {userImage ? (
-                      <Image
-                        src={userImage}
-                        alt={userName}
-                        width={64}
-                        height={64}
-                        className='object-cover w-16 h-16'
-                      />
-                    ) : (
-                      <span className='text-2xl font-semibold'>
-                        {userName ? userName.charAt(0).toUpperCase() : 'I'}
-                      </span>
-                    )}
-                  </div>
+                  <ProfileImage
+                    foto={userImage}
+                    alt={userName}
+                    size={80}
+                    showButton={false}
+                  />
                   <h2 className='text-4xl font-black leading-tight tracking-tight sm:text-5xl md:text-6xl lg:text-7xl'>
                     <span className='text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary to-primary/80'>
                       {userName}
