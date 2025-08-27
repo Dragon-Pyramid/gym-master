@@ -2,7 +2,11 @@ import axios from "axios";
 import { authHeader } from "@/services/storageService";
 
 export const fetchQrCode = async (): Promise<string> => {
-  const response = await axios.get("api/asistencias/qr-dia");
+  const response = await axios.get("api/asistencias/qr-dia", {
+    headers: {
+      ...authHeader(),
+    },
+  });
   return response.data.qrCode;
 };
 
