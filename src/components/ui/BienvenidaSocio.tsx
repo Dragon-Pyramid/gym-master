@@ -1,5 +1,6 @@
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import { getSocioByIdUsuario } from '@/services/socioService';
 import { Socio } from '@/interfaces/socio.interface';
@@ -19,6 +20,8 @@ export default function BienvenidaSocio({
   const [socioData, setSocioData] = useState<Socio | null>(null);
   const [loading, setLoading] = useState(false);
   const { user } = useAuthStore();
+  const router = useRouter();
+  const redirectTimeoutRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
     setMounted(true);
@@ -40,6 +43,27 @@ export default function BienvenidaSocio({
 
     fetchSocioData();
   }, [user]);
+
+  useEffect(() => {
+    if (mounted && socioData) {
+      redirectTimeoutRef.current = setTimeout(() => {
+        router.push('/dashboard');
+      }, 5000);
+    }
+
+    return () => {
+      if (redirectTimeoutRef.current) {
+        clearTimeout(redirectTimeoutRef.current);
+      }
+    };
+  }, [mounted, socioData, router]);
+
+  const handleClose = () => {
+    if (redirectTimeoutRef.current) {
+      clearTimeout(redirectTimeoutRef.current);
+    }
+    onClose?.();
+  };
 
   const displayNombre = socioData?.nombre_completo || nombre || 'Socio';
   const displayFoto = socioData?.foto || foto;
@@ -88,7 +112,7 @@ export default function BienvenidaSocio({
               )}
               <div className='flex items-center justify-center gap-3 mt-6 md:justify-start'>
                 <button
-                  onClick={onClose}
+                  onClick={handleClose}
                   className='px-6 py-3 font-semibold text-white bg-indigo-600 rounded-lg shadow hover:bg-indigo-700'
                 >
                   Continuar
