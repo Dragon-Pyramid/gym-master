@@ -47,7 +47,8 @@ export default function BienvenidaSocio({
   useEffect(() => {
     if (mounted && socioData) {
       redirectTimeoutRef.current = setTimeout(() => {
-        router.push('/dashboard');
+        const redirectUrl = user?.rol === 'admin' ? '/dashboard?qr=open' : '/dashboard';
+        router.push(redirectUrl);
       }, 5000);
     }
 
@@ -56,7 +57,7 @@ export default function BienvenidaSocio({
         clearTimeout(redirectTimeoutRef.current);
       }
     };
-  }, [mounted, socioData, router]);
+  }, [mounted, socioData, router, user?.rol]);
 
   const handleClose = () => {
     if (redirectTimeoutRef.current) {

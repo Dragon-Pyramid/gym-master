@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -12,21 +12,21 @@ import {
   Tooltip,
   Legend,
   ArcElement,
-} from "chart.js";
-import { Line, Bar, Pie } from "react-chartjs-2";
-import { AppHeader } from "@/components/header/AppHeader";
-import { AppFooter } from "@/components/footer/AppFooter";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { useAuthStore } from "@/stores/authStore";
-import { useRouter } from "next/navigation";
-import { AppSidebar } from "@/components/sidebar/AppSidebar";
-import DashboardInitialContent from "@/components/dashboard/DashboardInitialContent";
+} from 'chart.js';
+import { Line, Bar, Pie } from 'react-chartjs-2';
+import { AppHeader } from '@/components/header/AppHeader';
+import { AppFooter } from '@/components/footer/AppFooter';
+import { SidebarProvider } from '@/components/ui/sidebar';
+import { useAuthStore } from '@/stores/authStore';
+import { useRouter } from 'next/navigation';
+import { AppSidebar } from '@/components/sidebar/AppSidebar';
+import DashboardInitialContent from '@/components/dashboard/DashboardInitialContent';
 
-import { useEffect, useState } from "react";
-import QrDisplayModal from "@/components/ui/qr-display";
-import { Button } from "@/components/ui/button";
-import { getAllEquipamientos } from "@/services/equipamientoService";
-import { getAllMantenimientos } from "@/services/mantenimientoService";
+import { useEffect, useState } from 'react';
+import QrDisplayModal from '@/components/ui/qr-display';
+import { Button } from '@/components/ui/button';
+import { getAllEquipamientos } from '@/services/equipamientoService';
+import { getAllMantenimientos } from '@/services/mantenimientoService';
 import {
   getAdherenciaRutinas,
   getEvolucionPromedioRutinas,
@@ -35,10 +35,10 @@ import {
   getEstadoActualEquipamiento,
   getSegmentacionPagos,
   getHistogramaPagos,
-} from "@/services/apiClient";
+} from '@/services/apiClient';
 
-import { Equipamento } from "@/interfaces/equipamiento.interface";
-import { Mantenimiento } from "@/interfaces/mantenimiento.interface";
+import { Equipamento } from '@/interfaces/equipamiento.interface';
+import { Mantenimiento } from '@/interfaces/mantenimiento.interface';
 
 ChartJS.register(
   CategoryScale,
@@ -153,7 +153,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (isInitialized && !isAuthenticated) {
-      router.push("/auth/login");
+      router.push('/auth/login');
     }
   }, [isAuthenticated, isInitialized, router]);
 
@@ -165,7 +165,7 @@ export default function DashboardPage() {
       setEquipos(eqs || []);
       setMantenimientos(mants || []);
 
-      if (user?.rol === "admin") {
+      if (user?.rol === 'admin') {
         const [
           adherencia,
           evolucion,
@@ -177,7 +177,7 @@ export default function DashboardPage() {
         ] = await Promise.all([
           getAdherenciaRutinas(),
           getEvolucionPromedioRutinas(),
-          getConcurrenciaAsistencia("semanal"),
+          getConcurrenciaAsistencia('semanal'),
           getTopFallosEquipamiento(),
           getEstadoActualEquipamiento(),
           getSegmentacionPagos(),
@@ -210,10 +210,10 @@ export default function DashboardPage() {
 
   const equiposTotales = equipos.length;
   const equiposEnRevision = equipos.filter(
-    (e) => e.estado === "en mantenimiento"
+    (e) => e.estado === 'en mantenimiento'
   ).length;
   const equiposFueraDeServicio = equipos.filter(
-    (e) => e.estado === "fuera de servicio"
+    (e) => e.estado === 'fuera de servicio'
   ).length;
   const proximosMantenimientos = equipos.filter((e) => {
     if (!e.proxima_revision) return false;
@@ -233,7 +233,7 @@ export default function DashboardPage() {
 
   if (loadingDatos || !isInitialized) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className='flex items-center justify-center h-screen'>
         Cargando dashboard...
       </div>
     );
@@ -247,48 +247,53 @@ export default function DashboardPage() {
 
   return (
     <SidebarProvider>
-      <div className="relative flex w-full min-h-screen">
+      <div className='relative flex w-full min-h-screen'>
         {showQr && (
           <div
-            className="fixed inset-0 z-50 transition-opacity duration-300 bg-black"
-            style={{ pointerEvents: "auto", opacity: 1 }}
+            className='fixed inset-0 z-50 transition-opacity duration-300 bg-black'
+            style={{ pointerEvents: 'auto', opacity: 1 }}
           />
         )}
         <AppSidebar />
-        <div className="flex flex-col flex-1 w-full">
-          <AppHeader title="Dashboard" />
+        <div className='flex flex-col flex-1 w-full'>
+          <AppHeader title='Dashboard' />
           <QrDisplayModal open={showQr} onClose={() => setShowQr(false)} />
-          <main className="flex-1 w-full max-w-full px-4 py-6 space-y-6 md:px-8">
-            {(userType === "socio" || userType === "usuario") && (
+          <main className='flex-1 w-full max-w-full px-4 py-6 space-y-6 md:px-8'>
+            {(userType === 'socio' || userType === 'usuario') && (
               <DashboardInitialContent />
             )}
-            {userType === "admin" && (
+            {userType === 'admin' && (
               <>
-                <div className="p-5">
-                  <h1 className="mb-4 text-3xl font-bold">
+                <div className='p-5'>
+                  <h1 className='mb-4 text-3xl font-bold'>
                     Bienvenido al Panel de Control
                   </h1>
-                  <p className="text-lg text-gray-700 dark:text-gray-300">
+                  <p className='text-lg text-gray-700 dark:text-gray-300'>
                     Este es tu panel de control administrativo.
                   </p>
-                  <div className="flex items-center justify-start w-full mt-6">
+                  <div className='flex items-center justify-start w-full mt-6'>
                     <Button
-                      className="px-6 py-3 text-base font-medium"
-                      onClick={() => setShowQr(true)}
+                      className='px-6 py-3 text-base font-medium'
+                      onClick={() => {
+                        setShowQr(true);
+                        const url = new URL(window.location.href);
+                        url.searchParams.set('qr', 'open');
+                        window.history.pushState({}, '', url);
+                      }}
                     >
                       QR del Día
                     </Button>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 mt-6 md:grid-cols-2 xl:grid-cols-3">
+                <div className='grid grid-cols-1 gap-4 mt-6 md:grid-cols-2 xl:grid-cols-3'>
                   <Card>
                     <CardHeader>
                       <CardTitle>Equipos Totales</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold">{equiposTotales}</div>
-                      <p className="text-sm text-muted-foreground">
+                      <div className='text-3xl font-bold'>{equiposTotales}</div>
+                      <p className='text-sm text-muted-foreground'>
                         Total de equipos registrados
                       </p>
                     </CardContent>
@@ -299,10 +304,10 @@ export default function DashboardPage() {
                       <CardTitle>Equipos en Revisión</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold">
+                      <div className='text-3xl font-bold'>
                         {equiposEnRevision}
                       </div>
-                      <p className="text-sm text-muted-foreground">
+                      <p className='text-sm text-muted-foreground'>
                         Actualmente en proceso de revisión
                       </p>
                     </CardContent>
@@ -313,10 +318,10 @@ export default function DashboardPage() {
                       <CardTitle>Próximos Mantenimientos</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold">
+                      <div className='text-3xl font-bold'>
                         {proximosMantenimientos}
                       </div>
-                      <p className="text-sm text-muted-foreground">
+                      <p className='text-sm text-muted-foreground'>
                         Equipos con mantenimiento programado
                       </p>
                     </CardContent>
@@ -329,10 +334,10 @@ export default function DashboardPage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold">
+                      <div className='text-3xl font-bold'>
                         ${costoMantenimientoMensual}
                       </div>
-                      <p className="text-sm text-muted-foreground">
+                      <p className='text-sm text-muted-foreground'>
                         Costo estimado para este mes
                       </p>
                     </CardContent>
@@ -343,22 +348,22 @@ export default function DashboardPage() {
                       <CardTitle>Equipos Fuera de Servicio</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold">
+                      <div className='text-3xl font-bold'>
                         {equiposFueraDeServicio}
                       </div>
-                      <p className="text-sm text-muted-foreground">
+                      <p className='text-sm text-muted-foreground'>
                         Equipos no operativos actualmente
                       </p>
                     </CardContent>
                   </Card>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-                  <Card className="col-span-12 lg:col-span-6">
+                <div className='grid grid-cols-1 gap-4 lg:grid-cols-12'>
+                  <Card className='col-span-12 lg:col-span-6'>
                     <CardHeader>
                       <CardTitle>Adherencia a Rutinas</CardTitle>
                     </CardHeader>
-                    <CardContent className="h-[300px]">
+                    <CardContent className='h-[300px]'>
                       <Line
                         data={{
                           labels: adherenciaRutinas.map(
@@ -366,12 +371,12 @@ export default function DashboardPage() {
                           ),
                           datasets: [
                             {
-                              label: "Porcentaje Adherencia",
+                              label: 'Porcentaje Adherencia',
                               data: adherenciaRutinas.map(
                                 (item) => item.porcentaje_adherencia
                               ),
-                              borderColor: "#0088FE",
-                              backgroundColor: "rgba(0, 136, 254, 0.1)",
+                              borderColor: '#0088FE',
+                              backgroundColor: 'rgba(0, 136, 254, 0.1)',
                               tension: 0.1,
                             },
                           ],
@@ -381,7 +386,7 @@ export default function DashboardPage() {
                           maintainAspectRatio: false,
                           plugins: {
                             legend: {
-                              position: "top" as const,
+                              position: 'top' as const,
                             },
                           },
                         }}
@@ -389,22 +394,22 @@ export default function DashboardPage() {
                     </CardContent>
                   </Card>
 
-                  <Card className="col-span-12 lg:col-span-6">
+                  <Card className='col-span-12 lg:col-span-6'>
                     <CardHeader>
                       <CardTitle>Evolución Promedio por Objetivo</CardTitle>
                     </CardHeader>
-                    <CardContent className="h-[300px]">
+                    <CardContent className='h-[300px]'>
                       <Line
                         data={{
                           labels: evolucionRutinas.map((item) => item.año_mes),
                           datasets: [
                             {
-                              label: "Promedio Asistencias",
+                              label: 'Promedio Asistencias',
                               data: evolucionRutinas.map(
                                 (item) => item.promedio_asistencias
                               ),
-                              borderColor: "#00C49F",
-                              backgroundColor: "rgba(0, 196, 159, 0.1)",
+                              borderColor: '#00C49F',
+                              backgroundColor: 'rgba(0, 196, 159, 0.1)',
                               tension: 0.1,
                             },
                           ],
@@ -414,7 +419,7 @@ export default function DashboardPage() {
                           maintainAspectRatio: false,
                           plugins: {
                             legend: {
-                              position: "top" as const,
+                              position: 'top' as const,
                             },
                           },
                         }}
@@ -422,11 +427,11 @@ export default function DashboardPage() {
                     </CardContent>
                   </Card>
 
-                  <Card className="col-span-12 lg:col-span-8">
+                  <Card className='col-span-12 lg:col-span-8'>
                     <CardHeader>
                       <CardTitle>Concurrencia Semanal</CardTitle>
                     </CardHeader>
-                    <CardContent className="h-[300px]">
+                    <CardContent className='h-[300px]'>
                       <Line
                         data={{
                           labels: concurrenciaSemanal.map(
@@ -434,12 +439,12 @@ export default function DashboardPage() {
                           ),
                           datasets: [
                             {
-                              label: "Asistencias",
+                              label: 'Asistencias',
                               data: concurrenciaSemanal.map(
                                 (item) => item.asistencias
                               ),
-                              borderColor: "#FFBB28",
-                              backgroundColor: "rgba(255, 187, 40, 0.1)",
+                              borderColor: '#FFBB28',
+                              backgroundColor: 'rgba(255, 187, 40, 0.1)',
                               tension: 0.1,
                             },
                           ],
@@ -449,7 +454,7 @@ export default function DashboardPage() {
                           maintainAspectRatio: false,
                           plugins: {
                             legend: {
-                              position: "top" as const,
+                              position: 'top' as const,
                             },
                           },
                         }}
@@ -457,12 +462,12 @@ export default function DashboardPage() {
                     </CardContent>
                   </Card>
 
-                  <Card className="col-span-12 lg:col-span-4">
+                  <Card className='col-span-12 lg:col-span-4'>
                     <CardHeader>
                       <CardTitle>Estado de Equipamiento</CardTitle>
                     </CardHeader>
-                    <CardContent className="lg:h-[300px] md:h-[600px] overflow-y-auto">
-                      <div className="lg:h-[500px] md:h-[500px]">
+                    <CardContent className='lg:h-[300px] md:h-[600px] overflow-y-auto'>
+                      <div className='lg:h-[500px] md:h-[500px]'>
                         <Pie
                           data={{
                             labels: estadoEquipamiento.map(
@@ -470,17 +475,17 @@ export default function DashboardPage() {
                             ),
                             datasets: [
                               {
-                                label: "Costo Últimos 3M",
+                                label: 'Costo Últimos 3M',
                                 data: estadoEquipamiento.map(
                                   (item) => item.costo_ultimos_3m
                                 ),
                                 backgroundColor: [
-                                  "#0088FE",
-                                  "#00C49F",
-                                  "#FFBB28",
-                                  "#FF8042",
-                                  "#8884d8",
-                                  "#82ca9d",
+                                  '#0088FE',
+                                  '#00C49F',
+                                  '#FFBB28',
+                                  '#FF8042',
+                                  '#8884d8',
+                                  '#82ca9d',
                                 ],
                                 borderWidth: 1,
                               },
@@ -491,7 +496,7 @@ export default function DashboardPage() {
                             maintainAspectRatio: false,
                             plugins: {
                               legend: {
-                                position: "bottom" as const,
+                                position: 'bottom' as const,
                                 labels: {
                                   usePointStyle: true,
                                   padding: 10,
@@ -504,20 +509,20 @@ export default function DashboardPage() {
                     </CardContent>
                   </Card>
 
-                  <Card className="col-span-12 lg:col-span-6">
+                  <Card className='col-span-12 lg:col-span-6'>
                     <CardHeader>
                       <CardTitle>Top Fallos de Equipamiento</CardTitle>
                     </CardHeader>
-                    <CardContent className="h-[300px]">
+                    <CardContent className='h-[300px]'>
                       <Bar
                         data={{
                           labels: topFallos.map((item) => item.nombre),
                           datasets: [
                             {
-                              label: "Total Fallos",
+                              label: 'Total Fallos',
                               data: topFallos.map((item) => item.total_fallos),
-                              backgroundColor: "#FF8042",
-                              borderColor: "#FF8042",
+                              backgroundColor: '#FF8042',
+                              borderColor: '#FF8042',
                               borderWidth: 1,
                             },
                           ],
@@ -527,7 +532,7 @@ export default function DashboardPage() {
                           maintainAspectRatio: false,
                           plugins: {
                             legend: {
-                              position: "top" as const,
+                              position: 'top' as const,
                             },
                           },
                           scales: {
@@ -540,11 +545,11 @@ export default function DashboardPage() {
                     </CardContent>
                   </Card>
 
-                  <Card className="col-span-12 lg:col-span-6">
+                  <Card className='col-span-12 lg:col-span-6'>
                     <CardHeader>
                       <CardTitle>Segmentación de Pagos</CardTitle>
                     </CardHeader>
-                    <CardContent className="h-[300px]">
+                    <CardContent className='h-[300px]'>
                       <Pie
                         data={{
                           labels: segmentacionPagos.map(
@@ -552,17 +557,17 @@ export default function DashboardPage() {
                           ),
                           datasets: [
                             {
-                              label: "Total Pagado",
+                              label: 'Total Pagado',
                               data: segmentacionPagos.map(
                                 (item) => item.total_pagado
                               ),
                               backgroundColor: [
-                                "#0088FE",
-                                "#00C49F",
-                                "#FFBB28",
-                                "#FF8042",
-                                "#8884d8",
-                                "#82ca9d",
+                                '#0088FE',
+                                '#00C49F',
+                                '#FFBB28',
+                                '#FF8042',
+                                '#8884d8',
+                                '#82ca9d',
                               ],
                               borderWidth: 1,
                             },
@@ -573,7 +578,7 @@ export default function DashboardPage() {
                           maintainAspectRatio: false,
                           plugins: {
                             legend: {
-                              position: "bottom" as const,
+                              position: 'bottom' as const,
                             },
                           },
                         }}
@@ -581,22 +586,22 @@ export default function DashboardPage() {
                     </CardContent>
                   </Card>
 
-                  <Card className="col-span-12">
+                  <Card className='col-span-12'>
                     <CardHeader>
                       <CardTitle>Histograma de Pagos</CardTitle>
                     </CardHeader>
-                    <CardContent className="h-[300px]">
+                    <CardContent className='h-[300px]'>
                       <Bar
                         data={{
                           labels: histogramaPagos.map((item) => item.anio_mes),
                           datasets: [
                             {
-                              label: "Total Pagado",
+                              label: 'Total Pagado',
                               data: histogramaPagos.map(
                                 (item) => item.total_pagado
                               ),
-                              backgroundColor: "#82ca9d",
-                              borderColor: "#82ca9d",
+                              backgroundColor: '#82ca9d',
+                              borderColor: '#82ca9d',
                               borderWidth: 1,
                             },
                           ],
@@ -606,7 +611,7 @@ export default function DashboardPage() {
                           maintainAspectRatio: false,
                           plugins: {
                             legend: {
-                              position: "top" as const,
+                              position: 'top' as const,
                             },
                           },
                           scales: {
