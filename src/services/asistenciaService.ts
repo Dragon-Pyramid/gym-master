@@ -186,13 +186,13 @@ export const registrarAsistenciaDesdeQR = async (
     .insert({
       socio_id: socio.id_socio,
       fecha: hoy,
-      hora: dayjs().format('HH:mm:ss'),
+      hora_ingreso: dayjs().format('HH:mm:ss'),
     })
     .select(
       `
         *,
         socio: socio_id (
-          id_socio, 
+          id_socio,
           nombre_completo,
           usuario_id (
             foto,
@@ -204,7 +204,8 @@ export const registrarAsistenciaDesdeQR = async (
     .single();
 
   if (errorNuevaAsistencia) {
-    throw new Error('Error al crear la asistencia');
+    console.error('Error de Supabase al crear asistencia:', errorNuevaAsistencia);
+    throw new Error(`Error al crear la asistencia: ${errorNuevaAsistencia.message}`);
   }
 
   return {
