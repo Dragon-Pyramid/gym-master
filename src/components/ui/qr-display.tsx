@@ -237,6 +237,8 @@ export default function QrDisplayModal({
         <BienvenidaSocio
           nombre={adminWelcomeData.nombre}
           foto={adminWelcomeData.foto}
+          id_socio={adminWelcomeData.id_socio}
+          isAdminView={true}
           onClose={() => setShowAdminWelcome(false)}
         />
       )}
