@@ -43,23 +43,30 @@ export function RegistrarAsistenciaQR() {
       setMessage(res.message || 'Asistencia registrada correctamente.');
       let nombre: string | undefined;
       let foto: string | undefined;
+      let id_socio: string | undefined;
 
       if (res.asistencia && res.asistencia.socio) {
-        const socio = res.asistencia.socio as Socio;
+        const socio = res.asistencia.socio as Socio & {
+          usuario_id?: { foto?: string; nombre?: string };
+        };
         nombre = socio.nombre_completo || undefined;
-        foto = socio.foto || undefined;
+        foto = socio.usuario_id?.foto || undefined;
+        id_socio = socio.id_socio || undefined;
       }
 
       if (!nombre && res.socio) {
-        const socio = res.socio as Socio;
+        const socio = res.socio as Socio & {
+          usuario_id?: { foto?: string; nombre?: string };
+        };
         nombre = socio.nombre_completo || undefined;
-        foto = socio.foto || foto;
+        foto = socio.usuario_id?.foto || undefined;
+        id_socio = socio.id_socio || undefined;
       }
 
       if (!nombre && res.usuario) {
         const usuario = res.usuario as Usuario;
         nombre = usuario.nombre || undefined;
-        foto = usuario.foto || foto;
+        foto = usuario.foto || undefined;
       }
 
       if (!nombre) {
@@ -73,14 +80,12 @@ export function RegistrarAsistenciaQR() {
       setWelcomeData({ nombre, foto });
       setShowWelcome(true);
 
-      // Notificar al admin sobre el socio que acaba de escanear
       const socioData = {
         nombre: nombre || 'Socio desconocido',
         foto: foto || null,
-        id_socio: res.asistencia?.socio?.id_socio || res.socio?.id_socio,
+        id_socio: id_socio,
       };
 
-      // Disparar evento personalizado para que el admin lo vea
       window.dispatchEvent(
         new CustomEvent('socioEscaneoQR', {
           detail: socioData,

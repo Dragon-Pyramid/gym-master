@@ -1,9 +1,9 @@
-import Image from 'next/image';
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
-import { getSocioByIdUsuario } from '@/services/socioService';
+import { getSocioByIdUsuario, getSocioById } from '@/services/socioService';
 import { Socio } from '@/interfaces/socio.interface';
+import ProfileImage from '@/components/perfil/ProfileImage';
 
 type BienvenidaSocioProps = {
   foto?: string | null;
@@ -30,28 +30,35 @@ export default function BienvenidaSocio({
   useEffect(() => {
     setMounted(true);
 
-    if (!isAdminView) {
-      const fetchSocioData = async () => {
-        if (!user || !user.id || !user.dbName) return;
+    const fetchSocioData = async () => {
+      if (!user?.dbName) return;
 
-        setLoading(true);
-        try {
-          const socio = await getSocioByIdUsuario(user.id, user.dbName);
-          if (socio) {
-            setSocioData(socio);
+      setLoading(true);
+      try {
+        let socio: Socio | null = null;
+
+        if (!isAdminView) {
+          if (user?.id) {
+            socio = await getSocioByIdUsuario(user.id, user.dbName);
           }
-        } catch (error) {
-          console.error('Error al obtener datos del socio:', error);
-        } finally {
-          setLoading(false);
+        } else {
+          if (id_socio) {
+            socio = await getSocioById(id_socio, user.dbName);
+          }
         }
-      };
 
-      fetchSocioData();
-    } else {
-      setLoading(false);
-    }
-  }, [user, isAdminView]);
+        if (socio) {
+          setSocioData(socio);
+        }
+      } catch (error) {
+        console.error('Error al obtener datos del socio:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSocioData();
+  }, [user, isAdminView, id_socio]);
 
   useEffect(() => {
     if (mounted && socioData && !isAdminView) {
@@ -77,7 +84,12 @@ export default function BienvenidaSocio({
   };
 
   const displayNombre = socioData?.nombre_completo || nombre || 'Socio';
-  const displayFoto = socioData?.foto || foto;
+  const displayFoto =
+    (socioData &&
+      'usuario_id' in socioData &&
+      (socioData.usuario_id as { foto?: string })?.foto) ||
+    (socioData as { foto?: string })?.foto ||
+    foto;
   const displayIdSocio = isAdminView ? id_socio : socioData?.id_socio;
 
   return (
@@ -89,19 +101,17 @@ export default function BienvenidaSocio({
       >
         <div className='overflow-hidden bg-white shadow-2xl dark:bg-slate-900 rounded-2xl'>
           <div className='flex flex-col items-center gap-6 p-8 md:flex-row md:p-12'>
-            <div className='flex items-center justify-center flex-shrink-0 w-40 h-40 overflow-hidden bg-gray-100 rounded-full md:w-56 md:h-56'>
+            <div className='flex items-center justify-center flex-shrink-0'>
               {loading ? (
                 <div className='w-8 h-8 border-b-2 border-blue-500 rounded-full animate-spin'></div>
-              ) : displayFoto ? (
-                <Image
-                  src={displayFoto}
-                  alt={displayNombre}
-                  width={224}
-                  height={224}
-                  className='object-cover w-full h-full'
-                />
               ) : (
-                <div className='text-sm text-slate-400'>Sin foto</div>
+                <ProfileImage
+                  foto={displayFoto}
+                  alt={displayNombre}
+                  size={224}
+                  showButton={false}
+                  onClick={handleClose}
+                />
               )}
             </div>
             <div className='flex-1 text-center md:text-left'>
@@ -133,14 +143,16 @@ export default function BienvenidaSocio({
                   )}
                 </div>
               )}
-              <div className='flex items-center justify-center gap-3 mt-6 md:justify-start'>
-                <button
-                  onClick={handleClose}
-                  className='px-6 py-3 font-semibold text-white bg-indigo-600 rounded-lg shadow hover:bg-indigo-700'
-                >
-                  Continuar
-                </button>
-              </div>
+              {!isAdminView && (
+                <div className='flex items-center justify-center gap-3 mt-6 md:justify-start'>
+                  <button
+                    onClick={handleClose}
+                    className='px-6 py-3 font-semibold text-white bg-indigo-600 rounded-lg shadow hover:bg-indigo-700'
+                  >
+                    Continuar
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

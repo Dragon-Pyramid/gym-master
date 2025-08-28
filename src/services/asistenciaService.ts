@@ -9,6 +9,7 @@ import jwt from 'jsonwebtoken';
 import QRCode from 'qrcode';
 import { JwtUser } from '@/interfaces/jwtUser.interface';
 import { conexionBD } from '@/middlewares/conexionBd.middleware';
+import { getSocioByIdUsuario } from './socioService';
 
 export const getAllAsistencias = async (
   user: JwtUser
@@ -137,8 +138,8 @@ export const registrarAsistenciaDesdeQR = async (
   }
 
   //VERIFICO QUE EL SOCIO EXISTA Y ESTE ACTIVO
-  const existeSocio = await existeSocioActivo(user, user.id) as { id_socio: string } | false;
-  if (!existeSocio) {
+  const socio = await getSocioByIdUsuario(user.id, user.dbName);
+  if (!socio || !socio.activo) {
     return {
       valido: false,
       error: 'No se encontró un socio activo asociado a tu cuenta.',
@@ -153,10 +154,17 @@ export const registrarAsistenciaDesdeQR = async (
       .select(
         `
         *,
-        socio: socio_id (id_socio, nombre_completo, foto)
+        socio: socio_id (
+          id_socio, 
+          nombre_completo,
+          usuario_id (
+            foto,
+            nombre
+          )
+        )
       `
       )
-      .eq('socio_id', existeSocio ? existeSocio.id_socio : null)
+      .eq('socio_id', socio.id_socio)
       .eq('fecha', hoy)
       .single();
 
@@ -164,7 +172,6 @@ export const registrarAsistenciaDesdeQR = async (
     throw new Error('Error al verificar asistencia existente');
   }
 
-  // If attendance already exists, return success instead of error
   if (dataSocioAsistencia) {
     return {
       valido: true,
@@ -177,14 +184,21 @@ export const registrarAsistenciaDesdeQR = async (
   const { data: nuevaAsistencia, error: errorNuevaAsistencia } = await supabase
     .from('asistencia')
     .insert({
-      socio_id: existeSocio.id_socio,
+      socio_id: socio.id_socio,
       fecha: hoy,
       hora: dayjs().format('HH:mm:ss'),
     })
     .select(
       `
         *,
-        socio: socio_id (id_socio, nombre_completo, foto)
+        socio: socio_id (
+          id_socio, 
+          nombre_completo,
+          usuario_id (
+            foto,
+            nombre
+          )
+        )
       `
     )
     .single();
