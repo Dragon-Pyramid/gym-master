@@ -1,6 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/stores/authStore';
+import { useRef } from 'react';
 import ProfileImage from '@/components/perfil/ProfileImage';
 
 type BienvenidaSocioProps = {
@@ -19,30 +17,7 @@ export default function BienvenidaSocio({
   isAdminView = false,
   id_socio,
 }: BienvenidaSocioProps) {
-  const [mounted, setMounted] = useState(false);
-  const { user } = useAuthStore();
-  const router = useRouter();
   const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (mounted && !isAdminView) {
-      redirectTimeoutRef.current = setTimeout(() => {
-        const redirectUrl =
-          user?.rol === 'admin' ? '/dashboard?qr=open' : '/dashboard';
-        router.push(redirectUrl);
-      }, 5000);
-    }
-
-    return () => {
-      if (redirectTimeoutRef.current) {
-        clearTimeout(redirectTimeoutRef.current);
-      }
-    };
-  }, [mounted, router, user?.rol, isAdminView]);
 
   const handleClose = () => {
     if (redirectTimeoutRef.current) {
@@ -57,11 +32,7 @@ export default function BienvenidaSocio({
 
   return (
     <div className='fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm'>
-      <div
-        className={`transform transition-all duration-500 ease-out ${
-          mounted ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
-        } w-full max-w-3xl`}
-      >
+      <div className='w-full max-w-3xl'>
         <div className='overflow-hidden bg-white shadow-2xl dark:bg-slate-900 rounded-2xl'>
           <div className='flex flex-col items-center gap-6 p-8 md:flex-row md:p-12'>
             <div className='flex items-center justify-center flex-shrink-0'>
