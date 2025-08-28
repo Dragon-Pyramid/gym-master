@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RefreshCw } from 'lucide-react';
 import { fetchQrCode } from '@/services/qrService';
-import BienvenidaSocio from './BienvenidaSocio';
 
 interface QrDisplayModalProps {
   open: boolean;
@@ -29,12 +28,6 @@ type QrState = {
   lastUpdated: Date | null;
 };
 
-type SocioScanData = {
-  nombre?: string;
-  foto?: string | null;
-  id_socio?: string;
-};
-
 export default function QrDisplayModal({
   open,
   onClose,
@@ -46,9 +39,6 @@ export default function QrDisplayModal({
     error: null,
     lastUpdated: null,
   });
-
-  const [showAdminWelcome, setShowAdminWelcome] = useState(false);
-  const [adminWelcomeData, setAdminWelcomeData] = useState<SocioScanData>({});
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -114,8 +104,6 @@ export default function QrDisplayModal({
         error: null,
         lastUpdated: null,
       });
-      setShowAdminWelcome(false);
-      setAdminWelcomeData({});
       return;
     }
 
@@ -132,27 +120,6 @@ export default function QrDisplayModal({
     };
   }, [open, fetchQr, refreshIntervalMs]);
 
-  // Escuchar eventos de escaneo de QR por parte de socios
-  useEffect(() => {
-    const handleSocioEscaneo = (event: CustomEvent) => {
-      const socioData = event.detail as SocioScanData;
-      setAdminWelcomeData(socioData);
-      setShowAdminWelcome(true);
-    };
-
-    window.addEventListener(
-      'socioEscaneoQR',
-      handleSocioEscaneo as EventListener
-    );
-
-    return () => {
-      window.removeEventListener(
-        'socioEscaneoQR',
-        handleSocioEscaneo as EventListener
-      );
-    };
-  }, []);
-
   const formatLastUpdated = (date: Date) => {
     return new Intl.DateTimeFormat('es-ES', {
       hour: '2-digit',
@@ -162,86 +129,79 @@ export default function QrDisplayModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className='flex flex-col w-full max-w-4xl max-h-[95vh] p-0 gap-0'>
-        <DialogHeader className='px-6 pt-6 pb-4 space-y-3'>
-          <DialogTitle className='text-2xl font-semibold text-center'>
-            Código QR de Acceso
-          </DialogTitle>
-          <DialogDescription className='text-base text-center text-muted-foreground'>
-            Escanea este código para acceder. Se actualiza automáticamente cada
-            10 minutos.
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent className='flex flex-col w-full max-w-4xl max-h-[95vh] p-0 gap-0'>
+          <DialogHeader className='px-6 pt-6 pb-4 space-y-3'>
+            <DialogTitle className='text-2xl font-semibold text-center'>
+              Código QR de Acceso
+            </DialogTitle>
+            <DialogDescription className='text-base text-center text-muted-foreground'>
+              Escanea este código para acceder. Se actualiza automáticamente
+              cada 10 minutos.
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className='flex flex-col items-center justify-center flex-1 min-h-0 px-6 py-4'>
-          <div className='mb-6'>
-            <h3 className='mb-2 text-xl font-medium text-center'>QR del Día</h3>
-            {qrState.lastUpdated && (
-              <p className='text-sm text-center text-muted-foreground'>
-                Última actualización: {formatLastUpdated(qrState.lastUpdated)}
-              </p>
-            )}
+          <div className='flex flex-col items-center justify-center flex-1 min-h-0 px-6 py-4'>
+            <div className='mb-6'>
+              <h3 className='mb-2 text-xl font-medium text-center'>
+                QR del Día
+              </h3>
+              {qrState.lastUpdated && (
+                <p className='text-sm text-center text-muted-foreground'>
+                  Última actualización: {formatLastUpdated(qrState.lastUpdated)}
+                </p>
+              )}
+            </div>
+
+            <div className='flex items-center justify-center w-full max-w-lg aspect-square'>
+              {qrState.loading ? (
+                <div className='flex flex-col items-center gap-4'>
+                  <Skeleton className='w-full aspect-square rounded-xl' />
+                  <div className='flex items-center gap-2 text-sm text-muted-foreground'>
+                    <RefreshCw className='w-4 h-4 animate-spin' />
+                    Cargando código QR...
+                  </div>
+                </div>
+              ) : qrState.error ? (
+                <div className='flex flex-col items-center max-w-md gap-3 text-center'>
+                  <div className='text-lg font-medium text-destructive'>
+                    Error
+                  </div>
+                  <p className='text-destructive'>{qrState.error}</p>
+                </div>
+              ) : qrState.data ? (
+                <div className='w-full p-4 bg-white border shadow-sm aspect-square rounded-xl'>
+                  <img
+                    src={qrState.data || '/placeholder.svg'}
+                    alt='Código QR de acceso'
+                    className='object-contain w-full h-full'
+                    style={{ imageRendering: 'pixelated' }}
+                    loading='eager'
+                  />
+                </div>
+              ) : null}
+            </div>
           </div>
 
-          <div className='flex items-center justify-center w-full max-w-lg aspect-square'>
-            {qrState.loading ? (
-              <div className='flex flex-col items-center gap-4'>
-                <Skeleton className='w-full aspect-square rounded-xl' />
-                <div className='flex items-center gap-2 text-sm text-muted-foreground'>
-                  <RefreshCw className='w-4 h-4 animate-spin' />
-                  Cargando código QR...
-                </div>
-              </div>
-            ) : qrState.error ? (
-              <div className='flex flex-col items-center max-w-md gap-3 text-center'>
-                <div className='text-lg font-medium text-destructive'>
-                  Error
-                </div>
-                <p className='text-destructive'>{qrState.error}</p>
-              </div>
-            ) : qrState.data ? (
-              <div className='w-full p-4 bg-white border shadow-sm aspect-square rounded-xl'>
-                <img
-                  src={qrState.data || '/placeholder.svg'}
-                  alt='Código QR de acceso'
-                  className='object-contain w-full h-full'
-                  style={{ imageRendering: 'pixelated' }}
-                  loading='eager'
-                />
-              </div>
-            ) : null}
-          </div>
-        </div>
-
-        <DialogFooter className='flex flex-row justify-center gap-3 px-6 pt-4 pb-6'>
-          <Button
-            variant='outline'
-            onClick={handleRefresh}
-            disabled={qrState.loading}
-            className='flex items-center gap-2 bg-transparent'
-          >
-            <RefreshCw
-              className={`w-4 h-4 ${qrState.loading ? 'animate-spin' : ''}`}
-            />
-            Refrescar QR
-          </Button>
-          <DialogClose asChild>
-            <Button variant='secondary'>Cerrar</Button>
-          </DialogClose>
-        </DialogFooter>
-      </DialogContent>
-
-      {/* Bienvenida del Admin cuando un socio escanea */}
-      {showAdminWelcome && (
-        <BienvenidaSocio
-          nombre={adminWelcomeData.nombre}
-          foto={adminWelcomeData.foto}
-          id_socio={adminWelcomeData.id_socio}
-          isAdminView={true}
-          onClose={() => setShowAdminWelcome(false)}
-        />
-      )}
-    </Dialog>
+          <DialogFooter className='flex flex-row justify-center gap-3 px-6 pt-4 pb-6'>
+            <Button
+              variant='outline'
+              onClick={handleRefresh}
+              disabled={qrState.loading}
+              className='flex items-center gap-2 bg-transparent'
+            >
+              <RefreshCw
+                className={`w-4 h-4 ${qrState.loading ? 'animate-spin' : ''}`}
+              />
+              Refrescar QR
+            </Button>
+            <DialogClose asChild>
+              <Button variant='secondary'>Cerrar</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
