@@ -72,6 +72,20 @@ export function RegistrarAsistenciaQR() {
 
       setWelcomeData({ nombre, foto });
       setShowWelcome(true);
+
+      // Notificar al admin sobre el socio que acaba de escanear
+      const socioData = {
+        nombre: nombre || 'Socio desconocido',
+        foto: foto || null,
+        id_socio: res.asistencia?.socio?.id_socio || res.socio?.id_socio,
+      };
+
+      // Disparar evento personalizado para que el admin lo vea
+      window.dispatchEvent(
+        new CustomEvent('socioEscaneoQR', {
+          detail: socioData,
+        })
+      );
     } else {
       const err = (res && res.error) || 'No se pudo registrar la asistencia.';
       setError(err);
