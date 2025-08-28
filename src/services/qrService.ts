@@ -1,8 +1,8 @@
-import axios from "axios";
-import { authHeader } from "@/services/storageService";
+import axios from 'axios';
+import { authHeader } from '@/services/storageService';
 
 export const fetchQrCode = async (): Promise<string> => {
-  const response = await axios.get("api/asistencias/qr-dia", {
+  const response = await axios.get('api/asistencias/qr-dia', {
     headers: {
       ...authHeader(),
     },
@@ -17,27 +17,29 @@ export const registrarAsistenciaQR = async (
   try {
     try {
       const url = new URL(qr);
-      const queryToken = url.searchParams.get("tokenAsistencia");
+      const queryToken = url.searchParams.get('tokenAsistencia');
       if (queryToken) tokenAsistencia = queryToken;
     } catch {}
     const response = await axios.post(
-      "/api/asistencias/registro-qr",
+      '/api/asistencias/registro-qr',
       { qr: tokenAsistencia },
       {
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
           ...authHeader(),
         },
       }
     );
     return response.data;
-  } catch (error: any) {
-    if (error.response && error.response.data) {
+  } catch (error: unknown) {
+    const axiosError = error as { response?: { data?: { error?: string } } };
+    if (axiosError.response && axiosError.response.data) {
       return {
         error:
-          error.response.data.error || "No se pudo registrar la asistencia.",
+          axiosError.response.data.error ||
+          'No se pudo registrar la asistencia.',
       };
     }
-    return { error: "Error de red. Intente nuevamente." };
+    return { error: 'Error de red. Intente nuevamente.' };
   }
 };

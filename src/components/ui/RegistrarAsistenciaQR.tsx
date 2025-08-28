@@ -43,7 +43,6 @@ export function RegistrarAsistenciaQR() {
       setMessage(res.message || 'Asistencia registrada correctamente.');
       let nombre: string | undefined;
       let foto: string | undefined;
-      let id_socio: string | undefined;
 
       if (res.asistencia && res.asistencia.socio) {
         const socio = res.asistencia.socio as Socio & {
@@ -51,7 +50,6 @@ export function RegistrarAsistenciaQR() {
         };
         nombre = socio.nombre_completo || undefined;
         foto = socio.usuario_id?.foto || undefined;
-        id_socio = socio.id_socio || undefined;
       }
 
       if (!nombre && res.socio) {
@@ -60,7 +58,6 @@ export function RegistrarAsistenciaQR() {
         };
         nombre = socio.nombre_completo || undefined;
         foto = socio.usuario_id?.foto || undefined;
-        id_socio = socio.id_socio || undefined;
       }
 
       if (!nombre && res.usuario) {
@@ -80,17 +77,8 @@ export function RegistrarAsistenciaQR() {
       setWelcomeData({ nombre, foto });
       setShowWelcome(true);
 
-      const socioData = {
-        nombre: nombre || 'Socio desconocido',
-        foto: foto || null,
-        id_socio: id_socio,
-      };
-
-      window.dispatchEvent(
-        new CustomEvent('socioEscaneoQR', {
-          detail: socioData,
-        })
-      );
+      // El evento ya se dispara automáticamente desde el servicio qrService
+      // No necesitamos dispararlo manualmente aquí
     } else {
       const err = (res && res.error) || 'No se pudo registrar la asistencia.';
       setError(err);
