@@ -9,45 +9,55 @@ type BienvenidaSocioProps = {
   foto?: string | null;
   nombre?: string;
   onClose?: () => void;
+  isAdminView?: boolean;
+  id_socio?: string;
 };
 
 export default function BienvenidaSocio({
   foto,
   nombre,
   onClose,
+  isAdminView = false,
+  id_socio,
 }: BienvenidaSocioProps) {
   const [mounted, setMounted] = useState(false);
   const [socioData, setSocioData] = useState<Socio | null>(null);
   const [loading, setLoading] = useState(false);
   const { user } = useAuthStore();
   const router = useRouter();
-  const redirectTimeoutRef = useRef<NodeJS.Timeout>();
+  const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setMounted(true);
-    const fetchSocioData = async () => {
-      if (!user || !user.id || !user.dbName) return;
 
-      setLoading(true);
-      try {
-        const socio = await getSocioByIdUsuario(user.id, user.dbName);
-        if (socio) {
-          setSocioData(socio);
+    if (!isAdminView) {
+      const fetchSocioData = async () => {
+        if (!user || !user.id || !user.dbName) return;
+
+        setLoading(true);
+        try {
+          const socio = await getSocioByIdUsuario(user.id, user.dbName);
+          if (socio) {
+            setSocioData(socio);
+          }
+        } catch (error) {
+          console.error('Error al obtener datos del socio:', error);
+        } finally {
+          setLoading(false);
         }
-      } catch (error) {
-        console.error('Error al obtener datos del socio:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+      };
 
-    fetchSocioData();
-  }, [user]);
+      fetchSocioData();
+    } else {
+      setLoading(false);
+    }
+  }, [user, isAdminView]);
 
   useEffect(() => {
-    if (mounted && socioData) {
+    if (mounted && socioData && !isAdminView) {
       redirectTimeoutRef.current = setTimeout(() => {
-        const redirectUrl = user?.rol === 'admin' ? '/dashboard?qr=open' : '/dashboard';
+        const redirectUrl =
+          user?.rol === 'admin' ? '/dashboard?qr=open' : '/dashboard';
         router.push(redirectUrl);
       }, 5000);
     }
@@ -57,7 +67,7 @@ export default function BienvenidaSocio({
         clearTimeout(redirectTimeoutRef.current);
       }
     };
-  }, [mounted, socioData, router, user?.rol]);
+  }, [mounted, socioData, router, user?.rol, isAdminView]);
 
   const handleClose = () => {
     if (redirectTimeoutRef.current) {
@@ -68,6 +78,7 @@ export default function BienvenidaSocio({
 
   const displayNombre = socioData?.nombre_completo || nombre || 'Socio';
   const displayFoto = socioData?.foto || foto;
+  const displayIdSocio = isAdminView ? id_socio : socioData?.id_socio;
 
   return (
     <div className='fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm'>
@@ -95,20 +106,31 @@ export default function BienvenidaSocio({
             </div>
             <div className='flex-1 text-center md:text-left'>
               <h1 className='text-4xl font-extrabold leading-tight md:text-5xl text-slate-900 dark:text-white'>
-                ¡Bienvenido{displayNombre ? `, ${displayNombre}` : '!'}
+                {isAdminView ? '¡Socio accedió!' : '¡Bienvenido'}
+                {displayNombre && !isAdminView
+                  ? `, ${displayNombre}`
+                  : isAdminView
+                  ? ` ${displayNombre}`
+                  : '!'}
               </h1>
               <p className='mt-3 text-lg text-slate-600 dark:text-slate-300'>
-                Asistencia registrada correctamente
+                {isAdminView
+                  ? 'Un socio ha registrado su asistencia'
+                  : 'Asistencia registrada correctamente'}
               </p>
-              {socioData && (
+              {(socioData || (isAdminView && displayIdSocio)) && (
                 <div className='p-3 mt-4 rounded-lg bg-gray-50 dark:bg-slate-800'>
-                  <p className='text-sm text-gray-600 dark:text-gray-400'>
-                    <strong>ID Socio:</strong> {socioData.id_socio}
-                  </p>
-                  <p className='text-sm text-gray-600 dark:text-gray-400'>
-                    <strong>Estado:</strong>{' '}
-                    {socioData.activo ? 'Activo' : 'Inactivo'}
-                  </p>
+                  {displayIdSocio && (
+                    <p className='text-sm text-gray-600 dark:text-gray-400'>
+                      <strong>ID Socio:</strong> {displayIdSocio}
+                    </p>
+                  )}
+                  {socioData?.activo !== undefined && (
+                    <p className='text-sm text-gray-600 dark:text-gray-400'>
+                      <strong>Estado:</strong>{' '}
+                      {socioData.activo ? 'Activo' : 'Inactivo'}
+                    </p>
+                  )}
                 </div>
               )}
               <div className='flex items-center justify-center gap-3 mt-6 md:justify-start'>

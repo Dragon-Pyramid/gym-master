@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RefreshCw } from 'lucide-react';
 import { fetchQrCode } from '@/services/qrService';
+import BienvenidaSocio from './BienvenidaSocio';
 
 interface QrDisplayModalProps {
   open: boolean;
@@ -28,6 +29,12 @@ type QrState = {
   lastUpdated: Date | null;
 };
 
+type SocioScanData = {
+  nombre?: string;
+  foto?: string | null;
+  id_socio?: string;
+};
+
 export default function QrDisplayModal({
   open,
   onClose,
@@ -40,8 +47,11 @@ export default function QrDisplayModal({
     lastUpdated: null,
   });
 
-  const intervalRef = useRef<NodeJS.Timeout>();
-  const retryTimeoutRef = useRef<NodeJS.Timeout>();
+  const [showAdminWelcome, setShowAdminWelcome] = useState(false);
+  const [adminWelcomeData, setAdminWelcomeData] = useState<SocioScanData>({});
+
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchQr = useCallback(async (isRetry = false) => {
     if (!isRetry) {
@@ -104,6 +114,8 @@ export default function QrDisplayModal({
         error: null,
         lastUpdated: null,
       });
+      setShowAdminWelcome(false);
+      setAdminWelcomeData({});
       return;
     }
 
@@ -119,6 +131,27 @@ export default function QrDisplayModal({
       }
     };
   }, [open, fetchQr, refreshIntervalMs]);
+
+  // Escuchar eventos de escaneo de QR por parte de socios
+  useEffect(() => {
+    const handleSocioEscaneo = (event: CustomEvent) => {
+      const socioData = event.detail as SocioScanData;
+      setAdminWelcomeData(socioData);
+      setShowAdminWelcome(true);
+    };
+
+    window.addEventListener(
+      'socioEscaneoQR',
+      handleSocioEscaneo as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        'socioEscaneoQR',
+        handleSocioEscaneo as EventListener
+      );
+    };
+  }, []);
 
   const formatLastUpdated = (date: Date) => {
     return new Intl.DateTimeFormat('es-ES', {
@@ -198,6 +231,17 @@ export default function QrDisplayModal({
           </DialogClose>
         </DialogFooter>
       </DialogContent>
+
+      {/* Bienvenida del Admin cuando un socio escanea */}
+      {showAdminWelcome && (
+        <BienvenidaSocio
+          nombre={adminWelcomeData.nombre}
+          foto={adminWelcomeData.foto}
+          id_socio={adminWelcomeData.id_socio}
+          isAdminView={true}
+          onClose={() => setShowAdminWelcome(false)}
+        />
+      )}
     </Dialog>
   );
 }

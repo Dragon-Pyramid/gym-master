@@ -21,7 +21,7 @@ export const registrarAsistenciaQR = async (
       if (queryToken) tokenAsistencia = queryToken;
     } catch {}
     const response = await axios.post(
-      "/api/asistencia/registro-qr",
+      "/api/asistencias/registro-qr",
       { qr: tokenAsistencia },
       {
         headers: {
