@@ -1,12 +1,16 @@
 import axios from 'axios';
 import { authHeader } from '@/services/storageService';
 
-interface AsistenciaReciente {
+export interface AsistenciaReciente {
   id: string;
-  uuid: string;
   socio_id: string;
-  fecha: string;
-  creado_en: string;
+  fecha: string;           // 'YYYY-MM-DD'
+  hora_ingreso: string;    // 'HH:MM:SS'
+  socio?: {
+    id_socio: string;
+    nombre_completo: string;
+    foto: string | null;
+  } | null;
 }
 
 export const fetchQrCode = async (): Promise<string> => {
@@ -61,7 +65,7 @@ export const fetchAsistenciasRecientes = async (): Promise<
         ...authHeader(),
       },
     });
-    return response.data;
+    return response.data as AsistenciaReciente[];
   } catch (error: unknown) {
     const axiosError = error as { response?: { data?: { error?: string } } };
     if (axiosError.response && axiosError.response.data) {
