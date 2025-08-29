@@ -8,15 +8,30 @@ export async function GET(req: Request) {
     if (!user) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
+
     const supabase = conexionBD(user.dbName);
+
+    // Últimas 4 asistencias con datos del socio
     const { data, error } = await supabase
       .from('asistencia')
-      .select('id, socio_id, fecha, creado_en')
-      .order('creado_en', { ascending: false })
-      .limit(5);
-    if (error) {
-      throw new Error(error.message);
-    }
+      .select(`
+        id,
+        socio_id,
+        fecha,
+        hora_ingreso,
+        socio:socio_id (
+          id_socio,
+          nombre_completo,
+          foto
+        )
+      `)
+      .order('fecha', { ascending: false })
+      .order('hora_ingreso', { ascending: false })
+      .order('id', { ascending: false }) // ← tiebreaker estable
+      .limit(4);
+
+    if (error) throw new Error(error.message);
+
     return NextResponse.json(data, { status: 200 });
   } catch (error: unknown) {
     const errorMessage =

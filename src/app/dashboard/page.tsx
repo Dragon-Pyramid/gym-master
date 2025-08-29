@@ -40,6 +40,11 @@ import {
 import { Equipamento } from '@/interfaces/equipamiento.interface';
 import { Mantenimiento } from '@/interfaces/mantenimiento.interface';
 import AsistenciasRecientesTable from '@/components/ui/asistencias-recientes-table';
+import ClockCard from '@/components/ui/ClockCard';
+import BienvenidaSocio from '@/components/ui/BienvenidaSocio';
+
+// ⬇️ IMPORTA EL TIPO QUE EMITE LA TABLA
+import type { AsistenciaReciente as AsistenciaRecienteApi } from '@/services/qrService';
 
 ChartJS.register(
   CategoryScale,
@@ -61,20 +66,17 @@ interface MetricaAdherencia {
   socio_id: string;
   usuario_id: string;
 }
-
 interface MetricaEvolucion {
   id_objetivo: number;
   año_mes: string;
   promedio_asistencias: number;
 }
-
 interface MetricaConcurrencia {
   anio: number;
   semana: number;
   sexo: string;
   asistencias: number;
 }
-
 interface MetricaFallos {
   id_equipamiento: string;
   nombre: string;
@@ -82,7 +84,6 @@ interface MetricaFallos {
   costo_total: number;
   ranking: number;
 }
-
 interface MetricaEstadoEquipamiento {
   id: string;
   nombre: string;
@@ -92,7 +93,6 @@ interface MetricaEstadoEquipamiento {
   proxima_revision: string;
   ultima_revision: string;
 }
-
 interface MetricaSegmentacionPagos {
   anio_mes: string;
   cantidad_pagos: number;
@@ -105,7 +105,6 @@ interface MetricaSegmentacionPagos {
   total_descuento: number;
   total_pagado: number;
 }
-
 interface MetricaHistogramaPagos {
   anio_mes: string;
   cantidad_pagos: number;
@@ -127,6 +126,13 @@ export default function DashboardPage() {
   const [mantenimientos, setMantenimientos] = useState<Mantenimiento[]>([]);
   const [loadingDatos, setLoadingDatos] = useState(true);
   const [showQr, setShowQr] = useState(false);
+
+  // Overlay de bienvenida
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [welcomeData, setWelcomeData] = useState<{
+    nombre?: string;
+    foto?: string | null;
+  }>({});
 
   const [adherenciaRutinas, setAdherenciaRutinas] = useState<
     MetricaAdherencia[]
@@ -246,6 +252,16 @@ export default function DashboardPage() {
 
   const userType = user?.rol;
 
+  // ✅ Handler tipado con el mismo tipo que emite la tabla
+  const handleNewAsistencia = (a: AsistenciaRecienteApi) => {
+    setWelcomeData({
+      nombre: a.socio?.nombre_completo ?? '¡Bienvenido!',
+      foto: a.socio?.foto ?? null,
+    });
+    setShowWelcome(true);
+    setTimeout(() => setShowWelcome(false), 2500);
+  };
+
   return (
     <SidebarProvider>
       <div className='relative flex w-full min-h-screen'>
@@ -258,9 +274,11 @@ export default function DashboardPage() {
         <AppSidebar />
         <div className='flex flex-col flex-1 w-full'>
           <AppHeader title='Dashboard' />
+
           {showQr && (
             <div className='fixed inset-0 z-[60] flex items-center justify-center p-6'>
               <div className='grid w-full max-w-6xl grid-cols-1 gap-6 md:grid-cols-2 h-[85vh]'>
+                {/* Columna izquierda: QR */}
                 <div className='flex flex-col w-full h-full p-4 overflow-hidden border rounded-lg shadow-xl bg-background'>
                   <QrDisplayModal
                     open={true}
@@ -268,16 +286,34 @@ export default function DashboardPage() {
                     embedded
                   />
                 </div>
+
+                {/* Columna derecha: asistencias + reloj */}
                 <div className='flex flex-col w-full h-full p-4 overflow-auto border rounded-lg shadow-xl bg-background'>
-                  <AsistenciasRecientesTable />
+                  <AsistenciasRecientesTable
+                    onNewAsistencia={handleNewAsistencia}
+                  />
+                  <ClockCard />
                 </div>
               </div>
+
+              {/* Overlay de bienvenida por arriba de todo */}
+              {showWelcome && (
+                <div className='fixed inset-0 z-[80] flex items-center justify-center'>
+                  <BienvenidaSocio
+                    nombre={welcomeData.nombre}
+                    foto={welcomeData.foto ?? undefined}
+                    onClose={() => setShowWelcome(false)}
+                  />
+                </div>
+              )}
             </div>
           )}
+
           <main className='flex-1 w-full max-w-full px-4 py-6 space-y-6 md:px-8'>
             {(userType === 'socio' || userType === 'usuario') && (
               <DashboardInitialContent />
             )}
+
             {userType === 'admin' && (
               <>
                 <div className='p-5'>
@@ -345,141 +381,6 @@ export default function DashboardPage() {
 
                   <Card>
                     <CardHeader>
-                      <CardTitle>
-                        Costo Total de Mantenimiento Mensual
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className='text-3xl font-bold'>
-                        ${costoMantenimientoMensual}
-                      </div>
-                      <p className='text-sm text-muted-foreground'>
-                        Costo estimado para este mes
-                      </p>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Equipos Fuera de Servicio</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className='text-3xl font-bold'>
-                        {equiposFueraDeServicio}
-                      </div>
-                      <p className='text-sm text-muted-foreground'>
-                        Equipos no operativos actualmente
-                      </p>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                <div className='grid grid-cols-1 gap-4 lg:grid-cols-12'>
-                  <Card className='col-span-12 lg:col-span-6'>
-                    <CardHeader>
-                      <CardTitle>Adherencia a Rutinas</CardTitle>
-                    </CardHeader>
-                    <CardContent className='h-[300px]'>
-                      <Line
-                        data={{
-                          labels: adherenciaRutinas.map(
-                            (item) => item.anio_mes
-                          ),
-                          datasets: [
-                            {
-                              label: 'Porcentaje Adherencia',
-                              data: adherenciaRutinas.map(
-                                (item) => item.porcentaje_adherencia
-                              ),
-                              borderColor: '#0088FE',
-                              backgroundColor: 'rgba(0, 136, 254, 0.1)',
-                              tension: 0.1,
-                            },
-                          ],
-                        }}
-                        options={{
-                          responsive: true,
-                          maintainAspectRatio: false,
-                          plugins: {
-                            legend: {
-                              position: 'top' as const,
-                            },
-                          },
-                        }}
-                      />
-                    </CardContent>
-                  </Card>
-
-                  <Card className='col-span-12 lg:col-span-6'>
-                    <CardHeader>
-                      <CardTitle>Evolución Promedio por Objetivo</CardTitle>
-                    </CardHeader>
-                    <CardContent className='h-[300px]'>
-                      <Line
-                        data={{
-                          labels: evolucionRutinas.map((item) => item.año_mes),
-                          datasets: [
-                            {
-                              label: 'Promedio Asistencias',
-                              data: evolucionRutinas.map(
-                                (item) => item.promedio_asistencias
-                              ),
-                              borderColor: '#00C49F',
-                              backgroundColor: 'rgba(0, 196, 159, 0.1)',
-                              tension: 0.1,
-                            },
-                          ],
-                        }}
-                        options={{
-                          responsive: true,
-                          maintainAspectRatio: false,
-                          plugins: {
-                            legend: {
-                              position: 'top' as const,
-                            },
-                          },
-                        }}
-                      />
-                    </CardContent>
-                  </Card>
-
-                  <Card className='col-span-12 lg:col-span-8'>
-                    <CardHeader>
-                      <CardTitle>Concurrencia Semanal</CardTitle>
-                    </CardHeader>
-                    <CardContent className='h-[300px]'>
-                      <Line
-                        data={{
-                          labels: concurrenciaSemanal.map(
-                            (item) => `${item.anio}-S${item.semana}`
-                          ),
-                          datasets: [
-                            {
-                              label: 'Asistencias',
-                              data: concurrenciaSemanal.map(
-                                (item) => item.asistencias
-                              ),
-                              borderColor: '#FFBB28',
-                              backgroundColor: 'rgba(255, 187, 40, 0.1)',
-                              tension: 0.1,
-                            },
-                          ],
-                        }}
-                        options={{
-                          responsive: true,
-                          maintainAspectRatio: false,
-                          plugins: {
-                            legend: {
-                              position: 'top' as const,
-                            },
-                          },
-                        }}
-                      />
-                    </CardContent>
-                  </Card>
-
-                  <Card className='col-span-12 lg:col-span-4'>
-                    <CardHeader>
                       <CardTitle>Estado de Equipamiento</CardTitle>
                     </CardHeader>
                     <CardContent className='lg:h-[300px] md:h-[600px] overflow-y-auto'>
@@ -513,10 +414,7 @@ export default function DashboardPage() {
                             plugins: {
                               legend: {
                                 position: 'bottom' as const,
-                                labels: {
-                                  usePointStyle: true,
-                                  padding: 10,
-                                },
+                                labels: { usePointStyle: true, padding: 10 },
                               },
                             },
                           }}
@@ -546,16 +444,8 @@ export default function DashboardPage() {
                         options={{
                           responsive: true,
                           maintainAspectRatio: false,
-                          plugins: {
-                            legend: {
-                              position: 'top' as const,
-                            },
-                          },
-                          scales: {
-                            y: {
-                              beginAtZero: true,
-                            },
-                          },
+                          plugins: { legend: { position: 'top' as const } },
+                          scales: { y: { beginAtZero: true } },
                         }}
                       />
                     </CardContent>
@@ -568,9 +458,7 @@ export default function DashboardPage() {
                     <CardContent className='h-[300px]'>
                       <Pie
                         data={{
-                          labels: segmentacionPagos.map(
-                            (item) => item.anio_mes
-                          ),
+                          labels: segmentacionPagos.map((item) => item.anio_mes),
                           datasets: [
                             {
                               label: 'Total Pagado',
@@ -592,11 +480,7 @@ export default function DashboardPage() {
                         options={{
                           responsive: true,
                           maintainAspectRatio: false,
-                          plugins: {
-                            legend: {
-                              position: 'bottom' as const,
-                            },
-                          },
+                          plugins: { legend: { position: 'bottom' as const } },
                         }}
                       />
                     </CardContent>
@@ -625,16 +509,8 @@ export default function DashboardPage() {
                         options={{
                           responsive: true,
                           maintainAspectRatio: false,
-                          plugins: {
-                            legend: {
-                              position: 'top' as const,
-                            },
-                          },
-                          scales: {
-                            y: {
-                              beginAtZero: true,
-                            },
-                          },
+                          plugins: { legend: { position: 'top' as const } },
+                          scales: { y: { beginAtZero: true } },
                         }}
                       />
                     </CardContent>
