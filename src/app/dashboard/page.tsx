@@ -39,6 +39,7 @@ import {
 
 import { Equipamento } from '@/interfaces/equipamiento.interface';
 import { Mantenimiento } from '@/interfaces/mantenimiento.interface';
+import AsistenciasRecientesTable from '@/components/ui/asistencias-recientes-table';
 
 ChartJS.register(
   CategoryScale,
@@ -257,7 +258,22 @@ export default function DashboardPage() {
         <AppSidebar />
         <div className='flex flex-col flex-1 w-full'>
           <AppHeader title='Dashboard' />
-          <QrDisplayModal open={showQr} onClose={() => setShowQr(false)} />
+          {showQr && (
+            <div className='fixed inset-0 z-[60] flex items-center justify-center p-6'>
+              <div className='grid w-full max-w-6xl grid-cols-1 gap-6 md:grid-cols-2 h-[85vh]'>
+                <div className='flex flex-col w-full h-full p-4 overflow-hidden border rounded-lg shadow-xl bg-background'>
+                  <QrDisplayModal
+                    open={true}
+                    onClose={() => setShowQr(false)}
+                    embedded
+                  />
+                </div>
+                <div className='flex flex-col w-full h-full p-4 overflow-auto border rounded-lg shadow-xl bg-background'>
+                  <AsistenciasRecientesTable />
+                </div>
+              </div>
+            </div>
+          )}
           <main className='flex-1 w-full max-w-full px-4 py-6 space-y-6 md:px-8'>
             {(userType === 'socio' || userType === 'usuario') && (
               <DashboardInitialContent />
