@@ -10,6 +10,7 @@ export interface Socio {
   activo: boolean;
   fecha_baja?: string;
   fecha_alta?: string;
+  descuento_activo: boolean;
 }
 
 export interface CreateSocioDto {
@@ -33,4 +34,5 @@ export interface UpdateSocioDto {
   activo?: boolean;
   fecha_baja?: string;
   fecha_alta?: string;
+  descuento_activo?: boolean;
 }

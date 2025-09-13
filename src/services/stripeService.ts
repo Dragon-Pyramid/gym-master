@@ -39,6 +39,17 @@ export const createSessionPago = async (user:JwtUser) : Promise<{ url: string }>
           throw new Error('Ya la cuota ya fue pagada');
         }
       
+        let valorAPagar;
+
+        console.log(socio.descuento_activo);
+        
+        if (socio.descuento_activo){
+            valorAPagar = (cuota.monto - (cuota.monto * 0.10)) * 100; // Convertir a centavos
+        } else {
+            valorAPagar = cuota.monto * 100; // Convertir a centavos
+        }
+
+
     
         //SI NO TIENE UN PAGO DE ESTA CUOTA, CREO LA SESION DE PAGO
       const session = await stripe.checkout.sessions.create({
@@ -49,7 +60,7 @@ export const createSessionPago = async (user:JwtUser) : Promise<{ url: string }>
             product_data: {
               name: cuota.descripcion,
             },
-            unit_amount: cuota.monto * 100, // Convertir a centavos
+            unit_amount: valorAPagar, // Monto en centavos a cobrar
           },
           quantity: 1,
         }],
