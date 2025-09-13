@@ -1,6 +1,7 @@
 import { getSupabaseClient, supabase } from "./supabaseClient";
 import { Pago, CreatePagoDto, UpdatePagoDto, ResponsePago } from "../interfaces/pago.interface";
 import  dayjs  from 'dayjs';
+import { getSocioById, updateSocio } from "./socioService";
 
 /*export const getAllPagos = async (): Promise<Pago[]> => {
   const { data, error } = await supabase.from("pago").select();
@@ -72,9 +73,19 @@ export const createPago = async (payload: CreatePagoDto) :Promise<Pago> => {
   const id_cuota = cuota.id
   const fecha_pago = dayjs().format("YYYY-MM-DD");
   const fecha_vencimiento = dayjs(fecha_pago).add(30, 'day').format("YYYY-MM-DD"); // fecha de vencimiento es hoy + 30 dias
-  const monto_pagado = cuota.monto; // Asignar el monto de la cuota al pago
-
+  
   const { socio_id, registrado_por } = payload; 
+  
+  const dbName = "gym_master";
+  const socio = await getSocioById(socio_id, dbName);
+  let monto_pagado;
+
+  if (socio.descuento_activo) {
+monto_pagado = cuota.monto - (cuota.monto * 0.10); // Asignar el monto de la cuota al pago con descuento
+  } else {
+    monto_pagado = cuota.monto; // en caso que no tenga descuento, se le asigna el monto total de la cuota
+  }
+
 
 
   const { data, error } = await supabase.from("pago").insert({
@@ -92,7 +103,24 @@ export const createPago = async (payload: CreatePagoDto) :Promise<Pago> => {
     throw new Error("Error al crear el pago")}
     ;
 
+    //TODO: Debo crear la logica para pasarle el user logueado a todo los endpoint pagos
+    //updateSocio(user, id_socio, { descuento_activo: false }); // Desactivar el descuento del socio después de realizar el pago
 
+    const {data: dataSocio,error: errorSocio} = await supabase
+    .from('socio')
+    .update({ descuento_activo: false })
+    .eq('id_socio', socio_id);
+    if (errorSocio) {
+        console.log(errorSocio.message);
+        throw new Error("Error al actualizar el socio para desactivar el descuento");
+    }
+    if (dataSocio) {
+        console.log("Descuento del socio desactivado correctamente");
+        console.log("dataSocio", dataSocio);
+        
+    }
+
+    
   return data as Pago;
 };
 

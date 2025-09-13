@@ -1,4 +1,4 @@
-import { existeSocioActivo } from './socioService';
+import { existeSocioActivo, getSocioById, updateSocio } from './socioService';
 import {
   Asistencia,
   CreateAsistenciaDto,
@@ -249,3 +249,50 @@ export const dataTopInactivos = async (user: JwtUser) => {
   if (error) throw new Error(error.message);
   return data;
 };
+
+
+
+export const rankingMensualAsistencia = async ({mes, anio}: {mes: number, anio: number}, user: JwtUser) => {
+  const inicioMes = `${anio}-${mes}-01`;
+// Día final del mes (dayjs lo calcula con .endOf("month"))
+const finMes = dayjs(inicioMes).endOf("month").format("YYYY-MM-DD");
+
+const supabase = conexionBD(user.dbName);
+const {data, error} = await supabase 
+.from('asistencia')
+.select("*")
+ .gte('fecha', inicioMes)   // fecha >= inicioMes
+  .lte('fecha', finMes);     // fecha <= finMes
+
+if (error) throw new Error(error.message);
+
+const asistenciasFiltradas = data.filter( asistencias =>  asistencias.socio_id  )
+
+
+
+const setSocios = new Set(asistenciasFiltradas.map(asistencia => asistencia.socio_id));
+
+let asistenciasPorSocio: {socio_id: string, cantidad: number, nombre_completo: string}[] = [];
+for (let index = 0; index < [...setSocios].length; index++) {
+  //cada socio
+  //Ahora tengo que contar cuantas asistencias tiene cada socio en el mes y año indicado
+  const idSocio = [...setSocios][index];
+  const asistenciasDelSocio = asistenciasFiltradas.filter(asistencia => asistencia.socio_id === idSocio);
+  const cantidadAsistencias = asistenciasDelSocio.length;
+
+  //traigo los datos del socio para devolver el nombre completo en el ranking
+  const socio = await getSocioById(idSocio, user.dbName);
+
+  asistenciasPorSocio.push({ socio_id: idSocio, nombre_completo: socio.nombre_completo , cantidad: cantidadAsistencias });
+}
+asistenciasPorSocio.sort((a, b) => b.cantidad - a.cantidad);
+
+//Ahora solo dejo los 10 primeros
+asistenciasPorSocio = asistenciasPorSocio.slice(0, 10);
+
+asistenciasPorSocio.map( async (a) =>  await updateSocio(user, a.socio_id, {descuento_activo: true}) ) //Si el socio esta en el ranking entonces se le activa el descuento)
+
+return {asistenciasPorSocio};
+
+
+}
