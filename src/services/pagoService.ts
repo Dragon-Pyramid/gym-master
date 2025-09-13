@@ -86,10 +86,6 @@ monto_pagado = cuota.monto - (cuota.monto * 0.10); // Asignar el monto de la cuo
     monto_pagado = cuota.monto; // en caso que no tenga descuento, se le asigna el monto total de la cuota
   }
 
-//DEBO CREAR EL ATRIBUTO DESCUENTO_ACTIVO EN LA TABLA SOCIO PARA QUE ESTO FUNCIONE
-// Y ADEMAS DEBO CREAR LA LOGICA PARA QUE CUANDO SE LE ASIGNE UN DESCUENTO A UN SOCIO, SE LE PONGA EN TRUE ESE ATRIBUTO
-// Y CUANDO SE LE VENZA EL DESCUENTO, SE LE PONGA EN FALSE ESE ATRIBUTO
-
 
 
   const { data, error } = await supabase.from("pago").insert({

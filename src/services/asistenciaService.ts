@@ -1,4 +1,4 @@
-import { existeSocioActivo, getSocioById } from './socioService';
+import { existeSocioActivo, getSocioById, updateSocio } from './socioService';
 import {
   Asistencia,
   CreateAsistenciaDto,
@@ -280,6 +280,7 @@ for (let index = 0; index < [...setSocios].length; index++) {
   const asistenciasDelSocio = asistenciasFiltradas.filter(asistencia => asistencia.socio_id === idSocio);
   const cantidadAsistencias = asistenciasDelSocio.length;
 
+  //traigo los datos del socio para devolver el nombre completo en el ranking
   const socio = await getSocioById(idSocio, user.dbName);
 
   asistenciasPorSocio.push({ socio_id: idSocio, nombre_completo: socio.nombre_completo , cantidad: cantidadAsistencias });
@@ -288,6 +289,9 @@ asistenciasPorSocio.sort((a, b) => b.cantidad - a.cantidad);
 
 //Ahora solo dejo los 10 primeros
 asistenciasPorSocio = asistenciasPorSocio.slice(0, 10);
+
+asistenciasPorSocio.map( async (a) =>  await updateSocio(user, a.socio_id, {descuento_activo: true}) ) //Si el socio esta en el ranking entonces se le activa el descuento)
+
 return {asistenciasPorSocio};
 
 
