@@ -58,7 +58,7 @@ export default function CuotasForm({ cuota, onCreated }: CuotasFormProps) {
     setLoading(true);
     try {
       if (cuota && cuota.id) {
-        await updateCuota(cuota.id, form);
+        await updateCuota(cuota.id, { ...form, activo: true });
         toast.success("Cuota actualizada");
       } else {
         await createCuota(form);

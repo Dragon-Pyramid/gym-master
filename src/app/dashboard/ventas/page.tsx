@@ -12,7 +12,8 @@ import { Search, Printer, FileSpreadsheet } from "lucide-react";
 import { getAllVentas, deleteVenta } from "@/services/ventaService";
 import VentaModal from "@/components/modal/VentaModal";
 import VentaViewModal from "@/components/modal/VentaViewModal";
-import VentaTable, { Venta } from "@/components/tables/VentaTable";
+import VentaTable from "@/components/tables/VentaTable";
+import { Venta } from "@/interfaces/venta.interface";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
@@ -43,9 +44,28 @@ export default function VentasPage() {
 
   const loadVentas = async () => {
     setLoading(true);
-    const data = await getAllVentas();
-    setVentas(data ?? []);
-    setFilteredVentas(data ?? []);
+    if (!user) {
+      setVentas([]);
+      setFilteredVentas([]);
+      setLoading(false);
+      return;
+    }
+    const data = await getAllVentas(user as any);
+
+    const mappedVentas = (data ?? []).map((v: any) => {
+      return {
+        ...v,
+        socio_id: v.socio_id ?? v.socioId ?? v.socio ?? "",
+        total: v.total ?? v.monto ?? 0,
+        fecha: v.fecha ?? v.createdAt ?? v.date ?? "",
+        activo: v.activo ?? true,
+        id_venta_detalle: v.id_venta_detalle ?? v.detalles ?? [],
+        id: v.id ?? v.id_venta ?? v._id ?? 0,
+      } as Venta;
+    }) as Venta[];
+
+    setVentas(mappedVentas);
+    setFilteredVentas(mappedVentas);
     setLoading(false);
   };
 
@@ -121,9 +141,9 @@ export default function VentasPage() {
           <AppHeader title="Ventas" />
           <main className="flex-1 p-6 space-y-6">
             <Card className="w-full">
-              <CardHeader className="flex flex-wrap gap-4 justify-between items-center p-4 border-b md:flex-nowrap">
+              <CardHeader className="flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap">
                 <h2 className="text-xl font-bold">Listado de Ventas</h2>
-                <div className="flex flex-wrap gap-2 items-center w-full md:w-auto">
+                <div className="flex flex-wrap items-center w-full gap-2 md:w-auto">
                   <div className="relative flex-grow md:flex-grow-0">
                     <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -179,7 +199,7 @@ export default function VentasPage() {
                       if (!confirmar) return;
 
                       try {
-                        await deleteVenta(venta.id);
+                        await deleteVenta(user as any, venta.id);
                         toast.success("Venta eliminada correctamente");
                         await loadVentas();
                       } catch (err) {

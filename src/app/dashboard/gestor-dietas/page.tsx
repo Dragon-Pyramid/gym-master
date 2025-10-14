@@ -13,9 +13,11 @@ import { Search } from 'lucide-react';
 import SocioDietaGrid from '@/components/gestor-dietas/SocioDietaGrid';
 import { fetchSocios } from '@/services/socioService';
 import { Socio } from '@/interfaces/socio.interface';
+import { JwtUser } from '@/interfaces/jwtUser.interface';
 
 export default function DietasPage() {
-  const { isAuthenticated, initializeAuth, isInitialized } = useAuthStore();
+  const { isAuthenticated, initializeAuth, isInitialized, user } =
+    useAuthStore();
   const router = useRouter();
   const [socios, setSocios] = useState<Socio[]>([]);
   const [filteredSocios, setFilteredSocios] = useState<Socio[]>([]);
@@ -35,7 +37,7 @@ export default function DietasPage() {
   const loadSocios = async () => {
     setLoading(true);
     try {
-      const data = await fetchSocios();
+      const data = await fetchSocios(user as JwtUser);
       setSocios(data ?? []);
       setFilteredSocios(data ?? []);
     } catch (error) {

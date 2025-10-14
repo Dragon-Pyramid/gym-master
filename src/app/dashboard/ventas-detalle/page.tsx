@@ -50,7 +50,7 @@ export default function VentaDetallePage() {
 
   const loadDetalles = async () => {
     setLoading(true);
-    const data = await getAllVentaDetalles();
+    const data = await getAllVentaDetalles(user as any);
     setDetalles(data ?? []);
     setFilteredDetalles(data ?? []);
     setLoading(false);
@@ -132,11 +132,11 @@ export default function VentaDetallePage() {
           <AppHeader title="Detalles de Venta" />
           <main className="flex-1 p-6 space-y-6">
             <Card className="w-full">
-              <CardHeader className="flex flex-wrap gap-4 justify-between items-center p-4 border-b md:flex-nowrap">
+              <CardHeader className="flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap">
                 <h2 className="text-xl font-bold">
                   Listado de Detalles de Venta
                 </h2>
-                <div className="flex flex-wrap gap-2 items-center w-full md:w-auto">
+                <div className="flex flex-wrap items-center w-full gap-2 md:w-auto">
                   <div className="relative flex-grow md:flex-grow-0">
                     <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -192,7 +192,7 @@ export default function VentaDetallePage() {
                       if (!confirmar) return;
 
                       try {
-                        await deleteVentaDetalle(detalle.id);
+                        await deleteVentaDetalle(user as any, detalle.id);
                         toast.success("Detalle eliminado correctamente");
                         await loadDetalles();
                       } catch (err) {
