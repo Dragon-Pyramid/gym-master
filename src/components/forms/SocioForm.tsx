@@ -59,10 +59,18 @@ export default function SocioForm({ socio, onCreated }: SocioFormProps) {
     setLoading(true);
     try {
       if (socio && socio.id_socio) {
-        await updateSocio(socio.id_socio, form);
+        await updateSocio(undefined as any, socio.id_socio, form);
         toast.success("Socio actualizado");
       } else {
-        await createSocio(form);
+        const createData = {
+          usuario_id: "",
+          nombre_completo: form.nombre_completo,
+          dni: form.dni,
+          direccion: form.direccion,
+          telefono: form.telefono,
+          email: form.email,
+        };
+        await createSocio(undefined as any, createData);
         toast.success("Socio creado");
       }
       setForm(emptyForm);
@@ -79,7 +87,7 @@ export default function SocioForm({ socio, onCreated }: SocioFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="nombre_completo">Nombre completo</Label>
         <Input

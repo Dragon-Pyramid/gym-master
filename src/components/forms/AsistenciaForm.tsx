@@ -65,7 +65,7 @@ export default function AsistenciaForm({
           hora_ingreso: form.hora_ingreso,
           hora_egreso: form.hora_egreso,
         };
-        await updateAsistencia(asistencia.id, updateData);
+        await updateAsistencia(undefined as any, asistencia.id, updateData);
         toast.success("Asistencia actualizada");
       } else {
         const createData: CreateAsistenciaDto = {
@@ -74,7 +74,7 @@ export default function AsistenciaForm({
           hora_ingreso: form.hora_ingreso,
           hora_egreso: form.hora_egreso,
         };
-        await createAsistencia(createData);
+        await createAsistencia(undefined as any, createData);
         toast.success("Asistencia creada");
       }
       setForm(emptyForm);
@@ -160,7 +160,7 @@ export default function AsistenciaForm({
       <Button
         type="button"
         onClick={onCancel}
-        className="col-span-full justify-self-end text-gray-800 bg-gray-200 hover:bg-gray-300"
+        className="text-gray-800 bg-gray-200 col-span-full justify-self-end hover:bg-gray-300"
         disabled={loading}
       >
         Cancelar

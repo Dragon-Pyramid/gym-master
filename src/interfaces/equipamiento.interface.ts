@@ -1,43 +1,48 @@
-import { EstadoEquipamiento } from "@/enums/estadoEquipamiento.enum";
-import { TipoEquipamiento } from "@/enums/tipoEquipamiento.enum";
+import { EstadoEquipamiento } from '@/enums/estadoEquipamiento.enum';
+import { TipoEquipamiento } from '@/enums/tipoEquipamiento.enum';
 
-export interface Equipamento{
-    id: string; // UUID
-    nombre: string;
-    tipo: TipoEquipamiento;
-    marca: string;
-    modelo: string;
-    ubicacion: string;
-    estado: EstadoEquipamiento;
-    fecha_adquisicion: string;
-    ultima_revision: string;
-    proxima_revision: string;
-    observaciones: string;
-    activo: boolean;
+export interface Equipamento {
+  id: string; // UUID
+  nombre: string;
+  tipo: TipoEquipamiento;
+  marca: string;
+  modelo: string;
+  ubicacion: string;
+  estado: EstadoEquipamiento;
+  fecha_adquisicion: string;
+  ultima_revision: string;
+  proxima_revision: string;
+  observaciones: string;
+  activo: boolean;
 }
 
 export interface CreateEquipamentoDTO {
-    nombre: string;
-    tipo: TipoEquipamiento;
-    marca: string;
-    modelo: string;
-    ubicacion: string;
-    proxima_revision?: string;  // si no existe, se calcula automáticamente
-//    fecha_adquisicion: string;  hoy
-//    ultima_revision: string;   hoy
-    observaciones?: string;  // por defecto Sin observaciones
+  nombre: string;
+  tipo: TipoEquipamiento;
+  marca: string;
+  modelo: string;
+  ubicacion: string;
+  proxima_revision?: string; // si no existe, se calcula automáticamente
+  //    fecha_adquisicion: string;  hoy
+  //    ultima_revision: string;   hoy
+  observaciones?: string; // por defecto Sin observaciones
 }
 
 export interface UpdateEquipamentoDTO {
-    nombre?: string;
-    tipo?: TipoEquipamiento;
-    marca?: string;
-    modelo?: string;
-    ubicacion?: string;
-    estado?: EstadoEquipamiento;
-    fecha_adquisicion?: string; // si no se proporciona, se mantiene el valor actual
-    ultima_revision?: string; // si no se proporciona, se mantiene el valor actual
-    proxima_revision?: string; // si no se proporciona, se calcula automáticamente
-    observaciones?: string; // si no se proporciona, se mantiene el valor actual
-    activo?: boolean;
+  nombre?: string;
+  tipo?: TipoEquipamiento;
+  marca?: string;
+  modelo?: string;
+  ubicacion?: string;
+  // Accept either the enum value or the raw string literals used across the codebase
+  estado?:
+    | EstadoEquipamiento
+    | 'operativo'
+    | 'en mantenimiento'
+    | 'fuera de servicio';
+  fecha_adquisicion?: string; // si no se proporciona, se mantiene el valor actual
+  ultima_revision?: string; // si no se proporciona, se mantiene el valor actual
+  proxima_revision?: string; // si no se proporciona, se calcula automáticamente
+  observaciones?: string; // si no se proporciona, se mantiene el valor actual
+  activo?: boolean;
 }

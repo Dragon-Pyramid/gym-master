@@ -1,9 +1,12 @@
-import { getServicioById } from "@/services/servicioService";
-import { NextRequest, NextResponse } from "next/server";
+import { getServicioById } from '@/services/servicioService';
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const id = params.id;
+    const { id } = await params;
     const servicio = await getServicioById(id);
     return NextResponse.json({ data: servicio }, { status: 200 });
   } catch (error: any) {

@@ -44,7 +44,7 @@ export default function RutinasPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
-  const [selectedRutina, setSelectedRutina] = useState<RutinaDisplay | null>(
+  const [selectedRutina, setSelectedRutina] = useState<Rutina | null>(
     null
   );
   const [openModalVer, setOpenModalVer] = useState(false);
@@ -294,7 +294,21 @@ export default function RutinasPage() {
               <CardContent className="p-4">
                 <RutinaDisplay
                   onView={(rutina) => {
-                    setRutinaVer(rutina);
+                    let rutinaDesc = rutina.rutina_desc;
+
+                    if (typeof rutina.rutina_desc === "string") {
+                      try {
+                        rutinaDesc = JSON.parse(rutina.rutina_desc);
+                      } catch (e) {
+                        console.warn("Error parsing rutina_desc JSON:", e);
+                      }
+                    }
+
+                    setRutinaVer({
+                      id_rutina: rutina.id_rutina,
+                      rutina_desc: rutinaDesc,
+                      creado_en: rutina.creado_en || new Date().toISOString(),
+                    });
                     setOpenModalVer(true);
                   }}
                   onEdit={(rutina) => {
@@ -332,7 +346,7 @@ export default function RutinasPage() {
           setOpenModalVer(false);
           setRutinaVer(null);
         }}
-        rutina={rutinaVer}
+        rutina={rutinaVer as Rutina | null}
       />
     </SidebarProvider>
   );

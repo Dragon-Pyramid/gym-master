@@ -18,6 +18,7 @@ import UserModal from "@/components/modal/UserModal";
 import UserViewModal from "@/components/modal/UserViewModal";
 import UsersTable from "@/components/tables/UserTable";
 import { Usuario } from "@/interfaces/usuario.interface";
+import { JwtUser } from "@/interfaces/jwtUser.interface";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
@@ -55,11 +56,11 @@ export default function UsuariosPage() {
 
   const loadUsuarios = useCallback(async () => {
     setLoading(true);
-    const data = await fetchUsuarios();
-    setUsuarios(data ?? []);
-    setFilteredUsuarios(data ?? []);
+    const data = await fetchUsuarios(user as JwtUser);
+    setUsuarios(data as Usuario[] ?? []);
+    setFilteredUsuarios(data as Usuario[] ?? []);
     setLoading(false);
-  }, []);
+  }, [user]);
 
   const handlePrint = () => {
     window.print();
@@ -109,10 +110,10 @@ export default function UsuariosPage() {
 
     try {
       if (usuario.activo) {
-        await deleteUsuarios(usuario.id);
+        await deleteUsuarios(user as JwtUser, usuario.id);
         toast.success("Usuario desactivado correctamente");
       } else {
-        await updateUsuarios(usuario.id, { activo: true });
+        await updateUsuarios(user as JwtUser, usuario.id, { activo: true });
         toast.success("Usuario activado correctamente");
       }
       await loadUsuarios();

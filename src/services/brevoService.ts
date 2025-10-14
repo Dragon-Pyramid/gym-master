@@ -8,7 +8,7 @@ export async function obtenerSociosDeudores() : Promise<Socio[]> {
   const hoy = new Date().toISOString().slice(0, 10);
 
   // todos los socios activos
-  const socios = await getAllSociosActivos();
+  const socios = await getAllSociosActivos(undefined as any);
 
   const sociosDeudores: Socio[] = [];
 
@@ -72,7 +72,7 @@ export async function obtenerSociosDeudores() : Promise<Socio[]> {
 export const desactivarSociosPorDeuda = async () => {
   const hoy = new Date().toISOString().slice(0, 10);
   // Buscar todos los socios activos
-  const socios = await getAllSociosActivos();
+  const socios = await getAllSociosActivos(undefined as any);
 
   const sociosDesactivados: Socio[] = [];
   for (const socio of socios) {

@@ -1,16 +1,16 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { useState, useEffect } from 'react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import {
   Usuario,
   CreateUsuarioDto,
   UpdateUsuarioDto,
-} from "@/interfaces/usuario.interface";
-import { createUsuarios, updateUsuarios } from "@/services/usuarioService";
-import { toast } from "sonner";
+} from '@/interfaces/usuario.interface';
+import { createUsuarios, updateUsuarios } from '@/services/usuarioService';
+import { toast } from 'sonner';
 
 export interface UserFormProps {
   usuario?: Usuario | null;
@@ -19,10 +19,10 @@ export interface UserFormProps {
 }
 
 const emptyForm = {
-  nombre: "",
-  email: "",
-  password: "",
-  rol: "",
+  nombre: '',
+  email: '',
+  password: '',
+  rol: '',
 };
 
 export default function UserForm({
@@ -36,10 +36,10 @@ export default function UserForm({
   useEffect(() => {
     if (usuario) {
       setForm({
-        nombre: usuario.nombre ?? "",
-        email: usuario.email ?? "",
-        rol: usuario.rol ?? "",
-        password: "",
+        nombre: usuario.nombre ?? '',
+        email: usuario.email ?? '',
+        rol: usuario.rol ?? '',
+        password: '',
       });
     } else {
       setForm(emptyForm);
@@ -64,34 +64,33 @@ export default function UserForm({
           ...(form.password && { password: form.password }),
         };
 
-        await updateUsuarios(usuario.id, updateData);
-        toast.success("Usuario actualizado exitosamente.");
+        await updateUsuarios(undefined as any, usuario.id, updateData);
+        toast.success('Usuario actualizado exitosamente.');
       } else {
         const createData: CreateUsuarioDto = {
           nombre: form.nombre,
           email: form.email,
           password: form.password,
-          rol: form.rol || "socio",
         };
 
         if (!createData.password) {
           toast.error(
-            "La contraseña es obligatoria para crear un nuevo usuario."
+            'La contraseña es obligatoria para crear un nuevo usuario.'
           );
           setLoading(false);
           return;
         }
 
-        await createUsuarios(createData);
-        toast.success("Usuario creado exitosamente.");
+        await createUsuarios(undefined as any, createData);
+        toast.success('Usuario creado exitosamente.');
       }
       setForm(emptyForm);
       onCreated();
     } catch (error: any) {
-      let msg = error.message || "Error al guardar el usuario.";
-      if (msg.includes("value too long")) {
+      let msg = error.message || 'Error al guardar el usuario.';
+      if (msg.includes('value too long')) {
         msg =
-          "Uno de los campos excede la cantidad máxima de caracteres permitidos.";
+          'Uno de los campos excede la cantidad máxima de caracteres permitidos.';
       }
       toast.error(msg);
     } finally {
@@ -102,52 +101,52 @@ export default function UserForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="grid grid-cols-1 gap-4 md:grid-cols-2"
+      className='grid grid-cols-1 gap-4 md:grid-cols-2'
     >
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="nombre">Nombre</Label>
+      <div className='flex flex-col gap-1.5'>
+        <Label htmlFor='nombre'>Nombre</Label>
         <Input
-          id="nombre"
-          name="nombre"
-          placeholder="Ingrese nombre"
+          id='nombre'
+          name='nombre'
+          placeholder='Ingrese nombre'
           value={form.nombre}
           onChange={handleChange}
           required
         />
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="email">Email</Label>
+      <div className='flex flex-col gap-1.5'>
+        <Label htmlFor='email'>Email</Label>
         <Input
-          id="email"
-          name="email"
-          type="email"
-          placeholder="Ingrese correo electrónico"
+          id='email'
+          name='email'
+          type='email'
+          placeholder='Ingrese correo electrónico'
           value={form.email}
           onChange={handleChange}
           required
         />
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="rol">Rol</Label>
+      <div className='flex flex-col gap-1.5'>
+        <Label htmlFor='rol'>Rol</Label>
         <Input
-          id="rol"
-          name="rol"
+          id='rol'
+          name='rol'
           placeholder="Ingrese rol (ej. 'socio', 'admin')"
           value={form.rol}
           onChange={handleChange}
         />
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="password">Contraseña</Label>
+      <div className='flex flex-col gap-1.5'>
+        <Label htmlFor='password'>Contraseña</Label>
         <Input
-          id="password"
-          name="password"
-          type="password"
+          id='password'
+          name='password'
+          type='password'
           placeholder={
-            usuario ? "Dejar vacío para no cambiar" : "Ingrese contraseña"
+            usuario ? 'Dejar vacío para no cambiar' : 'Ingrese contraseña'
           }
           value={form.password}
           onChange={handleChange}
@@ -156,21 +155,21 @@ export default function UserForm({
       </div>
 
       <Button
-        type="submit"
-        className="col-span-full justify-self-end"
+        type='submit'
+        className='col-span-full justify-self-end'
         disabled={loading}
       >
         {loading
-          ? "Guardando..."
+          ? 'Guardando...'
           : usuario
-          ? "Actualizar Usuario"
-          : "Crear Usuario"}
+          ? 'Actualizar Usuario'
+          : 'Crear Usuario'}
       </Button>
 
       <Button
-        type="button"
+        type='button'
         onClick={onCancel}
-        className="col-span-full justify-self-end text-gray-800 bg-gray-200 hover:bg-gray-300"
+        className='text-gray-800 bg-gray-200 col-span-full justify-self-end hover:bg-gray-300'
         disabled={loading}
       >
         Cancelar
