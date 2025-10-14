@@ -64,11 +64,11 @@ export default function RutinasTable({
             key={i}
             className="odd:bg-muted/40 hover:bg-[#a8d9f9] transition-colors"
           >
-            <TableCell>{r.objetivo}</TableCell>
-            <TableCell>{r.nivel}</TableCell>
-            <TableCell>{r.creado_en}</TableCell>
-            <TableCell>{r.fecha}</TableCell>
-            <TableCell>{r.dias}</TableCell>
+            <TableCell>{r.rutina_desc?.objetivo ?? "—"}</TableCell>
+            <TableCell>{r.rutina_desc?.nivel ?? "—"}</TableCell>
+            <TableCell>{r.rutina_desc?.creado_en ?? r.id_rutina}</TableCell>
+            <TableCell>{r.rutina_desc?.fecha ?? "—"}</TableCell>
+            <TableCell>{r.rutina_desc?.dias ?? "—"}</TableCell>
             <TableCell className="flex gap-2">
               <Button
                 size="sm"

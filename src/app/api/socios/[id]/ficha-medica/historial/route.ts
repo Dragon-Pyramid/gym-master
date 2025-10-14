@@ -4,7 +4,7 @@ import { FindAllFichaMedicaSocio } from '@/services/fichaMedicaService';
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { user } = await authMiddleware(req);
@@ -14,7 +14,7 @@ export async function GET(
         { status: 401 }
       );
     }
-    const { id } = params;
+    const { id } = await params;
     if (!id) {
       return NextResponse.json(
         { error: 'ID de socio no proporcionado' },

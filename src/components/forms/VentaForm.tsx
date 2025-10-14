@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { createVenta, updateVenta } from "@/services/ventaService";
-import { toast } from "sonner";
+import { useState, useEffect } from 'react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { createVenta, updateVenta } from '@/services/ventaService';
+import { toast } from 'sonner';
 
 export interface VentaFormProps {
   venta?: {
@@ -18,9 +18,9 @@ export interface VentaFormProps {
 }
 
 const emptyForm = {
-  socio_id: "",
+  socio_id: '',
   total: 0,
-  fecha: "",
+  fecha: '',
 };
 
 export default function VentaForm({ venta, onCreated }: VentaFormProps) {
@@ -30,9 +30,9 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
   useEffect(() => {
     if (venta) {
       setForm({
-        socio_id: venta.socio_id ?? "",
+        socio_id: venta.socio_id ?? '',
         total: venta.total ?? 0,
-        fecha: venta.fecha ?? "",
+        fecha: venta.fecha ?? '',
       });
     } else {
       setForm(emptyForm);
@@ -43,7 +43,7 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
     const { name, value } = e.target;
     setForm((prev) => ({
       ...prev,
-      [name]: name === "total" ? Number(value) : value,
+      [name]: name === 'total' ? Number(value) : value,
     }));
   };
 
@@ -52,22 +52,22 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
     setLoading(true);
     try {
       if (venta && venta.id) {
-        await updateVenta(venta.id, form);
-        toast.success("Venta actualizada");
+        await updateVenta(undefined as any, venta.id, form);
+        toast.success('Venta actualizada');
       } else {
-        await createVenta({
+        await createVenta(undefined as any, {
           venta: { socio_id: form.socio_id, fecha: form.fecha },
-          venta_detalle: { producto_id: "", cantidad: 0 },
+          venta_detalle: { producto_id: '', cantidad: 0 },
         });
-        toast.success("Venta creada");
+        toast.success('Venta creada');
       }
       setForm(emptyForm);
       onCreated();
     } catch (error: any) {
-      let msg = error.message || "Error al guardar venta";
-      if (msg.includes("value too long")) {
+      let msg = error.message || 'Error al guardar venta';
+      if (msg.includes('value too long')) {
         msg =
-          "Uno de los campos excede la cantidad máxima de caracteres permitidos.";
+          'Uno de los campos excede la cantidad máxima de caracteres permitidos.';
       }
       toast.error(msg);
     } finally {
@@ -78,37 +78,37 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="grid grid-cols-1 md:grid-cols-2 gap-4"
+      className='grid grid-cols-1 md:grid-cols-2 gap-4'
     >
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="socio_id">Socio</Label>
+      <div className='flex flex-col gap-1.5'>
+        <Label htmlFor='socio_id'>Socio</Label>
         <Input
-          id="socio_id"
-          name="socio_id"
-          placeholder="ID del socio"
+          id='socio_id'
+          name='socio_id'
+          placeholder='ID del socio'
           value={form.socio_id}
           onChange={handleChange}
           required
         />
       </div>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="fecha">Fecha</Label>
+      <div className='flex flex-col gap-1.5'>
+        <Label htmlFor='fecha'>Fecha</Label>
         <Input
-          id="fecha"
-          name="fecha"
-          type="date"
+          id='fecha'
+          name='fecha'
+          type='date'
           value={form.fecha}
           onChange={handleChange}
           required
         />
       </div>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="total">Total</Label>
+      <div className='flex flex-col gap-1.5'>
+        <Label htmlFor='total'>Total</Label>
         <Input
-          id="total"
-          name="total"
-          type="number"
-          placeholder="Total"
+          id='total'
+          name='total'
+          type='number'
+          placeholder='Total'
           value={form.total}
           onChange={handleChange}
           required
@@ -116,11 +116,11 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
         />
       </div>
       <Button
-        type="submit"
-        className="col-span-full justify-self-end"
+        type='submit'
+        className='col-span-full justify-self-end'
         disabled={loading}
       >
-        {loading ? "Guardando..." : venta ? "Actualizar Venta" : "Crear Venta"}
+        {loading ? 'Guardando...' : venta ? 'Actualizar Venta' : 'Crear Venta'}
       </Button>
     </form>
   );

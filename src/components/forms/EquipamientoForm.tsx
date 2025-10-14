@@ -56,14 +56,13 @@ export default function EquipamientoForm({
       [field]: value,
     }));
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     if (isEdit && initialValues) {
       const updateData: UpdateEquipamentoDTO = {
         nombre: values.nombre,
-        tipo: values.tipo,
+        tipo: values.tipo as any,
         marca: values.marca,
         modelo: values.modelo,
         estado: values.estado,
@@ -76,7 +75,7 @@ export default function EquipamientoForm({
     } else {
       const createData: CreateEquipamentoDTO = {
         nombre: values.nombre,
-        tipo: values.tipo,
+        tipo: values.tipo as any,
         marca: values.marca,
         modelo: values.modelo,
         ubicacion: values.ubicacion,
@@ -88,7 +87,6 @@ export default function EquipamientoForm({
     }
     setSubmitting(false);
   };
-
   return (
     <form
       onSubmit={handleSubmit}
@@ -168,7 +166,7 @@ export default function EquipamientoForm({
           placeholder="Observaciones"
         />
       </div>
-      <div className="col-span-full flex justify-end gap-2">
+      <div className="flex justify-end gap-2 col-span-full">
         <Button
           type="button"
           variant="outline"

@@ -12,7 +12,8 @@ import { Search, Printer, FileSpreadsheet } from "lucide-react";
 import { getAllProductos, deleteProducto } from "@/services/productoService";
 import ProductoModal from "@/components/modal/ProductoModal";
 import ProductoViewModal from "@/components/modal/ProductoViewModal";
-import ProductoTable, { Producto } from "@/components/tables/ProductoTable";
+import ProductoTable from "@/components/tables/ProductoTable";
+import { Producto } from "@/interfaces/producto.interface";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
@@ -172,11 +173,11 @@ export default function ProductoPage() {
                     productos={filteredProductos}
                     loading={loading}
                     onEdit={(producto) => {
-                      setSelectedProducto(producto);
+                      setSelectedProducto(producto as Producto);
                       setOpenModal(true);
                     }}
                     onView={(producto) => {
-                      setProductoVer(producto);
+                      setProductoVer(producto as Producto);
                       setOpenModalVer(true);
                     }}
                     onDelete={async (producto) => {

@@ -227,7 +227,7 @@ export default function PagosPage() {
           pagoVer
             ? {
                 id: pagoVer.id,
-                socio_id: pagoVer.socio?.id ?? "",
+                socio_id: pagoVer.socio?.id_socio ?? "",
                 cuota_id: pagoVer.cuota?.id ?? "",
                 fecha_pago: pagoVer.fecha_pago,
                 fecha_vencimiento: pagoVer.fecha_vencimiento,

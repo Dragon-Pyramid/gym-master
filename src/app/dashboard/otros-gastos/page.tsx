@@ -15,9 +15,8 @@ import {
 } from "@/services/otrosGastosService";
 import OtrosGastosModal from "@/components/modal/OtrosGastosModal";
 import OtrosGastosViewModal from "@/components/modal/OtrosGastosViewModal";
-import OtrosGastosTable, {
-  OtrosGastos,
-} from "@/components/tables/OtrosGastosTable";
+import OtrosGastosTable from "@/components/tables/OtrosGastosTable";
+import { OtrosGastos } from "@/interfaces/otros_gastos.interface";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
@@ -170,7 +169,7 @@ export default function OtrosGastosPage() {
                     gastos={filteredGastos}
                     loading={loading}
                     onEdit={(gasto) => {
-                      setSelectedGasto(gasto);
+                      setSelectedGasto(gasto as OtrosGastos);
                       setOpenModal(true);
                     }}
                     onDelete={async (gasto) => {
@@ -212,7 +211,7 @@ export default function OtrosGastosPage() {
           setOpenModalVer(false);
           setGastoVer(null);
         }}
-        gasto={gastoVer}
+        gasto={gastoVer || undefined}
       />
     </SidebarProvider>
   );
