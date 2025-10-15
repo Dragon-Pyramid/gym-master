@@ -4,5 +4,7 @@
       "main": true,
       "*": false
     }
-  }
+  },
+  "buildCommand": "npm run build",
+  "installCommand": "npm install --legacy-peer-deps"
 }
