@@ -1,22 +1,22 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import { Toaster } from "sonner";
-import { SessionWrapper } from "@/components/SessionWrapper"; // ✅ Import del wrapper cliente
+import type { Metadata } from 'next';
+import { Geist, Geist_Mono } from 'next/font/google';
+import './globals.css';
+import { Toaster } from 'sonner';
+import { SessionWrapper } from '@/components/SessionWrapper'; // ✅ Import del wrapper cliente
 
 const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+  variable: '--font-geist-sans',
+  subsets: ['latin'],
 });
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  variable: '--font-geist-mono',
+  subsets: ['latin'],
 });
 
 export const metadata: Metadata = {
-  title: "Gym Master",
-  description: "Sistema de administración de gimnasios",
+  title: 'Gym Master',
+  description: 'Sistema de administración de gimnasios',
 };
 
 export default function RootLayout({
@@ -25,11 +25,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <SessionWrapper> {/* ✅ Usamos el componente cliente */}
-          <Toaster position="top-right" richColors />
+    <html lang='es'>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
+      >
+        <SessionWrapper>
           {children}
+          <Toaster position='top-right' richColors />
         </SessionWrapper>
       </body>
     </html>
