@@ -231,7 +231,6 @@ export default function LoginPage() {
                     <Button
                       variant='outline'
                       role='combobox'
-                      aria-expanded={userTypeOpen}
                       className='justify-between w-full'
                       type='button'
                     >
