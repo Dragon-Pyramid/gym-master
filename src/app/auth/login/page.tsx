@@ -1,28 +1,28 @@
-"use client";
+'use client';
 
-import { useState, FormEvent, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-import { useAuthStore } from "@/stores/authStore";
-import { Sun, Moon, Check, ChevronsUpDown } from "lucide-react";
+import { useState, FormEvent, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import { useAuthStore } from '@/stores/authStore';
+import { Sun, Moon, Check, ChevronsUpDown } from 'lucide-react';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import Image from "next/image";
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import Image from 'next/image';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from '@/components/ui/tooltip';
 import {
   Command,
   CommandEmpty,
@@ -30,26 +30,26 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
+} from '@/components/ui/command';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 
 const userTypes = [
   {
-    value: "admin",
-    label: "Administrador",
+    value: 'admin',
+    label: 'Administrador',
   },
   {
-    value: "socio",
-    label: "Socio",
+    value: 'socio',
+    label: 'Socio',
   },
   {
-    value: "usuario",
-    label: "Usuario",
+    value: 'usuario',
+    label: 'Usuario',
   },
 ];
 
@@ -57,20 +57,20 @@ function useDarkMode() {
   const [dark, setDark] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem("theme");
+    const saved = localStorage.getItem('theme');
     const prefersSystem = window.matchMedia(
-      "(prefers-color-scheme: dark)"
+      '(prefers-color-scheme: dark)'
     ).matches;
-    const initial = saved ? saved === "dark" : prefersSystem;
+    const initial = saved ? saved === 'dark' : prefersSystem;
     setDark(initial);
-    document.documentElement.classList.toggle("dark", initial);
+    document.documentElement.classList.toggle('dark', initial);
   }, []);
 
   const toggle = useCallback(() => {
     setDark((prev) => {
       const next = !prev;
-      document.documentElement.classList.toggle("dark", next);
-      localStorage.setItem("theme", next ? "dark" : "light");
+      document.documentElement.classList.toggle('dark', next);
+      localStorage.setItem('theme', next ? 'dark' : 'light');
       return next;
     });
   }, []);
@@ -89,19 +89,19 @@ export default function LoginPage() {
     clearError,
     isInitialized,
   } = useAuthStore();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [userType, setUserType] = useState<"admin" | "socio" | "usuario" | "">(
-    ""
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [userType, setUserType] = useState<'admin' | 'socio' | 'usuario' | ''>(
+    ''
   );
-  const [dbName, setDbName] = useState("");
+  const [dbName, setDbName] = useState('');
   const [userTypeOpen, setUserTypeOpen] = useState(false);
   const { dark, toggle } = useDarkMode();
 
   useEffect(() => {
     initializeAuth();
     if (isInitialized && isAuthenticated) {
-      router.push("/dashboard");
+      router.push('/dashboard');
     }
   }, [initializeAuth, isAuthenticated, isInitialized, router]);
 
@@ -116,22 +116,22 @@ export default function LoginPage() {
     e.preventDefault();
 
     if (!email.trim()) {
-      toast.error("El campo Usuario es obligatorio");
+      toast.error('El campo Usuario es obligatorio');
       return;
     }
 
     if (!password.trim()) {
-      toast.error("El campo Contraseña es obligatorio");
+      toast.error('El campo Contraseña es obligatorio');
       return;
     }
 
     if (!userType) {
-      toast.error("Debe seleccionar un tipo de usuario");
+      toast.error('Debe seleccionar un tipo de usuario');
       return;
     }
 
     if (!dbName.trim()) {
-      toast.error("Debe ingresar el nombre del gimnasio");
+      toast.error('Debe ingresar el nombre del gimnasio');
       return;
     }
 
@@ -143,109 +143,110 @@ export default function LoginPage() {
     });
 
     if (success) {
-      toast.success("Inicio de sesión exitoso");
-      router.push("/dashboard");
+      toast.success('Inicio de sesión exitoso');
+      router.push('/dashboard');
     }
   };
 
   return (
-    <div className="relative inset-0 flex flex-col items-center justify-center gap-4 bg-background">
-      <div className="absolute top-4 right-4">
+    <div className='relative inset-0 flex flex-col items-center justify-center gap-4 bg-background'>
+      <div className='absolute top-4 right-4'>
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground hover:text-foreground"
+                variant='ghost'
+                size='icon'
+                className='text-muted-foreground hover:text-foreground'
                 onClick={toggle}
-                aria-label="Cambiar modo claro/oscuro"
+                aria-label='Cambiar modo claro/oscuro'
               >
                 {dark ? (
-                  <Moon className="size-7" />
+                  <Moon className='size-7' />
                 ) : (
-                  <Sun className="size-7" />
+                  <Sun className='size-7' />
                 )}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {dark ? "Modo claro" : "Modo oscuro"}
+              {dark ? 'Modo claro' : 'Modo oscuro'}
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </div>
 
-      <div className="text-center">
-        <div className="relative mx-auto w-70 h-70">
+      <div className='text-center'>
+        <div className='relative mx-auto w-70 h-70'>
           <Image
-            src="/gm_logo.svg"
-            alt="Gym Master Logo"
+            src='/gm_logo.svg'
+            alt='Gym Master Logo'
             fill
-            className="object-contain dark:invert"
+            className='object-contain dark:invert'
             priority
           />
         </div>
       </div>
 
-      <div className="w-[400px] px-4">
-        <Card className="w-full overflow-hidden shadow-md rounded-xl">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">
+      <div className='w-[400px] px-4'>
+        <Card className='w-full overflow-hidden shadow-md rounded-xl'>
+          <CardHeader className='space-y-1'>
+            <CardTitle className='text-2xl font-bold text-center'>
               Iniciar Sesión
             </CardTitle>
-            <CardDescription className="text-center">
+            <CardDescription className='text-center'>
               Accedé con tu usuario y contraseña
             </CardDescription>
           </CardHeader>
 
           <CardContent>
-            <form onSubmit={handleSubmit} className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="email">Usuario</Label>
+            <form onSubmit={handleSubmit} className='grid gap-4'>
+              <div className='grid gap-2'>
+                <Label htmlFor='email'>Usuario</Label>
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="usuario@correo.com"
+                  id='email'
+                  type='email'
+                  placeholder='usuario@correo.com'
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="password">Contraseña</Label>
+              <div className='grid gap-2'>
+                <Label htmlFor='password'>Contraseña</Label>
                 <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
+                  id='password'
+                  type='password'
+                  placeholder='••••••••'
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
               </div>
 
-              <div className="grid gap-2">
+              <div className='grid gap-2'>
                 <Label>Tipo de Usuario</Label>
                 <Popover open={userTypeOpen} onOpenChange={setUserTypeOpen}>
                   <PopoverTrigger asChild>
                     <Button
-                      variant="outline"
-                      role="combobox"
+                      variant='outline'
+                      role='combobox'
                       aria-expanded={userTypeOpen}
-                      className="justify-between w-full"
+                      className='justify-between w-full'
+                      type='button'
                     >
                       {userType
                         ? userTypes.find((type) => type.value === userType)
                             ?.label
-                        : "Seleccione el tipo de usuario..."}
-                      <ChevronsUpDown className="w-4 h-4 ml-2 opacity-50 shrink-0" />
+                        : 'Seleccione el tipo de usuario...'}
+                      <ChevronsUpDown className='w-4 h-4 ml-2 opacity-50 shrink-0' />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-full p-0 bg-background">
+                  <PopoverContent className='w-[352px] p-0' align='start'>
                     <Command>
                       <CommandInput
-                        placeholder="Buscar tipo de usuario..."
-                        className="h-9"
+                        placeholder='Buscar tipo de usuario...'
+                        className='h-9'
                       />
                       <CommandList>
                         <CommandEmpty>
@@ -259,12 +260,12 @@ export default function LoginPage() {
                               onSelect={(currentValue) => {
                                 setUserType(
                                   currentValue === userType
-                                    ? ""
+                                    ? ''
                                     : (currentValue as
-                                        | "admin"
-                                        | "socio"
-                                        | "usuario"
-                                        | "")
+                                        | 'admin'
+                                        | 'socio'
+                                        | 'usuario'
+                                        | '')
                                 );
                                 setUserTypeOpen(false);
                               }}
@@ -272,10 +273,10 @@ export default function LoginPage() {
                               {type.label}
                               <Check
                                 className={cn(
-                                  "ml-auto h-4 w-4",
+                                  'ml-auto h-4 w-4',
                                   userType === type.value
-                                    ? "opacity-100"
-                                    : "opacity-0"
+                                    ? 'opacity-100'
+                                    : 'opacity-0'
                                 )}
                               />
                             </CommandItem>
@@ -287,12 +288,12 @@ export default function LoginPage() {
                 </Popover>
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="gymName">Gimnasio</Label>
+              <div className='grid gap-2'>
+                <Label htmlFor='gymName'>Gimnasio</Label>
                 <Input
-                  id="gymName"
-                  type="text"
-                  placeholder="Ej: Gym Master, Fitness Center..."
+                  id='gymName'
+                  type='text'
+                  placeholder='Ej: Gym Master, Fitness Center...'
                   value={dbName}
                   onChange={(e) => setDbName(e.target.value)}
                   required
@@ -300,17 +301,17 @@ export default function LoginPage() {
               </div>
 
               <Button
-                type="submit"
-                className="w-full mt-2"
+                type='submit'
+                className='w-full mt-2'
                 disabled={isLoading}
               >
                 {isLoading ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-current rounded-full border-t-transparent animate-spin"></div>
+                  <div className='flex items-center gap-2'>
+                    <div className='w-4 h-4 border-2 border-current rounded-full border-t-transparent animate-spin'></div>
                     <span>Ingresando...</span>
                   </div>
                 ) : (
-                  "Iniciar sesión"
+                  'Iniciar sesión'
                 )}
               </Button>
             </form>
