@@ -5,6 +5,10 @@ export type GymOption = {
   anonKey: string;
 };
 
+const normalizeDbName = (dbName: string): string => {
+  return dbName.trim().toLowerCase().replaceAll("-", "_");
+};
+
 const gyms: GymOption[] = [
   {
     value: "gym_master",
@@ -12,13 +16,17 @@ const gyms: GymOption[] = [
     url:
       process.env.NEXT_PUBLIC_SUPABASE_URL_gym_master ||
       process.env.SUPABASE_URL_gym_master ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      process.env.SUPABASE_URL ||
       "",
     anonKey:
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY_gym_master ||
       process.env.SUPABASE_ANON_KEY_gym_master ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      process.env.SUPABASE_ANON_KEY ||
       "",
   },
-  //* Aca se agregarian nuevos gyms si fuese necesario, o de forma dinamica (preferible que sea uno por uno)
+  //* Acá se agregarían nuevos gimnasios si fuese necesario.
 ];
 
 export const gymOptions: GymOption[] = gyms.filter(
@@ -26,5 +34,9 @@ export const gymOptions: GymOption[] = gyms.filter(
 );
 
 export function getGymConfig(dbName: string): GymOption | undefined {
-  return gymOptions.find((gym) => gym.value === dbName);
+  const normalizedDbName = normalizeDbName(dbName);
+
+  return gymOptions.find(
+    (gym) => normalizeDbName(gym.value) === normalizedDbName
+  );
 }

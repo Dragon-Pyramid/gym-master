@@ -30,8 +30,8 @@ import {
 } from "@/services/apiClient";
 import RutinaDisplay from "@/components/dashboard/rutinas/RutinaDisplay";
 
-interface RutinaDisplay {
-  id_rutina: string;
+interface RutinaDisplayData {
+  id_rutina: number;
   rutina_desc?: any;
   creado_en: string;
 }
@@ -40,19 +40,20 @@ export default function RutinasPage() {
   const { user, isAuthenticated, initializeAuth, isInitialized, token } =
     useAuthStore();
   const router = useRouter();
-  const [rutinas, setRutinas] = useState<RutinaDisplay[]>([]);
+  const [rutinas, setRutinas] = useState<RutinaDisplayData[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
-  const [selectedRutina, setSelectedRutina] = useState<Rutina | null>(
-    null
-  );
+  const [selectedRutina, setSelectedRutina] = useState<Rutina | null>(null);
   const [openModalVer, setOpenModalVer] = useState(false);
-  const [rutinaVer, setRutinaVer] = useState<RutinaDisplay | null>(null);
+  const [rutinaVer, setRutinaVer] = useState<RutinaDisplayData | null>(null);
   const [selectedNiveles, setSelectedNiveles] = useState<string[]>([]);
   const [selectedObjetivos, setSelectedObjetivos] = useState<string[]>([]);
   const [niveles, setNiveles] = useState<Nivel[]>([]);
   const [objetivos, setObjetivos] = useState<Objetivo[]>([]);
+  const usuarioEsAdmin =
+    user?.rol?.trim().toLowerCase() === "admin" ||
+    user?.rol?.trim().toLowerCase() === "administrador";
 
   const fetchRutinas = useCallback(async () => {
     if (!user || !token) return;
@@ -67,7 +68,7 @@ export default function RutinasPage() {
 
       const rutinasData: Rutina[] = response.data;
 
-      const rutinasDisplay: RutinaDisplay[] = rutinasData.map((rutina) => {
+      const rutinasDisplay: RutinaDisplayData[] = rutinasData.map((rutina) => {
         let rutinaDesc = rutina.rutina_desc;
 
         if (typeof rutina.rutina_desc === "string") {
@@ -185,7 +186,11 @@ export default function RutinasPage() {
           <main className="flex-1">
             <Card className="w-full">
               <CardHeader className="flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap">
-                <h2 className="text-xl font-bold">Mis Rutinas</h2>
+                <h2 className="text-xl font-bold">
+                  {usuarioEsAdmin
+                    ? "Rutinas asignadas a socios"
+                    : "Mis Rutinas"}
+                </h2>
                 <div className="flex flex-wrap items-center w-full gap-2 md:w-auto">
                   <div className="flex items-center flex-grow gap-2 md:flex-grow-0">
                     <Popover>
@@ -211,12 +216,12 @@ export default function RutinasPage() {
                                   <Checkbox
                                     id={`nivel-${nivel.id_nivel}`}
                                     checked={selectedNiveles.includes(
-                                      nivel.nombre_nivel
+                                      nivel.nombre_nivel,
                                     )}
                                     onCheckedChange={(checked) =>
                                       handleNivelChange(
                                         nivel.nombre_nivel,
-                                        checked as boolean
+                                        checked as boolean,
                                       )
                                     }
                                   />
@@ -241,12 +246,12 @@ export default function RutinasPage() {
                                   <Checkbox
                                     id={`objetivo-${objetivo.id_objetivo}`}
                                     checked={selectedObjetivos.includes(
-                                      objetivo.nombre_objetivo
+                                      objetivo.nombre_objetivo,
                                     )}
                                     onCheckedChange={(checked) =>
                                       handleObjetivoChange(
                                         objetivo.nombre_objetivo,
-                                        checked as boolean
+                                        checked as boolean,
                                       )
                                     }
                                   />
@@ -317,7 +322,7 @@ export default function RutinasPage() {
                   }}
                   onDelete={async () => {
                     const confirmar = window.confirm(
-                      "¿Está seguro de eliminar la rutina?"
+                      "¿Está seguro de eliminar la rutina?",
                     );
                     if (!confirmar) return;
                     await fetchRutinas();
