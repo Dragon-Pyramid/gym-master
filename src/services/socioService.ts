@@ -7,7 +7,7 @@ import { conexionBD } from '@/middlewares/conexionBd.middleware';
 import { JwtUser } from '@/interfaces/jwtUser.interface';
 
 export const fetchSocios = async (user: JwtUser): Promise<Socio[]> => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   const { data, error } = await supabase
     .from('socio')
     .select('*') // sin filtros
@@ -21,7 +21,7 @@ export const createSocio = async (
   user: JwtUser,
   payload: CreateSocioDto
 ): Promise<Socio> => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   const { data, error } = await supabase
     .from('socio')
     .insert(payload)
@@ -37,7 +37,7 @@ export const updateSocio = async (
   id_socio: string,
   updateData: UpdateSocioDto
 ): Promise<Socio> => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   const { data, error } = await supabase
     .from('socio')
     .update(updateData)
@@ -55,7 +55,7 @@ export const deleteSocio = async (
   user: JwtUser,
   id: string
 ): Promise<Socio> => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   const { data, error } = await supabase
     .from('socio')
     .update({ activo: false })
@@ -73,7 +73,7 @@ export const existeSocioActivo = async (
   user: JwtUser,
   id: string
 ): Promise<boolean> => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   const { data, error } = await supabase
     .from('socio')
     .select('id_socio')
@@ -93,7 +93,7 @@ export const toggleSocioActivo = async (
     activo: boolean;
   }
 ) => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   const { data, error } = await supabase
     .from('socio')
     .update({ activo: !socio.activo })
@@ -105,10 +105,9 @@ export const toggleSocioActivo = async (
 };
 
 export const getSocioById = async (
-  id: string,
-  dbName: string
+  id: string
 ): Promise<Socio> => {
-  const supabase = conexionBD(dbName);
+  const supabase = conexionBD();
   const { data, error } = await supabase
     .from('socio')
     .select(
@@ -130,7 +129,7 @@ export const getSocioById = async (
 };
 
 export const getAllSociosActivos = async (user: JwtUser): Promise<Socio[]> => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   const { data, error } = await supabase
     .from('socio')
     .select()
@@ -149,10 +148,9 @@ export const getAllSociosActivos = async (user: JwtUser): Promise<Socio[]> => {
 };
 
 export const getSocioByIdUsuario = async (
-  usuario_id: string,
-  dbName: string
+  usuario_id: string
 ): Promise<Socio> => {
-  const supabase = conexionBD(dbName);
+  const supabase = conexionBD();
 
   const { data: dataSocio, error: errorSocio } = await supabase
     .from('socio')
@@ -174,10 +172,9 @@ export const getSocioByIdUsuario = async (
 
 export const updateFotoSocioById = async (
   id_socio: string,
-  dbName: string,
   url: string
 ): Promise<Socio> => {
-  const supabase = conexionBD(dbName);
+  const supabase = conexionBD();
   const { data, error } = await supabase
     .from('socio')
     .update({ foto: url })

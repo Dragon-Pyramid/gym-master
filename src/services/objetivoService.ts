@@ -2,7 +2,7 @@ import { Objetivo } from "@/interfaces/objetivo.interface";
 import { getSupabaseClient } from "./supabaseClient";
 
 export const getAllObjetivos = async (user: any) : Promise<Objetivo[]> => {
-    const supabase = getSupabaseClient(user.dbName);
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
         .from('objetivo')
         .select('*')

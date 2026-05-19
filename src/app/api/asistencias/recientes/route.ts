@@ -9,7 +9,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const supabase = conexionBD(user.dbName);
+    const supabase = conexionBD();
 
     // Últimas 4 asistencias con datos del socio
     const { data, error } = await supabase

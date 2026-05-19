@@ -3,7 +3,7 @@ import { JwtUser } from "@/interfaces/jwtUser.interface";
 import { conexionBD } from "@/middlewares/conexionBd.middleware";
 
 export const createDietaSocio= async( createDieta: CreateDietaDto, user: JwtUser )  =>{
-const supabase = conexionBD(user.dbName);
+const supabase = conexionBD();
    /* const {data,error} = await supabase
     .from("dieta")
     .insert({...createDieta, creado_por: user.id })
@@ -38,7 +38,7 @@ return ultimaDieta;
     }
 
 export const getAllDietasSocio = async (id: string, user: JwtUser): Promise<Dieta[]> => {
-    const supabase = conexionBD(user.dbName);
+    const supabase = conexionBD();
     const { data, error } = await supabase
         .from("dieta")
         .select("*")
@@ -53,7 +53,7 @@ export const getAllDietasSocio = async (id: string, user: JwtUser): Promise<Diet
 }
 
 export const getAllDietas = async (user: JwtUser): Promise<Dieta[]> => {
-    const supabase = conexionBD(user.dbName);
+    const supabase = conexionBD();
     const { data, error } = await supabase
         .from("dieta")
         .select("*");
@@ -67,7 +67,7 @@ export const getAllDietas = async (user: JwtUser): Promise<Dieta[]> => {
 }
 
 export const getUltimaDietaSocio = async (id: string, user: JwtUser): Promise<Dieta> => {
-    const supabase = conexionBD(user.dbName);
+    const supabase = conexionBD();
     const {data:ultimaDietaData,error:ultimaDietaError} = await supabase
     .from("dieta")
     .select("*")

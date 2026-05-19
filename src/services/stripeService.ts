@@ -4,7 +4,7 @@ import { JwtUser } from "@/interfaces/jwtUser.interface";
 import { conexionBD } from "@/middlewares/conexionBd.middleware";
 
 export const createSessionPago = async (user:JwtUser) : Promise<{ url: string }> => {
-      const supabase = conexionBD(user.dbName);
+      const supabase = conexionBD();
     
         //TRAIGO LA CUOTA MAS RECIENTE
         const { data: cuota, error: cuotaError } = await supabase
@@ -19,7 +19,7 @@ export const createSessionPago = async (user:JwtUser) : Promise<{ url: string }>
           throw new Error("Error al traer la cuota");
         }
     
-          const socio = await getSocioByIdUsuario(user.id,user.dbName);
+          const socio = await getSocioByIdUsuario(user.id);
     
           //VERIFICO SI EL SOCIO YA TIENE UN PAGO DE ESTA CUOTA
          const {data: ultimoPago,error:ultimoPagoError} = await supabase

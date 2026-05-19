@@ -32,19 +32,32 @@ export async function POST(req: Request) {
       return NextResponse.json({error: "No autorizado"}, {status: 401});
     }
 
-    const { nombre, email, password } = await req.json();
+    const { nombre, email, password, rol, dni } = await req.json();
 
     if (!nombre || !email || !password) {
       return NextResponse.json({ error: 'Todos los campos son obligatorios' }, { status: 400 });
     }
 
-    const creado = await createUsuarios(user,{nombre: nombre.trim(), email: email.trim(), password: password.trim()});
+    const rolFinal = rol?.trim() || 'socio';
+
+    if (rolFinal === 'socio' && !dni?.trim()) {
+      return NextResponse.json({ error: 'El DNI es obligatorio para crear un usuario socio' }, { status: 400 });
+    }
+
+    const creado = await createUsuarios(user, {
+      nombre: nombre.trim(),
+      email: email.trim(),
+      password: password.trim(),
+      rol: rolFinal,
+      dni: dni?.trim(),
+    });
+
     return NextResponse.json({
       message: 'Usuario creado con éxito',
       data: creado
     }, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: 'Error al crear usuario' }, { status: 500 });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || 'Error al crear usuario' }, { status: 500 });
   }
 }
 
@@ -67,8 +80,8 @@ export async function PUT(req: Request) {
       message: 'Usuario actualizado con éxito',
       data: actualizado
     }, { status: 200 });
-  } catch {
-    return NextResponse.json({ error: 'Error al actualizar usuario' }, { status: 500 });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || 'Error al actualizar usuario' }, { status: 500 });
   }
 }
 
@@ -86,7 +99,7 @@ export async function DELETE(req: Request) {
 
     await deleteUsuarios(user,id);
     return NextResponse.json({ message: 'Usuario desactivado con éxito' }, { status: 200 });
-  } catch {
-    return NextResponse.json({ error: 'Error al desactivar usuario' }, { status: 500 });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || 'Error al desactivar usuario' }, { status: 500 });
   }
 }

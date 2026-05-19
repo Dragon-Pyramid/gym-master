@@ -15,7 +15,6 @@ type StoreUser = Partial<Usuario> & {
   id?: string;
   email?: string;
   rol?: string;
-  dbName?: string;
 };
 
 interface AuthState {
@@ -29,7 +28,6 @@ interface AuthState {
     email: string;
     password: string;
     rol: string;
-    dbName: string;
   }) => Promise<boolean>;
   logout: () => void;
   initializeAuth: () => void;

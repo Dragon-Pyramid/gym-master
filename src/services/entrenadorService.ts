@@ -8,7 +8,7 @@ import { conexionBD } from "@/middlewares/conexionBd.middleware";
 import { createEntrenadorHorario, updateEntrenadorHorario } from "./entrenadorHorarioService";
 
 export const getEntrenadores = async (user: JwtUser): Promise<Entrenador[]> => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   const { data: entrenadores, error } = await supabase
     .from("entrenadores")
     .select("*")
@@ -22,7 +22,7 @@ export const createEntrenador = async (
   createEntrenador: CreateEntrenadorDTO,
   user: JwtUser
 ): Promise<Entrenador> => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   const { nombre_completo, dni, horarios } = createEntrenador;
 
   const { data: entrenadorData, error: entrenadorError } = await supabase
@@ -79,7 +79,7 @@ export const getEntrenadorById = async (
   id: string,
   user: JwtUser
 ): Promise<Entrenador> => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   const { data: entrenador, error } = await supabase
     .from("entrenadores")
     .select()
@@ -100,7 +100,7 @@ export const updateEntrenador = async (
   updateData: UpdateEntrenadorDTO,
   user: JwtUser
 ): Promise<Entrenador> => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   console.log(updateData);
 
   const { horarios, ...updateEntrenador } = updateData;

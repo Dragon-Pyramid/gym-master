@@ -1,12 +1,13 @@
 import { GeneracionRutina, Rutina } from "@/interfaces/rutina.interface";
 import { getSupabaseClient } from "./supabaseClient";
 import { JwtUser } from "@/interfaces/jwtUser.interface";
+import { getSocioByIdUsuario } from "./socioService";
 
-const isValidUUID = (value?: string | null): boolean => {
-  if (!value) return false;
+const isValidUUID = (value?: string | null): value is string => {
+  if (typeof value !== "string") return false;
 
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(
-    value
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value.trim()
   );
 };
 
@@ -20,9 +21,39 @@ type RutinaAdminRow = Omit<Rutina, "socio"> & {
   socio?: Rutina["socio"] | Rutina["socio"][];
 };
 
+const resolveIdSocioForRutina = async (
+  user: JwtUser,
+  rutina: GeneracionRutina
+): Promise<string> => {
+  const idSocioFromBody = rutina.id_socio ?? rutina.idSocio;
+
+  // Caso admin o generación explícita: el endpoint puede enviar el socio destino.
+  if (isValidUUID(idSocioFromBody)) {
+    return idSocioFromBody.trim();
+  }
+
+  // Caso socio logueado: normalmente viene en el JWT.
+  if (isValidUUID(user.id_socio)) {
+    return user.id_socio.trim();
+  }
+
+  // Fallback robusto: si el token quedó viejo/incompleto, buscar el socio por usuario_id.
+  if (!isAdmin(user.rol) && isValidUUID(user.id)) {
+    const socio = await getSocioByIdUsuario(user.id);
+
+    if (isValidUUID(socio?.id_socio)) {
+      return socio.id_socio.trim();
+    }
+  }
+
+  throw new Error(
+    "No se pudo determinar el id_socio para generar rutina. El socio debe tener perfil asociado o el request debe enviar id_socio."
+  );
+};
+
 // Funciones para métricas de rutinas IA
 export const dataAdherenciaMensualRutinas = async (user: JwtUser) => {
-  const supabase = getSupabaseClient(user.dbName);
+  const supabase = getSupabaseClient();
 
   const { data, error } = await supabase.rpc("sp_adherencia_mensual_rutinas");
 
@@ -32,7 +63,7 @@ export const dataAdherenciaMensualRutinas = async (user: JwtUser) => {
 };
 
 export const dataEvolucionPromedioPorObjetivo = async (user: JwtUser) => {
-  const supabase = getSupabaseClient(user.dbName);
+  const supabase = getSupabaseClient();
 
   const { data, error } = await supabase.rpc(
     "sp_evolucion_promedio_por_objetivo"
@@ -47,15 +78,13 @@ export const dataGeneracionRutina = async (
   user: JwtUser,
   rutina: GeneracionRutina
 ) => {
-  const supabase = getSupabaseClient(user.dbName);
+  const supabase = getSupabaseClient();
 
-  if (!isValidUUID(user.id_socio)) {
-    throw new Error("El usuario no tiene un id_socio válido para generar rutina");
-  }
+  const idSocio = await resolveIdSocioForRutina(user, rutina);
 
   const { data, error } = await supabase
     .rpc("generar_rutina_socio", {
-      p_id_socio: user.id_socio,
+      p_id_socio: idSocio,
       p_id_objetivo: rutina.objetivo,
       p_id_nivel: rutina.nivel,
       p_dias: rutina.dias,
@@ -78,7 +107,7 @@ export const dataGeneracionRutinaPersonalizada = async (
     dias: number;
   }
 ) => {
-  const supabase = getSupabaseClient(user.dbName);
+  const supabase = getSupabaseClient();
 
   const { data, error } = await supabase.rpc(
     "sp_generar_rutina_personalizada",
@@ -100,7 +129,7 @@ export const dataGeneracionRutinaPersonalizada = async (
 export const historialRutinasAdmin = async (
   user: JwtUser
 ): Promise<Rutina[]> => {
-  const supabase = getSupabaseClient(user.dbName);
+  const supabase = getSupabaseClient();
 
   const { data, error } = await supabase
     .from("rutina")
@@ -153,7 +182,7 @@ export const historialRutinaSocioLogueado = async (
     return historialRutinasAdmin(user);
   }
 
-  const supabase = getSupabaseClient(user.dbName);
+  const supabase = getSupabaseClient();
 
   if (!isValidUUID(user.id_socio)) {
     console.warn(
@@ -182,7 +211,7 @@ export const historialRutinaSocio = async (
   user: JwtUser,
   id_socio: string
 ): Promise<Rutina[]> => {
-  const supabase = getSupabaseClient(user.dbName);
+  const supabase = getSupabaseClient();
 
   if (!isValidUUID(id_socio)) {
     console.warn(
@@ -208,7 +237,7 @@ export const historialRutinaSocio = async (
 };
 
 export const dataRetencionPorCombinacion = async (user: JwtUser) => {
-  const supabase = getSupabaseClient(user.dbName);
+  const supabase = getSupabaseClient();
 
   const { data, error } = await supabase.rpc(
     "calcular_retencion_por_combinacion"

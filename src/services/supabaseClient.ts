@@ -1,19 +1,20 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { getGymConfig } from "@/config/gymOptions";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    "Faltan variables de entorno NEXT_PUBLIC_SUPABASE_URL o NEXT_PUBLIC_SUPABASE_ANON_KEY"
+  );
+}
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-export const getSupabaseClient = (dbName: string): SupabaseClient => {
-  const gym = getGymConfig(dbName);
-
-  if (!gym) {
-    throw new Error(
-      `No se encontraron configuraciones para la base de datos: ${dbName}`
-    );
-  }
-
-  return createClient(gym.url, gym.anonKey);
-};
+/**
+ * Cliente único de Supabase.
+ *
+ * Gym Master deja de resolver la base por un identificador de gimnasio: cada gimnasio tendrá
+ * su propio deployment/URL y sus propias variables de entorno.
+ */
+export const getSupabaseClient = (): SupabaseClient => supabase;

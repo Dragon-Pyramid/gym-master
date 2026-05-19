@@ -22,7 +22,8 @@ const emptyForm = {
   nombre: '',
   email: '',
   password: '',
-  rol: '',
+  rol: 'socio',
+  dni: '',
 };
 
 export default function UserForm({
@@ -38,15 +39,16 @@ export default function UserForm({
       setForm({
         nombre: usuario.nombre ?? '',
         email: usuario.email ?? '',
-        rol: usuario.rol ?? '',
+        rol: usuario.rol ?? 'socio',
         password: '',
+        dni: '',
       });
     } else {
       setForm(emptyForm);
     }
   }, [usuario]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
@@ -67,16 +69,25 @@ export default function UserForm({
         await updateUsuarios(undefined as any, usuario.id, updateData);
         toast.success('Usuario actualizado exitosamente.');
       } else {
+        const rol = form.rol || 'socio';
         const createData: CreateUsuarioDto = {
           nombre: form.nombre,
           email: form.email,
           password: form.password,
+          rol,
+          ...(rol === 'socio' && { dni: form.dni }),
         };
 
         if (!createData.password) {
           toast.error(
             'La contraseña es obligatoria para crear un nuevo usuario.'
           );
+          setLoading(false);
+          return;
+        }
+
+        if (rol === 'socio' && !form.dni.trim()) {
+          toast.error('El DNI es obligatorio para crear un usuario socio.');
           setLoading(false);
           return;
         }
@@ -97,6 +108,8 @@ export default function UserForm({
       setLoading(false);
     }
   };
+
+  const isSocio = form.rol === 'socio';
 
   return (
     <form
@@ -130,14 +143,32 @@ export default function UserForm({
 
       <div className='flex flex-col gap-1.5'>
         <Label htmlFor='rol'>Rol</Label>
-        <Input
+        <select
           id='rol'
           name='rol'
-          placeholder="Ingrese rol (ej. 'socio', 'admin')"
           value={form.rol}
           onChange={handleChange}
-        />
+          className='flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
+        >
+          <option value='socio'>Socio</option>
+          <option value='admin'>Administrador</option>
+          <option value='usuario'>Usuario</option>
+        </select>
       </div>
+
+      {isSocio && !usuario && (
+        <div className='flex flex-col gap-1.5'>
+          <Label htmlFor='dni'>DNI</Label>
+          <Input
+            id='dni'
+            name='dni'
+            placeholder='Ingrese DNI del socio'
+            value={form.dni}
+            onChange={handleChange}
+            required={isSocio && !usuario}
+          />
+        </div>
+      )}
 
       <div className='flex flex-col gap-1.5'>
         <Label htmlFor='password'>Contraseña</Label>

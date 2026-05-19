@@ -5,8 +5,8 @@ import { JwtUser } from "@/interfaces/jwtUser.interface";
 import { conexionBD } from "@/middlewares/conexionBd.middleware";
 
 
-const validarEInsertarBloque = async (dia_semana: string, bloque: { hora_desde: string; hora_hasta: string }, dbName: string, entrenador_id: string) => {
-    const supabase = conexionBD(dbName);   
+const validarEInsertarBloque = async (dia_semana: string, bloque: { hora_desde: string; hora_hasta: string }, entrenador_id: string) => {
+    const supabase = conexionBD();   
     
     if (!bloque.hora_desde || !bloque.hora_hasta) {
             throw new Error("Cada bloque debe tener hora_desde y hora_hasta.");
@@ -71,13 +71,13 @@ export const createEntrenadorHorario = async (
 
         // Procesar cada bloque
         for (const bloque of bloques) {
-            await validarEInsertarBloque(dia_semana, bloque, user.dbName, entrenador_id);
+            await validarEInsertarBloque(dia_semana, bloque, entrenador_id);
         }
     }
 };
 
 export const getHorariosByEntrenadorId = async (id: string, user: JwtUser) => {
-    const supabase = conexionBD(user.dbName);
+    const supabase = conexionBD();
     const { data, error } = await supabase
         .from('entrenador_horarios')
         .select('*')
@@ -98,7 +98,7 @@ export const updateEntrenadorHorario = async (
     entrenadorHorarios: CreateEntrenadorHorarioDTO[],
     user: JwtUser
 ): Promise<void> => {
-    const supabase = conexionBD(user.dbName);
+    const supabase = conexionBD();
 
     // 1. Desactivar todos los horarios actuales del entrenador
     const { error: errorSoftDelete } = await supabase
@@ -122,7 +122,7 @@ export const updateEntrenadorHorario = async (
         }
 
         for (const bloque of bloques) {
-            await validarEInsertarBloque(dia_semana, bloque, user.dbName, entrenador_id);
+            await validarEInsertarBloque(dia_semana, bloque, entrenador_id);
         }
     }
 };

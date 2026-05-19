@@ -6,7 +6,7 @@ import { JwtUser } from "@/interfaces/jwtUser.interface";
 import { conexionBD } from "@/middlewares/conexionBd.middleware";
 
 export const getAllVentas = async (user: JwtUser): Promise<ResponseVenta[]> => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   const { data, error } = await supabase.from("venta").select(`*,
      venta_detalle: id_venta_detalle(*),
      socio: socio_id (id_socio, nombre_completo)`);
@@ -31,10 +31,10 @@ return response;
 };
 
 export const createVenta = async (user: JwtUser,payload: CreateVentaConDetalleDto): Promise<ResponseVenta> => {
-  const supabase = conexionBD(user.dbName); 
+  const supabase = conexionBD(); 
   const{venta,venta_detalle} = payload;
 
-    const socio = await getSocioById(venta.socio_id,user.dbName)
+    const socio = await getSocioById(venta.socio_id)
 
   const { data, error } = await supabase.from("venta").insert({...venta,total:1}).select().single();
   if (error) throw new Error(error.message);
@@ -64,7 +64,7 @@ await updateVenta(user,data.id, { total: det_venta.subtotal, id_venta_detalle : 
 };
 
 export const updateVenta = async (user: JwtUser, id: string, updateData: UpdateVentaDto): Promise<Venta> => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   const { data, error } = await supabase.from("venta").update(updateData).eq("id", id).select().single();
   if (error) throw new Error(error.message);
   if (!data || data.length === 0) throw new Error("No se encontró venta con ese id");
@@ -72,7 +72,7 @@ export const updateVenta = async (user: JwtUser, id: string, updateData: UpdateV
 };
 
 export const deleteVenta = async (user: JwtUser, id: string): Promise<Venta> => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   const { data, error } = await supabase.from("venta").update({ activo: false }).eq("id", id).select().single();
   if (error) throw new Error(error.message);
   if (!data) throw new Error("No se encontró venta con ese id");
@@ -81,7 +81,7 @@ export const deleteVenta = async (user: JwtUser, id: string): Promise<Venta> => 
 
 //TODO: FALTA IMPLEMENTAR BIDIRECCIONALIDAD EN DETALLE VENTA PARA MOSTRAR AL TRAER LA VENTA
 export const getVentaById = async (user:JwtUser,id: string): Promise<Venta> => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   const { data, error } = await supabase
     .from("venta")
     .select('*')

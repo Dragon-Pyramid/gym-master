@@ -21,6 +21,8 @@ export interface Rutina {
 }
 
 export interface GeneracionRutina {
+  id_socio?: string | null;
+  idSocio?: string | null;
   nivel: number;
   objetivo: number;
   dias: number;

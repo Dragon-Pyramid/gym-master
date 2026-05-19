@@ -6,7 +6,6 @@ interface JwtPayload {
   id: string;
   email: string;
   rol: string;
-  dbName: string;
   nombre?: string;
   exp?: number;
 }

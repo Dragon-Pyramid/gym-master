@@ -6,7 +6,7 @@ export const createEvolucionSocio = async (
   createEvolucionSocio: CreateEvolucionSocioDto,
   user: JwtUser
 ) => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
 
   const imc =
     createEvolucionSocio.peso /
@@ -35,7 +35,7 @@ export const findAllEvolucionesSocioByIdSocio = async (
   user: JwtUser,
   socio_id: string
 ) => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
 
   const { data, error } = await supabase
     .from("evolucion_socio")

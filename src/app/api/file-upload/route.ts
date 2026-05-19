@@ -29,7 +29,7 @@ const fileDto : FileUploadDTO = {
     buffer: buffer
 };
 
-    const folder = `${user.dbName}/${user.rol}/profile`;
+    const folder = `${user.rol}/profile`;
     const result = await uploadFile(fileDto, folder);
     if (!result) {
         return NextResponse.json({ error: "Error al subir el archivo" }, { status: 500 });

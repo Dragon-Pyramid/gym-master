@@ -2,7 +2,7 @@ import { Nivel } from "@/interfaces/niveles.interface";
 import { getSupabaseClient } from "./supabaseClient";
 
 export const getAllNiveles = async (user: any) : Promise<Nivel[]> => {
-    const supabase = getSupabaseClient(user.dbName);
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
         .from('nivel')
         .select('*')

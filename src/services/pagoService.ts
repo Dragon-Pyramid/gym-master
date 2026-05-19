@@ -76,8 +76,7 @@ export const createPago = async (payload: CreatePagoDto) :Promise<Pago> => {
   
   const { socio_id, registrado_por } = payload; 
   
-  const dbName = "gym_master";
-  const socio = await getSocioById(socio_id, dbName);
+  const socio = await getSocioById(socio_id);
   let monto_pagado;
 
   if (socio.descuento_activo) {
@@ -159,7 +158,7 @@ export const getPagoById = async (id: string): Promise<ResponsePago> => {
 
 // Funciones para métricas de pagos
 export const dataAnalisisConductaPagos = async (user: any) => {
-    const supabase = getSupabaseClient(user.dbName);
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
         .rpc('sp_analisis_conducta_pagos');
     if (error) throw new Error(error.message);

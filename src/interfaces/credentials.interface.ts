@@ -1,6 +1,5 @@
-export interface SignInDto{
-    email: string;
-    password: string;
-    rol: string;
-    dbName: string;
+export interface SignInDto {
+  email: string;
+  password: string;
+  rol: string;
 }
