@@ -5,6 +5,38 @@ Este sistema es desarrollado por un equipo de pasantes en un proyecto acelerado 
 
 ---
 
+## 🧭 Estado arquitectónico actual
+
+Desde el checkpoint `single-tenant` mergeado a `main`, Gym Master trabaja con una arquitectura **single-tenant por instancia**:
+
+- Una aplicación/deploy por gimnasio.
+- Una base Supabase/PostgreSQL por gimnasio.
+- El campo `dbName` ya no forma parte del flujo de login, servicios, JWT ni selección de base.
+- La generación de rutinas del socio se mantiene mediante el procedimiento almacenado `generar_rutina_socio`.
+
+> Nota operativa: cualquier documento, código histórico o referencia previa a multi-tenant / multibase debe tratarse como contexto desactualizado hasta que se valide contra la arquitectura actual.
+
+## 📚 Documentación técnica actual
+
+La documentación viva del proyecto se mantiene en `docs/`:
+
+- `docs/auditoria-tecnica-gym-master.md`: auditoría inicial del estado real del repo y backup SQL.
+- `docs/database/estado-base-datos.md`: inventario de tablas, funciones, relaciones y riesgos de base de datos.
+- `docs/pr/pr-auditoria-tecnica-gym-master.md`: texto sugerido para el PR de documentación.
+- `docs/informes/informe-ejecutivo-auditoria-inicial.md`: informe ejecutivo del bloque de auditoría.
+
+## 🔁 Flujo de trabajo recomendado
+
+1. Crear rama desde `main` actualizado.
+2. Analizar antes de modificar código.
+3. Aplicar cambios con `robocopy` cuando corresponda.
+4. Validar build/lint/tests disponibles.
+5. Actualizar `README.md` o documentación en `docs/*.md`.
+6. Preparar un Markdown con la descripción del PR.
+7. Cerrar cada bloque importante con informe ejecutivo.
+
+---
+
 ## 🚀 Objetivo del Proyecto
 
 Crear una plataforma moderna, segura y eficiente para la gestión completa de un gimnasio, incluyendo usuarios, socios, asistencia, pagos, rutinas, productos, ventas y dietas personalizadas, con soporte para funcionalidades híbridas.
