@@ -5,14 +5,14 @@ import { JwtUser } from "@/interfaces/jwtUser.interface";
 import { conexionBD } from "@/middlewares/conexionBd.middleware";
 
 export const getAllVentaDetalles = async (user:JwtUser): Promise<VentaDetalle[]> => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   const { data, error } = await supabase.from("venta_detalle").select();
   if (error) throw new Error(error.message);
   return data as VentaDetalle[];
 };
 
 export const createVentaDetalle = async (user: JwtUser, payload: CreateVentaDetalleDto, venta_id : string): Promise<VentaDetalle|false> => {
-  const supabase = conexionBD(user.dbName); 
+  const supabase = conexionBD(); 
   //valido stock y traigo precio 
   const { precio_unitario, tieneStock } = await verificoStock(payload.producto_id, payload.cantidad);
   
@@ -40,7 +40,7 @@ export const createVentaDetalle = async (user: JwtUser, payload: CreateVentaDeta
 };
 
 export const updateVentaDetalle = async (user: JwtUser, id: string, updateData: UpdateVentaDetalleDto): Promise<VentaDetalle> => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   const { data, error } = await supabase.from("venta_detalle").update(updateData).eq("id", id).select().single();
   if (error) throw new Error(error.message);
   if (!data || data.length === 0) throw new Error("No se encontró detalle de venta con ese id");
@@ -48,7 +48,7 @@ export const updateVentaDetalle = async (user: JwtUser, id: string, updateData: 
 };
 
 export const deleteVentaDetalle = async (user: JwtUser, id: string): Promise<VentaDetalle[]> => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   const { data, error } = await supabase.from("venta_detalle").delete().eq("id", id).select();
   if (error) throw new Error(error.message);
   if (!data || data.length === 0) throw new Error("No se encontró detalle de venta con ese id");

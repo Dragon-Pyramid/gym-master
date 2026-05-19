@@ -4,11 +4,11 @@ import { NextResponse } from "next/server";
 export async function POST(req : Request){
 try{
     const body = await req.json();
-    const { email, password,rol,dbName } = body;
-    if (!email || !password || !rol || !dbName) {
+    const { email, password, rol } = body;
+    if (!email || !password || !rol) {
         return NextResponse.json({ message: "Faltan datos" }, { status: 400 });
     }
-    const loginSignin = await signIn({email, password,rol,dbName});
+    const loginSignin = await signIn({ email, password, rol });
     return NextResponse.json({
         message: "Logueado con exito", token : loginSignin},{status: 200});
     } catch (error) {

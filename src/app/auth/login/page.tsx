@@ -94,7 +94,6 @@ export default function LoginPage() {
   const [userType, setUserType] = useState<'admin' | 'socio' | 'usuario' | ''>(
     ''
   );
-  const [dbName, setDbName] = useState('');
   const [userTypeOpen, setUserTypeOpen] = useState(false);
   const { dark, toggle } = useDarkMode();
 
@@ -130,16 +129,11 @@ export default function LoginPage() {
       return;
     }
 
-    if (!dbName.trim()) {
-      toast.error('Debe ingresar el nombre del gimnasio');
-      return;
-    }
 
     const success = await authLogin({
       email: email.trim(),
       password: password.trim(),
       rol: userType,
-      dbName,
     });
 
     if (success) {
@@ -287,17 +281,6 @@ export default function LoginPage() {
                 </Popover>
               </div>
 
-              <div className='grid gap-2'>
-                <Label htmlFor='gymName'>Gimnasio</Label>
-                <Input
-                  id='gymName'
-                  type='text'
-                  placeholder='Ej: Gym Master, Fitness Center...'
-                  value={dbName}
-                  onChange={(e) => setDbName(e.target.value)}
-                  required
-                />
-              </div>
 
               <Button
                 type='submit'

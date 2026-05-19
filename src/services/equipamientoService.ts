@@ -108,7 +108,7 @@ export const getOneEquipamientoById = async (id:string) : Promise<Equipamento> =
 
 // Funciones para métricas de equipamiento
 export const dataEstadoEquipamientoSemaforo = async (user: any) => {
-    const supabase = getSupabaseClient(user.dbName);
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
         .rpc('sp_estado_equipamiento_semaforo');
     if (error) throw new Error(error.message);
@@ -116,7 +116,7 @@ export const dataEstadoEquipamientoSemaforo = async (user: any) => {
 }
 
 export const dataRankingFallosEquipamiento = async (user: any) => {
-    const supabase = getSupabaseClient(user.dbName);
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
         .rpc('sp_ranking_fallos_equipamiento');
     if (error) throw new Error(error.message);
@@ -124,7 +124,7 @@ export const dataRankingFallosEquipamiento = async (user: any) => {
 }
 
 export const dataAnalisisCostoBeneficio = async (user: any) => {
-    const supabase = getSupabaseClient(user.dbName);
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
         .rpc('sp_analisis_costo_beneficio');
     if (error) throw new Error(error.message);

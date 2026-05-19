@@ -14,7 +14,7 @@ import { getSocioByIdUsuario } from './socioService';
 export const getAllAsistencias = async (
   user: JwtUser
 ): Promise<Asistencia[]> => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   const { data, error } = await supabase.from('asistencia').select(`*,
       socio: socio_id (id_socio, nombre_completo)`);
   if (error) {
@@ -28,7 +28,7 @@ export const createAsistencia = async (
   user: JwtUser,
   payload: CreateAsistenciaDto
 ): Promise<Asistencia> => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   // Verificar si el socio existe antes de crear la asistencia
   const socioActivo = await existeSocioActivo(user, payload.socio_id);
   if (!socioActivo) {
@@ -51,7 +51,7 @@ export const updateAsistencia = async (
   id: string,
   updateData: UpdateAsistenciaDto
 ): Promise<Asistencia> => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   const { data, error } = await supabase
     .from('asistencia')
     .update(updateData)
@@ -70,7 +70,7 @@ export const deleteAsistencia = async (
   user: JwtUser,
   id: string
 ): Promise<Asistencia[]> => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   const { data, error } = await supabase
     .from('asistencia')
     .delete()
@@ -138,7 +138,7 @@ export const registrarAsistenciaDesdeQR = async (
   }
 
   //VERIFICO QUE EL SOCIO EXISTA Y ESTE ACTIVO
-  const socio = await getSocioByIdUsuario(user.id, user.dbName);
+  const socio = await getSocioByIdUsuario(user.id);
   if (!socio || !socio.activo) {
     return {
       valido: false,
@@ -147,7 +147,7 @@ export const registrarAsistenciaDesdeQR = async (
   }
 
   //VERIFICO SI YA EXISTE UNA ASISTENCIA PARA HOY
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   const { data: dataSocioAsistencia, error: errorSocioAsistencia } =
     await supabase
       .from('asistencia')
@@ -216,35 +216,35 @@ export const registrarAsistenciaDesdeQR = async (
 };
 
 export const dataConcurrenciaSemanal = async (user: JwtUser) => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   const { data, error } = await supabase.rpc('sp_concurrencia_semanal');
   if (error) throw new Error(error.message);
   return data;
 };
 
 export const dataConcurrenciaMensual = async (user: JwtUser) => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   const { data, error } = await supabase.rpc('sp_concurrencia_mensual');
   if (error) throw new Error(error.message);
   return data;
 };
 
 export const dataConcurrenciaAnual = async (user: JwtUser) => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   const { data, error } = await supabase.rpc('sp_concurrencia_anual');
   if (error) throw new Error(error.message);
   return data;
 };
 
 export const dataPrediccionAbandono = async (user: JwtUser) => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   const { data, error } = await supabase.rpc('sp_prediccion_abandono');
   if (error) throw new Error(error.message);
   return data;
 };
 
 export const dataTopInactivos = async (user: JwtUser) => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   const { data, error } = await supabase.rpc('sp_top_inactivos');
   if (error) throw new Error(error.message);
   return data;
@@ -257,7 +257,7 @@ export const rankingMensualAsistencia = async ({mes, anio}: {mes: number, anio: 
 // Día final del mes (dayjs lo calcula con .endOf("month"))
 const finMes = dayjs(inicioMes).endOf("month").format("YYYY-MM-DD");
 
-const supabase = conexionBD(user.dbName);
+const supabase = conexionBD();
 const {data, error} = await supabase 
 .from('asistencia')
 .select("*")
@@ -281,7 +281,7 @@ for (let index = 0; index < [...setSocios].length; index++) {
   const cantidadAsistencias = asistenciasDelSocio.length;
 
   //traigo los datos del socio para devolver el nombre completo en el ranking
-  const socio = await getSocioById(idSocio, user.dbName);
+  const socio = await getSocioById(idSocio);
 
   asistenciasPorSocio.push({ socio_id: idSocio, nombre_completo: socio.nombre_completo , cantidad: cantidadAsistencias });
 }

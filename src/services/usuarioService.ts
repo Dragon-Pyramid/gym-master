@@ -4,19 +4,10 @@ import { JwtUser } from '@/interfaces/jwtUser.interface';
 import { conexionBD } from '@/middlewares/conexionBd.middleware';
 import { updateFotoSocioById } from './socioService';
 
-export const fetchUsuarios = async (user: JwtUser): Promise<ResponseUsuario[]> => {
-  //EXTRAIGO EL NOMBRE DE LA BASE DE DATOS DEL USUARIO LOGUEADO
-const dbName = user?.dbName 
-if (!dbName) {
-  throw new Error("No se encontró el nombre de la base de datos en el usuario");
-}
-//ME CONECTO A LA BD DEL USUARIO LOGUEADO
-  const supabase = conexionBD(dbName);
-  if (!supabase) {
-    throw new Error(`No se pudo obtener el cliente de Supabase para la base de datos: ${dbName}`);
-  }
+export const fetchUsuarios = async (_user?: JwtUser): Promise<ResponseUsuario[]> => {
+  const supabase = conexionBD();
 
-const { data, error } = await supabase
+  const { data, error } = await supabase
     .from('usuario')
     .select('*');
   if (error) throw new Error(error.message);
@@ -35,30 +26,71 @@ const responseUsuario = (data : Usuario[]) : ResponseUsuario[]=>{
   }))
 }
 
-export const createUsuarios = async (user: JwtUser, payload: CreateUsuarioDto): Promise<Usuario> => {
-  const supabase = conexionBD(user.dbName);
+export const createUsuarios = async (_user: JwtUser | undefined, payload: CreateUsuarioDto): Promise<Usuario> => {
+  const supabase = conexionBD();
+
+  const rol = payload.rol || 'socio';
+
+  if (rol === 'socio' && !payload.dni?.trim()) {
+    throw new Error('El DNI es obligatorio para crear un usuario socio.');
+  }
 
   const password_hash = await bcrypt.hash(payload.password, 10);
-  const { data, error } = await supabase
+
+  const { data: usuarioCreado, error: usuarioError } = await supabase
     .from('usuario')
-    .insert([{ nombre: payload.nombre, email: payload.email, password_hash, rol:'socio', activo: true }])
+    .insert([{
+      nombre: payload.nombre,
+      email: payload.email,
+      password_hash,
+      rol,
+      activo: true,
+      foto: payload.foto ?? null,
+    }])
     .select()
     .single();
-  if (error) throw new Error(error.message);
-  return data as Usuario;
+
+  if (usuarioError) throw new Error(usuarioError.message);
+
+  if (rol === 'socio') {
+    const { error: socioError } = await supabase
+      .from('socio')
+      .insert([{
+        usuario_id: usuarioCreado.id,
+        nombre_completo: payload.nombre,
+        dni: payload.dni?.trim(),
+        email: payload.email,
+        activo: true,
+        foto: payload.foto ?? null,
+      }]);
+
+    if (socioError) {
+      await supabase.from('usuario').delete().eq('id', usuarioCreado.id);
+      throw new Error(`Usuario creado, pero no se pudo crear el perfil de socio: ${socioError.message}`);
+    }
+  }
+
+  return usuarioCreado as Usuario;
 };
 
 export const updateUsuarios = async (
-  user: JwtUser,
+  _user: JwtUser | undefined,
   id: string,
   updateData: UpdateUsuarioDto
 ): Promise<Usuario> => {
 
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
+
+  const payload: Record<string, unknown> = { ...updateData };
+
+  if (updateData.password) {
+    payload.password_hash = await bcrypt.hash(updateData.password, 10);
+    delete payload.password;
+  }
 
   const { data, error } = await supabase
     .from('usuario')
-    .update(updateData)
+    .update(payload)
     .eq('id', id)
     .select()
     .single();
@@ -73,8 +105,8 @@ export const updateUsuarios = async (
   return data as Usuario;
 };
 
-export const deleteUsuarios = async (user: JwtUser,id: string): Promise<Usuario[]> => {
-  const supabase = conexionBD(user.dbName);
+export const deleteUsuarios = async (_user: JwtUser | undefined, id: string): Promise<Usuario[]> => {
+  const supabase = conexionBD();
   const { data, error } = await supabase
     .from('usuario')
     .update({ activo: false })
@@ -87,8 +119,8 @@ export const deleteUsuarios = async (user: JwtUser,id: string): Promise<Usuario[
   return data as Usuario[];
 };
 
-export const getUsuarioById = async(user:JwtUser, id:string): Promise <ResponseUsuario> => {
-  const supabase = conexionBD(user.dbName);
+export const getUsuarioById = async(_user: JwtUser | undefined, id:string): Promise <ResponseUsuario> => {
+  const supabase = conexionBD();
   const{data,error} = await supabase
   .from("usuario")
   .select()
@@ -111,7 +143,7 @@ return response;
 } 
 
 export const updateFotoUsuarioById = async (user: JwtUser, url: string): Promise<Usuario> => {
-const supabase = conexionBD(user.dbName);
+const supabase = conexionBD();
 
   const { data, error } = await supabase
     .from('usuario')
@@ -128,7 +160,7 @@ const supabase = conexionBD(user.dbName);
   }
 
   if(user.rol === "socio"){
-    await updateFotoSocioById(user.id_socio, user.dbName, url);
+    await updateFotoSocioById(user.id_socio, url);
   }
 console.log("profile_photo_updated: Foto de usuario actualizada:");
 

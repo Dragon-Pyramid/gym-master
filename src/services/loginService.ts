@@ -6,15 +6,10 @@ import { JwtUser } from '@/interfaces/jwtUser.interface';
 import { conexionBD } from '@/middlewares/conexionBd.middleware';
 
 export const signIn = async (login: SignInDto) => {
-  const { email, password, rol, dbName } = login;
-  if (!dbName) {
-    throw new Error(
-      'No se encontró el nombre de la base de datos en el usuario'
-    );
-  }
-  
-  //ME CONECTO A LA BD DINAMICAMENTE, CON SU NOMBRE
-  const supabase = conexionBD(dbName);
+  const { email, password, rol } = login;
+
+  // Modo single-tenant: este deployment apunta a una única base de datos.
+  const supabase = conexionBD();
   //BUSCO EN ESA BD, EL USUARIO
   const { data, error } = await supabase
     .from('usuario')
@@ -54,13 +49,12 @@ export const signIn = async (login: SignInDto) => {
     id_socio: '',
     email: data.email,
     rol: data.rol,
-    dbName,
     nombre: data.nombre,
     foto: data.foto ? data.foto : null,
   };
 
   if (rol === 'socio') {
-    const socio = await getSocioByIdUsuario(data.id, dbName);
+    const socio = await getSocioByIdUsuario(data.id);
     
     // const socio = await getSocioByIdUsuario(data.id);
 

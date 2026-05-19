@@ -14,7 +14,7 @@ export const createFichaMedicaSocio = async (
   createFichaMedicaDto: CreateFichaMedicaDto,
   file: FileUploadDTO
 ) => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   const {
     altura,
     peso,
@@ -37,7 +37,7 @@ export const createFichaMedicaSocio = async (
     proxima_revision,
   } = createFichaMedicaDto;
 
-  const urlFicha = await uploadFile(file, `${user.dbName}/${user.rol}/fichas`);
+  const urlFicha = await uploadFile(file, `${user.rol}/fichas`);
 
   const urlArchivosAdjuntos = await FindAllUrlFotoFichaMedica(user, id_socio);
 
@@ -74,7 +74,7 @@ export const createFichaMedicaSocio = async (
 };
 
 export const FindFichaMedicaSocio = async (user: JwtUser, id_socio: string) => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
 
   const { data, error } = await supabase.rpc('get_ficha_medica_actual', {
     p_id_socio: id_socio,
@@ -92,7 +92,7 @@ export const FindAllFichaMedicaSocio = async (
   user: JwtUser,
   id_socio: string
 ) => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
 
   const { data, error } = await supabase.rpc('list_fichas_medicas', {
     p_id_socio: id_socio,
@@ -111,7 +111,7 @@ export const FindOneFichaMedicaSocio = async (
   id: string,
   id_ficha: string
 ) => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
 
   const { data, error } = await supabase
     .from('ficha_medica')
@@ -132,7 +132,7 @@ export const FindAllUrlFotoFichaMedica = async (
   user: JwtUser,
   id_socio: string
 ) => {
-  const supabase = conexionBD(user.dbName);
+  const supabase = conexionBD();
   const { data: fichas, error } = await supabase
     .from('ficha_medica')
     .select('archivo_aprobacion')
