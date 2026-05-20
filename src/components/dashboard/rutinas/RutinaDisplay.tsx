@@ -5,7 +5,9 @@ import { useAuthStore } from "@/stores/authStore";
 import { getHistorialRutinas } from "@/services/apiClient";
 import { Rutina } from "@/interfaces/rutina.interface";
 import Image from "next/image";
-import { Eye, EyeOff } from "lucide-react";
+import { Download, Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
+import { descargarRutinaPdf } from "@/utils/rutinaPdf";
 
 type EjerciciosPorDia = Record<string, any[]>;
 
@@ -184,6 +186,7 @@ export default function RutinaEjercicios({
   const [rutinas, setRutinas] = useState<Rutina[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [imagenVisible, setImagenVisible] = useState<{
     [key: string]: boolean;
   }>({});
@@ -255,6 +258,31 @@ export default function RutinaEjercicios({
     }
   };
 
+  const handleDescargarPdf = async (rutina: Rutina, ejerciciosPorDia: EjerciciosPorDia) => {
+    const socioNombre =
+      rutina.socio?.nombre_completo ||
+      user?.nombre ||
+      user?.email ||
+      "Socio";
+
+    setExportingPdf(true);
+
+    try {
+      await descargarRutinaPdf({
+        rutina,
+        ejerciciosPorDia,
+        socioNombre,
+        logoUrl: "/gm_logo.svg",
+      });
+      toast.success("Rutina descargada correctamente");
+    } catch (error) {
+      console.error("Error al descargar rutina en PDF:", error);
+      toast.error("No se pudo descargar la rutina");
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="py-10 text-center text-muted-foreground">
@@ -312,12 +340,23 @@ export default function RutinaEjercicios({
               </div>
             </div>
 
-            <button
-              onClick={volverALista}
-              className="self-start px-4 py-2 text-xs font-light tracking-wide text-white transition-colors bg-transparent border rounded-full cursor-pointer sm:px-6 sm:py-3 sm:text-sm sm:tracking-wider border-white/30 hover:bg-white/10 sm:self-auto"
-            >
-              ← VOLVER
-            </button>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:self-auto">
+              <button
+                onClick={() => handleDescargarPdf(rutina, ejerciciosPorDia)}
+                disabled={exportingPdf}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-medium tracking-wide text-gray-900 transition-colors bg-white border border-white rounded-full cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 sm:px-6 sm:py-3 sm:text-sm sm:tracking-wider hover:bg-gray-100"
+              >
+                <Download className="w-4 h-4" />
+                {exportingPdf ? "GENERANDO..." : "DESCARGAR RUTINA"}
+              </button>
+
+              <button
+                onClick={volverALista}
+                className="self-start px-4 py-2 text-xs font-light tracking-wide text-white transition-colors bg-transparent border rounded-full cursor-pointer sm:px-6 sm:py-3 sm:text-sm sm:tracking-wider border-white/30 hover:bg-white/10 sm:self-auto"
+              >
+                ← VOLVER
+              </button>
+            </div>
           </div>
 
           <div className="p-4 sm:p-6 lg:p-10">
