@@ -9,7 +9,10 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Printer, FileSpreadsheet } from "lucide-react";
-import { getAllPagos, deletePago } from "@/services/pagoService";
+import {
+  deletePagoApi,
+  fetchPagosApi,
+} from "@/services/browser/pagoApiClient";
 import PagoModal from "@/components/modal/PagoModal";
 import PagoViewModal from "@/components/modal/PagoViewModal";
 import PagoTable from "@/components/tables/PagoTable";
@@ -19,9 +22,13 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 import ExcelJS from "exceljs";
 
+function numberOrZero(value: unknown) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 export default function PagosPage() {
-  const { user, isAuthenticated, initializeAuth, isInitialized } =
-    useAuthStore();
+  const { isAuthenticated, initializeAuth, isInitialized } = useAuthStore();
   const router = useRouter();
   const [pagos, setPagos] = useState<ResponsePago[]>([]);
   const [filteredPagos, setFilteredPagos] = useState<ResponsePago[]>([]);
@@ -43,11 +50,16 @@ export default function PagosPage() {
   }, [isAuthenticated, isInitialized, router]);
 
   const loadPagos = async () => {
-    setLoading(true);
-    const data = await getAllPagos();
-    setPagos(data ?? []);
-    setFilteredPagos(data ?? []);
-    setLoading(false);
+    try {
+      setLoading(true);
+      const data = await fetchPagosApi();
+      setPagos(data ?? []);
+      setFilteredPagos(data ?? []);
+    } catch (error: any) {
+      toast.error(error.message || "Error al cargar pagos");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handlePrint = () => {
@@ -59,12 +71,15 @@ export default function PagosPage() {
     const worksheet = workbook.addWorksheet("Pagos");
 
     worksheet.columns = [
-      { header: "Socio", key: "socio", width: 20 },
-      { header: "Cuota", key: "cuota", width: 20 },
-      { header: "Fecha Pago", key: "fecha_pago", width: 20 },
-      { header: "Vencimiento", key: "fecha_vencimiento", width: 20 },
+      { header: "Socio", key: "socio", width: 28 },
+      { header: "Cuota", key: "cuota", width: 24 },
+      { header: "Fecha Pago", key: "fecha_pago", width: 16 },
+      { header: "Periodo Desde", key: "periodo_desde", width: 16 },
+      { header: "Periodo Hasta", key: "periodo_hasta", width: 16 },
+      { header: "Meses", key: "meses", width: 10 },
+      { header: "Método", key: "metodo", width: 14 },
+      { header: "Estado", key: "estado", width: 14 },
       { header: "Monto Pagado", key: "monto_pagado", width: 15 },
-      { header: "Total", key: "total", width: 15 },
       { header: "Registrado Por", key: "registrado_por", width: 20 },
     ];
 
@@ -73,9 +88,12 @@ export default function PagosPage() {
         socio: p.socio?.nombre_completo || "",
         cuota: p.cuota?.descripcion || "",
         fecha_pago: p.fecha_pago,
-        fecha_vencimiento: p.fecha_vencimiento,
+        periodo_desde: p.periodo_desde || p.fecha_pago,
+        periodo_hasta: p.periodo_hasta || p.fecha_vencimiento,
+        meses: p.meses_cubiertos || 1,
+        metodo: p.metodo_pago || "",
+        estado: p.estado || "",
         monto_pagado: p.monto_pagado,
-        total: p.total,
         registrado_por: p.registrado_por?.nombre || "",
       });
     });
@@ -111,11 +129,17 @@ export default function PagosPage() {
           .toLowerCase()
           .includes(lowercaseSearch) ||
         (p.cuota?.descripcion || "").toLowerCase().includes(lowercaseSearch) ||
-        (p.registrado_por?.nombre || "").toLowerCase().includes(lowercaseSearch)
+        (p.registrado_por?.nombre || "").toLowerCase().includes(lowercaseSearch) ||
+        (p.metodo_pago || "").toLowerCase().includes(lowercaseSearch) ||
+        (p.estado || "").toLowerCase().includes(lowercaseSearch)
     );
 
     setFilteredPagos(filtered);
   }, [searchTerm, pagos]);
+
+  const totalEfectivo = filteredPagos
+    .filter((p) => p.metodo_pago === "efectivo" && p.estado !== "cancelado")
+    .reduce((acc, pago) => acc + numberOrZero(pago.monto_pagado), 0);
 
   if (!isInitialized) {
     return <div>Cargando...</div>;
@@ -134,13 +158,18 @@ export default function PagosPage() {
           <main className="flex-1 p-6 space-y-6">
             <Card className="w-full">
               <CardHeader className="flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap">
-                <h2 className="text-xl font-bold">Listado de Pagos</h2>
+                <div>
+                  <h2 className="text-xl font-bold">Listado de Pagos</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Total efectivo filtrado: ${totalEfectivo.toLocaleString("es-AR")}
+                  </p>
+                </div>
                 <div className="flex flex-wrap items-center w-full gap-2 md:w-auto">
                   <div className="relative flex-grow md:flex-grow-0">
                     <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                       type="search"
-                      placeholder="Buscar por socio, cuota, usuario..."
+                      placeholder="Buscar por socio, cuota, método..."
                       className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] w-full"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
@@ -166,7 +195,7 @@ export default function PagosPage() {
                     onClick={() => setOpenModal(true)}
                     className="bg-[#02a8e1] hover:bg-[#0288b1]"
                   >
-                    <span className="hidden sm:inline">Añadir Pago</span>
+                    <span className="hidden sm:inline">Registrar Pago Manual</span>
                     <span className="sm:hidden">Añadir</span>
                   </Button>
                 </div>
@@ -191,11 +220,11 @@ export default function PagosPage() {
                       if (!confirmar) return;
 
                       try {
-                        await deletePago(pago.id);
+                        await deletePagoApi(pago.id);
                         toast.success("Pago eliminado correctamente");
                         await loadPagos();
-                      } catch (err) {
-                        toast.error("Error al eliminar pago");
+                      } catch (err: any) {
+                        toast.error(err.message || "Error al eliminar pago");
                       }
                     }}
                   />
@@ -223,21 +252,7 @@ export default function PagosPage() {
           setOpenModalVer(false);
           setPagoVer(null);
         }}
-        pago={
-          pagoVer
-            ? {
-                id: pagoVer.id,
-                socio_id: pagoVer.socio?.id_socio ?? "",
-                cuota_id: pagoVer.cuota?.id ?? "",
-                fecha_pago: pagoVer.fecha_pago,
-                fecha_vencimiento: pagoVer.fecha_vencimiento,
-                monto_pagado: pagoVer.monto_pagado,
-                total: pagoVer.total,
-                registrado_por: pagoVer.registrado_por?.id ?? "",
-                enviar_email: pagoVer.enviar_email ?? false,
-              }
-            : null
-        }
+        pago={pagoVer}
       />
     </SidebarProvider>
   );
