@@ -14,7 +14,6 @@ import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 import RutinaModal from "@/components/modal/RutinaModal";
-import RutinaModalView from "@/components/modal/RutinaModalView";
 import {
   Popover,
   PopoverContent,
@@ -47,8 +46,6 @@ export default function RutinasPage() {
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [selectedRutina, setSelectedRutina] = useState<Rutina | null>(null);
-  const [openModalVer, setOpenModalVer] = useState(false);
-  const [rutinaVer, setRutinaVer] = useState<RutinaDisplayData | null>(null);
   const [selectedNiveles, setSelectedNiveles] = useState<string[]>([]);
   const [selectedObjetivos, setSelectedObjetivos] = useState<string[]>([]);
   const [niveles, setNiveles] = useState<Nivel[]>([]);
@@ -332,24 +329,6 @@ export default function RutinasPage() {
               <CardContent className="p-4">
                 <RutinaDisplay
                   refreshKey={rutinasRefreshKey}
-                  onView={(rutina) => {
-                    let rutinaDesc = rutina.rutina_desc;
-
-                    if (typeof rutina.rutina_desc === "string") {
-                      try {
-                        rutinaDesc = JSON.parse(rutina.rutina_desc);
-                      } catch (e) {
-                        console.warn("Error parsing rutina_desc JSON:", e);
-                      }
-                    }
-
-                    setRutinaVer({
-                      id_rutina: rutina.id_rutina,
-                      rutina_desc: rutinaDesc,
-                      creado_en: rutina.creado_en || new Date().toISOString(),
-                    });
-                    setOpenModalVer(true);
-                  }}
                   onEdit={(rutina) => {
                     setSelectedRutina(rutina);
                     setOpenModal(true);
@@ -372,14 +351,6 @@ export default function RutinasPage() {
         rutina={selectedRutina}
         objetivos={objetivos}
         niveles={niveles}
-      />
-      <RutinaModalView
-        open={openModalVer}
-        onClose={() => {
-          setOpenModalVer(false);
-          setRutinaVer(null);
-        }}
-        rutina={rutinaVer as Rutina | null}
       />
     </SidebarProvider>
   );
