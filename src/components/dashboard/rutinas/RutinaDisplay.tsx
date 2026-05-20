@@ -164,13 +164,15 @@ const obtenerTituloRutina = (rutina: Rutina): string => {
 };
 
 export default function RutinaEjercicios({
+  refreshKey = 0,
   onView,
   onEdit,
   onDelete,
 }: {
+  refreshKey?: number;
   onView?: (rutina: Rutina) => void;
   onEdit?: (rutina: Rutina) => void;
-  onDelete?: (rutina: Rutina) => void;
+  onDelete?: (rutina: Rutina) => Promise<void> | void;
 }) {
   const { user, token } = useAuthStore();
   const usuarioEsAdmin = isAdmin(user?.rol);
@@ -181,6 +183,7 @@ export default function RutinaEjercicios({
   }>({});
   const [rutinas, setRutinas] = useState<Rutina[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [imagenVisible, setImagenVisible] = useState<{
     [key: string]: boolean;
   }>({});
@@ -209,7 +212,7 @@ export default function RutinaEjercicios({
 
   useEffect(() => {
     fetchRutinas();
-  }, [fetchRutinas]);
+  }, [fetchRutinas, refreshKey]);
 
   const toggleDia = (dia: string) => {
     setDiasExpandidos((prev) => ({
@@ -233,6 +236,23 @@ export default function RutinaEjercicios({
   const volverALista = () => {
     setViendoRutina(null);
     setDiasExpandidos({});
+  };
+
+  const handleDelete = async (rutina: Rutina) => {
+    if (!onDelete) return;
+
+    setDeletingId(rutina.id_rutina);
+
+    try {
+      await onDelete(rutina);
+      await fetchRutinas();
+
+      if (viendoRutina === rutina.id_rutina) {
+        volverALista();
+      }
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   if (loading) {
@@ -495,10 +515,11 @@ export default function RutinaEjercicios({
                   </button>
 
                   <button
-                    onClick={() => onDelete?.(rutina)}
-                    className="px-6 py-2 text-xs font-medium tracking-wide text-red-600 transition-colors bg-transparent border border-red-600 rounded-full cursor-pointer sm:px-8 sm:py-3 sm:text-sm sm:tracking-widest hover:bg-red-50"
+                    onClick={() => handleDelete(rutina)}
+                    disabled={deletingId === rutina.id_rutina}
+                    className="px-6 py-2 text-xs font-medium tracking-wide text-red-600 transition-colors bg-transparent border border-red-600 rounded-full cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 sm:px-8 sm:py-3 sm:text-sm sm:tracking-widest hover:bg-red-50"
                   >
-                    ELIMINAR
+                    {deletingId === rutina.id_rutina ? "ELIMINANDO..." : "ELIMINAR"}
                   </button>
                 </div>
               </div>

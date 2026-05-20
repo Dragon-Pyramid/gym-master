@@ -249,6 +249,22 @@ export async function getRutinasPorSocio(idSocio: number | string) {
   return { ok: res.ok, data };
 }
 
+export async function eliminarRutina(idRutina: number | string) {
+  const token = getToken();
+  const headers: HeadersInit = token
+    ? { Authorization: `Bearer ${token}` }
+    : {};
+
+  const res = await fetch(`/api/rutina/${idRutina}`, {
+    method: 'DELETE',
+    headers,
+  });
+
+  const data = await res.json().catch(() => ({}));
+
+  return { ok: res.ok, ...data };
+}
+
 export async function crearEntrenador(body: any) {
   const token = getToken();
   const res = await fetch('/api/entrenadores', {
