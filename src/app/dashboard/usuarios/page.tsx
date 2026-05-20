@@ -10,15 +10,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Printer, FileSpreadsheet } from "lucide-react";
 import {
-  fetchUsuarios,
-  deleteUsuarios,
-  updateUsuarios,
-} from "@/services/usuarioService";
+  deactivateUsuarioApi,
+  fetchUsuariosApi,
+  updateUsuarioApi,
+} from "@/services/browser/usuarioApiClient";
 import UserModal from "@/components/modal/UserModal";
 import UserViewModal from "@/components/modal/UserViewModal";
 import UsersTable from "@/components/tables/UserTable";
 import { Usuario } from "@/interfaces/usuario.interface";
-import { JwtUser } from "@/interfaces/jwtUser.interface";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
@@ -31,7 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function UsuariosPage() {
-  const { user, isAuthenticated, initializeAuth, isInitialized } =
+  const { isAuthenticated, initializeAuth, isInitialized } =
     useAuthStore();
   const router = useRouter();
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -56,11 +55,11 @@ export default function UsuariosPage() {
 
   const loadUsuarios = useCallback(async () => {
     setLoading(true);
-    const data = await fetchUsuarios(user as JwtUser);
+    const data = await fetchUsuariosApi();
     setUsuarios(data as Usuario[] ?? []);
     setFilteredUsuarios(data as Usuario[] ?? []);
     setLoading(false);
-  }, [user]);
+  }, []);
 
   const handlePrint = () => {
     window.print();
@@ -110,10 +109,10 @@ export default function UsuariosPage() {
 
     try {
       if (usuario.activo) {
-        await deleteUsuarios(user as JwtUser, usuario.id);
+        await deactivateUsuarioApi(usuario.id);
         toast.success("Usuario desactivado correctamente");
       } else {
-        await updateUsuarios(user as JwtUser, usuario.id, { activo: true });
+        await updateUsuarioApi(usuario.id, { activo: true });
         toast.success("Usuario activado correctamente");
       }
       await loadUsuarios();

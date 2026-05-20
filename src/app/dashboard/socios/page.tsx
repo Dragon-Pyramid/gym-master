@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, Printer, FileSpreadsheet } from 'lucide-react';
-import { fetchSocios, toggleSocioActivo } from '@/services/socioService';
+import { fetchSociosApi, setSocioActivoApi } from '@/services/browser/socioApiClient';
 import SocioModal from '@/components/modal/SocioModal';
 import SocioViewModal from '@/components/modal/SocioViewModal';
 import SociosTable from '@/components/tables/SociosTable';
@@ -18,7 +18,6 @@ import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { toast } from 'sonner';
 import ExcelJS from 'exceljs';
-import { JwtUser } from '@/interfaces/jwtUser.interface';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -27,7 +26,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export default function SociosPage() {
-  const { user, isAuthenticated, initializeAuth, isInitialized } =
+  const { isAuthenticated, initializeAuth, isInitialized } =
     useAuthStore();
   const router = useRouter();
   const [socios, setSocios] = useState<Socio[]>([]);
@@ -52,7 +51,7 @@ export default function SociosPage() {
 
   const loadSocios = async () => {
     setLoading(true);
-    const data = await fetchSocios(user as JwtUser);
+    const data = await fetchSociosApi();
     setSocios(data ?? []);
     setFilteredSocios(data ?? []);
     setLoading(false);
@@ -246,7 +245,7 @@ export default function SociosPage() {
                       if (!confirmar) return;
 
                       try {
-                        await toggleSocioActivo(user as JwtUser, socio);
+                        await setSocioActivoApi(socio.id_socio, !socio.activo);
                         toast.success(
                           `Socio ${
                             socio.activo ? 'desactivado' : 'activado'

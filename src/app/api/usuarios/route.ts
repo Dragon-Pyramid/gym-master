@@ -1,105 +1,103 @@
 import { NextResponse } from 'next/server';
 import {
-  fetchUsuarios,
-  createUsuarios,
-  updateUsuarios,
-  deleteUsuarios
-} from '@/services/usuarioService';
+  createUsuarioServer,
+  deactivateUsuarioServer,
+  fetchUsuariosServer,
+  updateUsuarioServer,
+} from '@/services/server/usuarioServerService';
 import { authMiddleware } from '@/middlewares/auth.middleware';
 
-export async function GET(req : Request) {
-
+export async function GET(req: Request) {
   try {
-    //MIDDLEWARE PARA VERIFICAR QUE VENGA EL TOKEN Y ESTE FIRMADO CON LA CLAVESECRETA
-  const {user} = await authMiddleware(req);
-  console.log(user);
-  
-  //PASO EL PAYLOAD DEL USUARIO LOGUEADO AL SERVICIO  
-    const usuarios = await fetchUsuarios(user);
-    return NextResponse.json({data:usuarios}, { status: 200 });
-  } catch {
-    return NextResponse.json({ error: 'Error al obtener usuarios' }, { status: 500 });
+    const { user } = await authMiddleware(req);
+    const usuarios = await fetchUsuariosServer(user);
+    return NextResponse.json({ data: usuarios }, { status: 200 });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message || 'Error al obtener usuarios' },
+      { status: error.message?.includes('No autorizado') ? 403 : 500 }
+    );
   }
 }
 
-
-//TODO: Implementar dto para que al enviar el response, no se envie el password_hash
 export async function POST(req: Request) {
   try {
+    const { user } = await authMiddleware(req);
+    const { nombre, email, password, rol, dni, foto } = await req.json();
 
-    const {user} = await authMiddleware(req);
-    if(!user){
-      return NextResponse.json({error: "No autorizado"}, {status: 401});
-    }
-
-    const { nombre, email, password, rol, dni } = await req.json();
-
-    if (!nombre || !email || !password) {
-      return NextResponse.json({ error: 'Todos los campos son obligatorios' }, { status: 400 });
-    }
-
-    const rolFinal = rol?.trim() || 'socio';
-
-    if (rolFinal === 'socio' && !dni?.trim()) {
-      return NextResponse.json({ error: 'El DNI es obligatorio para crear un usuario socio' }, { status: 400 });
-    }
-
-    const creado = await createUsuarios(user, {
-      nombre: nombre.trim(),
-      email: email.trim(),
-      password: password.trim(),
-      rol: rolFinal,
-      dni: dni?.trim(),
+    const creado = await createUsuarioServer(user, {
+      nombre,
+      email,
+      password,
+      rol,
+      dni,
+      foto,
     });
 
-    return NextResponse.json({
-      message: 'Usuario creado con éxito',
-      data: creado
-    }, { status: 201 });
+    return NextResponse.json(
+      {
+        message: 'Usuario creado con éxito',
+        data: creado,
+      },
+      { status: 201 }
+    );
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Error al crear usuario' }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || 'Error al crear usuario' },
+      { status: error.message?.includes('No autorizado') ? 403 : 500 }
+    );
   }
 }
 
 export async function PUT(req: Request) {
   try {
-
-    const {user} = await authMiddleware(req);
-    if(!user){
-      return NextResponse.json({error: "No autorizado"}, {status: 401});
-    }
-
+    const { user } = await authMiddleware(req);
     const { id, updateData } = await req.json();
 
     if (!id || typeof id !== 'string') {
-      return NextResponse.json({ error: 'ID inválido para actualizar' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'ID inválido para actualizar' },
+        { status: 400 }
+      );
     }
-    
-    const actualizado = await updateUsuarios(user,id, updateData);
-    return NextResponse.json({
-      message: 'Usuario actualizado con éxito',
-      data: actualizado
-    }, { status: 200 });
+
+    const actualizado = await updateUsuarioServer(user, id, updateData);
+    return NextResponse.json(
+      {
+        message: 'Usuario actualizado con éxito',
+        data: actualizado,
+      },
+      { status: 200 }
+    );
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Error al actualizar usuario' }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || 'Error al actualizar usuario' },
+      { status: error.message?.includes('No autorizado') ? 403 : 500 }
+    );
   }
 }
 
 export async function DELETE(req: Request) {
   try {
-    const {user} = await authMiddleware(req);
-    if(!user){
-      return NextResponse.json({error: "No autorizado"}, {status: 401});
-    }
+    const { user } = await authMiddleware(req);
     const { id } = await req.json();
 
     if (!id || typeof id !== 'string') {
-      return NextResponse.json({ error: 'ID requerido para eliminar' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'ID requerido para eliminar' },
+        { status: 400 }
+      );
     }
 
-    await deleteUsuarios(user,id);
-    return NextResponse.json({ message: 'Usuario desactivado con éxito' }, { status: 200 });
+    const desactivado = await deactivateUsuarioServer(user, id);
+    return NextResponse.json(
+      { message: 'Usuario desactivado con éxito', data: desactivado },
+      { status: 200 }
+    );
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Error al desactivar usuario' }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || 'Error al desactivar usuario' },
+      { status: error.message?.includes('No autorizado') ? 403 : 500 }
+    );
   }
 }
