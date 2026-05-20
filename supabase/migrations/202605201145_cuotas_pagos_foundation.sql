@@ -87,7 +87,6 @@ UPDATE public.pago
 SET
   periodo_desde = COALESCE(periodo_desde, fecha_pago),
   periodo_hasta = COALESCE(periodo_hasta, fecha_vencimiento),
-  total = COALESCE(total, monto_pagado),
   meses_cubiertos = COALESCE(meses_cubiertos, 1),
   metodo_pago = COALESCE(metodo_pago, 'efectivo'),
   estado = COALESCE(estado, 'pagado'),
