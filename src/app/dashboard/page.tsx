@@ -21,6 +21,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useRouter } from 'next/navigation';
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import DashboardInitialContent from '@/components/dashboard/DashboardInitialContent';
+import CuotasEstadoDashboard from '@/components/dashboard/cuotas/CuotasEstadoDashboard';
 
 import { useEffect, useState } from 'react';
 import QrDisplayModal from '@/components/ui/qr-display';
@@ -339,6 +340,8 @@ export default function DashboardPage() {
                 </div>
 
                 <div className='grid grid-cols-1 gap-4 mt-6 md:grid-cols-2 xl:grid-cols-3'>
+                  <CuotasEstadoDashboard />
+
                   <Card>
                     <CardHeader>
                       <CardTitle>Equipos Totales</CardTitle>
