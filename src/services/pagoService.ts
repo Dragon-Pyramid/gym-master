@@ -1,7 +1,12 @@
 import { getSupabaseClient, supabase } from "./supabaseClient";
-import { Pago, CreatePagoDto, UpdatePagoDto, ResponsePago } from "../interfaces/pago.interface";
-import  dayjs  from 'dayjs';
-import { getSocioById, updateSocio } from "./socioService";
+import {
+  Pago,
+  CreatePagoDto,
+  UpdatePagoDto,
+  ResponsePago,
+} from "../interfaces/pago.interface";
+import dayjs from "dayjs";
+import { getSocioById } from "./socioService";
 
 /*export const getAllPagos = async (): Promise<Pago[]> => {
   const { data, error } = await supabase.from("pago").select();
@@ -9,163 +14,327 @@ import { getSocioById, updateSocio } from "./socioService";
   return data as Pago[];
 };
 */
-export const getAllPagos = async () : Promise<ResponsePago[]> => {
-    
+
+type PagoRow = {
+  id: string;
+  socio_id?: string;
+  cuota_id?: string;
+  fecha_pago: string;
+  fecha_vencimiento: string;
+  periodo_desde?: string | null;
+  periodo_hasta?: string | null;
+  meses_cubiertos?: number | null;
+  monto_pagado: number;
+  total?: number | null;
+  metodo_pago?: string | null;
+  estado?: string | null;
+  observaciones?: string | null;
+  enviar_email?: boolean | null;
+  activo?: boolean | null;
+  stripe_session_id?: string | null;
+  stripe_payment_intent_id?: string | null;
+  registrado_por:
+    | {
+        id: string;
+        nombre: string;
+      }
+    | null;
+  socio:
+    | {
+        id_socio: string;
+        nombre_completo: string;
+        email?: string | null;
+      }
+    | null;
+  cuota:
+    | {
+        id: string;
+        descripcion: string;
+        monto?: number | null;
+        periodo?: string | null;
+        fecha_fin?: string | null;
+      }
+    | null;
+};
+
+export const getAllPagos = async (): Promise<ResponsePago[]> => {
   const { data, error } = await supabase
-  .from("pago")
-  .select(`*, 
-    socio: socio_id ( id_socio, nombre_completo ),
-    cuota: cuota_id (id, descripcion, fecha_fin),
-    registrado_por: registrado_por( id, nombre )
-    `);
-    
-console.log(error, data);
+    .from("pago")
+    .select(`
+      *,
+      socio:socio_id (
+        id_socio,
+        nombre_completo,
+        email
+      ),
+      cuota:cuota_id (
+        id,
+        descripcion,
+        monto,
+        periodo,
+        fecha_fin
+      ),
+      registrado_por:registrado_por (
+        id,
+        nombre
+      )
+    `)
+    .order("fecha_pago", { ascending: false });
+
+  console.log(error, data);
 
   if (error) throw new Error(error.message);
 
-  const response = responseAllPagos(data as ResponsePago[]);
-  return response;
+  return responseAllPagos((data ?? []) as PagoRow[]);
 };
 
-//Genere esta funcion para transformar el formato de la respuesta y simplificar el uso en la funcion del get
-const responseAllPagos = (data : ResponsePago[]) :  ResponsePago[] =>{
- const response : ResponsePago[] = data.map(pago=>(responsePago(pago)));
-  return response;
-}
-const responsePago = (data: ResponsePago): ResponsePago => {
+// Genera una respuesta segura y simplificada para consumir en UI.
+const responseAllPagos = (data: PagoRow[]): ResponsePago[] => {
+  return data.map((pago) => responsePago(pago));
+};
+
+const responsePago = (data: PagoRow): ResponsePago => {
   return {
     id: data.id,
+
     fecha_pago: data.fecha_pago,
     fecha_vencimiento: data.fecha_vencimiento,
+
+    periodo_desde: data.periodo_desde ?? null,
+    periodo_hasta: data.periodo_hasta ?? null,
+    meses_cubiertos: data.meses_cubiertos ?? null,
+
     monto_pagado: data.monto_pagado,
-    total: data.total,
-    enviar_email: data.enviar_email,
-    registrado_por:{
-        id: data.registrado_por.id,
-        nombre: data.registrado_por.nombre
-    },
-    cuota:{
-        id: data.cuota.id,
-        descripcion: data.cuota.descripcion
-    },
-    socio:{
-        id_socio: data.socio.id_socio,
-        nombre_completo: data.socio.nombre_completo
-    }
+    total: data.total ?? null,
+
+    metodo_pago: data.metodo_pago ?? null,
+    estado: data.estado ?? null,
+    observaciones: data.observaciones ?? null,
+    enviar_email: data.enviar_email ?? false,
+    activo: data.activo ?? true,
+
+    stripe_session_id: data.stripe_session_id ?? null,
+    stripe_payment_intent_id: data.stripe_payment_intent_id ?? null,
+
+    registrado_por: data.registrado_por
+      ? {
+          id: data.registrado_por.id,
+          nombre: data.registrado_por.nombre,
+        }
+      : null,
+
+    cuota: data.cuota
+      ? {
+          id: data.cuota.id,
+          descripcion: data.cuota.descripcion,
+          monto: data.cuota.monto ?? null,
+          periodo: data.cuota.periodo ?? null,
+        }
+      : {
+          id: data.cuota_id ?? "",
+          descripcion: "Cuota no disponible",
+          monto: null,
+          periodo: null,
+        },
+
+    socio: data.socio
+      ? {
+          id_socio: data.socio.id_socio,
+          nombre_completo: data.socio.nombre_completo,
+          email: data.socio.email ?? null,
+        }
+      : {
+          id_socio: data.socio_id ?? "",
+          nombre_completo: "Socio no disponible",
+          email: null,
+        },
   };
-}
+};
 
+export const createPago = async (payload: CreatePagoDto): Promise<Pago> => {
+  const dto = payload as CreatePagoDto & {
+    cuota_id?: string;
+    fecha_pago?: string;
+    fecha_vencimiento?: string;
+    periodo_desde?: string;
+    periodo_hasta?: string;
+    meses_cubiertos?: number;
+    monto_pagado?: number;
+    metodo_pago?: string;
+    estado?: string;
+    registrado_por?: string | null;
+    observaciones?: string | null;
+    enviar_email?: boolean;
+    stripe_session_id?: string | null;
+    stripe_payment_intent_id?: string | null;
+  };
 
-export const createPago = async (payload: CreatePagoDto) :Promise<Pago> => {
+  const { data: cuota, error: cuotaError } = dto.cuota_id
+    ? await supabase.from("cuota").select().eq("id", dto.cuota_id).single()
+    : await supabase
+        .from("cuota")
+        .select()
+        .eq("activo", true)
+        .order("creado_en", { ascending: false })
+        .limit(1)
+        .single();
 
-    const { data :cuota , error:cuotaError } = await supabase
-  .from("cuota")
-  .select()
-  .order('creado_en', { ascending: false })
-  .limit(1)
-  .single();
-
-    if (cuotaError) {
+  if (cuotaError) {
     console.log(cuotaError.message);
-    throw new Error("Error al traer la cuota")}
-    ;
-  
-  const id_cuota = cuota.id
-  const fecha_pago = dayjs().format("YYYY-MM-DD");
-  const fecha_vencimiento = dayjs(fecha_pago).add(30, 'day').format("YYYY-MM-DD"); // fecha de vencimiento es hoy + 30 dias
-  
-  const { socio_id, registrado_por } = payload; 
-  
-  const socio = await getSocioById(socio_id);
-  let monto_pagado;
-
-  if (socio.descuento_activo) {
-monto_pagado = cuota.monto - (cuota.monto * 0.10); // Asignar el monto de la cuota al pago con descuento
-  } else {
-    monto_pagado = cuota.monto; // en caso que no tenga descuento, se le asigna el monto total de la cuota
+    throw new Error("Error al traer la cuota");
   }
 
+  const socioId = dto.socio_id;
+  const cuotaId = cuota.id;
 
+  const fechaPago = dto.fecha_pago ?? dayjs().format("YYYY-MM-DD");
+  const mesesCubiertos = dto.meses_cubiertos ?? 1;
 
-  const { data, error } = await supabase.from("pago").insert({
-    socio_id,
-    cuota_id: id_cuota,
-    fecha_pago,
-    fecha_vencimiento,
-    monto_pagado,
-    registrado_por,
-    enviar_email: true, // Por defecto, se envía el email de notificación
-    
-  }).select().single();
+  const periodoDesde = dto.periodo_desde ?? fechaPago;
+  const periodoHasta =
+    dto.periodo_hasta ??
+    dto.fecha_vencimiento ??
+    dayjs(periodoDesde).add(mesesCubiertos, "month").format("YYYY-MM-DD");
+
+  const fechaVencimiento = dto.fecha_vencimiento ?? periodoHasta;
+
+  const socio = await getSocioById(socioId);
+
+  let montoPagado = dto.monto_pagado;
+
+  if (!montoPagado) {
+    if (socio.descuento_activo) {
+      montoPagado = cuota.monto - cuota.monto * 0.1;
+    } else {
+      montoPagado = cuota.monto;
+    }
+  }
+
+  const { data, error } = await supabase
+    .from("pago")
+    .insert({
+      socio_id: socioId,
+      cuota_id: cuotaId,
+      fecha_pago: fechaPago,
+      fecha_vencimiento: fechaVencimiento,
+      periodo_desde: periodoDesde,
+      periodo_hasta: periodoHasta,
+      meses_cubiertos: mesesCubiertos,
+      monto_pagado: montoPagado,
+      metodo_pago: dto.metodo_pago ?? "efectivo",
+      estado: dto.estado ?? "pagado",
+      registrado_por: dto.registrado_por ?? null,
+      observaciones: dto.observaciones ?? null,
+      enviar_email: dto.enviar_email ?? true,
+      activo: true,
+      stripe_session_id: dto.stripe_session_id ?? null,
+      stripe_payment_intent_id: dto.stripe_payment_intent_id ?? null,
+    })
+    .select()
+    .single();
+
   if (error) {
     console.log(error.message);
-    throw new Error("Error al crear el pago")}
-    ;
+    throw new Error("Error al crear el pago");
+  }
 
-    //TODO: Debo crear la logica para pasarle el user logueado a todo los endpoint pagos
-    //updateSocio(user, id_socio, { descuento_activo: false }); // Desactivar el descuento del socio después de realizar el pago
-
-    const {data: dataSocio,error: errorSocio} = await supabase
-    .from('socio')
+  const { data: dataSocio, error: errorSocio } = await supabase
+    .from("socio")
     .update({ descuento_activo: false })
-    .eq('id_socio', socio_id);
-    if (errorSocio) {
-        console.log(errorSocio.message);
-        throw new Error("Error al actualizar el socio para desactivar el descuento");
-    }
-    if (dataSocio) {
-        console.log("Descuento del socio desactivado correctamente");
-        console.log("dataSocio", dataSocio);
-        
-    }
+    .eq("id_socio", socioId);
 
-    
+  if (errorSocio) {
+    console.log(errorSocio.message);
+    throw new Error("Error al actualizar el socio para desactivar el descuento");
+  }
+
+  if (dataSocio) {
+    console.log("Descuento del socio desactivado correctamente");
+    console.log("dataSocio", dataSocio);
+  }
+
   return data as Pago;
 };
 
+export const updatePago = async (
+  id: string,
+  updateData: UpdatePagoDto
+): Promise<Pago> => {
+  const { data, error } = await supabase
+    .from("pago")
+    .update(updateData)
+    .eq("id", id)
+    .select()
+    .single();
 
-export const updatePago = async (id: string, updateData: UpdatePagoDto): Promise<Pago> => {
-  const { data, error } = await supabase.from("pago").update(updateData).eq("id", id).select().single();
   if (error) throw new Error(error.message);
-  if (!data || data.length === 0) throw new Error("No se encontró pago con ese id");
+  if (!data) throw new Error("No se encontró pago con ese id");
+
   return data as Pago;
 };
 
 export const deletePago = async (id: string): Promise<Pago> => {
-  const { data, error } = await supabase.from("pago").update({ activo: false }).eq("id", id).select().single();
+  const { data, error } = await supabase
+    .from("pago")
+    .update({
+      activo: false,
+      estado: "cancelado",
+    })
+    .eq("id", id)
+    .select()
+    .single();
+
   if (error) throw new Error(error.message);
   if (!data) throw new Error("No se encontró pago con ese id");
+
   return data as Pago;
 };
 
 export const getPagoById = async (id: string): Promise<ResponsePago> => {
   const { data, error } = await supabase
     .from("pago")
-      .select(`*, 
-    socio: socio_id ( id_socio, nombre_completo ),
-    cuota: cuota_id (id, descripcion, fecha_fin),
-    registrado_por: registrado_por( id, nombre )
+    .select(`
+      *,
+      socio:socio_id (
+        id_socio,
+        nombre_completo,
+        email
+      ),
+      cuota:cuota_id (
+        id,
+        descripcion,
+        monto,
+        periodo,
+        fecha_fin
+      ),
+      registrado_por:registrado_por (
+        id,
+        nombre
+      )
     `)
     .eq("id", id)
     .single();
+
   if (error) {
     console.log(error.message);
     throw new Error("No se encontró el pago con ese id");
   }
-  const response = responsePago(data);
-  return response;
+
+  return responsePago(data as PagoRow);
 };
 
 // Funciones para métricas de pagos
 export const dataAnalisisConductaPagos = async (user: any) => {
-    const supabase = getSupabaseClient();
-    const { data, error } = await supabase
-        .rpc('sp_analisis_conducta_pagos');
-    if (error) throw new Error(error.message);
-    return data;
-}
+  const supabase = getSupabaseClient();
+
+  const { data, error } = await supabase.rpc("sp_analisis_conducta_pagos");
+
+  if (error) throw new Error(error.message);
+
+  return data;
+};
 
 export const dataProyeccionIngresos = async (user: any) => {
-    //TODO IMPLEMENTAR LÓGICA DE PROYECCIÓN DE INGRESOS
-    throw new Error("Funcionalidad no implementada");
-}
+  // TODO IMPLEMENTAR LÓGICA DE PROYECCIÓN DE INGRESOS
+  throw new Error("Funcionalidad no implementada");
+};

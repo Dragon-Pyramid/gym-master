@@ -15,6 +15,11 @@ import {
 } from "@/components/ui/table";
 import { ResponsePago } from "@/interfaces/pago.interface";
 
+function money(value?: number | null) {
+  if (value === null || value === undefined) return "-";
+  return `$${Number(value).toLocaleString("es-AR")}`;
+}
+
 export default function PagoTable({
   pagos,
   loading,
@@ -53,28 +58,36 @@ export default function PagoTable({
           <TableHead>Socio</TableHead>
           <TableHead>Cuota</TableHead>
           <TableHead>Fecha Pago</TableHead>
-          <TableHead>Vencimiento</TableHead>
-          <TableHead>Monto Pagado</TableHead>
-          <TableHead>Total</TableHead>
+          <TableHead>Cobertura</TableHead>
+          <TableHead>Método</TableHead>
+          <TableHead>Estado</TableHead>
+          <TableHead>Monto</TableHead>
           <TableHead>Registrado Por</TableHead>
           <TableHead>Acciones</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {pagos.map((p, i) => (
+        {pagos.map((p) => (
           <TableRow
-            key={i}
+            key={p.id}
             className="odd:bg-muted/40 hover:bg-[#a8d9f9] transition-colors"
           >
             <TableCell className="font-medium">
-              {p.socio.nombre_completo}
+              {p.socio?.nombre_completo ?? "-"}
             </TableCell>
-            <TableCell>{p.cuota.descripcion}</TableCell>
+            <TableCell>{p.cuota?.descripcion ?? "-"}</TableCell>
             <TableCell>{p.fecha_pago}</TableCell>
-            <TableCell>{p.fecha_vencimiento}</TableCell>
-            <TableCell>${p.monto_pagado}</TableCell>
-            <TableCell>${p.total}</TableCell>
-            <TableCell>{p.registrado_por.nombre}</TableCell>
+            <TableCell>
+              <div className="flex flex-col text-xs">
+                <span>{p.periodo_desde ?? p.fecha_pago}</span>
+                <span>hasta {p.periodo_hasta ?? p.fecha_vencimiento}</span>
+                <span>{p.meses_cubiertos ?? 1} mes/es</span>
+              </div>
+            </TableCell>
+            <TableCell className="capitalize">{p.metodo_pago ?? "-"}</TableCell>
+            <TableCell className="capitalize">{p.estado ?? "-"}</TableCell>
+            <TableCell>{money(p.monto_pagado)}</TableCell>
+            <TableCell>{p.registrado_por?.nombre ?? "-"}</TableCell>
             <TableCell className="flex gap-2">
               <Button
                 size="sm"
@@ -104,7 +117,7 @@ export default function PagoTable({
       </TableBody>
       <TableFooter>
         <TableRow>
-          <TableCell colSpan={7}>Total de pagos</TableCell>
+          <TableCell colSpan={8}>Total de pagos</TableCell>
           <TableCell className="text-right">{pagos.length}</TableCell>
         </TableRow>
       </TableFooter>
