@@ -79,6 +79,7 @@
     "@types/yup": "^0.29.14",
     "eslint": "^9",
     "eslint-config-next": "15.3.3",
+    "supabase": "^2.100.1",
     "tailwindcss": "^4.1.8",
     "tw-animate-css": "^1.3.4",
     "typescript": "^5"
