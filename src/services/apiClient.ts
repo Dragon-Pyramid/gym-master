@@ -641,3 +641,34 @@ export async function getFichaMedicaHistorial(
   }
   return { ok: res.ok, data };
 }
+
+export async function getCuotaEstado(socioId?: string) {
+  const token = getToken();
+  const query = socioId ? `?socio_id=${encodeURIComponent(socioId)}` : '';
+  const res = await fetch(`/api/cuota-estado${query}`, {
+    method: 'GET',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data };
+}
+
+export async function getAdminCuotasEstadoSocios() {
+  const token = getToken();
+  const res = await fetch('/api/admin/cuotas/estado-socios', {
+    method: 'GET',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data };
+}
+
+export async function getAdminCuotasResumen() {
+  const token = getToken();
+  const res = await fetch('/api/admin/cuotas/resumen', {
+    method: 'GET',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data };
+}
