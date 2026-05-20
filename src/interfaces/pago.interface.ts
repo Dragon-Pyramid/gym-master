@@ -25,20 +25,26 @@ export interface Pago {
 export interface CreatePagoDto {
   socio_id: string;
   cuota_id?: string;
+
   fecha_pago?: string;
+  fecha_vencimiento?: string;
+
   periodo_desde?: string;
   periodo_hasta?: string;
   meses_cubiertos?: number;
+
   monto_pagado?: number;
-  metodo_pago?: MetodoPago;
-  observaciones?: string;
+
+  metodo_pago?: string;
+  estado?: string;
+
+  registrado_por?: string | null;
+  observaciones?: string | null;
+
   enviar_email?: boolean;
-  /**
-   * Compatibilidad temporal con el flujo legacy de Stripe webhook.
-   * El registro manual desde admin usa el usuario autenticado en server-side.
-   * Este campo se mantendrá hasta refactorizar stripe-webhook a la nueva base de pagos.
-   */
-  registrado_por?: string;
+
+  stripe_session_id?: string | null;
+  stripe_payment_intent_id?: string | null;
 }
 
 export interface UpdatePagoDto {

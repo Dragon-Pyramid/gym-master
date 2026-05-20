@@ -1,8 +1,8 @@
-import { SidebarItemType } from "@/components/sidebar/sidebarConfig";
+import { SidebarItemType } from '@/components/sidebar/sidebarConfig';
 import {
   SidebarSectionType,
   sections,
-} from "../components/sidebar/sidebarConfig";
+} from '../components/sidebar/sidebarConfig';
 
 export const useSidebarMenu = (
   userType: string | undefined
@@ -14,21 +14,23 @@ export const useSidebarMenu = (
   const filteredSections: SidebarSectionType[] = [];
 
   const menuTitlesMap: { [key: string]: string } = {
-    Rutinas: "Rutina",
-    Dietas: "Dieta",
-    Cuotas: "Cuota - Precio",
+    Rutinas: 'Rutina',
+    Dietas: 'Dieta',
+    Cuotas: 'Cuota - Precio',
   };
-  if (userType === "socio") {
+
+  if (userType === 'socio') {
     const socioAllowedTitles = [
-      "Inicio",
-      "Control de Asistencia",
-      "Ficha Médica",
-      "Rutinas",
-      "Dietas",
-      "Evolución Física",
-      "Cuotas",
-      "Perfil",
-      "Preferencias",
+      'Inicio',
+      'Control de Asistencia',
+      'Ficha Médica',
+      'Pagar cuota',
+      'Historial de pagos',
+      'Rutinas',
+      'Dietas',
+      'Evolución Física',
+      'Perfil',
+      'Preferencias',
     ];
 
     sections.forEach((section: SidebarSectionType) => {
@@ -45,17 +47,17 @@ export const useSidebarMenu = (
         });
       }
     });
-  } else if (userType === "usuario") {
+  } else if (userType === 'usuario') {
     const usuarioAllowedTitles = [
-      "Inicio",
-      "Asistencias",
-      "Socios",
-      "Pagos",
-      "Ventas",
-      "Rutinas",
-      "Dietas",
-      "Perfil",
-      "Preferencias",
+      'Inicio',
+      'Asistencias',
+      'Socios',
+      'Pagos',
+      'Ventas',
+      'Rutinas',
+      'Dietas',
+      'Perfil',
+      'Preferencias',
     ];
 
     sections.forEach((section: SidebarSectionType) => {
@@ -72,29 +74,29 @@ export const useSidebarMenu = (
         });
       }
     });
-  } else if (userType === "admin") {
+  } else if (userType === 'admin') {
     const adminAllowedTitles = [
-      "Inicio",
-      "Asistencias",
-      "Gestión de Rutinas",
-      "Gestión de Dietas",
-      "Socios",
-      "Pagos",
-      "Ventas",
-      "Avisos",
-      "Rutinas",
-      "Dietas",
-      "Equipamientos",
-      "Actividades",
-      "Entrenadores",
-      "Cuotas",
-      "Proveedores",
-      "Usuarios",
-      "Productos",
-      "Servicios",
-      "Otros gastos",
-      "Perfil",
-      "Preferencias",
+      'Inicio',
+      'Asistencias',
+      'Gestión de Rutinas',
+      'Gestión de Dietas',
+      'Socios',
+      'Pagos',
+      'Ventas',
+      'Avisos',
+      'Rutinas',
+      'Dietas',
+      'Equipamientos',
+      'Actividades',
+      'Entrenadores',
+      'Cuotas',
+      'Proveedores',
+      'Usuarios',
+      'Productos',
+      'Servicios',
+      'Otros gastos',
+      'Perfil',
+      'Preferencias',
     ];
 
     sections.forEach((section: SidebarSectionType) => {

@@ -2,20 +2,41 @@ import { authMiddleware } from '@/middlewares/auth.middleware';
 import { NextRequest, NextResponse } from 'next/server';
 import { createSessionPago } from '@/services/stripeService';
 
-export async function POST(req: NextRequest) {
-try{
-    //SACO USUARIO DE LA SESION
-    const{user} = await authMiddleware(req);
-    if (!user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    //INGRESO A LA CREACION DE LA SESION DE PAGO
-    const session = await createSessionPago(user);
-    
-  return NextResponse.json({ url: session.url });
-  }catch (error: any) {
-    console.error('Error al crear la sesión de pago:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+export const dynamic = 'force-dynamic';
 
+export async function POST(req: NextRequest) {
+  try {
+    const { user } = await authMiddleware(req);
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (user.rol !== 'socio') {
+      return NextResponse.json(
+        { error: 'Solo los socios pueden pagar su cuota con Stripe desde este flujo' },
+        { status: 403 }
+      );
+    }
+
+    let body: { meses_cubiertos?: number } = {};
+
+    try {
+      body = await req.json();
+    } catch {
+      body = {};
+    }
+
+    const session = await createSessionPago(user, {
+      meses_cubiertos: body.meses_cubiertos,
+    });
+
+    return NextResponse.json({ url: session.url }, { status: 200 });
+  } catch (error: any) {
+    console.error('Error al crear la sesión de pago:', error);
+    return NextResponse.json(
+      { error: error.message || 'Error al crear la sesión de pago' },
+      { status: 500 }
+    );
+  }
 }
