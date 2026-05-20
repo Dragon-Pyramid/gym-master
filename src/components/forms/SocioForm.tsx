@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { createSocio, updateSocio } from "@/services/socioService";
+import { createSocioApi, updateSocioApi } from "@/services/browser/socioApiClient";
 import { toast } from "sonner";
 
 export interface SocioFormProps {
@@ -59,7 +59,7 @@ export default function SocioForm({ socio, onCreated }: SocioFormProps) {
     setLoading(true);
     try {
       if (socio && socio.id_socio) {
-        await updateSocio(undefined as any, socio.id_socio, form);
+        await updateSocioApi(socio.id_socio, form);
         toast.success("Socio actualizado");
       } else {
         const createData = {
@@ -70,7 +70,7 @@ export default function SocioForm({ socio, onCreated }: SocioFormProps) {
           telefono: form.telefono,
           email: form.email,
         };
-        await createSocio(undefined as any, createData);
+        await createSocioApi(createData);
         toast.success("Socio creado");
       }
       setForm(emptyForm);

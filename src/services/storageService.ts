@@ -40,7 +40,14 @@ export function getToken() {
   return Cookies.get(TOKEN_KEY) || null;
 }
 
-export function authHeader() {
+export function authHeader(): Record<string, string> {
   const token = getToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
+
+  if (!token) {
+    return {};
+  }
+
+  return {
+    Authorization: `Bearer ${token}`,
+  };
 }

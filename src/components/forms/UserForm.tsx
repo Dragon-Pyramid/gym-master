@@ -9,7 +9,7 @@ import {
   CreateUsuarioDto,
   UpdateUsuarioDto,
 } from '@/interfaces/usuario.interface';
-import { createUsuarios, updateUsuarios } from '@/services/usuarioService';
+import { createUsuarioApi, updateUsuarioApi } from '@/services/browser/usuarioApiClient';
 import { toast } from 'sonner';
 
 export interface UserFormProps {
@@ -66,7 +66,7 @@ export default function UserForm({
           ...(form.password && { password: form.password }),
         };
 
-        await updateUsuarios(undefined as any, usuario.id, updateData);
+        await updateUsuarioApi(usuario.id, updateData);
         toast.success('Usuario actualizado exitosamente.');
       } else {
         const rol = form.rol || 'socio';
@@ -92,7 +92,7 @@ export default function UserForm({
           return;
         }
 
-        await createUsuarios(undefined as any, createData);
+        await createUsuarioApi(createData);
         toast.success('Usuario creado exitosamente.');
       }
       setForm(emptyForm);
