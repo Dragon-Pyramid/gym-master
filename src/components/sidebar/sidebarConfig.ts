@@ -1,4 +1,10 @@
-import { LayoutDashboard, Dumbbell, Settings, ShieldBan } from 'lucide-react';
+import {
+  CreditCard,
+  Dumbbell,
+  LayoutDashboard,
+  Settings,
+  ShieldBan,
+} from 'lucide-react';
 import React from 'react';
 
 export interface SidebarItemType {
@@ -29,6 +35,22 @@ export const sections: SidebarSectionType[] = [
         level: 2,
       },
       { title: 'Ficha Médica', link: '/dashboard/ficha-medica', level: 2 },
+    ],
+  },
+  {
+    title: 'Mi cuenta',
+    icon: CreditCard,
+    items: [
+      {
+        title: 'Pagar cuota',
+        link: '/dashboard/mi-cuenta/pagar-cuota',
+        level: 2,
+      },
+      {
+        title: 'Historial de pagos',
+        link: '/dashboard/mi-cuenta/historial-pagos',
+        level: 2,
+      },
     ],
   },
   {
