@@ -27,6 +27,7 @@ import {
   getHistorialRutinas,
   getObjetivos,
   getNiveles,
+  eliminarRutina,
 } from "@/services/apiClient";
 import RutinaDisplay from "@/components/dashboard/rutinas/RutinaDisplay";
 
@@ -41,6 +42,7 @@ export default function RutinasPage() {
     useAuthStore();
   const router = useRouter();
   const [rutinas, setRutinas] = useState<RutinaDisplayData[]>([]);
+  const [rutinasRefreshKey, setRutinasRefreshKey] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
@@ -123,6 +125,37 @@ export default function RutinasPage() {
       console.error("Error al cargar niveles:", error);
     }
   }, [user, token]);
+
+  const refreshRutinas = useCallback(async () => {
+    await fetchRutinas();
+    setRutinasRefreshKey((current) => current + 1);
+  }, [fetchRutinas]);
+
+  const handleDeleteRutina = useCallback(
+    async (rutina: Rutina) => {
+      const confirmar = window.confirm(
+        "¿Está seguro de eliminar la rutina?",
+      );
+
+      if (!confirmar) return;
+
+      try {
+        const response = await eliminarRutina(rutina.id_rutina);
+
+        if (!response.ok) {
+          throw new Error(response.error || "Error al eliminar rutina");
+        }
+
+        toast.success("Rutina eliminada correctamente");
+        await refreshRutinas();
+      } catch (error) {
+        console.error("Error al eliminar rutina:", error);
+        toast.error("Error al eliminar la rutina");
+        throw error;
+      }
+    },
+    [refreshRutinas],
+  );
 
   useEffect(() => {
     initializeAuth();
@@ -298,6 +331,7 @@ export default function RutinasPage() {
               </CardHeader>
               <CardContent className="p-4">
                 <RutinaDisplay
+                  refreshKey={rutinasRefreshKey}
                   onView={(rutina) => {
                     let rutinaDesc = rutina.rutina_desc;
 
@@ -320,13 +354,7 @@ export default function RutinasPage() {
                     setSelectedRutina(rutina);
                     setOpenModal(true);
                   }}
-                  onDelete={async () => {
-                    const confirmar = window.confirm(
-                      "¿Está seguro de eliminar la rutina?",
-                    );
-                    if (!confirmar) return;
-                    await fetchRutinas();
-                  }}
+                  onDelete={handleDeleteRutina}
                 />
               </CardContent>
             </Card>
@@ -340,7 +368,7 @@ export default function RutinasPage() {
           setOpenModal(false);
           setSelectedRutina(null);
         }}
-        onCreated={fetchRutinas}
+        onCreated={refreshRutinas}
         rutina={selectedRutina}
         objetivos={objetivos}
         niveles={niveles}
