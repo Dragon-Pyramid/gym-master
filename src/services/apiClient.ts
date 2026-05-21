@@ -193,9 +193,15 @@ export async function getConcurrenciaAsistencia(
 
 export async function getHistorialRutinas() {
   const token = getToken();
-  const res = await fetch('/api/rutina/historial', {
+  const headers: HeadersInit = {
+    'Cache-Control': 'no-cache',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+
+  const res = await fetch(`/api/rutina/historial?t=${Date.now()}`, {
     method: 'GET',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers,
+    cache: 'no-store',
   });
   const data = await res.json();
   return { ok: res.ok, data };
@@ -258,6 +264,7 @@ export async function eliminarRutina(idRutina: number | string) {
   const res = await fetch(`/api/rutina/${idRutina}`, {
     method: 'DELETE',
     headers,
+    cache: 'no-store',
   });
 
   const data = await res.json().catch(() => ({}));
