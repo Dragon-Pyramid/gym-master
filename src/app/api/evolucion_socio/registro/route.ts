@@ -2,47 +2,55 @@ import { authMiddleware } from "@/middlewares/auth.middleware";
 import { createEvolucionSocio } from "@/services/evolucionSocioService";
 import { NextResponse } from "next/server";
 
+const getStatusFromError = (message?: string) => {
+  if (!message) return 500;
+  if (
+    message.includes("Token") ||
+    message.includes("Unauthorized") ||
+    message.includes("No autorizado")
+  ) {
+    return 401;
+  }
+  if (
+    message.includes("obligatorio") ||
+    message.includes("obligatoria") ||
+    message.includes("Debe") ||
+    message.includes("socio asociado")
+  ) {
+    return 400;
+  }
+  return 500;
+};
+
 export async function POST(req: Request) {
-	try {
-		const { user } = await authMiddleware(req);
+  try {
+    const { user } = await authMiddleware(req);
+    const body = await req.json();
 
-		if (!user) {
-			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-		}
+    const evolucion = await createEvolucionSocio(
+      {
+        ...body,
+        socio_id: body.socio_id || user.id_socio,
+      },
+      user
+    );
 
-		const body = await req.json();
-		if (
-			!body.peso ||
-			!body.cintura ||
-			!body.bicep ||
-			!body.tricep ||
-			!body.pierna ||
-			!body.gluteos ||
-			!body.pantorrilla ||
-			!body.altura ||
-			!body.observaciones
-		) {
-			return NextResponse.json(
-				{ error: "Debe cargar todos los campos" },
-				{ status: 400 }
-			);
-		}
+    return NextResponse.json(
+      {
+        message: "Evolución física registrada con éxito",
+        data: evolucion,
+      },
+      { status: 201 }
+    );
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : "Error al registrar evolución";
 
-		if (!user.id_socio) {
-			return NextResponse.json(
-				{ error: "El usuario no tiene un socio asociado" },
-				{ status: 400 }
-			);
-		}
+    console.error("ERROR evolucion_socio/registro:", message);
 
-		const evolucion = await createEvolucionSocio(
-			{ ...body, socio_id: user.id_socio },
-			user
-		);
-
-		return NextResponse.json({ data: evolucion }, { status: 201 });
-	} catch (error: any) {
-		console.log(error);
-		return NextResponse.json({ error: error.message }, { status: 500 });
-	}
+    return NextResponse.json(
+      { error: message },
+      { status: getStatusFromError(message) }
+    );
+  }
 }

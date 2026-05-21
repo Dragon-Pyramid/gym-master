@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Eye, TrendingDown, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -14,13 +15,84 @@ import {
   TableCaption,
 } from "@/components/ui/table";
 import { EvolucionSocio } from "@/interfaces/evolucionSocio.interface";
-import { getEvolucionesSocio } from "@/services/apiClient";
+import { getEvolucionesFisicas } from "@/services/evolucionSocioClient";
+
+const formatDate = (value?: string | Date | null) => {
+  if (!value) return "-";
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "-" : date.toLocaleDateString();
+};
+
+const formatNumber = (value?: number | null, suffix = "") => {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) {
+    return "-";
+  }
+
+  return `${Number(value).toLocaleString(undefined, {
+    maximumFractionDigits: 2,
+  })}${suffix}`;
+};
+
+const delta = (current?: number | null, initial?: number | null) => {
+  if (
+    current === null ||
+    current === undefined ||
+    initial === null ||
+    initial === undefined
+  ) {
+    return null;
+  }
+
+  return Number((Number(current) - Number(initial)).toFixed(2));
+};
+
+const getRowKey = (row: EvolucionSocio, index: number) =>
+  row.id || row.id_evolucion || `${row.socio_id}-${row.fecha}-${index}`;
+
+const MetricCard = ({
+  title,
+  value,
+  helper,
+}: {
+  title: string;
+  value: string;
+  helper?: string;
+}) => (
+  <div className="rounded-xl border bg-card p-4 shadow-sm">
+    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      {title}
+    </p>
+    <p className="mt-2 text-2xl font-bold">{value}</p>
+    {helper && <p className="mt-1 text-xs text-muted-foreground">{helper}</p>}
+  </div>
+);
+
+const DeltaValue = ({ value, inverse = false }: { value: number | null; inverse?: boolean }) => {
+  if (value === null) return <span>-</span>;
+
+  const isPositive = value > 0;
+  const Icon = isPositive ? TrendingUp : TrendingDown;
+  const label = `${isPositive ? "+" : ""}${formatNumber(value)}`;
+
+  return (
+    <span className="inline-flex items-center gap-1">
+      <Icon className="h-3.5 w-3.5" />
+      <span>{label}</span>
+      {inverse ? null : null}
+    </span>
+  );
+};
 
 export default function EvolucionSocioTable({
+  socioId = "me",
+  refreshKey = 0,
   searchTerm,
   onDataChange,
   onView,
 }: {
+  socioId?: string;
+  refreshKey?: number;
   searchTerm?: string;
   onDataChange?: (rows: EvolucionSocio[]) => void;
   onView?: (evolucion: EvolucionSocio) => void;
@@ -29,130 +101,220 @@ export default function EvolucionSocioTable({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const loadData = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await getEvolucionesFisicas(socioId);
+      setEvoluciones(res.data);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Error al cargar evoluciones");
+      setEvoluciones([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
+
     (async () => {
       setLoading(true);
       setError(null);
+
       try {
-        const res = await getEvolucionesSocio("me");
-        if (mounted) {
-          const data: EvolucionSocio[] =
-            res.ok && Array.isArray(res.data) ? res.data : [];
-          setEvoluciones(data);
-        }
+        const res = await getEvolucionesFisicas(socioId);
+        if (mounted) setEvoluciones(res.data);
       } catch (e: unknown) {
-        if (mounted) setError((e as Error).message);
+        if (mounted) {
+          setError(e instanceof Error ? e.message : "Error al cargar evoluciones");
+          setEvoluciones([]);
+        }
       } finally {
         if (mounted) setLoading(false);
       }
     })();
+
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [socioId, refreshKey]);
+
+  const orderedAsc = useMemo(() => {
+    return [...evoluciones].sort(
+      (a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime()
+    );
+  }, [evoluciones]);
+
+  const initial = orderedAsc.find((row) => row.es_registro_inicial) || orderedAsc[0] || null;
+  const current = orderedAsc[orderedAsc.length - 1] || null;
 
   const filtered = useMemo(() => {
     if (!searchTerm?.trim()) return evoluciones;
+
     const q = searchTerm.toLowerCase();
-    return evoluciones.filter(
-      (e) =>
-        String(e.peso).toLowerCase().includes(q) ||
-        String(e.cintura).toLowerCase().includes(q) ||
-        String(e.altura).toLowerCase().includes(q) ||
-        (e.observaciones || "").toLowerCase().includes(q)
+
+    return evoluciones.filter((e) =>
+      [
+        e.fecha,
+        e.peso,
+        e.altura,
+        e.imc,
+        e.cintura,
+        e.pecho,
+        e.cadera,
+        e.porcentaje_grasa,
+        e.masa_muscular,
+        e.tipo_corporal,
+        e.sexo_referencia,
+        e.observaciones,
+      ]
+        .filter((value) => value !== null && value !== undefined)
+        .some((value) => String(value).toLowerCase().includes(q))
     );
   }, [searchTerm, evoluciones]);
 
   useEffect(() => {
-    if (onDataChange) {
-      onDataChange(filtered);
-    }
+    onDataChange?.(filtered);
   }, [filtered, onDataChange]);
 
   if (loading) {
     return (
-      <div className="space-y-2">
+      <div className="space-y-4">
+        <div className="grid gap-3 md:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-24 w-full rounded-xl" />
+          ))}
+        </div>
         {[...Array(5)].map((_, i) => (
-          <Skeleton key={i} className="w-full rounded-md h-9" />
+          <Skeleton key={i} className="h-9 w-full rounded-md" />
         ))}
       </div>
     );
   }
 
   if (error) {
-    return <div className="py-10 text-center text-red-500">{error}</div>;
-  }
-
-  if (filtered.length === 0) {
     return (
-      <div className="py-10 text-center text-muted-foreground">
-        No hay evoluciones registradas.
+      <div className="rounded-md border border-red-200 bg-red-50 p-6 text-center text-red-600">
+        {error}
+        <div className="mt-4">
+          <Button variant="outline" onClick={loadData}>
+            Reintentar
+          </Button>
+        </div>
       </div>
     );
   }
 
+  if (evoluciones.length === 0) {
+    return (
+      <div className="rounded-md border border-dashed py-12 text-center text-muted-foreground">
+        No hay evoluciones registradas para este socio.
+      </div>
+    );
+  }
+
+  const diffPeso = delta(current?.peso, initial?.peso);
+  const diffCintura = delta(current?.cintura, initial?.cintura);
+  const diffGrasa = delta(current?.porcentaje_grasa, initial?.porcentaje_grasa);
+  const diffMasa = delta(current?.masa_muscular, initial?.masa_muscular);
+
   return (
-    <Table className="w-full overflow-hidden text-sm border rounded-md border-border">
-      <TableHeader>
-        <TableRow className="bg-muted/50 text-muted-foreground">
-          <TableHead>Fecha</TableHead>
-          <TableHead>Peso</TableHead>
-          <TableHead>Cintura</TableHead>
-          <TableHead>Bíceps</TableHead>
-          <TableHead>Tríceps</TableHead>
-          <TableHead>Pierna</TableHead>
-          <TableHead>Glúteos</TableHead>
-          <TableHead>Pantorrilla</TableHead>
-          <TableHead>Altura</TableHead>
-          <TableHead>IMC</TableHead>
-          <TableHead>Observaciones</TableHead>
-          <TableHead>Acciones</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {filtered.map((e, i) => (
-          <TableRow
-            key={i}
-            className="odd:bg-muted/40 hover:bg-[#a8d9f9] transition-colors"
-          >
-            <TableCell>
-              {e.fecha ? new Date(e.fecha).toLocaleDateString() : ""}
-            </TableCell>
-            <TableCell>{e.peso}</TableCell>
-            <TableCell>{e.cintura}</TableCell>
-            <TableCell>{e.bicep}</TableCell>
-            <TableCell>{e.tricep}</TableCell>
-            <TableCell>{e.pierna}</TableCell>
-            <TableCell>{e.gluteos}</TableCell>
-            <TableCell>{e.pantorrilla}</TableCell>
-            <TableCell>{e.altura}</TableCell>
-            <TableCell>{e.imc}</TableCell>
-            <TableCell
-              className="max-w-[220px] truncate"
-              title={e.observaciones}
-            >
-              {e.observaciones}
-            </TableCell>
-            <TableCell className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onView && onView(e)}
+    <div className="space-y-5">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          title="Registro inicial"
+          value={initial ? formatDate(initial.fecha) : "-"}
+          helper={initial ? `${formatNumber(initial.peso, " kg")} · IMC ${formatNumber(initial.imc)}` : undefined}
+        />
+        <MetricCard
+          title="Último registro"
+          value={current ? formatDate(current.fecha) : "-"}
+          helper={current ? `${formatNumber(current.peso, " kg")} · IMC ${formatNumber(current.imc)}` : undefined}
+        />
+        <MetricCard
+          title="Cambio peso / cintura"
+          value={`${diffPeso !== null ? `${diffPeso > 0 ? "+" : ""}${formatNumber(diffPeso, " kg")}` : "-"} / ${
+            diffCintura !== null ? `${diffCintura > 0 ? "+" : ""}${formatNumber(diffCintura, " cm")}` : "-"
+          }`}
+          helper="Comparación último vs. inicial"
+        />
+        <MetricCard
+          title="Grasa / masa muscular"
+          value={`${diffGrasa !== null ? `${diffGrasa > 0 ? "+" : ""}${formatNumber(diffGrasa, "%")}` : "-"} / ${
+            diffMasa !== null ? `${diffMasa > 0 ? "+" : ""}${formatNumber(diffMasa, " kg")}` : "-"
+          }`}
+          helper="Comparación último vs. inicial"
+        />
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="rounded-md border border-dashed py-10 text-center text-muted-foreground">
+          No hay resultados para la búsqueda actual.
+        </div>
+      ) : (
+        <Table className="w-full overflow-hidden rounded-md border border-border text-sm">
+          <TableHeader>
+            <TableRow className="bg-muted/50 text-muted-foreground">
+              <TableHead>Fecha</TableHead>
+              <TableHead>Peso</TableHead>
+              <TableHead>Altura</TableHead>
+              <TableHead>IMC</TableHead>
+              <TableHead>Cintura</TableHead>
+              <TableHead>Pecho</TableHead>
+              <TableHead>Cadera</TableHead>
+              <TableHead>% Grasa</TableHead>
+              <TableHead>Masa muscular</TableHead>
+              <TableHead>Tipo</TableHead>
+              <TableHead>Inicial</TableHead>
+              <TableHead>Observaciones</TableHead>
+              <TableHead>Acciones</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filtered.map((e, i) => (
+              <TableRow
+                key={getRowKey(e, i)}
+                className="odd:bg-muted/40 transition-colors hover:bg-[#a8d9f9]"
               >
-                Ver
-              </Button>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-      <TableFooter>
-        <TableRow>
-          <TableCell colSpan={11}>Total de evoluciones</TableCell>
-          <TableCell className="text-right">{filtered.length}</TableCell>
-        </TableRow>
-      </TableFooter>
-      <TableCaption>Listado de evoluciones registradas.</TableCaption>
-    </Table>
+                <TableCell>{formatDate(e.fecha)}</TableCell>
+                <TableCell>{formatNumber(e.peso, " kg")}</TableCell>
+                <TableCell>{formatNumber(e.altura, " cm")}</TableCell>
+                <TableCell>{formatNumber(e.imc)}</TableCell>
+                <TableCell>{formatNumber(e.cintura, " cm")}</TableCell>
+                <TableCell>{formatNumber(e.pecho, " cm")}</TableCell>
+                <TableCell>{formatNumber(e.cadera, " cm")}</TableCell>
+                <TableCell>{formatNumber(e.porcentaje_grasa, "%")}</TableCell>
+                <TableCell>{formatNumber(e.masa_muscular, " kg")}</TableCell>
+                <TableCell className="capitalize">{e.tipo_corporal || "-"}</TableCell>
+                <TableCell>{e.es_registro_inicial ? "Sí" : "No"}</TableCell>
+                <TableCell className="max-w-[220px] truncate" title={e.observaciones || ""}>
+                  {e.observaciones || "-"}
+                </TableCell>
+                <TableCell>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onView?.(e)}
+                    className="flex items-center gap-1"
+                  >
+                    <Eye className="h-4 w-4" />
+                    Ver
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+          <TableFooter>
+            <TableRow>
+              <TableCell colSpan={12}>Total de registros</TableCell>
+              <TableCell className="text-right">{filtered.length}</TableCell>
+            </TableRow>
+          </TableFooter>
+          <TableCaption>Historial de evolución física del socio.</TableCaption>
+        </Table>
+      )}
+    </div>
   );
 }
