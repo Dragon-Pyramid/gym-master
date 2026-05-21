@@ -51,6 +51,34 @@ const resolveIdSocioForRutina = async (
   );
 };
 
+
+const resolveIdSocioForAuthenticatedUser = async (
+  user: JwtUser
+): Promise<string | null> => {
+  if (isValidUUID(user.id_socio)) {
+    return user.id_socio.trim();
+  }
+
+  if (!isAdmin(user.rol) && isValidUUID(user.id)) {
+    const socio = await getSocioByIdUsuario(user.id);
+
+    if (isValidUUID(socio?.id_socio)) {
+      return socio.id_socio.trim();
+    }
+  }
+
+  return null;
+};
+
+const normalizeRutinaId = (idRutina: string | number): number => {
+  const parsed = Number(idRutina);
+
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error("El id de rutina no es válido");
+  }
+
+  return parsed;
+};
 // Funciones para métricas de rutinas IA
 export const dataAdherenciaMensualRutinas = async (user: JwtUser) => {
   const supabase = getSupabaseClient();
@@ -183,8 +211,9 @@ export const historialRutinaSocioLogueado = async (
   }
 
   const supabase = getSupabaseClient();
+  const idSocio = await resolveIdSocioForAuthenticatedUser(user);
 
-  if (!isValidUUID(user.id_socio)) {
+  if (!idSocio) {
     console.warn(
       "No se consultó historial de rutinas porque el usuario no tiene un id_socio válido:",
       user.id_socio
@@ -196,7 +225,7 @@ export const historialRutinaSocioLogueado = async (
   const { data, error } = await supabase
     .from("rutina")
     .select("*")
-    .eq("id_socio", user.id_socio)
+    .eq("id_socio", idSocio)
     .order("creado_en", { ascending: false });
 
   if (error) {
@@ -234,6 +263,52 @@ export const historialRutinaSocio = async (
   }
 
   return (data ?? []) as Rutina[];
+};
+
+export const eliminarRutina = async (
+  user: JwtUser,
+  idRutina: string | number
+): Promise<{ id_rutina: number }> => {
+  const supabase = getSupabaseClient();
+  const rutinaId = normalizeRutinaId(idRutina);
+
+  const { data: rutina, error: findError } = await supabase
+    .from("rutina")
+    .select("id_rutina, id_socio")
+    .eq("id_rutina", rutinaId)
+    .maybeSingle();
+
+  if (findError) {
+    console.log("Error al buscar la rutina:", findError.message);
+    throw new Error("Error al buscar la rutina");
+  }
+
+  if (!rutina) {
+    throw new Error("No se encontró la rutina");
+  }
+
+  if (!isAdmin(user.rol)) {
+    const idSocio = await resolveIdSocioForAuthenticatedUser(user);
+
+    if (!idSocio || rutina.id_socio !== idSocio) {
+      throw new Error("No tenés permisos para eliminar esta rutina");
+    }
+  }
+
+  // La tabla rutina no tiene columna activo/eliminado_en; se usa delete físico controlado.
+  const { data, error } = await supabase
+    .from("rutina")
+    .delete()
+    .eq("id_rutina", rutinaId)
+    .select("id_rutina")
+    .single();
+
+  if (error) {
+    console.log("Error al eliminar rutina:", error.message);
+    throw new Error("Error al eliminar la rutina");
+  }
+
+  return data as { id_rutina: number };
 };
 
 export const dataRetencionPorCombinacion = async (user: JwtUser) => {
