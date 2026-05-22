@@ -23,6 +23,7 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { EvolucionSocio } from "@/interfaces/evolucionSocio.interface";
+import EvolucionFisicaBodySilhouette from "./EvolucionFisicaBodySilhouette";
 
 interface EvolucionFisicaDashboardProps {
   rows: EvolucionSocio[];
@@ -399,6 +400,8 @@ export default function EvolucionFisicaDashboard({
         />
       </section>
 
+      <EvolucionFisicaBodySilhouette initial={initial} current={current} />
+
       <section className="grid gap-6 xl:grid-cols-2">
         <ChartCard
           title="Peso e IMC"
@@ -471,7 +474,7 @@ export default function EvolucionFisicaDashboard({
                   </tr>
                 </thead>
                 <tbody>
-                  {[
+                  {([
                     ["Peso", formatNumber(initial?.peso, " kg"), formatNumber(current?.peso, " kg"), signed(diffPeso, " kg")],
                     ["IMC", formatNumber(initial?.imc), formatNumber(current?.imc), signed(diffImc)],
                     ["Cintura", formatNumber(initial?.cintura, " cm"), formatNumber(current?.cintura, " cm"), signed(diffCintura, " cm")],
@@ -479,7 +482,7 @@ export default function EvolucionFisicaDashboard({
                     ["Masa muscular", formatNumber(initial?.masa_muscular, " kg"), formatNumber(current?.masa_muscular, " kg"), signed(diffMasa, " kg")],
                     ["Brazo promedio", formatNumber(brazoInicial, " cm"), formatNumber(brazoActual, " cm"), signed(delta(brazoActual, brazoInicial), " cm")],
                     ["Muslo promedio", formatNumber(piernaInicial, " cm"), formatNumber(piernaActual, " cm"), signed(delta(piernaActual, piernaInicial), " cm")],
-                  ].map(([label, initialValue, currentValue, change]) => (
+                  ] as Array<[string, string, string, string]>).map(([label, initialValue, currentValue, change]) => (
                     <tr key={label} className="border-b last:border-0">
                       <td className="px-4 py-3 font-medium text-gray-950">{label}</td>
                       <td className="px-4 py-3 text-gray-600">{initialValue}</td>
