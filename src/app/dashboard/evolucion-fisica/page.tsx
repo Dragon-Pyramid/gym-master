@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import ExcelJS from "exceljs";
 import { Download, FileSpreadsheet, Search } from "lucide-react";
 import { toast } from "sonner";
@@ -9,6 +9,7 @@ import { AppHeader } from "@/components/header/AppHeader";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import EvolucionSocioForm from "@/components/forms/EvolucionSocioForm";
 import EvolucionSocioTable from "@/components/tables/EvolucionSocioTable";
+import EvolucionFisicaDashboard from "@/components/dashboard/evolucion-fisica/EvolucionFisicaDashboard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -57,6 +58,7 @@ export default function EvolucionFisicaPage() {
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [exportRows, setExportRows] = useState<EvolucionSocio[]>([]);
+  const [dashboardRows, setDashboardRows] = useState<EvolucionSocio[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [socios, setSocios] = useState<SocioBasico[]>([]);
   const [selectedSocioId, setSelectedSocioId] = useState("me");
@@ -202,6 +204,10 @@ export default function EvolucionFisicaPage() {
     setRefreshKey((value) => value + 1);
   };
 
+  const handleLoadedDataChange = useCallback((rows: EvolucionSocio[]) => {
+    setDashboardRows(rows);
+  }, []);
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
@@ -278,6 +284,11 @@ export default function EvolucionFisicaPage() {
               </Card>
             )}
 
+            <EvolucionFisicaDashboard
+              rows={dashboardRows}
+              socioNombre={selectedSocioName}
+            />
+
             <Card className="w-full">
               <CardHeader className="flex flex-wrap items-center justify-between gap-4 border-b p-4 md:flex-nowrap">
                 <h2 className="text-xl font-bold">Historial de medidas</h2>
@@ -323,6 +334,7 @@ export default function EvolucionFisicaPage() {
                   refreshKey={refreshKey}
                   searchTerm={searchTerm}
                   onDataChange={(rows) => setExportRows(rows)}
+                  onLoadedDataChange={handleLoadedDataChange}
                 />
               </CardContent>
             </Card>
