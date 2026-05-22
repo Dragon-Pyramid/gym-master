@@ -1,6 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useMemo } from "react";
 import {
   Activity,
@@ -24,21 +23,8 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { EvolucionSocio } from "@/interfaces/evolucionSocio.interface";
-import EvolucionFisicaBodySilhouette from "./EvolucionFisicaBodySilhouette";
+import EvolucionFisicaHumanSilhouette from "./EvolucionFisicaHumanSilhouette";
 
-const EvolucionFisicaBody3DPrototype = dynamic(
-  () => import("./EvolucionFisicaBody3DPrototype"),
-  {
-    ssr: false,
-    loading: () => (
-      <Card className="rounded-2xl border bg-white shadow-sm">
-        <CardContent className="p-6 text-sm text-gray-500">
-          Preparando prototipo 3D de evolución corporal...
-        </CardContent>
-      </Card>
-    ),
-  }
-);
 
 interface EvolucionFisicaDashboardProps {
   rows: EvolucionSocio[];
@@ -415,9 +401,7 @@ export default function EvolucionFisicaDashboard({
         />
       </section>
 
-      <EvolucionFisicaBodySilhouette initial={initial} current={current} />
-
-      <EvolucionFisicaBody3DPrototype initial={initial} current={current} />
+      <EvolucionFisicaHumanSilhouette initial={initial} current={current} />
 
       <section className="grid gap-6 xl:grid-cols-2">
         <ChartCard
