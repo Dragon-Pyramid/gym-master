@@ -132,6 +132,88 @@ const loadImageAsDataUrl = async (
   });
 };
 
+
+interface PdfImageAsset {
+  dataUrl: string;
+  width: number;
+  height: number;
+}
+
+const loadTransparentImageAsset = async (
+  url: string,
+  maxWidth = 900,
+  maxHeight = 900
+): Promise<PdfImageAsset | null> => {
+  return new Promise((resolve) => {
+    if (!url) {
+      resolve(null);
+      return;
+    }
+
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+
+    image.onload = () => {
+      try {
+        const ratio = Math.min(maxWidth / image.width, maxHeight / image.height, 1);
+        const canvas = document.createElement("canvas");
+
+        canvas.width = Math.max(1, Math.round(image.width * ratio));
+        canvas.height = Math.max(1, Math.round(image.height * ratio));
+
+        const ctx = canvas.getContext("2d");
+
+        if (!ctx) {
+          resolve(null);
+          return;
+        }
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+        resolve({
+          dataUrl: canvas.toDataURL("image/png"),
+          width: canvas.width,
+          height: canvas.height,
+        });
+      } catch (error) {
+        console.warn("No se pudo convertir la silueta biométrica para PDF:", error);
+        resolve(null);
+      }
+    };
+
+    image.onerror = () => {
+      console.warn("No se pudo cargar la silueta biométrica para PDF:", url);
+      resolve(null);
+    };
+
+    image.src = url;
+  });
+};
+
+const addImageContained = (
+  doc: jsPDF,
+  image: PdfImageAsset,
+  x: number,
+  y: number,
+  width: number,
+  height: number
+) => {
+  const ratio = Math.min(width / image.width, height / image.height);
+  const imageWidth = image.width * ratio;
+  const imageHeight = image.height * ratio;
+
+  doc.addImage(
+    image.dataUrl,
+    "PNG",
+    x + (width - imageWidth) / 2,
+    y + (height - imageHeight) / 2,
+    imageWidth,
+    imageHeight
+  );
+};
+
+
 const ensureSpace = (doc: jsPDF, y: number, requiredHeight: number): number => {
   if (y + requiredHeight <= PAGE_HEIGHT - PAGE_MARGIN - 8) {
     return y;
@@ -170,6 +252,96 @@ const addWrappedText = (
   return y + lines.length * lineHeight;
 };
 
+
+const addPdfIcon = (
+  doc: jsPDF,
+  icon: "user" | "calendar" | "scale" | "ruler" | "percent" | "muscle" | "activity" | "info",
+  x: number,
+  y: number,
+  size = 7,
+  color: [number, number, number] = [2, 168, 225]
+) => {
+  const [r, g, b] = color;
+
+  doc.setDrawColor(r, g, b);
+  doc.setFillColor(230, 247, 253);
+  doc.circle(x + size / 2, y + size / 2, size / 2, "FD");
+
+  doc.setDrawColor(r, g, b);
+  doc.setTextColor(r, g, b);
+  doc.setLineWidth(0.35);
+
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+
+  if (icon === "user") {
+    doc.circle(cx, cy - 1.3, 1.1, "S");
+    doc.roundedRect(cx - 2.7, cy + 0.9, 5.4, 2.7, 1.2, 1.2, "S");
+    return;
+  }
+
+  if (icon === "calendar") {
+    doc.roundedRect(cx - 2.5, cy - 2.2, 5, 4.8, 0.6, 0.6, "S");
+    doc.line(cx - 2.5, cy - 0.8, cx + 2.5, cy - 0.8);
+    doc.line(cx - 1.4, cy - 2.8, cx - 1.4, cy - 1.7);
+    doc.line(cx + 1.4, cy - 2.8, cx + 1.4, cy - 1.7);
+    return;
+  }
+
+  if (icon === "scale") {
+    doc.roundedRect(cx - 2.4, cy - 1.9, 4.8, 4.4, 0.7, 0.7, "S");
+    doc.line(cx - 1.4, cy - 0.6, cx + 1.4, cy - 0.6);
+    doc.line(cx, cy - 0.6, cx + 0.8, cy - 1.2);
+    return;
+  }
+
+  if (icon === "ruler") {
+    doc.line(cx - 2.7, cy + 1.8, cx + 2.7, cy - 1.8);
+    doc.line(cx - 1.7, cy + 1.1, cx - 1.1, cy + 1.7);
+    doc.line(cx - 0.3, cy + 0.2, cx + 0.3, cy + 0.8);
+    doc.line(cx + 1.1, cy - 0.8, cx + 1.7, cy - 0.2);
+    return;
+  }
+
+  if (icon === "percent") {
+    doc.text("%", cx - 1.8, cy + 1.8);
+    return;
+  }
+
+  if (icon === "muscle") {
+    doc.circle(cx - 0.9, cy + 0.5, 1.45, "S");
+    doc.circle(cx + 1.4, cy - 0.2, 1.15, "S");
+    doc.line(cx - 2.7, cy + 1.2, cx - 3.1, cy + 2.4);
+    doc.line(cx - 3.1, cy + 2.4, cx - 1.3, cy + 2.4);
+    doc.line(cx + 2.2, cy - 1.1, cx + 3.0, cy - 2.0);
+    return;
+  }
+
+  if (icon === "activity") {
+    doc.line(cx - 3, cy + 0.4, cx - 1.4, cy + 0.4);
+    doc.line(cx - 1.4, cy + 0.4, cx - 0.5, cy - 2.3);
+    doc.line(cx - 0.5, cy - 2.3, cx + 0.9, cy + 2.3);
+    doc.line(cx + 0.9, cy + 2.3, cx + 1.7, cy + 0.4);
+    doc.line(cx + 1.7, cy + 0.4, cx + 3, cy + 0.4);
+    return;
+  }
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(6);
+  doc.text("i", cx - 0.7, cy + 2);
+};
+
+const resolveInfoIcon = (title: string) => {
+  const normalized = title.toLowerCase();
+
+  if (normalized.includes("registro") || normalized.includes("último")) return "calendar";
+  if (normalized.includes("peso")) return "scale";
+  if (normalized.includes("grasa")) return "percent";
+
+  return "activity";
+};
+
+
 const addInfoBox = (
   doc: jsPDF,
   title: string,
@@ -179,24 +351,26 @@ const addInfoBox = (
   y: number,
   width: number
 ) => {
-  doc.setDrawColor(225, 225, 225);
+  doc.setDrawColor(226, 232, 240);
   doc.setFillColor(255, 255, 255);
-  doc.roundedRect(x, y, width, 24, 2, 2, "FD");
+  doc.roundedRect(x, y, width, 26, 3, 3, "FD");
+
+  addPdfIcon(doc, resolveInfoIcon(title) as "calendar" | "scale" | "percent" | "activity", x + 4, y + 5, 9);
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(7.5);
-  doc.setTextColor(90, 90, 90);
-  doc.text(title.toUpperCase(), x + 4, y + 6);
+  doc.setFontSize(7.2);
+  doc.setTextColor(92, 103, 121);
+  doc.text(title.toUpperCase(), x + 16, y + 7.2);
 
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.setTextColor(17, 24, 39);
-  doc.text(value, x + 4, y + 13);
+  doc.setFontSize(10.5);
+  doc.setTextColor(15, 23, 42);
+  doc.text(value, x + 16, y + 14.6, { maxWidth: width - 20 });
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(7);
-  doc.setTextColor(110, 110, 110);
-  doc.text(helper, x + 4, y + 19);
+  doc.setFontSize(6.7);
+  doc.setTextColor(100, 116, 139);
+  doc.text(helper, x + 16, y + 21, { maxWidth: width - 20 });
 };
 
 const addTableHeader = (doc: jsPDF, y: number) => {
@@ -510,6 +684,502 @@ const addDashboardCharts = (
   return y;
 };
 
+
+type BiometricSex = "masculino" | "femenino";
+
+interface BiometricMetrics {
+  peso: number | null;
+  cintura: number | null;
+  grasa: number | null;
+  masaMuscular: number | null;
+  brazoPromedio: number | null;
+  musloPromedio: number | null;
+  pantorrillaPromedio: number | null;
+  cadera: number | null;
+  sexoReferencia: string | null;
+}
+
+interface BiometricVisualModel {
+  sex: BiometricSex;
+  dominantSrc: string;
+  widthScale: number;
+  heightScale: number;
+  glowOpacity: number;
+  abdomenOpacity: number;
+  muscleOpacity: number;
+}
+
+const BIOMETRIC_SILHOUETTES = {
+  masculino: {
+    soft: "/images/evolucion-fisica/siluetas/male-soft.png",
+    athletic: "/images/evolucion-fisica/siluetas/male-athletic.png",
+  },
+  femenino: {
+    soft: "/images/evolucion-fisica/siluetas/female-soft.png",
+    athletic: "/images/evolucion-fisica/siluetas/female-athletic.png",
+  },
+} as const;
+
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
+
+const averageValues = (left: unknown, right: unknown): number | null => {
+  const values = [toNumber(left), toNumber(right)].filter(
+    (value): value is number => value !== null
+  );
+
+  if (!values.length) return null;
+
+  return Number((values.reduce((acc, value) => acc + value, 0) / values.length).toFixed(2));
+};
+
+const getBiometricMetrics = (row: EvolucionSocio): BiometricMetrics => ({
+  peso: toNumber(row.peso),
+  cintura: toNumber(row.cintura),
+  grasa: toNumber(row.porcentaje_grasa),
+  masaMuscular: toNumber(row.masa_muscular),
+  brazoPromedio: averageValues(row.biceps_izquierdo, row.biceps_derecho),
+  musloPromedio: averageValues(row.muslo_izquierdo, row.muslo_derecho),
+  pantorrillaPromedio: averageValues(row.pantorrilla_izquierda, row.pantorrilla_derecha),
+  cadera: toNumber(row.cadera),
+  sexoReferencia: row.sexo_referencia ?? null,
+});
+
+const inferBiometricSex = (metrics: BiometricMetrics): BiometricSex => {
+  if (metrics.sexoReferencia === "femenino") return "femenino";
+  if (metrics.sexoReferencia === "masculino") return "masculino";
+
+  const cadera = metrics.cadera ?? 98;
+  const cintura = metrics.cintura ?? 84;
+
+  return cadera > 100 && cintura < cadera * 0.9 ? "femenino" : "masculino";
+};
+
+const normalizeBiometric = (value: number, base: number, divisor: number) =>
+  clamp((value - base) / divisor, -1.4, 1.4);
+
+const buildBiometricVisualModel = (row: EvolucionSocio): BiometricVisualModel => {
+  const metrics = getBiometricMetrics(row);
+  const sex = inferBiometricSex(metrics);
+  const female = sex === "femenino";
+
+  const base = female
+    ? { peso: 64, cintura: 74, cadera: 102, grasa: 25, masa: 44, brazo: 28, muslo: 56, pantorrilla: 36 }
+    : { peso: 78, cintura: 86, cadera: 98, grasa: 20, masa: 56, brazo: 34, muslo: 60, pantorrilla: 38 };
+
+  const peso = metrics.peso ?? base.peso;
+  const cintura = metrics.cintura ?? base.cintura;
+  const cadera = metrics.cadera ?? base.cadera;
+  const grasa = metrics.grasa ?? base.grasa;
+  const masa = metrics.masaMuscular ?? base.masa;
+  const brazo = metrics.brazoPromedio ?? base.brazo;
+  const muslo = metrics.musloPromedio ?? base.muslo;
+  const pantorrilla = metrics.pantorrillaPromedio ?? base.pantorrilla;
+
+  const pesoN = normalizeBiometric(peso, base.peso, female ? 18 : 22);
+  const cinturaN = normalizeBiometric(cintura, base.cintura, female ? 11 : 13);
+  const caderaN = normalizeBiometric(cadera, base.cadera, female ? 12 : 14);
+  const grasaN = normalizeBiometric(grasa, base.grasa, 9);
+  const masaN = normalizeBiometric(masa, base.masa, female ? 7 : 9);
+  const brazoN = normalizeBiometric(brazo, base.brazo, female ? 4.5 : 5.5);
+  const musloN = normalizeBiometric(muslo, base.muslo, female ? 6 : 7);
+  const pantorrillaN = normalizeBiometric(pantorrilla, base.pantorrilla, 5);
+
+  const leanness = -grasaN * 0.28 - cinturaN * 0.24;
+  const muscle = masaN * 0.28 + brazoN * 0.17 + musloN * 0.14 + pantorrillaN * 0.04;
+  const bodyContext = -pesoN * 0.08 + caderaN * (female ? 0.03 : -0.02);
+  const fitnessScore = clamp(0.5 + leanness + muscle + bodyContext, 0.08, 0.92);
+
+  const volume =
+    pesoN * 0.04 +
+    cinturaN * 0.055 +
+    caderaN * (female ? 0.035 : 0.02) +
+    grasaN * 0.03 +
+    masaN * 0.018;
+
+  const muscleExpansion = masaN * 0.018 + brazoN * 0.016 + musloN * 0.012;
+
+  return {
+    sex,
+    dominantSrc:
+      fitnessScore >= 0.52 ? BIOMETRIC_SILHOUETTES[sex].athletic : BIOMETRIC_SILHOUETTES[sex].soft,
+    widthScale: clamp(1 + volume + muscleExpansion, 0.92, 1.1),
+    heightScale: clamp(1 + pesoN * 0.006 - grasaN * 0.004, 0.985, 1.018),
+    glowOpacity: clamp(0.24 + masaN * 0.055 - grasaN * 0.018, 0.18, 0.42),
+    abdomenOpacity: clamp(0.12 + grasaN * 0.14 + cinturaN * 0.08, 0.08, 0.32),
+    muscleOpacity: clamp(0.16 + masaN * 0.12 + brazoN * 0.04, 0.12, 0.34),
+  };
+};
+
+const getBiometricMetricRows = (row: EvolucionSocio) => {
+  const metrics = getBiometricMetrics(row);
+
+  return [
+    { icon: "scale" as const, label: "Peso", value: formatNumber(metrics.peso, " kg") },
+    { icon: "ruler" as const, label: "Cintura", value: formatNumber(metrics.cintura, " cm") },
+    { icon: "percent" as const, label: "% grasa", value: formatNumber(metrics.grasa, "%") },
+    { icon: "muscle" as const, label: "Masa", value: formatNumber(metrics.masaMuscular, " kg") },
+    { icon: "ruler" as const, label: "Brazo prom.", value: formatNumber(metrics.brazoPromedio, " cm") },
+    { icon: "ruler" as const, label: "Muslo prom.", value: formatNumber(metrics.musloPromedio, " cm") },
+  ];
+};
+
+const getBiometricDeltaRows = (initial: EvolucionSocio, current: EvolucionSocio) => {
+  const initialMetrics = getBiometricMetrics(initial);
+  const currentMetrics = getBiometricMetrics(current);
+
+  return [
+    { icon: "scale" as const, label: "Peso", value: formatDelta(currentMetrics.peso, initialMetrics.peso, " kg"), positiveDirection: "lower" as const },
+    { icon: "ruler" as const, label: "Cintura", value: formatDelta(currentMetrics.cintura, initialMetrics.cintura, " cm"), positiveDirection: "lower" as const },
+    { icon: "percent" as const, label: "% grasa", value: formatDelta(currentMetrics.grasa, initialMetrics.grasa, "%"), positiveDirection: "lower" as const },
+    { icon: "muscle" as const, label: "Masa muscular", value: formatDelta(currentMetrics.masaMuscular, initialMetrics.masaMuscular, " kg"), positiveDirection: "higher" as const },
+    { icon: "muscle" as const, label: "Brazo promedio", value: formatDelta(currentMetrics.brazoPromedio, initialMetrics.brazoPromedio, " cm"), positiveDirection: "higher" as const },
+    { icon: "ruler" as const, label: "Muslo promedio", value: formatDelta(currentMetrics.musloPromedio, initialMetrics.musloPromedio, " cm"), positiveDirection: "higher" as const },
+  ];
+};
+
+const isPositiveDelta = (
+  value: string,
+  direction: "lower" | "higher"
+): boolean => {
+  if (value === "-") return false;
+  const normalized = value.replace(/\./g, "").replace(",", ".");
+  const match = normalized.match(/[+-]?\d+(\.\d+)?/);
+  if (!match) return false;
+
+  const parsed = Number(match[0]);
+
+  if (!Number.isFinite(parsed) || parsed === 0) return false;
+
+  return direction === "lower" ? parsed < 0 : parsed > 0;
+};
+
+const addBiometricMetricBox = (
+  doc: jsPDF,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  icon: "scale" | "ruler" | "percent" | "muscle",
+  label: string,
+  value: string
+) => {
+  doc.setDrawColor(226, 232, 240);
+  doc.setFillColor(248, 250, 252);
+  doc.roundedRect(x, y, width, height, 2, 2, "FD");
+
+  addPdfIcon(doc, icon, x + 2.2, y + 2.2, 5.2);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(5.6);
+  doc.setTextColor(100, 116, 139);
+  doc.text(label.toUpperCase(), x + 8.5, y + 5.8, { maxWidth: width - 9 });
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.4);
+  doc.setTextColor(15, 23, 42);
+  doc.text(value, x + 3, y + height - 4.2, { maxWidth: width - 5 });
+};
+
+const addBiometricSilhouettePanel = (
+  doc: jsPDF,
+  image: PdfImageAsset | null,
+  model: BiometricVisualModel,
+  x: number,
+  y: number,
+  width: number,
+  height: number
+) => {
+  doc.setDrawColor(8, 15, 35);
+  doc.setFillColor(3, 17, 38);
+  doc.roundedRect(x, y, width, height, 3, 3, "FD");
+
+  doc.setFillColor(7, 26, 50);
+  doc.roundedRect(x + 3, y + 4, width - 6, height - 8, 3, 3, "F");
+
+  doc.setFillColor(2, 132, 199);
+  doc.circle(x + width / 2, y + height * 0.47, Math.min(width, height) * 0.25, "F");
+
+  doc.setFillColor(34, 211, 238);
+  doc.ellipse(x + width / 2, y + height - 6, width * 0.27, 1.5, "F");
+
+  if (image) {
+    const innerX = x + 3.8;
+    const innerY = y + 7;
+    const innerWidth = width - 7.6;
+    const innerHeight = height - 13;
+
+    /**
+     * Ajuste fino para PDF biométrico:
+     * - las siluetas soft son más anchas y visualmente más pesadas;
+     * - si se centran de forma totalmente neutra pueden verse más bajas,
+     *   un poco corridas o comprimidas frente a las athletic;
+     * - por eso se aplica una calibración suave por variante, manteniendo
+     *   proporción natural, apoyo visual en la plataforma y mejor encuadre.
+     */
+    const isSoftVariant = model.dominantSrc.includes("soft");
+    const variantHeightBoost = isSoftVariant ? 1.23 : 1.015;
+    const variantWidthLimit = isSoftVariant ? 1.03 : 0.93;
+    const variantOffsetX = isSoftVariant ? 1.9 : 0.35;
+    const variantBottomInset = isSoftVariant ? 0.8 : 1.15;
+
+    let targetHeight = innerHeight * model.heightScale * variantHeightBoost;
+    let targetWidth = image.width * (targetHeight / image.height);
+
+    const maxAllowedWidth = innerWidth * variantWidthLimit;
+    if (targetWidth > maxAllowedWidth) {
+      const downscale = maxAllowedWidth / targetWidth;
+      targetWidth *= downscale;
+      targetHeight *= downscale;
+    }
+
+    const targetX = innerX + (innerWidth - targetWidth) / 2 + variantOffsetX;
+    const targetY = innerY + innerHeight - targetHeight - variantBottomInset;
+
+    doc.addImage(
+      image.dataUrl,
+      "PNG",
+      targetX,
+      targetY,
+      targetWidth,
+      targetHeight
+    );
+  }
+};
+
+const addBiometricCard = (
+  doc: jsPDF,
+  row: EvolucionSocio,
+  image: PdfImageAsset | null,
+  model: BiometricVisualModel,
+  label: string,
+  title: string,
+  x: number,
+  y: number,
+  width: number,
+  height: number
+) => {
+  doc.setDrawColor(226, 232, 240);
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(x, y, width, height, 3, 3, "FD");
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6.6);
+  doc.setTextColor(100, 116, 139);
+  doc.text(label.toUpperCase(), x + 4, y + 6);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10.2);
+  doc.setTextColor(15, 23, 42);
+  doc.text(title, x + 4, y + 12);
+
+  addPdfIcon(doc, "activity", x + width - 12, y + 3.5, 7);
+
+  const sexLabel = model.sex === "femenino" ? "femenina" : "masculina";
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(5.8);
+  doc.setTextColor(2, 132, 199);
+  doc.text(`Silueta ${sexLabel} biométrica según medición.`, x + 4, y + 17, {
+    maxWidth: width - 8,
+  });
+
+  const panelX = x + 4;
+  const panelY = y + 22;
+  // Panel más ancho para que la silueta soft/robusta no se comprima horizontalmente.
+  const panelWidth = 38;
+  const panelHeight = height - 27;
+
+  addBiometricSilhouettePanel(doc, image, model, panelX, panelY, panelWidth, panelHeight);
+
+  const metrics = getBiometricMetricRows(row);
+  const metricGap = 2;
+  const metricX = panelX + panelWidth + 3;
+  const metricWidth = (width - (metricX - x) - 4 - metricGap) / 2;
+  const metricHeight = 21.2;
+
+  metrics.forEach((metric, index) => {
+    const column = index % 2;
+    const rowIndex = Math.floor(index / 2);
+    const boxX = metricX + column * (metricWidth + metricGap);
+    const boxY = panelY + rowIndex * (metricHeight + metricGap);
+
+    addBiometricMetricBox(
+      doc,
+      boxX,
+      boxY,
+      metricWidth,
+      metricHeight,
+      metric.icon,
+      metric.label,
+      metric.value
+    );
+  });
+};
+
+const addBiometricReadingCard = (
+  doc: jsPDF,
+  initial: EvolucionSocio,
+  current: EvolucionSocio,
+  x: number,
+  y: number,
+  width: number,
+  height: number
+) => {
+  doc.setDrawColor(226, 232, 240);
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(x, y, width, height, 3, 3, "FD");
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6.6);
+  doc.setTextColor(2, 132, 199);
+  doc.text("LECTURA AUTOMÁTICA", x + 4, y + 6);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(15, 23, 42);
+  doc.text("Cambios corporales detectados", x + 4, y + 13);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6.6);
+  doc.setTextColor(100, 116, 139);
+  doc.text(
+    "Resumen final de variaciones entre el registro inicial y la última medición.",
+    x + 4,
+    y + 19,
+    { maxWidth: width - 8 }
+  );
+
+  const rows = getBiometricDeltaRows(initial, current);
+  const columns = 3;
+  const gap = 2.5;
+  const rowWidth = (width - 8 - gap * (columns - 1)) / columns;
+  const rowHeight = 9.8;
+  const startX = x + 4;
+  const startY = y + 25;
+
+  rows.forEach((row, index) => {
+    const column = index % columns;
+    const rowIndex = Math.floor(index / columns);
+    const rowX = startX + column * (rowWidth + gap);
+    const rowY = startY + rowIndex * (rowHeight + 2.6);
+    const positive = isPositiveDelta(row.value, row.positiveDirection);
+
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(241, 245, 249);
+    doc.roundedRect(rowX, rowY, rowWidth, rowHeight, 2, 2, "FD");
+
+    addPdfIcon(doc, row.icon, rowX + 2, rowY + 2.1, 5);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6.2);
+    doc.setTextColor(71, 85, 105);
+    doc.text(row.label, rowX + 9, rowY + 6.1, { maxWidth: rowWidth - 22 });
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(6.6);
+    doc.setTextColor(positive ? 5 : 2, positive ? 150 : 132, positive ? 105 : 199);
+    doc.text(row.value, rowX + rowWidth - 2.5, rowY + 6.1, { align: "right" });
+  });
+
+  doc.setFillColor(230, 247, 253);
+  doc.setDrawColor(191, 232, 247);
+  doc.roundedRect(x + width - 60, y + height - 17, 56, 12, 2, 2, "FD");
+  addPdfIcon(doc, "info", x + width - 57.5, y + height - 14.7, 5.2);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(5.4);
+  doc.setTextColor(2, 132, 199);
+  doc.text(
+    doc.splitTextToSize("Cierre visual del informe de evolución física.", 44),
+    x + width - 49,
+    y + height - 12.5
+  );
+};
+
+const addBiometricVisualizationSection = async (
+  doc: jsPDF,
+  initial: EvolucionSocio,
+  current: EvolucionSocio,
+  startY: number
+): Promise<number> => {
+  let y = ensureSpace(doc, startY, 168);
+
+  const initialModel = buildBiometricVisualModel(initial);
+  const currentModel = buildBiometricVisualModel(current);
+
+  const [initialImage, currentImage] = await Promise.all([
+    loadTransparentImageAsset(initialModel.dominantSrc),
+    loadTransparentImageAsset(currentModel.dominantSrc),
+  ]);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13.2);
+  doc.setTextColor(15, 23, 42);
+  doc.text("Visualización biométrica", PAGE_MARGIN, y);
+
+  const titleIconX = PAGE_MARGIN + doc.getTextWidth("Visualización biométrica") + 5;
+  addPdfIcon(doc, "activity", titleIconX, y - 5.2, 7);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(100, 116, 139);
+  doc.text(
+    "Comparativa visual y métricas de composición corporal basada en registros reales del socio.",
+    PAGE_MARGIN,
+    y + 6,
+    { maxWidth: CONTENT_WIDTH }
+  );
+
+  y += 13;
+
+  const gap = 4;
+  const cardWidth = (CONTENT_WIDTH - gap) / 2;
+  const cardHeight = 106;
+  const readingHeight = 52;
+
+  addBiometricCard(
+    doc,
+    initial,
+    initialImage,
+    initialModel,
+    "Antes",
+    "Registro inicial",
+    PAGE_MARGIN,
+    y,
+    cardWidth,
+    cardHeight
+  );
+
+  addBiometricCard(
+    doc,
+    current,
+    currentImage,
+    currentModel,
+    "Ahora",
+    "Última medición",
+    PAGE_MARGIN + cardWidth + gap,
+    y,
+    cardWidth,
+    cardHeight
+  );
+
+  y += cardHeight + 6;
+
+  addBiometricReadingCard(
+    doc,
+    initial,
+    current,
+    PAGE_MARGIN,
+    y,
+    CONTENT_WIDTH,
+    readingHeight
+  );
+
+  return y + readingHeight + 10;
+};
+
+
 export const descargarEvolucionFisicaPdf = async ({
   rows,
   socioNombre = "Socio",
@@ -729,6 +1399,8 @@ export const descargarEvolucionFisicaPdf = async ({
   y = addSegmentedMeasurementsTable(doc, orderedRows, y + 12);
 
   y = addDashboardCharts(doc, dashboardCharts, y + 8);
+
+  y = await addBiometricVisualizationSection(doc, initial, current, y + 8);
 
   addFooter(doc);
 
