@@ -86,6 +86,7 @@ export const useSidebarMenu = (
       'Avisos',
       'Rutinas',
       'Dietas',
+      'Evolución Física',
       'Equipamientos',
       'Actividades',
       'Entrenadores',

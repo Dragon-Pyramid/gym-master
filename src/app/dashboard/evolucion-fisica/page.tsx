@@ -10,10 +10,12 @@ import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import EvolucionSocioForm from "@/components/forms/EvolucionSocioForm";
 import EvolucionSocioTable from "@/components/tables/EvolucionSocioTable";
 import EvolucionFisicaDashboard from "@/components/dashboard/evolucion-fisica/EvolucionFisicaDashboard";
+import EvolucionFisicaViewModal from "@/components/modal/EvolucionFisicaViewModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { useAuthStore } from "@/stores/authStore";
 import { EvolucionSocio } from "@/interfaces/evolucionSocio.interface";
 import {
   getSociosBasicos,
@@ -54,7 +56,170 @@ const formatDate = (value?: string | Date | null) => {
   return Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString();
 };
 
+
+interface DashboardChartLegendItem {
+  label: string;
+  color: string;
+}
+
+interface DashboardChartSnapshot {
+  title: string;
+  description?: string;
+  dataUrl: string;
+  width: number;
+  height: number;
+  legends?: DashboardChartLegendItem[];
+}
+
+const getChartLegends = (title: string): DashboardChartLegendItem[] => {
+  const normalizedTitle = title.trim().toLowerCase();
+
+  if (normalizedTitle.includes("peso")) {
+    return [
+      { label: "Peso", color: "#02a8e1" },
+      { label: "IMC", color: "#6d28d9" },
+    ];
+  }
+
+  if (normalizedTitle.includes("composición") || normalizedTitle.includes("composicion")) {
+    return [
+      { label: "% grasa", color: "#f97316" },
+      { label: "Masa muscular", color: "#16a34a" },
+    ];
+  }
+
+  if (normalizedTitle.includes("medidas")) {
+    return [
+      { label: "Cintura", color: "#0f172a" },
+      { label: "Pecho", color: "#0284c7" },
+      { label: "Cadera", color: "#db2777" },
+    ];
+  }
+
+  return [];
+};
+
+const waitForChartPaint = () =>
+  new Promise<void>((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => resolve());
+    });
+  });
+
+const svgToPngDataUrl = async (
+  svgElement: SVGSVGElement,
+  scale = 2
+): Promise<{ dataUrl: string; width: number; height: number } | null> => {
+  const rect = svgElement.getBoundingClientRect();
+  const width = Math.max(1, Math.round(rect.width));
+  const height = Math.max(1, Math.round(rect.height));
+
+  if (!width || !height) return null;
+
+  const clonedSvg = svgElement.cloneNode(true) as SVGSVGElement;
+  clonedSvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  clonedSvg.setAttribute("width", String(width));
+  clonedSvg.setAttribute("height", String(height));
+
+  if (!clonedSvg.getAttribute("viewBox")) {
+    clonedSvg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  }
+
+  const background = document.createElementNS(
+    "http://www.w3.org/2000/svg",
+    "rect"
+  );
+  background.setAttribute("x", "0");
+  background.setAttribute("y", "0");
+  background.setAttribute("width", String(width));
+  background.setAttribute("height", String(height));
+  background.setAttribute("fill", "#ffffff");
+  clonedSvg.insertBefore(background, clonedSvg.firstChild);
+
+  const style = document.createElementNS("http://www.w3.org/2000/svg", "style");
+  style.textContent = `
+    text { font-family: Arial, Helvetica, sans-serif; }
+    .recharts-cartesian-axis-tick-value,
+    .recharts-legend-item-text { fill: #4b5563; }
+  `;
+  clonedSvg.insertBefore(style, clonedSvg.firstChild);
+
+  const svgText = new XMLSerializer().serializeToString(clonedSvg);
+  const svgBlob = new Blob([svgText], {
+    type: "image/svg+xml;charset=utf-8",
+  });
+  const url = URL.createObjectURL(svgBlob);
+
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("No se pudo capturar el gráfico"));
+      img.src = url;
+    });
+
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(width * scale);
+    canvas.height = Math.round(height * scale);
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    return {
+      dataUrl: canvas.toDataURL("image/png"),
+      width,
+      height,
+    };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+};
+
+const captureDashboardChartSnapshots = async (): Promise<DashboardChartSnapshot[]> => {
+  if (typeof document === "undefined") return [];
+
+  await waitForChartPaint();
+
+  const cards = Array.from(
+    document.querySelectorAll<HTMLElement>(
+      '[data-evolucion-pdf-chart-card="true"]'
+    )
+  );
+
+  const snapshots: DashboardChartSnapshot[] = [];
+
+  for (const card of cards) {
+    const svg = card.querySelector<SVGSVGElement>("svg.recharts-surface");
+    if (!svg) continue;
+
+    try {
+      const png = await svgToPngDataUrl(svg);
+      if (!png) continue;
+
+      const title = card.dataset.chartTitle || "Gráfico de evolución";
+
+      snapshots.push({
+        title,
+        description: card.dataset.chartDescription || undefined,
+        dataUrl: png.dataUrl,
+        width: png.width,
+        height: png.height,
+        legends: getChartLegends(title),
+      });
+    } catch (error) {
+      console.warn("No se pudo capturar un gráfico para el PDF:", error);
+    }
+  }
+
+  return snapshots;
+};
+
 export default function EvolucionFisicaPage() {
+  const { user } = useAuthStore();
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [exportRows, setExportRows] = useState<EvolucionSocio[]>([]);
@@ -63,37 +228,71 @@ export default function EvolucionFisicaPage() {
   const [socios, setSocios] = useState<SocioBasico[]>([]);
   const [selectedSocioId, setSelectedSocioId] = useState("me");
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [selectedEvolucion, setSelectedEvolucion] = useState<EvolucionSocio | null>(null);
+
+  const userRole = user?.rol?.trim().toLowerCase() ?? "";
+  const isAdmin = userRole === "admin" || userRole === "administrador";
 
   useEffect(() => {
     let mounted = true;
 
+    if (!isAdmin) {
+      setSocios([]);
+      setSelectedSocioId("me");
+      return () => {
+        mounted = false;
+      };
+    }
+
     (async () => {
       const res = await getSociosBasicos();
 
-      if (mounted && res.ok && res.data.length > 0) {
+      if (!mounted) return;
+
+      if (res.ok && res.data.length > 0) {
         setSocios(res.data);
+
+        setSelectedSocioId((current) => {
+          const currentStillExists = res.data.some(
+            (socio) => getSocioId(socio) === current
+          );
+
+          if (current && current !== "me" && currentStillExists) {
+            return current;
+          }
+
+          return getSocioId(res.data[0]) || "me";
+        });
+      } else {
+        setSocios([]);
+        setSelectedSocioId("me");
       }
     })();
 
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [isAdmin]);
 
   const effectiveSocioId = useMemo(
-    () => selectedSocioId || "me",
-    [selectedSocioId]
+    () => (isAdmin ? selectedSocioId || "me" : "me"),
+    [isAdmin, selectedSocioId]
   );
 
   const selectedSocioName = useMemo(() => {
-    if (effectiveSocioId === "me") {
-      return "Socio autenticado";
+    if (!isAdmin || effectiveSocioId === "me") {
+      const authenticatedName = user?.nombre?.trim();
+      const authenticatedEmail = user?.email?.trim();
+
+      return authenticatedName || authenticatedEmail || "Socio autenticado";
     }
 
     const selectedSocio = socios.find((socio) => getSocioId(socio) === effectiveSocioId);
 
     return selectedSocio ? formatSocioName(selectedSocio) : "Socio";
-  }, [effectiveSocioId, socios]);
+  }, [effectiveSocioId, isAdmin, socios, user?.email, user?.nombre]);
+
+  const canRenderEvolutionData = !isAdmin || effectiveSocioId !== "me";
 
   const handleDownloadPdf = async () => {
     if (!exportRows.length) {
@@ -104,10 +303,13 @@ export default function EvolucionFisicaPage() {
     setGeneratingPdf(true);
 
     try {
+      const dashboardCharts = await captureDashboardChartSnapshots();
+
       await descargarEvolucionFisicaPdf({
         rows: exportRows,
         socioNombre: selectedSocioName,
         logoUrl: "/gm_logo.svg",
+        dashboardCharts,
       });
 
       toast.success("PDF de evolución física generado");
@@ -222,42 +424,52 @@ export default function EvolucionFisicaPage() {
                   Registro profesional de medidas corporales, composición física e historial comparativo del socio.
                 </p>
               </CardHeader>
-              <CardContent className="grid gap-4 p-4 md:grid-cols-[1fr_auto]">
-                <div className="space-y-2">
-                  <label htmlFor="socioId" className="text-sm font-medium">
-                    Socio
-                  </label>
-                  <select
-                    id="socioId"
-                    value={selectedSocioId}
-                    onChange={(e) => {
-                      setSelectedSocioId(e.target.value || "me");
-                      setShowForm(false);
-                    }}
-                    className="h-10 w-full max-w-xl rounded-md border bg-background px-3 text-sm"
-                  >
-                    <option value="me">Mi evolución / socio autenticado</option>
-                    {socios.map((socio) => {
-                      const id = getSocioId(socio);
-                      if (!id) return null;
+              <CardContent
+                className={`flex flex-col gap-4 p-4 md:flex-row md:items-end ${
+                  isAdmin ? "md:justify-between" : "md:justify-end"
+                }`}
+              >
+                {isAdmin && (
+                  <div className="space-y-2">
+                    <label htmlFor="socioId" className="text-sm font-medium">
+                      Socio a consultar
+                    </label>
+                    <select
+                      id="socioId"
+                      value={selectedSocioId}
+                      onChange={(e) => {
+                        setSelectedSocioId(e.target.value || "me");
+                        setShowForm(false);
+                        setSelectedEvolucion(null);
+                      }}
+                      className="h-10 w-full max-w-xl rounded-md border bg-background px-3 text-sm md:min-w-[380px]"
+                    >
+                      <option value="me" disabled>
+                        Seleccionar socio
+                      </option>
+                      {socios.map((socio) => {
+                        const id = getSocioId(socio);
+                        if (!id) return null;
 
-                      return (
-                        <option key={id} value={id}>
-                          {formatSocioName(socio)}
-                        </option>
-                      );
-                    })}
-                  </select>
-                  {socios.length === 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      Si ingresaste como socio, se usará tu perfil autenticado. Si ingresaste como administrador, aquí aparecerán los socios disponibles.
-                    </p>
-                  )}
-                </div>
+                        return (
+                          <option key={id} value={id}>
+                            {formatSocioName(socio)}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    {socios.length === 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        No hay socios disponibles para consultar en este momento.
+                      </p>
+                    )}
+                  </div>
+                )}
 
-                <div className="flex items-end">
+                <div className="flex items-end md:ml-auto">
                   <Button
                     onClick={() => setShowForm(true)}
+                    disabled={!canRenderEvolutionData}
                     className="w-full bg-[#02a8e1] hover:bg-[#0288b1] md:w-auto"
                   >
                     Nueva evolución
@@ -284,12 +496,21 @@ export default function EvolucionFisicaPage() {
               </Card>
             )}
 
-            <EvolucionFisicaDashboard
-              rows={dashboardRows}
-              socioNombre={selectedSocioName}
-            />
+            {canRenderEvolutionData ? (
+              <EvolucionFisicaDashboard
+                rows={dashboardRows}
+                socioNombre={selectedSocioName}
+              />
+            ) : (
+              <Card className="w-full rounded-2xl border bg-white shadow-sm">
+                <CardContent className="p-6 text-sm text-muted-foreground">
+                  Seleccioná un socio para consultar su evolución física.
+                </CardContent>
+              </Card>
+            )}
 
-            <Card className="w-full">
+            {canRenderEvolutionData && (
+              <Card className="w-full">
               <CardHeader className="flex flex-wrap items-center justify-between gap-4 border-b p-4 md:flex-nowrap">
                 <h2 className="text-xl font-bold">Historial de medidas</h2>
                 <div className="flex w-full flex-wrap items-center gap-2 md:w-auto">
@@ -335,12 +556,20 @@ export default function EvolucionFisicaPage() {
                   searchTerm={searchTerm}
                   onDataChange={(rows) => setExportRows(rows)}
                   onLoadedDataChange={handleLoadedDataChange}
+                  onView={(evolucion) => setSelectedEvolucion(evolucion)}
                 />
               </CardContent>
             </Card>
+            )}
           </main>
           <AppFooter />
         </SidebarInset>
+        <EvolucionFisicaViewModal
+          open={Boolean(selectedEvolucion)}
+          onClose={() => setSelectedEvolucion(null)}
+          evolucion={selectedEvolucion}
+          socioNombre={selectedSocioName}
+        />
       </div>
     </SidebarProvider>
   );
