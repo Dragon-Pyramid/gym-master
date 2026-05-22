@@ -204,13 +204,19 @@ function ChartCard({
   children: React.ReactNode;
 }) {
   return (
-    <Card className="rounded-2xl border bg-white shadow-sm">
-      <CardHeader className="space-y-1 border-b p-4">
-        <h3 className="text-lg font-semibold text-gray-950">{title}</h3>
-        <p className="text-sm text-gray-500">{description}</p>
-      </CardHeader>
-      <CardContent className="h-[320px] p-4">{children}</CardContent>
-    </Card>
+    <div
+      data-evolucion-pdf-chart-card="true"
+      data-chart-title={title}
+      data-chart-description={description}
+    >
+      <Card className="rounded-2xl border bg-white shadow-sm">
+        <CardHeader className="space-y-1 border-b p-4">
+          <h3 className="text-lg font-semibold text-gray-950">{title}</h3>
+          <p className="text-sm text-gray-500">{description}</p>
+        </CardHeader>
+        <CardContent className="h-[320px] p-4">{children}</CardContent>
+      </Card>
+    </div>
   );
 }
 
