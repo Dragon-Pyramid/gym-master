@@ -112,6 +112,66 @@ export const createQRDiario = async () => {
   return { qrCode, url, token };
 };
 
+type EstadoCuotaAcceso = {
+  estado_cuota: string | null;
+  dias_vencido: number;
+  periodo_hasta: string | null;
+  ultimo_vencimiento: string | null;
+};
+
+function toAccessNumber(value: unknown): number {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function normalizeEstadoCuotaAcceso(row: any): EstadoCuotaAcceso | null {
+  if (!row) return null;
+
+  return {
+    estado_cuota: row.estado_cuota ?? null,
+    dias_vencido: toAccessNumber(row.dias_vencido),
+    periodo_hasta: row.periodo_hasta ?? null,
+    ultimo_vencimiento: row.ultimo_vencimiento ?? null,
+  };
+}
+
+function getSocioAccessPayload(socio: any) {
+  return {
+    id_socio: socio.id_socio,
+    nombre_completo: socio.nombre_completo,
+    foto: socio.foto ?? null,
+  };
+}
+
+async function getEstadoCuotaAcceso(supabase: any, socioId: string) {
+  const { data, error } = await supabase.rpc('obtener_estado_cuota_socio', {
+    p_id_socio: socioId,
+  });
+
+  if (error) {
+    console.warn('No se pudo consultar estado de cuota para control de acceso:', error.message);
+    return null;
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  return normalizeEstadoCuotaAcceso(row);
+}
+
+function isCuotaConDeuda(estado: EstadoCuotaAcceso | null) {
+  return estado?.estado_cuota === 'vencido' || estado?.estado_cuota === 'sin_pagos';
+}
+
+function buildMensajeDeuda(estado: EstadoCuotaAcceso | null) {
+  if (estado?.estado_cuota === 'sin_pagos') {
+    return 'Usted no registra pagos activos. Regularice su situación en administración.';
+  }
+
+  const periodo = estado?.periodo_hasta || estado?.ultimo_vencimiento;
+  const periodoTexto = periodo ? ` con vencimiento ${periodo}` : ' correspondiente';
+
+  return `Usted adeuda la cuota${periodoTexto}. Regularice su situación en administración.`;
+}
+
 export const registrarAsistenciaDesdeQR = async (
   tokenAsistencia: string,
   user: JwtUser
@@ -134,20 +194,41 @@ export const registrarAsistenciaDesdeQR = async (
     return {
       valido: false,
       error: 'El código QR ha expirado. Solicita un nuevo código.',
+      access_status: 'qr_expirado',
+      alert_type: 'error',
     };
   }
 
-  //VERIFICO QUE EL SOCIO EXISTA Y ESTE ACTIVO
+  const supabase = conexionBD();
+
+  //VERIFICO QUE EL SOCIO EXISTA
   const socio = await getSocioByIdUsuario(user.id);
-  if (!socio || !socio.activo) {
+  if (!socio) {
     return {
       valido: false,
-      error: 'No se encontró un socio activo asociado a tu cuenta.',
+      error: 'No se encontró un socio asociado a tu cuenta.',
+      access_status: 'sin_socio',
+      alert_type: 'error',
     };
   }
 
+  //SI EL SOCIO ESTÁ INACTIVO/DESACTIVADO, NO SE REGISTRA ASISTENCIA
+  if (!socio.activo) {
+    return {
+      valido: false,
+      error: 'Usted está desactivado. Regularice su situación en administración.',
+      access_status: 'desactivado',
+      alert_type: 'inactive',
+      bloquea_ingreso: true,
+      socio: getSocioAccessPayload(socio),
+    };
+  }
+
+  const estadoCuota = await getEstadoCuotaAcceso(supabase, socio.id_socio);
+  const tieneDeuda = isCuotaConDeuda(estadoCuota);
+  const mensajeDeuda = tieneDeuda ? buildMensajeDeuda(estadoCuota) : null;
+
   //VERIFICO SI YA EXISTE UNA ASISTENCIA PARA HOY
-  const supabase = conexionBD();
   const { data: dataSocioAsistencia, error: errorSocioAsistencia } =
     await supabase
       .from('asistencia')
@@ -175,8 +256,14 @@ export const registrarAsistenciaDesdeQR = async (
   if (dataSocioAsistencia) {
     return {
       valido: true,
-      message: `Asistencia ya registrada para hoy. ¡Bienvenido de nuevo!`,
+      message: tieneDeuda
+        ? `Asistencia ya registrada para hoy. ${mensajeDeuda}`
+        : 'Asistencia ya registrada para hoy. ¡Bienvenido de nuevo!',
       asistencia: dataSocioAsistencia,
+      access_status: tieneDeuda ? 'deuda' : 'al_dia',
+      alert_type: tieneDeuda ? 'debt' : 'success',
+      estado_cuota: estadoCuota,
+      mensaje_acceso: mensajeDeuda,
     };
   }
 
@@ -210,10 +297,17 @@ export const registrarAsistenciaDesdeQR = async (
 
   return {
     valido: true,
-    message: 'Asistencia registrada correctamente.',
+    message: tieneDeuda
+      ? `Asistencia registrada. ${mensajeDeuda}`
+      : 'Asistencia registrada correctamente.',
     asistencia: nuevaAsistencia,
+    access_status: tieneDeuda ? 'deuda' : 'al_dia',
+    alert_type: tieneDeuda ? 'debt' : 'success',
+    estado_cuota: estadoCuota,
+    mensaje_acceso: mensajeDeuda,
   };
 };
+
 
 export const dataConcurrenciaSemanal = async (user: JwtUser) => {
   const supabase = conexionBD();
