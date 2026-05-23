@@ -13,6 +13,39 @@ export interface AsistenciaReciente {
   } | null;
 }
 
+export type RegistroAsistenciaAlertType = 'success' | 'debt' | 'inactive' | 'error';
+
+export interface RegistroAsistenciaQRResponse {
+  valido?: boolean;
+  message?: string;
+  error?: string;
+  access_status?: 'al_dia' | 'deuda' | 'desactivado' | 'qr_expirado' | 'sin_socio' | string;
+  alert_type?: RegistroAsistenciaAlertType;
+  bloquea_ingreso?: boolean;
+  mensaje_acceso?: string | null;
+  estado_cuota?: {
+    estado_cuota?: string | null;
+    dias_vencido?: number;
+    periodo_hasta?: string | null;
+    ultimo_vencimiento?: string | null;
+  } | null;
+  asistencia?: {
+    socio?: {
+      id_socio?: string;
+      nombre_completo?: string;
+      usuario_id?: {
+        foto?: string | null;
+        nombre?: string | null;
+      } | null;
+    } | null;
+  };
+  socio?: {
+    id_socio?: string;
+    nombre_completo?: string;
+    foto?: string | null;
+  } | null;
+}
+
 export const fetchQrCode = async (): Promise<string> => {
   const response = await axios.get('api/asistencias/qr-dia', {
     headers: {
@@ -24,7 +57,7 @@ export const fetchQrCode = async (): Promise<string> => {
 
 export const registrarAsistenciaQR = async (
   qr: string
-): Promise<{ message?: string; error?: string }> => {
+): Promise<RegistroAsistenciaQRResponse> => {
   let tokenAsistencia = qr;
   try {
     try {
@@ -32,6 +65,7 @@ export const registrarAsistenciaQR = async (
       const queryToken = url.searchParams.get('tokenAsistencia');
       if (queryToken) tokenAsistencia = queryToken;
     } catch {}
+
     const response = await axios.post(
       '/api/asistencias/registro-qr',
       { qr: tokenAsistencia },
@@ -42,17 +76,29 @@ export const registrarAsistenciaQR = async (
         },
       }
     );
+
     return response.data;
   } catch (error: unknown) {
-    const axiosError = error as { response?: { data?: { error?: string } } };
-    if (axiosError.response && axiosError.response.data) {
+    const axiosError = error as {
+      response?: {
+        data?: RegistroAsistenciaQRResponse;
+      };
+    };
+
+    if (axiosError.response?.data) {
       return {
+        ...axiosError.response.data,
         error:
           axiosError.response.data.error ||
           'No se pudo registrar la asistencia.',
       };
     }
-    return { error: 'Error de red. Intente nuevamente.' };
+
+    return {
+      valido: false,
+      alert_type: 'error',
+      error: 'Error de red. Intente nuevamente.',
+    };
   }
 };
 

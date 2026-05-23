@@ -419,11 +419,12 @@ const endpointDefinitions: EndpointDefinition[] = [
     ],
     "tag": "Asistencias",
     "summary": "QR diario de asistencia",
-    "description": "Genera o recupera el QR del día para registrar asistencia.",
+    "description": "Genera el QR diario de asistencia para que los socios lo escaneen desde su sesión. El QR incluye un token vigente para el día.",
     "auth": true,
     "admin": false,
     "notImplemented": false,
     "statuses": [
+      200,
       401,
       500
     ],
@@ -455,7 +456,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     ],
     "tag": "Asistencias",
     "summary": "Asistencias recientes",
-    "description": "Devuelve las asistencias recientes para mostrar actividad operativa.",
+    "description": "Devuelve las últimas asistencias recientes para mostrar actividad operativa en el panel administrativo, incluyendo socio, foto y hora de ingreso.",
     "auth": true,
     "admin": false,
     "notImplemented": false,
@@ -475,14 +476,15 @@ const endpointDefinitions: EndpointDefinition[] = [
     ],
     "tag": "Asistencias",
     "summary": "Registro de asistencia por QR",
-    "description": "Valida un token de QR y registra la asistencia del usuario autenticado. GET usa query tokenAsistencia; POST acepta body con qr.",
+    "description": "Valida el token del QR diario y registra la asistencia del socio autenticado. Mantiene el caso normal con bienvenida, informa deuda con alerta roja si la cuota está vencida o sin pagos, y bloquea el ingreso con alerta amarillo/naranja si el socio está desactivado.",
     "auth": true,
     "admin": false,
     "notImplemented": false,
     "statuses": [
       200,
       400,
-      401
+      401,
+      403
     ],
     "queryParams": [
       "tokenAsistencia"

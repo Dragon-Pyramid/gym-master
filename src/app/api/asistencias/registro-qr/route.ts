@@ -2,37 +2,46 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authMiddleware } from '@/middlewares/auth.middleware';
 import { registrarAsistenciaDesdeQR } from '@/services/asistenciaService';
 
+function getInvalidRegistroStatus(registro: any) {
+  if (registro?.access_status === 'desactivado') return 403;
+  if (registro?.access_status === 'qr_expirado') return 400;
+  return 400;
+}
+
+async function handleRegistroQR(req: NextRequest, tokenAsistencia: string | null) {
+  const { user } = await authMiddleware(req);
+
+  if (!user) {
+    return NextResponse.json(
+      { valido: false, error: 'El usuario no esta logueado' },
+      { status: 400 }
+    );
+  }
+
+  if (!tokenAsistencia) {
+    return NextResponse.json(
+      { valido: false, error: 'Falta el tokenAsistencia' },
+      { status: 400 }
+    );
+  }
+
+  const registro = await registrarAsistenciaDesdeQR(tokenAsistencia, user);
+
+  if (!registro.valido) {
+    return NextResponse.json(registro, {
+      status: getInvalidRegistroStatus(registro),
+    });
+  }
+
+  return NextResponse.json(registro, { status: 200 });
+}
+
 export async function GET(req: NextRequest) {
   try {
-    //VERIFICO QUE ESTEEL USUARIO LOGUEADO
-    const { user } = await authMiddleware(req);
-    if (!user) {
-      return NextResponse.json(
-        { error: 'El usuario no esta logueado' },
-        { status: 400 }
-      );
-    }
-    //AGARRO LA QUERY DE LA URL
     const { searchParams } = new URL(req.url);
     const tokenAsistencia = searchParams.get('tokenAsistencia');
-    //SI NO ESTA, LANZO ERROR
-    if (!tokenAsistencia) {
-      return NextResponse.json(
-        { error: 'Falta el tokenAsistencia' },
-        { status: 400 }
-      );
-    }
 
-    //LE MANDO EL TOKEN DE LA ASISTENCIA Y EL USUARIO LOGUEADO
-    const registro = await registrarAsistenciaDesdeQR(tokenAsistencia, user);
-
-    //SI NO ES VALIDO, ES PORQUE YA HABIA IDO AL GYM Y NO CREO LA ASISTENCIA NUEVA
-    if (!registro.valido) {
-      return NextResponse.json({ error: registro.error }, { status: 400 });
-    }
-
-    // Retornar la respuesta si fue valida o no y la asistencia creada
-    return NextResponse.json(registro, { status: 200 });
+    return handleRegistroQR(req, tokenAsistencia);
   } catch (err: any) {
     console.error(err);
     return NextResponse.json(
@@ -44,35 +53,10 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    //VERIFICO QUE ESTEEL USUARIO LOGUEADO
-    const { user } = await authMiddleware(req);
-    if (!user) {
-      return NextResponse.json(
-        { error: 'El usuario no esta logueado' },
-        { status: 400 }
-      );
-    }
-    //AGARRO EL TOKEN DEL BODY (viene como { qr: tokenAsistencia })
     const body = await req.json();
     const tokenAsistencia = body.qr;
-    //SI NO ESTA, LANZO ERROR
-    if (!tokenAsistencia) {
-      return NextResponse.json(
-        { error: 'Falta el tokenAsistencia' },
-        { status: 400 }
-      );
-    }
 
-    //LE MANDO EL TOKEN DE LA ASISTENCIA Y EL USUARIO LOGUEADO
-    const registro = await registrarAsistenciaDesdeQR(tokenAsistencia, user);
-
-    //SI NO ES VALIDO, ES PORQUE YA HABIA IDO AL GYM Y NO CREO LA ASISTENCIA NUEVA
-    if (!registro.valido) {
-      return NextResponse.json({ error: registro.error }, { status: 400 });
-    }
-
-    // Retornar la respuesta si fue valida o no y la asistencia creada
-    return NextResponse.json(registro, { status: 200 });
+    return handleRegistroQR(req, tokenAsistencia);
   } catch (err: any) {
     console.error(err);
     return NextResponse.json(
