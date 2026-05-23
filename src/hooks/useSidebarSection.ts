@@ -96,6 +96,7 @@ export const useSidebarMenu = (
       'Productos',
       'Servicios',
       'Otros gastos',
+      'Parametrización',
       'Perfil',
       'Preferencias',
     ];
