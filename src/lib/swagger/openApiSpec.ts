@@ -774,6 +774,26 @@ const endpointDefinitions: EndpointDefinition[] = [
     "source": "src/app/api/entrenadores/route.ts"
   },
   {
+    "path": "/api/equipamientos/alertas-mantenimiento",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Equipamiento",
+    "summary": "Alertas de mantenimiento de equipamiento",
+    "description": "Devuelve el tablero operativo de alertas de mantenimiento calculado a partir de la próxima revisión, el estado del equipamiento y un umbral configurable en días. Permite detectar equipos vencidos, próximos a revisión, en mantenimiento, fuera de servicio o sin fecha de revisión. Se usa en el módulo de Equipamientos para mostrar alertas anticipadas y priorizar tareas.",
+    "auth": false,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      500
+    ],
+    "queryParams": [
+      "umbralDias"
+    ],
+    "source": "src/app/api/equipamientos/alertas-mantenimiento/route.ts"
+  },
+  {
     "path": "/api/equipamientos/{id}",
     "methods": [
       "PUT",
@@ -1778,6 +1798,8 @@ function getQueryParams(endpoint: EndpointDefinition) {
         "ID del socio a consultar. Si se omite, el endpoint resuelve según el rol del usuario autenticado.",
       url:
         "URL absoluta de la imagen remota que será descargada por el proxy.",
+      umbralDias:
+        "Cantidad de días de anticipación para considerar una revisión como próxima. Valor por defecto: 5. Rango sugerido: 0 a 90.",
       options:
         "Cuando vale true, devuelve opciones de formulario en lugar del listado principal.",
       page:
@@ -2007,7 +2029,46 @@ function buildResponses(endpoint: EndpointDefinition, method: string) {
           description: successDescription(method, endpoint),
           content: {
             "application/json": {
-              schema: { $ref: "#/components/schemas/GenericSuccessResponse" },
+              schema:
+                endpoint.path === "/api/equipamientos/alertas-mantenimiento"
+                  ? { $ref: "#/components/schemas/AlertasMantenimientoEquipamientoResponse" }
+                  : { $ref: "#/components/schemas/GenericSuccessResponse" },
+              examples:
+                endpoint.path === "/api/equipamientos/alertas-mantenimiento"
+                  ? {
+                      alertas: {
+                        summary: "Resumen de alertas de mantenimiento",
+                        value: {
+                          generated_at: "2026-05-23T15:30:00.000Z",
+                          umbral_dias: 5,
+                          resumen: {
+                            total: 12,
+                            vencidos: 2,
+                            proximos: 3,
+                            ok: 5,
+                            sin_fecha: 1,
+                            en_mantenimiento: 1,
+                            fuera_de_servicio: 0,
+                          },
+                          alertas_operativas: [
+                            {
+                              id: "2d2a45df-0fd5-4f4e-9c01-5de07dca1111",
+                              nombre: "Polea alta",
+                              tipo: "Fuerza",
+                              ubicacion: "Sala de musculación",
+                              estado: "operativo",
+                              proxima_revision: "2026-05-25",
+                              dias_para_revision: 2,
+                              estado_alerta: "proximo",
+                              severidad: "alta",
+                              mensaje: "La revisión vence en 2 días.",
+                            },
+                          ],
+                          alertas: [],
+                        },
+                      },
+                    }
+                  : undefined,
             },
           },
         };
@@ -2141,6 +2202,107 @@ export const openApiSpec = {
           { data: [] },
           { message: "Operación realizada correctamente" },
         ],
+      },
+      AlertaMantenimientoEquipamiento: {
+        type: "object",
+        required: [
+          "id",
+          "nombre",
+          "estado_alerta",
+          "severidad",
+          "mensaje",
+        ],
+        properties: {
+          id: { type: "string", format: "uuid" },
+          nombre: { type: "string", example: "Polea alta" },
+          tipo: { type: "string", nullable: true, example: "Fuerza" },
+          ubicacion: {
+            type: "string",
+            nullable: true,
+            example: "Sala de musculación",
+          },
+          estado: {
+            type: "string",
+            nullable: true,
+            example: "operativo",
+          },
+          proxima_revision: {
+            type: "string",
+            nullable: true,
+            format: "date",
+            example: "2026-05-25",
+          },
+          dias_para_revision: {
+            type: "integer",
+            nullable: true,
+            example: 2,
+          },
+          estado_alerta: {
+            type: "string",
+            enum: [
+              "vencido",
+              "proximo",
+              "ok",
+              "sin_fecha",
+              "en_mantenimiento",
+              "fuera_de_servicio",
+            ],
+            example: "proximo",
+          },
+          severidad: {
+            type: "string",
+            enum: ["critica", "alta", "media", "baja", "ok"],
+            example: "alta",
+          },
+          mensaje: {
+            type: "string",
+            example: "La revisión vence en 2 días.",
+          },
+        },
+      },
+      AlertasMantenimientoEquipamientoResponse: {
+        type: "object",
+        required: [
+          "generated_at",
+          "umbral_dias",
+          "resumen",
+          "alertas",
+          "alertas_operativas",
+        ],
+        properties: {
+          generated_at: {
+            type: "string",
+            format: "date-time",
+          },
+          umbral_dias: {
+            type: "integer",
+            minimum: 0,
+            maximum: 90,
+            example: 5,
+          },
+          resumen: {
+            type: "object",
+            properties: {
+              total: { type: "integer", example: 12 },
+              vencidos: { type: "integer", example: 2 },
+              proximos: { type: "integer", example: 3 },
+              ok: { type: "integer", example: 5 },
+              sin_fecha: { type: "integer", example: 1 },
+              en_mantenimiento: { type: "integer", example: 1 },
+              fuera_de_servicio: { type: "integer", example: 0 },
+            },
+          },
+          alertas: {
+            type: "array",
+            items: { $ref: "#/components/schemas/AlertaMantenimientoEquipamiento" },
+          },
+          alertas_operativas: {
+            type: "array",
+            description:
+              "Subconjunto de alertas excluyendo estado ok, útil para el panel operativo.",
+            items: { $ref: "#/components/schemas/AlertaMantenimientoEquipamiento" },
+          },
+        },
       },
       ErrorResponse: {
         type: "object",
