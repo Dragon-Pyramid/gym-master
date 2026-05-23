@@ -69,6 +69,7 @@ function normalizePago(row: any): ResponsePago {
     socio: {
       id_socio: row.socio?.id_socio ?? row.socio_id,
       nombre_completo: row.socio?.nombre_completo ?? 'Socio sin nombre',
+      email: row.socio?.email ?? null,
     },
     cuota: {
       id: row.cuota?.id ?? row.cuota_id,

@@ -127,3 +127,34 @@ export interface PagoManualFormOptions {
     activo?: boolean | null;
   }>;
 }
+
+
+export interface PagoVerificationResponse {
+  valid: boolean;
+  codigo?: string;
+  verificado_en?: string;
+  error?: string;
+  pago?: {
+    id: string;
+    fecha_pago: string;
+    fecha_vencimiento: string;
+    periodo_desde?: string | null;
+    periodo_hasta?: string | null;
+    meses_cubiertos?: number | null;
+    monto_pagado: number;
+    metodo_pago?: string | null;
+    estado?: string | null;
+    activo?: boolean | null;
+    socio?: {
+      id_socio: string;
+      nombre_completo: string;
+      email?: string | null;
+    } | null;
+    cuota?: {
+      id: string;
+      descripcion: string;
+      monto?: number | null;
+      periodo?: string | null;
+    } | null;
+  };
+}

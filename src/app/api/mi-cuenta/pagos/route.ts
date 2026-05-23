@@ -5,7 +5,7 @@ import { getSocioByIdUsuario } from '@/services/socioService';
 
 export const dynamic = 'force-dynamic';
 
-function normalizePago(row: any) {
+function normalizePago(row: any, socioFallback?: { id_socio: string; nombre_completo: string; email?: string | null } | null) {
   return {
     id: row.id,
     fecha_pago: row.fecha_pago,
@@ -22,6 +22,7 @@ function normalizePago(row: any) {
     stripe_payment_intent_id: row.stripe_payment_intent_id ?? null,
     cuota: row.cuota ?? null,
     registrado_por: row.registrado_por ?? null,
+    socio: row.socio ?? socioFallback ?? null,
   };
 }
 
@@ -37,10 +38,16 @@ export async function GET(req: Request) {
     }
 
     let socioId = user.id_socio;
+    let socioFallback: { id_socio: string; nombre_completo: string; email?: string | null } | null = null;
 
     if (!socioId) {
       const socio = await getSocioByIdUsuario(user.id);
       socioId = socio.id_socio;
+      socioFallback = {
+        id_socio: socio.id_socio,
+        nombre_completo: socio.nombre_completo,
+        email: socio.email ?? null,
+      };
     }
 
     const supabase = getSupabaseServerClient();
@@ -62,6 +69,11 @@ export async function GET(req: Request) {
         stripe_session_id,
         stripe_payment_intent_id,
         activo,
+        socio:socio_id (
+          id_socio,
+          nombre_completo,
+          email
+        ),
         cuota:cuota_id (
           id,
           descripcion,
@@ -85,7 +97,7 @@ export async function GET(req: Request) {
     }
 
     return NextResponse.json(
-      { data: (data ?? []).map(normalizePago) },
+      { data: (data ?? []).map((row) => normalizePago(row, socioFallback)) },
       { status: 200 }
     );
   } catch (error: any) {

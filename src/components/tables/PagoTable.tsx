@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil } from "lucide-react";
+import { Pencil, ReceiptText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -26,12 +26,14 @@ export default function PagoTable({
   onEdit,
   onView,
   onDelete,
+  onReceipt,
 }: {
   pagos: ResponsePago[];
   loading?: boolean;
   onEdit: (pago: ResponsePago) => void;
   onView?: (pago: ResponsePago) => void;
   onDelete?: (pago: ResponsePago) => void;
+  onReceipt?: (pago: ResponsePago) => void;
 }) {
   if (loading) {
     return (
@@ -95,6 +97,14 @@ export default function PagoTable({
                 onClick={() => onView && onView(p)}
               >
                 Ver
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onReceipt && onReceipt(p)}
+                title="Descargar recibo PDF"
+              >
+                <ReceiptText className="w-4 h-4" />
               </Button>
               <Button
                 size="sm"

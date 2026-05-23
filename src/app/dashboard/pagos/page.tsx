@@ -21,6 +21,7 @@ import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 import ExcelJS from "exceljs";
+import { descargarPagoReciboPdf } from "@/utils/pagoReciboPdf";
 
 function numberOrZero(value: unknown) {
   const parsed = Number(value);
@@ -109,6 +110,17 @@ export default function PagosPage() {
     a.click();
     window.URL.revokeObjectURL(url);
   };
+
+
+  const handleDownloadReceipt = async (pago: ResponsePago) => {
+    try {
+      await descargarPagoReciboPdf(pago);
+      toast.success("Recibo PDF generado correctamente");
+    } catch (error: any) {
+      toast.error(error?.message || "Error al generar el recibo PDF");
+    }
+  };
+
 
   useEffect(() => {
     if (isInitialized && isAuthenticated) {
@@ -213,6 +225,7 @@ export default function PagosPage() {
                       setPagoVer(pago);
                       setOpenModalVer(true);
                     }}
+                    onReceipt={handleDownloadReceipt}
                     onDelete={async (pago) => {
                       const confirmar = window.confirm(
                         "¿Está seguro de eliminar el pago?"
@@ -253,6 +266,7 @@ export default function PagosPage() {
           setPagoVer(null);
         }}
         pago={pagoVer}
+        onReceiptDownload={handleDownloadReceipt}
       />
     </SidebarProvider>
   );

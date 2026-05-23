@@ -6,7 +6,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { ResponsePago } from "@/interfaces/pago.interface";
+import { ReceiptText } from "lucide-react";
 
 function money(value?: number | null) {
   if (value === null || value === undefined) return "-";
@@ -63,10 +65,12 @@ export default function PagoViewModal({
   open,
   onClose,
   pago,
+  onReceiptDownload,
 }: {
   open: boolean;
   onClose: () => void;
   pago?: ResponsePago | null;
+  onReceiptDownload?: (pago: ResponsePago) => void;
 }) {
   if (!pago) return null;
 
@@ -79,11 +83,27 @@ export default function PagoViewModal({
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="!max-w-[90vw] sm:!max-w-[840px] !w-full bg-background text-foreground">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold text-foreground">
-            Detalle del pago
-          </DialogTitle>
-          <div className="text-sm text-right text-muted-foreground">
-            {new Date().toLocaleString("es-AR")}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <DialogTitle className="text-xl font-semibold text-foreground">
+                Detalle del pago
+              </DialogTitle>
+              <div className="text-sm text-muted-foreground">
+                {new Date().toLocaleString("es-AR")}
+              </div>
+            </div>
+
+            {onReceiptDownload ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
+                onClick={() => onReceiptDownload(pago)}
+              >
+                <ReceiptText className="w-4 h-4 mr-2" />
+                Descargar recibo PDF
+              </Button>
+            ) : null}
           </div>
         </DialogHeader>
 
