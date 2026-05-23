@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { createProducto, updateProducto } from "@/services/productoService";
+import { CatalogoParametrizableItem } from "@/interfaces/parametrizacion.interface";
+import { useCatalogoParametrizable } from "@/hooks/useCatalogosParametrizables";
 import { toast } from "sonner";
 
 export interface ProductoFormProps {
@@ -15,9 +17,21 @@ export interface ProductoFormProps {
     precio: number;
     stock: number;
     proveedor_id: string;
+    id_categoria_producto?: string | null;
   } | null;
   onCreated: () => void;
 }
+
+const fallbackCategoriasProducto: CatalogoParametrizableItem[] = [
+  {
+    id: "fallback-otros",
+    codigo: "otros",
+    nombre: "Otros",
+    descripcion: "Productos no clasificados.",
+    activo: true,
+    orden: 90,
+  },
+];
 
 const emptyForm = {
   nombre: "",
@@ -25,6 +39,7 @@ const emptyForm = {
   precio: 0,
   stock: 0,
   proveedor_id: "",
+  id_categoria_producto: "",
 };
 
 export default function ProductoForm({
@@ -33,6 +48,10 @@ export default function ProductoForm({
 }: ProductoFormProps) {
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
+  const { items: categoriasProducto } = useCatalogoParametrizable(
+    "categoria_producto",
+    fallbackCategoriasProducto
+  );
 
   useEffect(() => {
     if (producto) {
@@ -42,13 +61,16 @@ export default function ProductoForm({
         precio: producto.precio ?? 0,
         stock: producto.stock ?? 0,
         proveedor_id: producto.proveedor_id ?? "",
+        id_categoria_producto: producto.id_categoria_producto ?? "",
       });
     } else {
       setForm(emptyForm);
     }
   }, [producto]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value, type } = e.target;
     setForm((prev) => ({
       ...prev,
@@ -60,11 +82,16 @@ export default function ProductoForm({
     e.preventDefault();
     setLoading(true);
     try {
+      const payload = {
+        ...form,
+        id_categoria_producto: form.id_categoria_producto || null,
+      };
+
       if (producto && producto.id) {
-        await updateProducto(producto.id, form);
+        await updateProducto(producto.id, payload);
         toast.success("Producto actualizado");
       } else {
-        await createProducto(form);
+        await createProducto(payload);
         toast.success("Producto creado");
       }
       setForm(emptyForm);
@@ -103,6 +130,23 @@ export default function ProductoForm({
           onChange={handleChange}
           required
         />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="id_categoria_producto">Categoría</Label>
+        <select
+          id="id_categoria_producto"
+          name="id_categoria_producto"
+          value={form.id_categoria_producto}
+          onChange={handleChange}
+          className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+        >
+          <option value="">Sin categoría</option>
+          {categoriasProducto.map((categoria) => (
+            <option key={categoria.id} value={categoria.id}>
+              {categoria.nombre}
+            </option>
+          ))}
+        </select>
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="precio">Precio</Label>

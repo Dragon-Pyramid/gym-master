@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { toast } from "sonner";
 import { crearEntrenador, actualizarEntrenador } from "@/services/apiClient";
 import { Entrenador } from "@/interfaces/entrenador.interface";
+import { CatalogoParametrizableItem } from "@/interfaces/parametrizacion.interface";
+import { useCatalogoParametrizable } from "@/hooks/useCatalogosParametrizables";
 
 export interface EntrenadorFormProps {
   entrenador?: Entrenador | null;
@@ -23,9 +25,21 @@ const diasSemana = [
   { id: "Domingo", label: "Domingo" },
 ];
 
+const fallbackTiposEmpleado: CatalogoParametrizableItem[] = [
+  {
+    id: "fallback-entrenador",
+    codigo: "entrenador",
+    nombre: "Entrenador",
+    descripcion: "Empleado responsable de entrenamiento, rutinas y seguimiento físico.",
+    activo: true,
+    orden: 20,
+  },
+];
+
 const emptyForm = {
   nombre_completo: "",
   dni: "",
+  id_tipo_empleado: "",
 };
 
 export default function EntrenadorForm({
@@ -37,6 +51,7 @@ export default function EntrenadorForm({
       ? {
           nombre_completo: entrenador.nombre_completo,
           dni: entrenador.dni,
+          id_tipo_empleado: entrenador.id_tipo_empleado ?? "",
         }
       : emptyForm
   );
@@ -45,6 +60,10 @@ export default function EntrenadorForm({
     [dia: string]: { hora_desde: string; hora_hasta: string }[];
   }>({});
   const [loading, setLoading] = useState(false);
+  const { items: tiposEmpleado } = useCatalogoParametrizable(
+    "tipo_empleado",
+    fallbackTiposEmpleado
+  );
 
   const agregarBloque = (dia: string) => {
     setHorarios((prev) => ({
@@ -118,6 +137,7 @@ export default function EntrenadorForm({
       const formData = {
         nombre_completo: form.nombre_completo,
         dni: form.dni,
+        id_tipo_empleado: form.id_tipo_empleado || null,
         horarios: diasSeleccionados.map((dia) => ({
           dia_semana: dia,
           bloques: horarios[dia] || [],
@@ -182,6 +202,30 @@ export default function EntrenadorForm({
             onChange={(e) => setForm({ ...form, dni: e.target.value })}
             required
           />
+        </div>
+        <div className="space-y-2 md:col-span-2">
+          <label htmlFor="id_tipo_empleado" className="block text-sm font-medium">
+            Tipo de empleado
+          </label>
+          <select
+            id="id_tipo_empleado"
+            value={form.id_tipo_empleado}
+            onChange={(e) =>
+              setForm({ ...form, id_tipo_empleado: e.target.value })
+            }
+            className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            required
+          >
+            <option value="">Seleccionar tipo de empleado</option>
+            {tiposEmpleado.map((tipo) => (
+              <option
+                key={tipo.id}
+                value={tipo.id.startsWith("fallback-") ? "" : tipo.id}
+              >
+                {tipo.nombre}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
       <Card>

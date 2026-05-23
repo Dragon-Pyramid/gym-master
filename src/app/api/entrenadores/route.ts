@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     //  return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     //}
     const body = await req.json();
-    const { nombre_completo, dni, horarios } = body;
+    const { nombre_completo, dni, horarios, id_tipo_empleado } = body;
 
     if (!nombre_completo || !dni || !horarios) {
       return NextResponse.json(
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
     }
 
     const entrenador = await createEntrenador(
-      { nombre_completo, dni, horarios },
+      { nombre_completo, dni, horarios, id_tipo_empleado },
       user
     );
     return NextResponse.json(entrenador, { status: 201 });

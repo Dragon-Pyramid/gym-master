@@ -4,6 +4,7 @@ export interface Mantenimiento{
     id: string;
     id_equipamiento: string;
     tipo_mantenimiento: string; // preventivo / correctivo
+    id_tipo_mantenimiento?: string | null;
     descripcion: string;
     fecha_mantenimiento: string;
     tecnico_responsable: string;
@@ -15,6 +16,7 @@ export interface Mantenimiento{
 export interface CreateMantenimientoDTO {
     id_equipamiento: string;
     tipo_mantenimiento: string; // preventivo / correctivo
+    id_tipo_mantenimiento?: string | null;
     descripcion: string;
     fecha_mantenimiento?: string;
     tecnico_responsable: string;
@@ -24,6 +26,7 @@ export interface CreateMantenimientoDTO {
 export interface UpdateMantenimientoDTO {
     id_equipamiento?: string;
     tipo_mantenimiento?: string; // preventivo / correctivo
+    id_tipo_mantenimiento?: string | null;
     descripcion?: string;
     fecha_mantenimiento?: string;
     tecnico_responsable?: string;

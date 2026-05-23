@@ -1,8 +1,35 @@
+"use client";
+
 import { useState } from "react";
 import { createMantenimiento } from "@/services/mantenimientoService";
 import { CreateMantenimientoDTO } from "@/interfaces/mantenimiento.interface";
+import { CatalogoParametrizableItem } from "@/interfaces/parametrizacion.interface";
+import { useCatalogoParametrizable } from "@/hooks/useCatalogosParametrizables";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+
+const fallbackTiposMantenimiento: CatalogoParametrizableItem[] = [
+  {
+    id: "fallback-preventivo",
+    codigo: "preventivo",
+    nombre: "Preventivo",
+    descripcion: "Mantenimiento preventivo general.",
+    activo: true,
+    orden: 10,
+    frecuencia_dias: 30,
+    alerta_dias_anticipacion: 5,
+  },
+  {
+    id: "fallback-correctivo",
+    codigo: "correctivo",
+    nombre: "Correctivo",
+    descripcion: "Mantenimiento correctivo por falla o rotura.",
+    activo: true,
+    orden: 20,
+    frecuencia_dias: null,
+    alerta_dias_anticipacion: 0,
+  },
+];
 
 export default function MantenimientoForm({
   equipoId,
@@ -12,12 +39,25 @@ export default function MantenimientoForm({
   onCreated: () => void;
 }) {
   const [tipo_mantenimiento, setTipoMantenimiento] = useState("");
+  const [id_tipo_mantenimiento, setIdTipoMantenimiento] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [fecha_mantenimiento, setFechaMantenimiento] = useState("");
   const [tecnico_responsable, setTecnicoResponsable] = useState("");
   const [costo, setCosto] = useState(0);
   const [observaciones, setObservaciones] = useState("");
   const [loading, setLoading] = useState(false);
+  const { items: tiposMantenimiento } = useCatalogoParametrizable(
+    "tipo_mantenimiento",
+    fallbackTiposMantenimiento
+  );
+
+  const handleTipoChange = (value: string) => {
+    const selected = tiposMantenimiento.find((item) => item.id === value);
+    setIdTipoMantenimiento(
+      selected?.id?.startsWith("fallback-") ? "" : selected?.id ?? ""
+    );
+    setTipoMantenimiento(selected?.codigo ?? value);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,6 +65,7 @@ export default function MantenimientoForm({
     const payload: CreateMantenimientoDTO = {
       id_equipamiento: equipoId,
       tipo_mantenimiento,
+      id_tipo_mantenimiento: id_tipo_mantenimiento || null,
       descripcion,
       fecha_mantenimiento,
       tecnico_responsable,
@@ -33,6 +74,7 @@ export default function MantenimientoForm({
     };
     await createMantenimiento(payload);
     setTipoMantenimiento("");
+    setIdTipoMantenimiento("");
     setDescripcion("");
     setFechaMantenimiento("");
     setTecnicoResponsable("");
@@ -50,13 +92,17 @@ export default function MantenimientoForm({
       <div>
         <select
           className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-          value={tipo_mantenimiento}
-          onChange={(e) => setTipoMantenimiento(e.target.value)}
+          value={id_tipo_mantenimiento || tiposMantenimiento.find((item) => item.codigo === tipo_mantenimiento)?.id || ""}
+          onChange={(e) => handleTipoChange(e.target.value)}
           required
         >
           <option value="">Tipo de mantenimiento</option>
-          <option value="preventivo">Preventivo</option>
-          <option value="correctivo">Correctivo</option>
+          {tiposMantenimiento.map((tipo) => (
+            <option key={tipo.id} value={tipo.id}>
+              {tipo.nombre}
+              {tipo.frecuencia_dias ? ` · cada ${tipo.frecuencia_dias} días` : ""}
+            </option>
+          ))}
         </select>
       </div>
       <div>

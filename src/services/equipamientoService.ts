@@ -21,21 +21,21 @@ const ultima_revision = dayjs().format("YYYY-MM-DD");
 const observaciones = payload.observaciones || "Sin observaciones";
 const proxima_revision = payload.proxima_revision || dayjs().add(3, 'month').format("YYYY-MM-DD");
 
-// Si se pasa tipo como string, convertir a enum
-let tipo = payload.tipo.toLowerCase();
+// Si se pasa tipo como string, normalizar valores legacy y permitir catálogos parametrizables.
+const tipoNormalizado = String(payload.tipo ?? "").trim();
+let tipo = tipoNormalizado;
 
-if (typeof tipo === 'string') {
-  if(tipo === "cardio"){
-  tipo = TipoEquipamiento.CARDIO;
-  } else if(tipo === "fuerza"){
-  tipo = TipoEquipamiento.FUERZA;
-  } else if(tipo === "accesorio"){
-  tipo = TipoEquipamiento.ACCESORIO;
-  } else {
-    throw new Error("Tipo de equipamiento no válido");
-  }
-} else {
+if (!tipoNormalizado) {
   throw new Error("El tipo de equipamiento debe ser una cadena de texto");
+}
+
+const tipoLower = tipoNormalizado.toLowerCase();
+if (tipoLower === "cardio") {
+  tipo = TipoEquipamiento.CARDIO;
+} else if (tipoLower === "fuerza") {
+  tipo = TipoEquipamiento.FUERZA;
+} else if (tipoLower === "accesorio") {
+  tipo = TipoEquipamiento.ACCESORIO;
 }
 
     const { data, error } = await supabase

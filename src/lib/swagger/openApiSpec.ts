@@ -1096,15 +1096,21 @@ const endpointDefinitions: EndpointDefinition[] = [
   {
     "path": "/api/parametrizacion/catalogos",
     "methods": [
-      "GET"
+      "GET",
+      "POST",
+      "PATCH"
     ],
     "tag": "Parametrización",
     "summary": "Catálogos parametrizables",
-    "description": "Lista catálogos parametrizables creados para configuración del sistema: tipos de empleado, medios de pago, gastos, ingresos, productos, equipamiento y mantenimiento.",
+    "description": "Consulta, crea y actualiza registros de catálogos parametrizables. GET lista tipos de empleado, medios de pago, gastos, ingresos, categorías de producto, tipos/ubicaciones de equipamiento y tipos de mantenimiento. POST crea nuevos registros con código, nombre, descripción, orden y campos específicos. PATCH edita, activa o desactiva registros sin hard delete.",
     "auth": false,
     "admin": false,
     "notImplemented": false,
     "statuses": [
+      200,
+      201,
+      400,
+      409,
       500
     ],
     "queryParams": [],
