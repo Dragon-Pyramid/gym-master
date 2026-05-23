@@ -38,9 +38,29 @@ export interface CatalogoParametrizableSummary {
   inactivos: number;
   items: CatalogoParametrizableItem[];
   examples: string[];
+  editable: boolean;
 }
 
 export interface ParametrizacionCatalogosResponse {
   generated_at: string;
   catalogos: CatalogoParametrizableSummary[];
+}
+
+export interface CatalogoParametrizablePayload {
+  catalogo: CatalogoParametrizableKey;
+  id?: string;
+  codigo?: string;
+  nombre?: string;
+  descripcion?: string | null;
+  activo?: boolean;
+  orden?: number;
+  requiere_comprobante?: boolean | null;
+  es_online?: boolean | null;
+  frecuencia_dias?: number | null;
+  alerta_dias_anticipacion?: number | null;
+}
+
+export interface CatalogoParametrizableMutationResponse {
+  item: CatalogoParametrizableItem;
+  message: string;
 }
