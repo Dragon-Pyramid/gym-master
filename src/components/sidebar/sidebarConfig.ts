@@ -97,13 +97,18 @@ export const sections: SidebarSectionType[] = [
     ],
   },
   {
-    title: 'Configuración Personal',
+    title: 'Configuración',
     icon: Settings,
     items: [
       { title: 'Perfil', link: '/dashboard/perfil', level: 2 },
       {
         title: 'Preferencias',
         link: '/dashboard/settings/preferences',
+        level: 2,
+      },
+      {
+        title: 'Parametrización',
+        link: '/dashboard/parametrizacion',
         level: 2,
       },
     ],
