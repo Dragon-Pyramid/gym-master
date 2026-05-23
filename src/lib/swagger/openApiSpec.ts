@@ -1,0 +1,2253 @@
+type EndpointDefinition = {
+  path: string;
+  methods: string[];
+  tag: string;
+  summary: string;
+  description: string;
+  auth: boolean;
+  admin: boolean;
+  notImplemented: boolean;
+  statuses: number[];
+  queryParams: string[];
+  source: string;
+};
+
+type OpenApiOperation = Record<string, unknown>;
+type OpenApiPathItem = Record<string, OpenApiOperation>;
+
+const endpointDefinitions: EndpointDefinition[] = [
+  {
+    "path": "/api/actividades/{id}",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Catálogos y operación",
+    "summary": "Operación sobre actividades por identificador",
+    "description": "Consulta datos de actividades. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: getActividadById.",
+    "auth": false,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/actividades/[id]/route.ts"
+  },
+  {
+    "path": "/api/actividades",
+    "methods": [
+      "GET",
+      "POST",
+      "PUT",
+      "DELETE"
+    ],
+    "tag": "Catálogos y operación",
+    "summary": "Operaciones de actividades",
+    "description": "Consulta datos de actividades. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: createActividad, deleteActividad, fetchAllActividades, updateActividad.",
+    "auth": false,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      201,
+      400,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/actividades/route.ts"
+  },
+  {
+    "path": "/api/admin/cuotas/dashboard-bi",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Administración y BI",
+    "summary": "Dashboard BI de cuotas y pagos",
+    "description": "Consolida KPIs, pagos recientes, socios vencidos, socios sin pagos, evolución de precio de cuota y resumen por método de pago para el dashboard administrativo.",
+    "auth": false,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/admin/cuotas/dashboard-bi/route.ts"
+  },
+  {
+    "path": "/api/admin/cuotas/estado-socios",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Administración y BI",
+    "summary": "Estado de cuotas de socios",
+    "description": "Devuelve el estado operativo de cuotas por socio, incluyendo al día, vencidos, sin pagos y próximos a vencer.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200
+    ],
+    "queryParams": [],
+    "source": "src/app/api/admin/cuotas/estado-socios/route.ts"
+  },
+  {
+    "path": "/api/admin/cuotas/resumen",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Administración y BI",
+    "summary": "Resumen administrativo de cuotas",
+    "description": "Devuelve un resumen compacto para el dashboard: estados, pagos por método, vencidos, sin pagos y próximos a vencer.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200
+    ],
+    "queryParams": [],
+    "source": "src/app/api/admin/cuotas/resumen/route.ts"
+  },
+  {
+    "path": "/api/admin/metricas/asistencia/{tipo}",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Administración y BI",
+    "summary": "Métricas de concurrencia por tipo",
+    "description": "Devuelve métricas de asistencia según el tipo solicitado: semanal, mensual o anual.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      400,
+      401,
+      403,
+      404,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/admin/metricas/asistencia/[tipo]/route.ts"
+  },
+  {
+    "path": "/api/admin/metricas/asistencia/prediccion-abandono",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Administración y BI",
+    "summary": "Predicción de abandono de socios",
+    "description": "Endpoint reservado para un modelo o lógica de predicción de abandono. Actualmente puede responder 501 si no está implementado.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": true,
+    "statuses": [
+      401,
+      403,
+      500,
+      501
+    ],
+    "queryParams": [],
+    "source": "src/app/api/admin/metricas/asistencia/prediccion-abandono/route.ts"
+  },
+  {
+    "path": "/api/admin/metricas/asistencia/top-inactivos",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Administración y BI",
+    "summary": "Top de socios inactivos",
+    "description": "Endpoint reservado para ranking de socios con baja asistencia o riesgo de inactividad. Actualmente puede responder 501 si no está implementado.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": true,
+    "statuses": [
+      401,
+      403,
+      500,
+      501
+    ],
+    "queryParams": [],
+    "source": "src/app/api/admin/metricas/asistencia/top-inactivos/route.ts"
+  },
+  {
+    "path": "/api/admin/metricas/equipamiento/costo-beneficio",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Administración y BI",
+    "summary": "Análisis costo-beneficio de equipamiento",
+    "description": "Devuelve análisis de costo-beneficio del equipamiento para decisiones de mantenimiento, reemplazo o inversión.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      401,
+      403,
+      404,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/admin/metricas/equipamiento/costo-beneficio/route.ts"
+  },
+  {
+    "path": "/api/admin/metricas/equipamiento/estado-actual",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Administración y BI",
+    "summary": "Estado actual de equipamiento",
+    "description": "Devuelve semáforo o estado operativo actual del equipamiento del gimnasio.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      401,
+      403,
+      404,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/admin/metricas/equipamiento/estado-actual/route.ts"
+  },
+  {
+    "path": "/api/admin/metricas/equipamiento/prediccion-fallo",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Administración y BI",
+    "summary": "Predicción de fallos de equipamiento",
+    "description": "Endpoint reservado para análisis predictivo de fallos. Actualmente puede responder 501 si no está implementado.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": true,
+    "statuses": [
+      401,
+      403,
+      500,
+      501
+    ],
+    "queryParams": [],
+    "source": "src/app/api/admin/metricas/equipamiento/prediccion-fallo/route.ts"
+  },
+  {
+    "path": "/api/admin/metricas/equipamiento/top-fallos",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Administración y BI",
+    "summary": "Ranking de fallos de equipamiento",
+    "description": "Devuelve ranking o resumen de equipamientos con mayor cantidad de fallos.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      401,
+      403,
+      404,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/admin/metricas/equipamiento/top-fallos/route.ts"
+  },
+  {
+    "path": "/api/admin/metricas/pagos/histograma",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Administración y BI",
+    "summary": "Histograma de conducta de pagos",
+    "description": "Devuelve distribución de pagos para análisis de comportamiento financiero de socios.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      401,
+      403,
+      404,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/admin/metricas/pagos/histograma/route.ts"
+  },
+  {
+    "path": "/api/admin/metricas/pagos/proyeccion-ingresos",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Administración y BI",
+    "summary": "Proyección de ingresos",
+    "description": "Endpoint reservado para proyección de ingresos. Actualmente puede responder 501 si no está implementado.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": true,
+    "statuses": [
+      401,
+      403,
+      500,
+      501
+    ],
+    "queryParams": [],
+    "source": "src/app/api/admin/metricas/pagos/proyeccion-ingresos/route.ts"
+  },
+  {
+    "path": "/api/admin/metricas/pagos/segmentacion",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Administración y BI",
+    "summary": "Segmentación de conducta de pagos",
+    "description": "Devuelve segmentación de socios o pagos según comportamiento financiero.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      401,
+      403,
+      404,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/admin/metricas/pagos/segmentacion/route.ts"
+  },
+  {
+    "path": "/api/admin/metricas/retencion_por_combinacion",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Administración y BI",
+    "summary": "Retención por combinación de rutina",
+    "description": "Devuelve análisis de retención agrupado por objetivo, nivel y frecuencia semanal.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      401,
+      403,
+      404,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/admin/metricas/retencion_por_combinacion/route.ts"
+  },
+  {
+    "path": "/api/admin/metricas/rutinas/adherencia",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Administración y BI",
+    "summary": "Adherencia mensual a rutinas",
+    "description": "Devuelve métricas de adherencia mensual a rutinas.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      401,
+      403,
+      404,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/admin/metricas/rutinas/adherencia/route.ts"
+  },
+  {
+    "path": "/api/admin/metricas/rutinas/evolucion-promedio",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Administración y BI",
+    "summary": "Evolución promedio por objetivo",
+    "description": "Devuelve evolución promedio agrupada por objetivo de entrenamiento.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      401,
+      403,
+      404,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/admin/metricas/rutinas/evolucion-promedio/route.ts"
+  },
+  {
+    "path": "/api/admin/metricas/rutinas/generar-rutina",
+    "methods": [
+      "POST"
+    ],
+    "tag": "Administración y BI",
+    "summary": "Métrica de generación de rutina",
+    "description": "Ejecuta o consulta lógica administrativa vinculada a generación de rutinas.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      401,
+      403,
+      404,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/admin/metricas/rutinas/generar-rutina/route.ts"
+  },
+  {
+    "path": "/api/admin/metricas/rutinas/generar-rutina-personalizada",
+    "methods": [
+      "POST"
+    ],
+    "tag": "Administración y BI",
+    "summary": "Generación de rutina personalizada",
+    "description": "Ejecuta lógica administrativa para generación personalizada de rutinas.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      401,
+      403,
+      404,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/admin/metricas/rutinas/generar-rutina-personalizada/route.ts"
+  },
+  {
+    "path": "/api/asistencias/qr-dia",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Asistencias",
+    "summary": "QR diario de asistencia",
+    "description": "Genera o recupera el QR del día para registrar asistencia.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      401,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/asistencias/qr-dia/route.ts"
+  },
+  {
+    "path": "/api/asistencias/ranking-mensual",
+    "methods": [
+      "POST"
+    ],
+    "tag": "Asistencias",
+    "summary": "Ranking mensual de asistencia",
+    "description": "Calcula ranking mensual de asistencia para un período solicitado.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      401,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/asistencias/ranking-mensual/route.ts"
+  },
+  {
+    "path": "/api/asistencias/recientes",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Asistencias",
+    "summary": "Asistencias recientes",
+    "description": "Devuelve las asistencias recientes para mostrar actividad operativa.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      401,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/asistencias/recientes/route.ts"
+  },
+  {
+    "path": "/api/asistencias/registro-qr",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "tag": "Asistencias",
+    "summary": "Registro de asistencia por QR",
+    "description": "Valida un token de QR y registra la asistencia del usuario autenticado. GET usa query tokenAsistencia; POST acepta body con qr.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401
+    ],
+    "queryParams": [
+      "tokenAsistencia"
+    ],
+    "source": "src/app/api/asistencias/registro-qr/route.ts"
+  },
+  {
+    "path": "/api/asistencias",
+    "methods": [
+      "GET",
+      "POST",
+      "PUT",
+      "DELETE"
+    ],
+    "tag": "Asistencias",
+    "summary": "Operaciones de asistencias",
+    "description": "Consulta datos de asistencias. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Requiere usuario autenticado cuando el middleware/servicio lo valide. Implementación relacionada: getAllAsistencias, createAsistencia, updateAsistencia, deleteAsistencia.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      201,
+      400,
+      401,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/asistencias/route.ts"
+  },
+  {
+    "path": "/api/auth/{nextauth}",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "tag": "Autenticación",
+    "summary": "NextAuth credentials",
+    "description": "Endpoint interno de NextAuth para autenticación por credenciales y gestión de sesión.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [],
+    "queryParams": [],
+    "source": "src/app/api/auth/[...nextauth]/route.ts"
+  },
+  {
+    "path": "/api/avisos/{id}",
+    "methods": [
+      "GET",
+      "PUT",
+      "DELETE"
+    ],
+    "tag": "Catálogos y operación",
+    "summary": "Operación sobre avisos por identificador",
+    "description": "Consulta datos de avisos. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: getAvisoById, updateAviso, deleteAviso.",
+    "auth": false,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      404,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/avisos/[id]/route.ts"
+  },
+  {
+    "path": "/api/avisos",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "tag": "Catálogos y operación",
+    "summary": "Operaciones de avisos",
+    "description": "Consulta datos de avisos. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: getAllAvisos, createAviso.",
+    "auth": false,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      201,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/avisos/route.ts"
+  },
+  {
+    "path": "/api/cuota/{id}",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Cuotas y pagos",
+    "summary": "Operación sobre cuotas por identificador",
+    "description": "Consulta datos de cuotas. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: getCuotaById.",
+    "auth": false,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200
+    ],
+    "queryParams": [],
+    "source": "src/app/api/cuota/[id]/route.ts"
+  },
+  {
+    "path": "/api/cuota",
+    "methods": [
+      "GET",
+      "POST",
+      "PUT",
+      "DELETE"
+    ],
+    "tag": "Cuotas y pagos",
+    "summary": "Operaciones de cuotas",
+    "description": "Consulta datos de cuotas. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: createCuota, deleteCuota, getAllCuotas, updateCuota.",
+    "auth": false,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      201,
+      400,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/cuota/route.ts"
+  },
+  {
+    "path": "/api/cuota-estado",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Cuotas y pagos",
+    "summary": "Estado de cuota",
+    "description": "Devuelve estado de cuota para socio autenticado, socio específico por query o resumen administrativo según rol.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400
+    ],
+    "queryParams": [
+      "socio_id"
+    ],
+    "source": "src/app/api/cuota-estado/route.ts"
+  },
+  {
+    "path": "/api/custom-login",
+    "methods": [
+      "POST"
+    ],
+    "tag": "Autenticación",
+    "summary": "Login personalizado",
+    "description": "Valida credenciales y tipo de usuario para iniciar sesión en el sistema.",
+    "auth": false,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/custom-login/route.ts"
+  },
+  {
+    "path": "/api/dieta/generar",
+    "methods": [
+      "POST"
+    ],
+    "tag": "Dietas",
+    "summary": "Generar dieta para socio",
+    "description": "Crea una dieta asociada a un socio a partir de datos del usuario autenticado.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      201,
+      400,
+      401,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/dieta/generar/route.ts"
+  },
+  {
+    "path": "/api/dieta/socio/{id}",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Dietas",
+    "summary": "Dietas de un socio",
+    "description": "Lista dietas asociadas a un socio específico.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401,
+      404,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/dieta/socio/[id]/route.ts"
+  },
+  {
+    "path": "/api/dieta/todas",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Dietas",
+    "summary": "Todas las dietas",
+    "description": "Lista dietas registradas según permisos del usuario.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      401,
+      404,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/dieta/todas/route.ts"
+  },
+  {
+    "path": "/api/entrenadores/{id}/horarios",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Empleados y entrenadores",
+    "summary": "Horarios de entrenador",
+    "description": "Devuelve horarios asociados a un entrenador por ID.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401,
+      404,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/entrenadores/[id]/horarios/route.ts"
+  },
+  {
+    "path": "/api/entrenadores/{id}",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "tag": "Empleados y entrenadores",
+    "summary": "Operación sobre entrenadores/empleados por identificador",
+    "description": "Consulta datos de entrenadores/empleados. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Requiere usuario autenticado cuando el middleware/servicio lo valide. Implementación relacionada: getEntrenadorById, updateEntrenador.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401,
+      404,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/entrenadores/[id]/route.ts"
+  },
+  {
+    "path": "/api/entrenadores",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "tag": "Empleados y entrenadores",
+    "summary": "Operaciones de entrenadores/empleados",
+    "description": "Consulta datos de entrenadores/empleados. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Requiere permisos administrativos cuando el middleware/servicio lo valide. Implementación relacionada: createEntrenador, getEntrenadores.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      201,
+      400,
+      401,
+      403,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/entrenadores/route.ts"
+  },
+  {
+    "path": "/api/equipamientos/{id}",
+    "methods": [
+      "PUT",
+      "DELETE"
+    ],
+    "tag": "Equipamiento",
+    "summary": "Operación sobre equipamientos por identificador",
+    "description": "Actualiza datos de equipamientos. Normalmente requiere un identificador y un objeto con los campos a modificar. Implementación relacionada: deleteEquipamiento, updateEquipamiento.",
+    "auth": false,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      201,
+      400,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/equipamientos/[id]/route.ts"
+  },
+  {
+    "path": "/api/equipamientos",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "tag": "Equipamiento",
+    "summary": "Operaciones de equipamientos",
+    "description": "Consulta datos de equipamientos. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: createEquipamiento, getAllEquipamientos.",
+    "auth": false,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      201,
+      400,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/equipamientos/route.ts"
+  },
+  {
+    "path": "/api/evolucion_socio/{socio_id}",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Evolución física",
+    "summary": "Historial de evolución física de socio",
+    "description": "Devuelve registros de evolución física asociados a un socio.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400
+    ],
+    "queryParams": [],
+    "source": "src/app/api/evolucion_socio/[socio_id]/route.ts"
+  },
+  {
+    "path": "/api/evolucion_socio/registro",
+    "methods": [
+      "POST"
+    ],
+    "tag": "Evolución física",
+    "summary": "Crear registro de evolución física",
+    "description": "Crea un nuevo registro de evolución física para un socio.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      201
+    ],
+    "queryParams": [],
+    "source": "src/app/api/evolucion_socio/registro/route.ts"
+  },
+  {
+    "path": "/api/file-upload",
+    "methods": [
+      "POST"
+    ],
+    "tag": "Archivos",
+    "summary": "Subida de archivo",
+    "description": "Sube archivos/fotos mediante servicio de almacenamiento y puede actualizar la foto del usuario.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/file-upload/route.ts"
+  },
+  {
+    "path": "/api/image-proxy",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Archivos",
+    "summary": "Proxy de imágenes para PDF",
+    "description": "Descarga y devuelve imágenes remotas permitidas para usarlas en exportaciones PDF evitando problemas de CORS.",
+    "auth": false,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      415,
+      500
+    ],
+    "queryParams": [
+      "url"
+    ],
+    "source": "src/app/api/image-proxy/route.ts"
+  },
+  {
+    "path": "/api/mantenimientos/{id}",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Mantenimiento",
+    "summary": "Operación sobre mantenimientos por identificador",
+    "description": "Consulta datos de mantenimientos. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: getMantenimientoByIdEquipamiento.",
+    "auth": false,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/mantenimientos/[id]/route.ts"
+  },
+  {
+    "path": "/api/mantenimientos/completado/{id}",
+    "methods": [
+      "PUT"
+    ],
+    "tag": "Mantenimiento",
+    "summary": "Operación sobre mantenimientos por identificador",
+    "description": "Actualiza datos de mantenimientos. Normalmente requiere un identificador y un objeto con los campos a modificar. Implementación relacionada: mantenimientoCompletado.",
+    "auth": false,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/mantenimientos/completado/[id]/route.ts"
+  },
+  {
+    "path": "/api/mantenimientos",
+    "methods": [
+      "GET",
+      "POST",
+      "PUT"
+    ],
+    "tag": "Mantenimiento",
+    "summary": "Operaciones de mantenimientos",
+    "description": "Consulta datos de mantenimientos. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: createMantenimiento, getAllMantenimientos, updateMantenimiento.",
+    "auth": false,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      201,
+      400,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/mantenimientos/route.ts"
+  },
+  {
+    "path": "/api/mi-cuenta/pagos",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Socios",
+    "summary": "Pagos de mi cuenta",
+    "description": "Devuelve historial de pagos del socio autenticado.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      403,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/mi-cuenta/pagos/route.ts"
+  },
+  {
+    "path": "/api/niveles",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Catálogos y operación",
+    "summary": "Operaciones de niveles",
+    "description": "Consulta datos de niveles. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Requiere usuario autenticado cuando el middleware/servicio lo valide. Implementación relacionada: getAllNiveles.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      401,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/niveles/route.ts"
+  },
+  {
+    "path": "/api/objetivos",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Catálogos y operación",
+    "summary": "Operaciones de objetivos",
+    "description": "Consulta datos de objetivos. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Requiere usuario autenticado cuando el middleware/servicio lo valide. Implementación relacionada: getAllObjetivos.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      401,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/objetivos/route.ts"
+  },
+  {
+    "path": "/api/otros_gastos",
+    "methods": [
+      "GET",
+      "POST",
+      "PUT",
+      "DELETE"
+    ],
+    "tag": "Catálogos y operación",
+    "summary": "Operaciones de otros gastos",
+    "description": "Consulta datos de otros gastos. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: createOtrosGastos, deleteOtrosGastos, getAllOtrosGastos, updateOtrosGastos.",
+    "auth": false,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      201,
+      400,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/otros_gastos/route.ts"
+  },
+  {
+    "path": "/api/pagar-cuota",
+    "methods": [
+      "POST"
+    ],
+    "tag": "Cuotas y pagos",
+    "summary": "Crear sesión de pago de cuota",
+    "description": "Crea una sesión de pago online para la cuota del socio.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      401,
+      403,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/pagar-cuota/route.ts"
+  },
+  {
+    "path": "/api/pagos/{id}",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Cuotas y pagos",
+    "summary": "Operación sobre pagos por identificador",
+    "description": "Consulta datos de pagos. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: getPagoById.",
+    "auth": false,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200
+    ],
+    "queryParams": [],
+    "source": "src/app/api/pagos/[id]/route.ts"
+  },
+  {
+    "path": "/api/pagos",
+    "methods": [
+      "GET",
+      "POST",
+      "PUT",
+      "DELETE"
+    ],
+    "tag": "Cuotas y pagos",
+    "summary": "Operaciones de pagos",
+    "description": "Consulta datos de pagos. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Requiere usuario autenticado cuando el middleware/servicio lo valide. Implementación relacionada: createPagoManualServer, deactivatePagoServer, fetchPagoFormOptionsServer, fetchPagosServer, updatePagoServer.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      201,
+      400
+    ],
+    "queryParams": [
+      "options"
+    ],
+    "source": "src/app/api/pagos/route.ts"
+  },
+  {
+    "path": "/api/parametrizacion/catalogos",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Parametrización",
+    "summary": "Catálogos parametrizables",
+    "description": "Lista catálogos parametrizables creados para configuración del sistema: tipos de empleado, medios de pago, gastos, ingresos, productos, equipamiento y mantenimiento.",
+    "auth": false,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/parametrizacion/catalogos/route.ts"
+  },
+  {
+    "path": "/api/productos/{id}",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Comercial",
+    "summary": "Operación sobre productos por identificador",
+    "description": "Consulta datos de productos. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: getProductoById.",
+    "auth": false,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200
+    ],
+    "queryParams": [],
+    "source": "src/app/api/productos/[id]/route.ts"
+  },
+  {
+    "path": "/api/productos",
+    "methods": [
+      "GET",
+      "POST",
+      "PUT",
+      "DELETE"
+    ],
+    "tag": "Comercial",
+    "summary": "Operaciones de productos",
+    "description": "Consulta datos de productos. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: createProducto, deleteProducto, getAllProductos, updateProducto.",
+    "auth": false,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      201,
+      400,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/productos/route.ts"
+  },
+  {
+    "path": "/api/proveedores/{id}",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Comercial",
+    "summary": "Operación sobre proveedores por identificador",
+    "description": "Consulta datos de proveedores. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: getProveedorById.",
+    "auth": false,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200
+    ],
+    "queryParams": [],
+    "source": "src/app/api/proveedores/[id]/route.ts"
+  },
+  {
+    "path": "/api/proveedores",
+    "methods": [
+      "GET",
+      "POST",
+      "PUT",
+      "DELETE"
+    ],
+    "tag": "Comercial",
+    "summary": "Operaciones de proveedores",
+    "description": "Consulta datos de proveedores. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: getAllProveedores, createProveedor, updateProveedor, deleteProveedor.",
+    "auth": false,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      201,
+      400,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/proveedores/route.ts"
+  },
+  {
+    "path": "/api/rutina/{idSocio}",
+    "methods": [
+      "GET",
+      "DELETE"
+    ],
+    "tag": "Rutinas",
+    "summary": "Operación sobre rutina por identificador",
+    "description": "Consulta datos de rutina. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Requiere usuario autenticado cuando el middleware/servicio lo valide. Implementación relacionada: historialRutinaSocio, deleteRutinaById.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401,
+      403,
+      404,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/rutina/[idSocio]/route.ts"
+  },
+  {
+    "path": "/api/rutina/delete/{id}",
+    "methods": [
+      "GET",
+      "DELETE"
+    ],
+    "tag": "Rutinas",
+    "summary": "Eliminar rutina por ID",
+    "description": "Endpoint de eliminación/historial de rutina por ID. Mantener compatibilidad mientras se estabiliza el flujo de borrado.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      401,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/rutina/delete/[id]/route.ts"
+  },
+  {
+    "path": "/api/rutina/generar",
+    "methods": [
+      "POST"
+    ],
+    "tag": "Rutinas",
+    "summary": "Generar rutina",
+    "description": "Genera una rutina para un socio según objetivo, nivel, frecuencia u otros criterios.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      401,
+      404,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/rutina/generar/route.ts"
+  },
+  {
+    "path": "/api/rutina/historial/{id_socio}",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Rutinas",
+    "summary": "Historial de rutina por socio",
+    "description": "Devuelve historial de rutinas de un socio específico.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      401
+    ],
+    "queryParams": [],
+    "source": "src/app/api/rutina/historial/[id_socio]/route.ts"
+  },
+  {
+    "path": "/api/rutina/historial",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Rutinas",
+    "summary": "Historial de rutina del socio autenticado",
+    "description": "Devuelve el historial de rutinas del socio autenticado.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      401
+    ],
+    "queryParams": [],
+    "source": "src/app/api/rutina/historial/route.ts"
+  },
+  {
+    "path": "/api/servicios/{id}",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Comercial",
+    "summary": "Operación sobre servicios por identificador",
+    "description": "Consulta datos de servicios. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: getServicioById.",
+    "auth": false,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200
+    ],
+    "queryParams": [],
+    "source": "src/app/api/servicios/[id]/route.ts"
+  },
+  {
+    "path": "/api/servicios",
+    "methods": [
+      "GET",
+      "POST",
+      "PUT",
+      "DELETE"
+    ],
+    "tag": "Comercial",
+    "summary": "Operaciones de servicios",
+    "description": "Consulta datos de servicios. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: createServicio, deleteServicio, getAllServicios, updateServicio.",
+    "auth": false,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      201,
+      400,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/servicios/route.ts"
+  },
+  {
+    "path": "/api/socios/{id}/ficha-medica/{id_ficha}",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Ficha médica",
+    "summary": "Operación sobre socios por identificador",
+    "description": "Consulta datos de socios. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Requiere usuario autenticado cuando el middleware/servicio lo valide. Implementación relacionada: FindOneFichaMedicaSocio.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/socios/[id]/ficha-medica/[id_ficha]/route.ts"
+  },
+  {
+    "path": "/api/socios/{id}/ficha-medica/actual",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Ficha médica",
+    "summary": "Ficha médica de socio",
+    "description": "Consulta datos de socios. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Requiere usuario autenticado cuando el middleware/servicio lo valide. Implementación relacionada: FindFichaMedicaSocio.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/socios/[id]/ficha-medica/actual/route.ts"
+  },
+  {
+    "path": "/api/socios/{id}/ficha-medica/historial",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Ficha médica",
+    "summary": "Ficha médica de socio",
+    "description": "Consulta datos de socios. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Requiere usuario autenticado cuando el middleware/servicio lo valide. Implementación relacionada: FindAllFichaMedicaSocio.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401,
+      500
+    ],
+    "queryParams": [
+      "page"
+    ],
+    "source": "src/app/api/socios/[id]/ficha-medica/historial/route.ts"
+  },
+  {
+    "path": "/api/socios/{id}/ficha-medica",
+    "methods": [
+      "POST"
+    ],
+    "tag": "Ficha médica",
+    "summary": "Ficha médica de socio",
+    "description": "Crea o registra datos de socios. El payload debe enviarse como JSON salvo endpoints especiales de archivos o webhooks. Requiere usuario autenticado cuando el middleware/servicio lo valide. Implementación relacionada: createFichaMedicaSocio.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      201,
+      400,
+      401,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/socios/[id]/ficha-medica/route.ts"
+  },
+  {
+    "path": "/api/socios/{id}",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Socios",
+    "summary": "Operación sobre socios por identificador",
+    "description": "Consulta datos de socios. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Requiere usuario autenticado cuando el middleware/servicio lo valide. Implementación relacionada: getSocioById.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200
+    ],
+    "queryParams": [],
+    "source": "src/app/api/socios/[id]/route.ts"
+  },
+  {
+    "path": "/api/socios",
+    "methods": [
+      "GET",
+      "POST",
+      "PUT",
+      "DELETE"
+    ],
+    "tag": "Socios",
+    "summary": "Operaciones de socios",
+    "description": "Consulta datos de socios. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Requiere usuario autenticado cuando el middleware/servicio lo valide. Implementación relacionada: createSocioServer, deactivateSocioServer, fetchSociosServer, updateSocioServer.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      201,
+      400
+    ],
+    "queryParams": [],
+    "source": "src/app/api/socios/route.ts"
+  },
+  {
+    "path": "/api/stripe-webhook",
+    "methods": [
+      "POST"
+    ],
+    "tag": "Cuotas y pagos",
+    "summary": "Webhook de Stripe",
+    "description": "Recibe eventos de Stripe para registrar pagos online. Debe usarse con firma/validación de Stripe en ambientes productivos.",
+    "auth": false,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/stripe-webhook/route.ts"
+  },
+  {
+    "path": "/api/test-alertas",
+    "methods": [
+      "POST"
+    ],
+    "tag": "Alertas",
+    "summary": "Prueba de alertas de deuda",
+    "description": "Endpoint técnico para probar alertas o desactivación de socios con deuda.",
+    "auth": false,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/test-alertas/route.ts"
+  },
+  {
+    "path": "/api/usuarios/{id}/perfil",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Usuarios",
+    "summary": "Operaciones de usuarios",
+    "description": "Consulta datos de usuarios. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Requiere usuario autenticado cuando el middleware/servicio lo valide. Implementación relacionada: getUsuarioById.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      401
+    ],
+    "queryParams": [],
+    "source": "src/app/api/usuarios/[id]/perfil/route.ts"
+  },
+  {
+    "path": "/api/usuarios/{id}",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Usuarios",
+    "summary": "Operación sobre usuarios por identificador",
+    "description": "Consulta datos de usuarios. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Requiere usuario autenticado cuando el middleware/servicio lo valide. Implementación relacionada: getUsuarioById.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      401
+    ],
+    "queryParams": [],
+    "source": "src/app/api/usuarios/[id]/route.ts"
+  },
+  {
+    "path": "/api/usuarios",
+    "methods": [
+      "GET",
+      "POST",
+      "PUT",
+      "DELETE"
+    ],
+    "tag": "Usuarios",
+    "summary": "Operaciones de usuarios",
+    "description": "Consulta datos de usuarios. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Requiere usuario autenticado cuando el middleware/servicio lo valide. Implementación relacionada: createUsuarioServer, deactivateUsuarioServer, fetchUsuariosServer, updateUsuarioServer.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      201,
+      400
+    ],
+    "queryParams": [],
+    "source": "src/app/api/usuarios/route.ts"
+  },
+  {
+    "path": "/api/ventas/{id}",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Comercial",
+    "summary": "Operación sobre ventas por identificador",
+    "description": "Consulta datos de ventas. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Requiere usuario autenticado cuando el middleware/servicio lo valide. Implementación relacionada: getVentaById.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      401
+    ],
+    "queryParams": [],
+    "source": "src/app/api/ventas/[id]/route.ts"
+  },
+  {
+    "path": "/api/ventas",
+    "methods": [
+      "GET",
+      "POST",
+      "PUT",
+      "DELETE"
+    ],
+    "tag": "Comercial",
+    "summary": "Operaciones de ventas",
+    "description": "Consulta datos de ventas. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Requiere usuario autenticado cuando el middleware/servicio lo valide. Implementación relacionada: createVenta, deleteVenta, getAllVentas, updateVenta.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      201,
+      400,
+      401,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/ventas/route.ts"
+  },
+  {
+    "path": "/api/ventas_detalles",
+    "methods": [
+      "GET",
+      "POST",
+      "PUT",
+      "DELETE"
+    ],
+    "tag": "Comercial",
+    "summary": "Operaciones de detalles de venta",
+    "description": "Consulta datos de detalles de venta. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Requiere usuario autenticado cuando el middleware/servicio lo valide. Implementación relacionada: createVentaDetalle, deleteVentaDetalle, getAllVentaDetalles, updateVentaDetalle.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      201,
+      400,
+      401,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/ventas_detalles/route.ts"
+  },
+  {
+    "path": "/api/swagger-json",
+    "methods": [
+      "GET"
+    ],
+    "tag": "General",
+    "summary": "Especificación OpenAPI de Gym Master",
+    "description": "Devuelve la especificación OpenAPI usada por la pantalla /swagger. Permite auditar la documentación de endpoints desde Swagger UI o herramientas externas.",
+    "auth": false,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200
+    ],
+    "queryParams": [],
+    "source": "src/app/api/swagger-json/route.ts"
+  }
+];
+
+const tags = [
+  {
+    "name": "Administración y BI",
+    "description": "Dashboards, reportes y métricas administrativas."
+  },
+  {
+    "name": "Autenticación",
+    "description": "Inicio de sesión, NextAuth y control de sesión."
+  },
+  {
+    "name": "Usuarios",
+    "description": "Gestión de usuarios internos del sistema."
+  },
+  {
+    "name": "Socios",
+    "description": "Gestión y autoservicio de socios."
+  },
+  {
+    "name": "Ficha médica",
+    "description": "Ficha médica, historial y registros clínicos asociados al socio."
+  },
+  {
+    "name": "Asistencias",
+    "description": "Registro, consulta, ranking y QR de asistencia."
+  },
+  {
+    "name": "Rutinas",
+    "description": "Generación, historial y eliminación de rutinas."
+  },
+  {
+    "name": "Dietas",
+    "description": "Generación y consulta de dietas."
+  },
+  {
+    "name": "Cuotas y pagos",
+    "description": "Cuotas, pagos manuales, Stripe, estado de cuota y recibos futuros."
+  },
+  {
+    "name": "Equipamiento",
+    "description": "Gestión de máquinas y equipamiento."
+  },
+  {
+    "name": "Mantenimiento",
+    "description": "Gestión de mantenimientos y tareas completadas."
+  },
+  {
+    "name": "Comercial",
+    "description": "Productos, proveedores, servicios, ventas y detalles de venta."
+  },
+  {
+    "name": "Empleados y entrenadores",
+    "description": "Gestión actual de entrenadores y futura evolución a empleados."
+  },
+  {
+    "name": "Evolución física",
+    "description": "Registros de evolución física y métricas corporales del socio."
+  },
+  {
+    "name": "Parametrización",
+    "description": "Catálogos parametrizables del sistema."
+  },
+  {
+    "name": "Catálogos y operación",
+    "description": "Catálogos operativos y módulos complementarios."
+  },
+  {
+    "name": "Archivos",
+    "description": "Subida y proxy de archivos/imágenes."
+  },
+  {
+    "name": "Alertas",
+    "description": "Endpoints técnicos de alertas o mantenimiento operativo."
+  },
+  {
+    "name": "General",
+    "description": "Endpoints generales no clasificados."
+  }
+];
+
+const methodOrder: Record<string, number> = {
+  get: 1,
+  post: 2,
+  put: 3,
+  patch: 4,
+  delete: 5,
+};
+
+function toOperationId(method: string, path: string) {
+  const pathName = path
+    .replace(/^\/api\//, "")
+    .replace(/\{([^}]+)\}/g, "by-$1")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .split("-")
+    .filter(Boolean)
+    .map((part, index) =>
+      index === 0
+        ? part.toLowerCase()
+        : part.charAt(0).toUpperCase() + part.slice(1)
+    )
+    .join("");
+
+  return `${method.toLowerCase()}${pathName.charAt(0).toUpperCase() + pathName.slice(1)}`;
+}
+
+function getPathParams(path: string) {
+  const matches = Array.from(path.matchAll(/\{([^}]+)\}/g));
+
+  return matches.map((match) => {
+    const name = match[1];
+    const isUuidLike = /id|socio|usuario|ficha/i.test(name);
+
+    return {
+      name,
+      in: "path",
+      required: true,
+      description:
+        name === "tipo"
+          ? "Tipo de métrica solicitada. Valores soportados: semanal, mensual o anual."
+          : `Parámetro dinámico ${name} requerido por la ruta.`,
+      schema: name === "tipo"
+        ? { type: "string", enum: ["semanal", "mensual", "anual"] }
+        : { type: "string", ...(isUuidLike ? { format: "uuid" } : {}) },
+      example:
+        name === "tipo"
+          ? "mensual"
+          : isUuidLike
+            ? "2d2a45df-0fd5-4f4e-9c01-5de07dca1111"
+            : "valor",
+    };
+  });
+}
+
+function getQueryParams(endpoint: EndpointDefinition) {
+  return endpoint.queryParams.map((name) => {
+    const descriptions: Record<string, string> = {
+      tokenAsistencia:
+        "Token del QR diario usado para registrar asistencia.",
+      socio_id:
+        "ID del socio a consultar. Si se omite, el endpoint resuelve según el rol del usuario autenticado.",
+      url:
+        "URL absoluta de la imagen remota que será descargada por el proxy.",
+      options:
+        "Cuando vale true, devuelve opciones de formulario en lugar del listado principal.",
+      page:
+        "Página de resultados para listados paginados.",
+    };
+
+    const examples: Record<string, string> = {
+      tokenAsistencia: "qr_2026_05_23_abcd",
+      socio_id: "2d2a45df-0fd5-4f4e-9c01-5de07dca1111",
+      url: "https://example.com/image.png",
+      options: "true",
+      page: "1",
+    };
+
+    return {
+      name,
+      in: "query",
+      required: name === "url" || name === "tokenAsistencia" ? true : false,
+      description: descriptions[name] ?? `Parámetro de consulta ${name}.`,
+      schema: { type: "string" },
+      example: examples[name] ?? "valor",
+    };
+  });
+}
+
+function getRequestBody(endpoint: EndpointDefinition, method: string) {
+  const lowerMethod = method.toLowerCase();
+
+  if (!["post", "put", "patch"].includes(lowerMethod)) {
+    if (lowerMethod === "delete" && !endpoint.path.includes("{")) {
+      return {
+        required: false,
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/IdMutationRequest" },
+            examples: {
+              eliminarPorId: {
+                summary: "Eliminar o desactivar por ID",
+                value: { id: "2d2a45df-0fd5-4f4e-9c01-5de07dca1111" },
+              },
+            },
+          },
+        },
+      };
+    }
+
+    return undefined;
+  }
+
+  if (endpoint.path === "/api/file-upload") {
+    return {
+      required: true,
+      content: {
+        "multipart/form-data": {
+          schema: {
+            type: "object",
+            properties: {
+              file: { type: "string", format: "binary" },
+              usuario_id: { type: "string", format: "uuid" },
+              tipo: { type: "string", example: "foto_perfil" },
+            },
+          },
+        },
+      },
+    };
+  }
+
+  if (endpoint.path === "/api/stripe-webhook") {
+    return {
+      required: true,
+      content: {
+        "application/json": {
+          schema: { type: "object", additionalProperties: true },
+          examples: {
+            stripeEvent: {
+              summary: "Evento de Stripe",
+              value: {
+                id: "evt_123",
+                type: "checkout.session.completed",
+                data: { object: { id: "cs_test_123" } },
+              },
+            },
+          },
+        },
+      },
+    };
+  }
+
+  if (endpoint.path === "/api/auth/{nextauth}" || endpoint.path === "/api/custom-login") {
+    return {
+      required: true,
+      content: {
+        "application/json": {
+          schema: { $ref: "#/components/schemas/LoginRequest" },
+          examples: {
+            credentials: {
+              summary: "Credenciales de usuario",
+              value: {
+                email: "admin@gymmaster.local",
+                password: "********",
+                userType: "admin",
+              },
+            },
+          },
+        },
+      },
+    };
+  }
+
+  if (endpoint.path === "/api/asistencias/registro-qr" && lowerMethod === "post") {
+    return {
+      required: true,
+      content: {
+        "application/json": {
+          schema: {
+            type: "object",
+            required: ["qr"],
+            properties: {
+              qr: {
+                type: "string",
+                description: "Token QR recibido desde el lector o cámara.",
+                example: "qr_2026_05_23_abcd",
+              },
+            },
+          },
+        },
+      },
+    };
+  }
+
+  if (endpoint.path === "/api/parametrizacion/catalogos") {
+    return {
+      required: true,
+      content: {
+        "application/json": {
+          schema: { $ref: "#/components/schemas/CatalogoParametrizableMutationRequest" },
+          examples: {
+            medioPago: {
+              summary: "Crear medio de pago",
+              value: {
+                catalogo: "medio_pago",
+                codigo: "mercado_pago",
+                nombre: "Mercado Pago",
+                descripcion: "Pago online o presencial registrado mediante Mercado Pago.",
+                activo: true,
+                orden: 60,
+                requiere_comprobante: true,
+                es_online: true,
+              },
+            },
+            desactivar: {
+              summary: "Desactivar registro sin hard delete",
+              value: {
+                catalogo: "medio_pago",
+                id: "95ce23de-3112-4198-8f00-6d736afe1111",
+                activo: false,
+              },
+            },
+          },
+        },
+      },
+    };
+  }
+
+  return {
+    required: true,
+    content: {
+      "application/json": {
+        schema: { $ref: "#/components/schemas/GenericMutationRequest" },
+        examples: {
+          generic: {
+            summary: "Payload genérico",
+            description:
+              "La forma exacta del payload depende del módulo y del servicio asociado al endpoint.",
+            value: {
+              id: "2d2a45df-0fd5-4f4e-9c01-5de07dca1111",
+              data: {
+                nombre: "Ejemplo",
+                activo: true,
+              },
+            },
+          },
+        },
+      },
+    },
+  };
+}
+
+function successDescription(method: string, endpoint: EndpointDefinition) {
+  if (endpoint.notImplemented) {
+    return "Endpoint definido, pero la lógica puede estar pendiente.";
+  }
+
+  switch (method.toLowerCase()) {
+    case "get":
+      return "Consulta ejecutada correctamente.";
+    case "post":
+      return "Registro, proceso o acción creada/ejecutada correctamente.";
+    case "put":
+    case "patch":
+      return "Registro actualizado correctamente.";
+    case "delete":
+      return "Registro eliminado o desactivado correctamente.";
+    default:
+      return "Operación ejecutada correctamente.";
+  }
+}
+
+function buildResponses(endpoint: EndpointDefinition, method: string) {
+  const responses: Record<string, unknown> = {};
+  const statuses = new Set(endpoint.statuses);
+
+  if (!Array.from(statuses).some((status) => status >= 200 && status < 300)) {
+    statuses.add(method.toLowerCase() === "post" ? 201 : 200);
+  }
+
+  if (endpoint.auth) statuses.add(401);
+  if (endpoint.admin) statuses.add(403);
+  if (endpoint.notImplemented) statuses.add(501);
+  statuses.add(500);
+
+  Array.from(statuses)
+    .sort((a, b) => a - b)
+    .forEach((status) => {
+      if (status >= 200 && status < 300) {
+        responses[String(status)] = {
+          description: successDescription(method, endpoint),
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/GenericSuccessResponse" },
+            },
+          },
+        };
+        return;
+      }
+
+      responses[String(status)] = {
+        description:
+          status === 400
+            ? "Solicitud inválida o payload incompleto."
+            : status === 401
+              ? "Usuario no autenticado o sesión inválida."
+              : status === 403
+                ? "Usuario sin permisos suficientes para ejecutar la operación."
+                : status === 404
+                  ? "Recurso no encontrado."
+                  : status === 409
+                    ? "Conflicto de datos, por ejemplo código duplicado."
+                    : status === 415
+                      ? "Tipo de contenido no soportado."
+                      : status === 501
+                        ? "Endpoint definido pero todavía no implementado."
+                        : "Error interno del servidor.",
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/ErrorResponse" },
+          },
+        },
+      };
+    });
+
+  return responses;
+}
+
+function buildOperation(endpoint: EndpointDefinition, method: string) {
+  const lowerMethod = method.toLowerCase();
+  const parameters = [...getPathParams(endpoint.path), ...getQueryParams(endpoint)];
+  const requestBody = getRequestBody(endpoint, lowerMethod);
+  const security = endpoint.auth || endpoint.admin
+    ? [{ bearerAuth: [] }, { nextAuthSession: [] }]
+    : undefined;
+
+  const operation: OpenApiOperation = {
+    tags: [endpoint.tag],
+    summary:
+      lowerMethod === "get"
+        ? endpoint.summary
+        : `${method.toUpperCase()} ${endpoint.summary}`,
+    description: `${endpoint.description}\n\nArchivo fuente: \`${endpoint.source}\`.`,
+    operationId: toOperationId(method, endpoint.path),
+    parameters,
+    responses: buildResponses(endpoint, lowerMethod),
+  };
+
+  if (security) operation.security = security;
+  if (requestBody) operation.requestBody = requestBody;
+  if (endpoint.notImplemented) operation.deprecated = true;
+
+  return operation;
+}
+
+function buildPaths() {
+  const paths: Record<string, OpenApiPathItem> = {};
+
+  for (const endpoint of endpointDefinitions) {
+    const pathItem = paths[endpoint.path] ?? {};
+
+    for (const method of endpoint.methods) {
+      const lowerMethod = method.toLowerCase();
+      pathItem[lowerMethod] = buildOperation(endpoint, lowerMethod);
+    }
+
+    const orderedPathItem: OpenApiPathItem = {};
+    Object.entries(pathItem)
+      .sort(([methodA], [methodB]) => (methodOrder[methodA] ?? 99) - (methodOrder[methodB] ?? 99))
+      .forEach(([method, operation]) => {
+        orderedPathItem[method] = operation;
+      });
+
+    paths[endpoint.path] = orderedPathItem;
+  }
+
+  return Object.fromEntries(
+    Object.entries(paths).sort(([pathA], [pathB]) => pathA.localeCompare(pathB))
+  );
+}
+
+export const openApiSpec = {
+  openapi: "3.0.3",
+  info: {
+    title: "Gym Master API",
+    version: "0.1.0",
+    description:
+      "Documentación completa de endpoints detectados en `src/app/api/**/route.ts`. Esta especificación debe actualizarse en cada feature que agregue o modifique APIs.",
+    contact: {
+      name: "Dragon Pyramid - Gym Master",
+    },
+  },
+  servers: [
+    {
+      url: "/",
+      description: "Origen actual de la aplicación Next.js",
+    },
+  ],
+  tags,
+  paths: buildPaths(),
+  components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: "http",
+        scheme: "bearer",
+        bearerFormat: "JWT",
+        description:
+          "Token JWT cuando el endpoint se consuma desde clientes externos o pruebas técnicas.",
+      },
+      nextAuthSession: {
+        type: "apiKey",
+        in: "cookie",
+        name: "next-auth.session-token",
+        description:
+          "Sesión de NextAuth usada por el frontend de Gym Master.",
+      },
+    },
+    schemas: {
+      GenericSuccessResponse: {
+        type: "object",
+        additionalProperties: true,
+        description:
+          "Respuesta exitosa. La estructura final depende del módulo: puede incluir data, message, registros, KPIs o payloads específicos.",
+        examples: [
+          { data: [] },
+          { message: "Operación realizada correctamente" },
+        ],
+      },
+      ErrorResponse: {
+        type: "object",
+        required: ["error"],
+        properties: {
+          error: {
+            type: "string",
+            example: "No autorizado",
+          },
+          message: {
+            type: "string",
+            example: "Detalle opcional del error",
+          },
+        },
+      },
+      IdMutationRequest: {
+        type: "object",
+        properties: {
+          id: {
+            type: "string",
+            format: "uuid",
+            example: "2d2a45df-0fd5-4f4e-9c01-5de07dca1111",
+          },
+        },
+      },
+      GenericMutationRequest: {
+        type: "object",
+        additionalProperties: true,
+        description:
+          "Payload genérico para endpoints de creación/actualización. Consultar la implementación del servicio asociado para campos exactos.",
+        properties: {
+          id: {
+            type: "string",
+            format: "uuid",
+          },
+          data: {
+            type: "object",
+            additionalProperties: true,
+          },
+        },
+      },
+      LoginRequest: {
+        type: "object",
+        required: ["email", "password"],
+        properties: {
+          email: {
+            type: "string",
+            format: "email",
+            example: "admin@gymmaster.local",
+          },
+          password: {
+            type: "string",
+            format: "password",
+            example: "********",
+          },
+          userType: {
+            type: "string",
+            enum: ["admin", "usuario", "socio"],
+            example: "admin",
+          },
+        },
+      },
+      CatalogoParametrizableMutationRequest: {
+        type: "object",
+        required: ["catalogo"],
+        properties: {
+          catalogo: {
+            type: "string",
+            enum: [
+              "tipo_empleado",
+              "medio_pago",
+              "tipo_gasto",
+              "tipo_ingreso",
+              "categoria_producto",
+              "tipo_equipamiento",
+              "ubicacion_equipamiento",
+              "tipo_mantenimiento",
+            ],
+          },
+          id: { type: "string", format: "uuid" },
+          codigo: { type: "string", example: "mercado_pago" },
+          nombre: { type: "string", example: "Mercado Pago" },
+          descripcion: {
+            type: "string",
+            nullable: true,
+            example: "Pago online o presencial registrado mediante Mercado Pago.",
+          },
+          activo: { type: "boolean", example: true },
+          orden: { type: "integer", minimum: 0, example: 60 },
+          requiere_comprobante: {
+            type: "boolean",
+            nullable: true,
+            description: "Campo específico de medio_pago.",
+          },
+          es_online: {
+            type: "boolean",
+            nullable: true,
+            description: "Campo específico de medio_pago.",
+          },
+          frecuencia_dias: {
+            type: "integer",
+            nullable: true,
+            minimum: 1,
+            description: "Campo específico de tipo_mantenimiento.",
+          },
+          alerta_dias_anticipacion: {
+            type: "integer",
+            nullable: true,
+            minimum: 0,
+            description: "Campo específico de tipo_mantenimiento.",
+          },
+        },
+      },
+    },
+  },
+} as const;
