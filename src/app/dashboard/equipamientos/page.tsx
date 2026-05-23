@@ -4,9 +4,11 @@ import { useAuthStore } from "@/stores/authStore";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Equipamento } from "@/interfaces/equipamiento.interface";
+import { AlertasMantenimientoEquipamientoResponse } from "@/interfaces/equipamientoAlertas.interface";
 import {
   getAllEquipamientos,
   deleteEquipamiento,
+  getAlertasMantenimientoEquipamientos,
 } from "@/services/equipamientoService";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import EquipamientoModal from "@/components/modal/EquipamientoModal";
@@ -21,7 +23,7 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Filter, Search, Printer, FileSpreadsheet } from "lucide-react";
+import { AlertTriangle, CalendarClock, CheckCircle2, FileSpreadsheet, Filter, Printer, RefreshCw, Search, Wrench } from "lucide-react";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { AppHeader } from "@/components/header/AppHeader";
 import { AppFooter } from "@/components/footer/AppFooter";
@@ -44,9 +46,19 @@ export default function EquipamientosPage() {
   const [selectedEstados, setSelectedEstados] = useState<string[]>([]);
   const [selectedUbicaciones, setSelectedUbicaciones] = useState<string[]>([]);
   const [filtrosOpen, setFiltrosOpen] = useState(false);
-  const tipos = ["Cardio", "Fuerza", "Funcional", "Otro"];
+  const [alertasMantenimiento, setAlertasMantenimiento] =
+    useState<AlertasMantenimientoEquipamientoResponse | null>(null);
+  const [loadingAlertas, setLoadingAlertas] = useState(false);
+
+  const tipos = Array.from(
+    new Set(equipos.map((equipo) => String(equipo.tipo ?? "").trim()).filter(Boolean))
+  ).sort();
   const estados = ["operativo", "en mantenimiento", "fuera de servicio"];
-  const ubicaciones = ["Zona A", "Zona B", "Zona C", "Zona D"];
+  const ubicaciones = Array.from(
+    new Set(
+      equipos.map((equipo) => String(equipo.ubicacion ?? "").trim()).filter(Boolean)
+    )
+  ).sort();
 
   useEffect(() => {
     initializeAuth();
@@ -65,9 +77,23 @@ export default function EquipamientosPage() {
     setLoading(false);
   };
 
+  const loadAlertasMantenimiento = async () => {
+    try {
+      setLoadingAlertas(true);
+      const data = await getAlertasMantenimientoEquipamientos(5);
+      setAlertasMantenimiento(data);
+    } catch (error) {
+      console.error("Error al cargar alertas de mantenimiento:", error);
+      setAlertasMantenimiento(null);
+    } finally {
+      setLoadingAlertas(false);
+    }
+  };
+
   useEffect(() => {
     if (isInitialized && isAuthenticated) {
       loadEquipos();
+      loadAlertasMantenimiento();
     }
   }, [isInitialized, isAuthenticated]);
 
@@ -92,10 +118,10 @@ export default function EquipamientosPage() {
       const lower = searchTerm.toLowerCase();
       equiposFiltrados = equiposFiltrados.filter(
         (e) =>
-          e.nombre.toLowerCase().includes(lower) ||
-          e.tipo.toLowerCase().includes(lower) ||
-          e.estado.toLowerCase().includes(lower) ||
-          e.ubicacion.toLowerCase().includes(lower)
+          String(e.nombre ?? "").toLowerCase().includes(lower) ||
+          String(e.tipo ?? "").toLowerCase().includes(lower) ||
+          String(e.estado ?? "").toLowerCase().includes(lower) ||
+          String(e.ubicacion ?? "").toLowerCase().includes(lower)
       );
     }
     return equiposFiltrados;
@@ -140,6 +166,14 @@ export default function EquipamientosPage() {
     return null;
   }
 
+  const resumenAlertas = alertasMantenimiento?.resumen;
+  const alertasOperativas = alertasMantenimiento?.alertas_operativas ?? [];
+  const proximasAlertas = alertasOperativas.slice(0, 5);
+
+  const handleRefreshMantenimiento = async () => {
+    await Promise.all([loadEquipos(), loadAlertasMantenimiento()]);
+  };
+
   return (
     <SidebarProvider>
       <div className="flex w-full min-h-screen">
@@ -147,6 +181,141 @@ export default function EquipamientosPage() {
         <SidebarInset>
           <AppHeader title="Equipamientos" />
           <main className="flex-1 p-6 space-y-6">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+              <Card className="border-red-100 bg-red-50">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-red-700">Vencidos</p>
+                      <p className="mt-1 text-2xl font-bold text-red-900">
+                        {resumenAlertas?.vencidos ?? 0}
+                      </p>
+                    </div>
+                    <AlertTriangle className="h-8 w-8 text-red-600" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-amber-100 bg-amber-50">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-amber-700">Próximos</p>
+                      <p className="mt-1 text-2xl font-bold text-amber-900">
+                        {resumenAlertas?.proximos ?? 0}
+                      </p>
+                    </div>
+                    <CalendarClock className="h-8 w-8 text-amber-600" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-blue-100 bg-blue-50">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-blue-700">En mantenimiento</p>
+                      <p className="mt-1 text-2xl font-bold text-blue-900">
+                        {resumenAlertas?.en_mantenimiento ?? 0}
+                      </p>
+                    </div>
+                    <Wrench className="h-8 w-8 text-blue-600" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-slate-100 bg-slate-50">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-slate-700">Sin fecha</p>
+                      <p className="mt-1 text-2xl font-bold text-slate-900">
+                        {resumenAlertas?.sin_fecha ?? 0}
+                      </p>
+                    </div>
+                    <AlertTriangle className="h-8 w-8 text-slate-500" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-emerald-100 bg-emerald-50">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-emerald-700">Sin alerta</p>
+                      <p className="mt-1 text-2xl font-bold text-emerald-900">
+                        {resumenAlertas?.ok ?? 0}
+                      </p>
+                    </div>
+                    <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card className="w-full">
+              <CardHeader className="flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap">
+                <div>
+                  <h2 className="text-xl font-bold">Alertas de mantenimiento</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Control operativo basado en próxima revisión, estado del equipo y umbral de 5 días.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleRefreshMantenimiento}
+                  disabled={loadingAlertas}
+                  className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
+                >
+                  <RefreshCw className={`h-4 w-4 ${loadingAlertas ? "animate-spin" : ""}`} />
+                  Actualizar alertas
+                </Button>
+              </CardHeader>
+              <CardContent className="p-4">
+                {proximasAlertas.length === 0 ? (
+                  <div className="rounded-lg border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-800">
+                    No hay alertas operativas de mantenimiento con el umbral actual.
+                  </div>
+                ) : (
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    {proximasAlertas.map((alerta) => (
+                      <div
+                        key={alerta.id}
+                        className="rounded-xl border bg-white p-4 shadow-sm"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-semibold text-slate-950">
+                              {alerta.nombre}
+                            </p>
+                            <p className="mt-1 text-xs text-slate-500">
+                              {alerta.tipo || "Sin tipo"} · {alerta.ubicacion || "Sin ubicación"}
+                            </p>
+                          </div>
+                          <span
+                            className={`rounded-full px-2 py-1 text-xs font-medium ${
+                              alerta.severidad === "critica"
+                                ? "bg-red-100 text-red-700"
+                                : alerta.severidad === "alta"
+                                  ? "bg-amber-100 text-amber-700"
+                                  : "bg-slate-100 text-slate-700"
+                            }`}
+                          >
+                            {alerta.estado_alerta.replaceAll("_", " ")}
+                          </span>
+                        </div>
+                        <p className="mt-3 text-sm text-slate-700">{alerta.mensaje}</p>
+                        <p className="mt-2 text-xs text-slate-500">
+                          Próxima revisión: {alerta.proxima_revision || "sin fecha"}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             <Card className="w-full">
               <CardHeader className="flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap">
                 <h2 className="text-xl font-bold">Listado de Equipamientos</h2>
@@ -326,7 +495,7 @@ export default function EquipamientosPage() {
                       );
                       if (!confirmar) return;
                       await deleteEquipamiento(equipo.id);
-                      loadEquipos();
+                      await handleRefreshMantenimiento();
                     }}
                   />
                 </div>
@@ -342,7 +511,7 @@ export default function EquipamientosPage() {
           setOpenModal(false);
           setSelectedEquipo(null);
         }}
-        onCreated={loadEquipos}
+        onCreated={handleRefreshMantenimiento}
         equipoId={selectedEquipo ? selectedEquipo.id : null}
       />
       <EquipamientoViewModal

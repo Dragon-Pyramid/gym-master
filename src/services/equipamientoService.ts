@@ -1,4 +1,5 @@
 import { CreateEquipamentoDTO, Equipamento, UpdateEquipamentoDTO } from "@/interfaces/equipamiento.interface";
+import { AlertasMantenimientoEquipamientoResponse } from "@/interfaces/equipamientoAlertas.interface";
 import { TipoEquipamiento } from "@/enums/tipoEquipamiento.enum";
 import { getSupabaseClient, supabase } from "./supabaseClient";
 import dayjs from "dayjs";
@@ -135,3 +136,23 @@ export const dataPrediccionFallo = async (user: any) => {
     //TODO IMPLEMENTAR LÓGICA DE PREDICCIÓN DE FALLOS DE EQUIPAMIENTO
     throw new Error("Funcionalidad no implementada");
 }
+
+export const getAlertasMantenimientoEquipamientos = async (
+  umbralDias = 5
+): Promise<AlertasMantenimientoEquipamientoResponse> => {
+  const response = await fetch(
+    `/api/equipamientos/alertas-mantenimiento?umbralDias=${umbralDias}`,
+    {
+      method: "GET",
+      cache: "no-store",
+    }
+  );
+
+  const payload = await response.json();
+
+  if (!response.ok) {
+    throw new Error(payload?.error || "Error al obtener alertas de mantenimiento");
+  }
+
+  return payload as AlertasMantenimientoEquipamientoResponse;
+};
