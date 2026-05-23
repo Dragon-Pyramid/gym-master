@@ -23,13 +23,14 @@ export const createEntrenador = async (
   user: JwtUser
 ): Promise<Entrenador> => {
   const supabase = conexionBD();
-  const { nombre_completo, dni, horarios } = createEntrenador;
+  const { nombre_completo, dni, horarios, id_tipo_empleado } = createEntrenador;
 
   const { data: entrenadorData, error: entrenadorError } = await supabase
     .from("entrenadores")
     .insert({
       nombre_completo,
       dni,
+      id_tipo_empleado: id_tipo_empleado ?? null,
       fecha_alta: new Date().toISOString(),
       activo: true,
       horarios_texto: "",

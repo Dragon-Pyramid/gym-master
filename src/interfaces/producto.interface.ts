@@ -5,6 +5,7 @@ export interface Producto {
   precio: number;
   stock: number;
   proveedor_id: string;
+  id_categoria_producto?: string | null;
   activo: boolean;
 }
 
@@ -14,6 +15,7 @@ export interface CreateProductoDto {
   precio: number;
   stock: number;
   proveedor_id: string;
+  id_categoria_producto?: string | null;
 }
 
 export interface UpdateProductoDto {
@@ -22,5 +24,6 @@ export interface UpdateProductoDto {
   precio?: number;
   stock?: number;
   proveedor_id?: string;
+  id_categoria_producto?: string | null;
   activo?: boolean;
 }

@@ -10,6 +10,8 @@ import {
   updatePagoApi,
 } from "@/services/browser/pagoApiClient";
 import { PagoManualFormOptions, ResponsePago } from "@/interfaces/pago.interface";
+import { CatalogoParametrizableItem } from "@/interfaces/parametrizacion.interface";
+import { useCatalogoParametrizable } from "@/hooks/useCatalogosParametrizables";
 import { toast } from "sonner";
 
 export interface PagoFormProps {
@@ -26,6 +28,39 @@ function addMonthsIso(dateIso: string, months: number) {
   return date.toISOString().slice(0, 10);
 }
 
+const fallbackMediosPago: CatalogoParametrizableItem[] = [
+  {
+    id: "fallback-efectivo",
+    codigo: "efectivo",
+    nombre: "Efectivo",
+    descripcion: "Pago manual registrado por administración.",
+    activo: true,
+    orden: 10,
+    requiere_comprobante: false,
+    es_online: false,
+  },
+  {
+    id: "fallback-transferencia",
+    codigo: "transferencia",
+    nombre: "Transferencia",
+    descripcion: "Pago por transferencia bancaria o billetera.",
+    activo: true,
+    orden: 30,
+    requiere_comprobante: true,
+    es_online: false,
+  },
+  {
+    id: "fallback-otro",
+    codigo: "otro",
+    nombre: "Otro",
+    descripcion: "Medio de pago no clasificado.",
+    activo: true,
+    orden: 90,
+    requiere_comprobante: false,
+    es_online: false,
+  },
+];
+
 const emptyForm = {
   socio_id: "",
   cuota_id: "",
@@ -34,7 +69,8 @@ const emptyForm = {
   periodo_hasta: addMonthsIso(todayIso(), 1),
   meses_cubiertos: 1,
   monto_pagado: 0,
-  metodo_pago: "efectivo" as const,
+  metodo_pago: "efectivo",
+  id_medio_pago: "",
   observaciones: "",
 };
 
@@ -46,6 +82,10 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
   });
   const [loading, setLoading] = useState(false);
   const [loadingOptions, setLoadingOptions] = useState(true);
+  const { items: mediosPago } = useCatalogoParametrizable(
+    "medio_pago",
+    fallbackMediosPago
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -71,6 +111,11 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
 
   useEffect(() => {
     if (pago) {
+      const metodoPago = pago.metodo_pago ?? "efectivo";
+      const medioPago = mediosPago.find(
+        (item) => item.codigo === metodoPago || item.id === pago.id_medio_pago
+      );
+
       setForm({
         socio_id: pago.socio?.id_socio ?? "",
         cuota_id: pago.cuota?.id ?? "",
@@ -80,13 +125,18 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
           pago.periodo_hasta ?? pago.fecha_vencimiento ?? addMonthsIso(todayIso(), 1),
         meses_cubiertos: pago.meses_cubiertos ?? 1,
         monto_pagado: pago.monto_pagado ?? 0,
-        metodo_pago: (pago.metodo_pago as "efectivo") ?? "efectivo",
+        metodo_pago: medioPago?.codigo ?? metodoPago,
+        id_medio_pago: pago.id_medio_pago ?? medioPago?.id ?? "",
         observaciones: pago.observaciones ?? "",
       });
     } else {
-      setForm(emptyForm);
+      setForm((prev) => ({
+        ...emptyForm,
+        id_medio_pago:
+          mediosPago.find((item) => item.codigo === emptyForm.metodo_pago)?.id ?? "",
+      }));
     }
-  }, [pago]);
+  }, [pago, mediosPago]);
 
   const selectedCuota = useMemo(
     () => options.cuotas.find((cuota) => cuota.id === form.cuota_id),
@@ -131,6 +181,15 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
 
       return next;
     });
+  };
+
+  const handleMedioPagoChange = (value: string) => {
+    const selected = mediosPago.find((item) => item.id === value);
+    setForm((prev) => ({
+      ...prev,
+      id_medio_pago: selected?.id ?? "",
+      metodo_pago: selected?.codigo ?? value,
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -261,17 +320,20 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="metodo_pago">Método de pago</Label>
+        <Label htmlFor="id_medio_pago">Método de pago</Label>
         <select
-          id="metodo_pago"
-          name="metodo_pago"
-          value={form.metodo_pago}
-          onChange={handleChange}
+          id="id_medio_pago"
+          name="id_medio_pago"
+          value={form.id_medio_pago || mediosPago.find((item) => item.codigo === form.metodo_pago)?.id || form.metodo_pago}
+          onChange={(e) => handleMedioPagoChange(e.target.value)}
           className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
         >
-          <option value="efectivo">Efectivo</option>
-          <option value="transferencia">Transferencia</option>
-          <option value="otro">Otro</option>
+          {mediosPago.map((medio) => (
+            <option key={medio.id} value={medio.id}>
+              {medio.nombre}
+              {medio.es_online ? " (online)" : ""}
+            </option>
+          ))}
         </select>
       </div>
 

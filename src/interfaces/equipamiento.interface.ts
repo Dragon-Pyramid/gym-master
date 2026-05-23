@@ -4,10 +4,12 @@ import { TipoEquipamiento } from '@/enums/tipoEquipamiento.enum';
 export interface Equipamento {
   id: string; // UUID
   nombre: string;
-  tipo: TipoEquipamiento;
+  tipo: TipoEquipamiento | string;
+  id_tipo_equipamiento?: string | null;
   marca: string;
   modelo: string;
   ubicacion: string;
+  id_ubicacion_equipamiento?: string | null;
   estado: EstadoEquipamiento;
   fecha_adquisicion: string;
   ultima_revision: string;
@@ -18,10 +20,12 @@ export interface Equipamento {
 
 export interface CreateEquipamentoDTO {
   nombre: string;
-  tipo: TipoEquipamiento;
+  tipo: TipoEquipamiento | string;
+  id_tipo_equipamiento?: string | null;
   marca: string;
   modelo: string;
   ubicacion: string;
+  id_ubicacion_equipamiento?: string | null;
   proxima_revision?: string; // si no existe, se calcula automáticamente
   //    fecha_adquisicion: string;  hoy
   //    ultima_revision: string;   hoy
@@ -30,10 +34,12 @@ export interface CreateEquipamentoDTO {
 
 export interface UpdateEquipamentoDTO {
   nombre?: string;
-  tipo?: TipoEquipamiento;
+  tipo?: TipoEquipamiento | string;
+  id_tipo_equipamiento?: string | null;
   marca?: string;
   modelo?: string;
   ubicacion?: string;
+  id_ubicacion_equipamiento?: string | null;
   // Accept either the enum value or the raw string literals used across the codebase
   estado?:
     | EstadoEquipamiento

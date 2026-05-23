@@ -15,6 +15,7 @@ export interface Pago {
   periodo_hasta?: string | null;
   meses_cubiertos?: number | null;
   metodo_pago?: MetodoPago | string | null;
+  id_medio_pago?: string | null;
   estado?: EstadoPago | string | null;
   stripe_session_id?: string | null;
   stripe_payment_intent_id?: string | null;
@@ -36,6 +37,7 @@ export interface CreatePagoDto {
   monto_pagado?: number;
 
   metodo_pago?: string;
+  id_medio_pago?: string | null;
   estado?: string;
 
   registrado_por?: string | null;
@@ -57,7 +59,8 @@ export interface UpdatePagoDto {
   meses_cubiertos?: number;
   monto_pagado?: number;
   registrado_por?: string;
-  metodo_pago?: MetodoPago;
+  metodo_pago?: MetodoPago | string;
+  id_medio_pago?: string | null;
   estado?: EstadoPago;
   observaciones?: string;
   activo?: boolean;
@@ -78,6 +81,7 @@ export interface ResponsePago {
   total: number | null;
 
   metodo_pago?: string | null;
+  id_medio_pago?: string | null;
   estado?: string | null;
   observaciones?: string | null;
   enviar_email: boolean;
