@@ -979,7 +979,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     ],
     "tag": "Socios",
     "summary": "Pagos de mi cuenta",
-    "description": "Devuelve historial de pagos del socio autenticado.",
+    "description": "Devuelve el historial de pagos del socio autenticado. La respuesta incluye datos del socio, cuota, cobertura, medio de pago, estado y monto para que el socio pueda consultar sus pagos y descargar su recibo PDF verificable desde Mi cuenta.",
     "auth": true,
     "admin": false,
     "notImplemented": false,

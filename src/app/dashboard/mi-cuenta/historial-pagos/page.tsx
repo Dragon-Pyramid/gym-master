@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Clock, CreditCard, Loader2 } from 'lucide-react';
+import { Clock, CreditCard, Loader2, ReceiptText } from 'lucide-react';
 import { AppHeader } from '@/components/header/AppHeader';
 import { AppFooter } from '@/components/footer/AppFooter';
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
@@ -12,6 +12,8 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getToken } from '@/services/storageService';
 import { useAuthStore } from '@/stores/authStore';
+import { descargarPagoReciboPdf } from '@/utils/pagoReciboPdf';
+import type { ResponsePago } from '@/interfaces/pago.interface';
 
 type PagoSocio = {
   id: string;
@@ -27,6 +29,12 @@ type PagoSocio = {
   observaciones: string | null;
   stripe_session_id: string | null;
   stripe_payment_intent_id: string | null;
+  enviar_email?: boolean;
+  socio: {
+    id_socio: string;
+    nombre_completo: string;
+    email?: string | null;
+  } | null;
   cuota: {
     id: string;
     descripcion: string;
@@ -110,6 +118,31 @@ export default function HistorialPagosSocioPage() {
     }
   }, [isInitialized, isAuthenticated]);
 
+  const handleDownloadReceipt = async (pago: PagoSocio) => {
+    try {
+      if (!pago.socio) {
+        throw new Error('No se encontraron los datos del socio para generar el recibo');
+      }
+
+      await descargarPagoReciboPdf({
+        ...pago,
+        enviar_email: pago.enviar_email ?? false,
+        socio: pago.socio,
+        cuota: pago.cuota ?? {
+          id: '',
+          descripcion: 'Cuota',
+          monto: pago.monto_pagado,
+          periodo: null,
+        },
+        registrado_por: pago.registrado_por ?? null,
+      } as ResponsePago);
+
+      toast.success('Recibo PDF generado correctamente');
+    } catch (error: any) {
+      toast.error(error.message || 'No se pudo generar el recibo PDF');
+    }
+  };
+
   const totalPagado = useMemo(
     () => pagos.reduce((acc, pago) => acc + Number(pago.monto_pagado ?? 0), 0),
     [pagos]
@@ -183,6 +216,7 @@ export default function HistorialPagosSocioPage() {
                           <th className='px-4 py-3 text-left'>Método</th>
                           <th className='px-4 py-3 text-left'>Estado</th>
                           <th className='px-4 py-3 text-right'>Monto</th>
+                          <th className='px-4 py-3 text-right'>Recibo</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -212,6 +246,19 @@ export default function HistorialPagosSocioPage() {
                             </td>
                             <td className='px-4 py-3 font-semibold text-right whitespace-nowrap'>
                               {formatMoney(pago.monto_pagado)}
+                            </td>
+                            <td className='px-4 py-3 text-right'>
+                              <Button
+                                type='button'
+                                size='sm'
+                                variant='outline'
+                                className='border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]'
+                                onClick={() => handleDownloadReceipt(pago)}
+                                title='Descargar recibo PDF'
+                              >
+                                <ReceiptText className='w-4 h-4 mr-2' />
+                                Recibo
+                              </Button>
                             </td>
                           </tr>
                         ))}
