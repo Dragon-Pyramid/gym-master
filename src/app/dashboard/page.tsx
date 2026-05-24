@@ -257,18 +257,6 @@ export default function DashboardPage() {
     )
     .reduce((acc, m) => acc + (m.costo || 0), 0);
 
-  if (loadingDatos || !isInitialized) {
-    return (
-      <div className='flex items-center justify-center h-screen'>
-        Cargando dashboard...
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return null;
-  }
-
   const userType = user?.rol;
 
   const showAdminAccessFeedback = (payload: {
@@ -366,6 +354,18 @@ export default function DashboardPage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.rol]);
+
+  if (loadingDatos || !isInitialized) {
+    return (
+      <div className='flex items-center justify-center h-screen'>
+        Cargando dashboard...
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <SidebarProvider>
