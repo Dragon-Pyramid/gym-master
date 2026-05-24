@@ -4,7 +4,7 @@ import { useState, FormEvent, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/authStore';
-import { Sun, Moon, Check, ChevronsUpDown } from 'lucide-react';
+import { Sun, Moon, Check, ChevronsUpDown, Eye, EyeOff } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -95,6 +95,7 @@ export default function LoginPage() {
     ''
   );
   const [userTypeOpen, setUserTypeOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { dark, toggle } = useDarkMode();
 
   useEffect(() => {
@@ -208,14 +209,34 @@ export default function LoginPage() {
 
               <div className='grid gap-2'>
                 <Label htmlFor='password'>Contraseña</Label>
-                <Input
-                  id='password'
-                  type='password'
-                  placeholder='••••••••'
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
+                <div className='relative'>
+                  <Input
+                    id='password'
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder='••••••••'
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className='pr-12'
+                    autoComplete='current-password'
+                    required
+                  />
+                  <Button
+                    type='button'
+                    variant='ghost'
+                    size='icon'
+                    className='absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground hover:text-foreground'
+                    onClick={() => setShowPassword((value) => !value)}
+                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    title={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    tabIndex={0}
+                  >
+                    {showPassword ? (
+                      <EyeOff className='h-4 w-4' aria-hidden='true' />
+                    ) : (
+                      <Eye className='h-4 w-4' aria-hidden='true' />
+                    )}
+                  </Button>
+                </div>
               </div>
 
               <div className='grid gap-2'>
