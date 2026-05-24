@@ -6,6 +6,7 @@ import {
   UpdateUsuarioDto,
   Usuario,
 } from '@/interfaces/usuario.interface';
+import { sanitizeMenuPermissionsForRole } from '@/lib/permissions/menuPermissions';
 import { JwtUser } from '@/interfaces/jwtUser.interface';
 import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 
@@ -26,6 +27,7 @@ function toResponseUsuario(usuario: Usuario): ResponseUsuario {
     rol: usuario.rol,
     activo: usuario.activo,
     foto: usuario.foto,
+    permisos_menu: usuario.permisos_menu ?? null,
   };
 }
 
@@ -45,7 +47,7 @@ export const fetchUsuariosServer = async (
 
   const { data, error } = await supabase
     .from('usuario')
-    .select('id,nombre,email,rol,activo,foto')
+    .select('id,nombre,email,rol,activo,foto,permisos_menu')
     .order('creado_en', { ascending: false });
 
   if (error) throw new Error(error.message);
@@ -83,9 +85,10 @@ export const createUsuarioServer = async (
         rol,
         activo: true,
         foto: payload.foto ?? null,
+        permisos_menu: sanitizeMenuPermissionsForRole(rol, payload.permisos_menu),
       },
     ])
-    .select('id,nombre,email,rol,activo,foto')
+    .select('id,nombre,email,rol,activo,foto,permisos_menu')
     .single();
 
   if (usuarioError) throw new Error(usuarioError.message);
@@ -134,8 +137,17 @@ export const updateUsuarioServer = async (
     payload.nombre = updateData.nombre.trim();
   }
 
-  if (typeof updateData.rol === 'string') {
-    payload.rol = sanitizeRole(updateData.rol);
+  const nextRole = typeof updateData.rol === 'string' ? sanitizeRole(updateData.rol) : undefined;
+
+  if (nextRole) {
+    payload.rol = nextRole;
+  }
+
+  if ('permisos_menu' in updateData || nextRole) {
+    payload.permisos_menu = sanitizeMenuPermissionsForRole(
+      nextRole ?? updateData.rol,
+      updateData.permisos_menu
+    );
   }
 
   if (updateData.password) {
@@ -147,7 +159,7 @@ export const updateUsuarioServer = async (
     .from('usuario')
     .update(payload)
     .eq('id', id)
-    .select('id,nombre,email,rol,activo,foto')
+    .select('id,nombre,email,rol,activo,foto,permisos_menu')
     .single();
 
   if (error) throw new Error(error.message);
@@ -167,7 +179,7 @@ export const deactivateUsuarioServer = async (
     .from('usuario')
     .update({ activo: false })
     .eq('id', id)
-    .select('id,nombre,email,rol,activo,foto')
+    .select('id,nombre,email,rol,activo,foto,permisos_menu')
     .single();
 
   if (error) throw new Error(error.message);
@@ -187,7 +199,7 @@ export const getUsuarioByIdServer = async (
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from('usuario')
-    .select('id,nombre,email,rol,activo,foto')
+    .select('id,nombre,email,rol,activo,foto,permisos_menu')
     .eq('id', id)
     .single();
 

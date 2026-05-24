@@ -42,6 +42,14 @@ export default function UserViewModal({
             <strong>Rol:</strong> {usuario.rol}
           </p>
           <p className="text-foreground">
+            <strong>Permisos:</strong>{' '}
+            {usuario.rol === 'admin'
+              ? 'Control total'
+              : Array.isArray(usuario.permisos_menu)
+              ? `${usuario.permisos_menu.length} módulos habilitados`
+              : 'Permisos por defecto'}
+          </p>
+          <p className="text-foreground">
             <strong>Estado:</strong>{" "}
             <span
               className={`px-2 py-1 rounded-full text-xs font-semibold ${

@@ -54,6 +54,7 @@ export default function UsersTable({
           <TableHead>Email</TableHead>
           <TableHead>Rol</TableHead>
           <TableHead>Activo</TableHead>
+          <TableHead>Permisos</TableHead>
           <TableHead>Acciones</TableHead>
         </TableRow>
       </TableHeader>
@@ -67,6 +68,13 @@ export default function UsersTable({
             <TableCell>{u.email}</TableCell>
             <TableCell>{u.rol}</TableCell>
             <TableCell>{u.activo ? "✅" : "❌"}</TableCell>
+            <TableCell>
+              {u.rol === 'admin'
+                ? 'Total'
+                : Array.isArray(u.permisos_menu)
+                ? `${u.permisos_menu.length} módulos`
+                : 'Por defecto'}
+            </TableCell>
             <TableCell className="flex gap-2">
               <Button
                 size="sm"
@@ -101,7 +109,7 @@ export default function UsersTable({
       </TableBody>
       <TableFooter>
         <TableRow>
-          <TableCell colSpan={4}>Total de usuarios</TableCell>
+          <TableCell colSpan={5}>Total de usuarios</TableCell>
           <TableCell className="text-right">{usuarios.length}</TableCell>
         </TableRow>
       </TableFooter>
