@@ -1,11 +1,22 @@
 import axios from 'axios';
 import { authHeader } from '@/services/storageService';
 
+export interface EstadoCuotaAccesoQR {
+  estado_cuota?: string | null;
+  dias_vencido?: number;
+  periodo_hasta?: string | null;
+  ultimo_vencimiento?: string | null;
+}
+
 export interface AsistenciaReciente {
   id: string;
   socio_id: string;
   fecha: string;           // 'YYYY-MM-DD'
   hora_ingreso: string;    // 'HH:MM:SS'
+  access_status?: 'al_dia' | 'deuda' | 'desactivado' | string;
+  alert_type?: RegistroAsistenciaAlertType;
+  mensaje_acceso?: string | null;
+  estado_cuota?: EstadoCuotaAccesoQR | null;
   socio?: {
     id_socio: string;
     nombre_completo: string;
@@ -23,12 +34,7 @@ export interface RegistroAsistenciaQRResponse {
   alert_type?: RegistroAsistenciaAlertType;
   bloquea_ingreso?: boolean;
   mensaje_acceso?: string | null;
-  estado_cuota?: {
-    estado_cuota?: string | null;
-    dias_vencido?: number;
-    periodo_hasta?: string | null;
-    ultimo_vencimiento?: string | null;
-  } | null;
+  estado_cuota?: EstadoCuotaAccesoQR | null;
   asistencia?: {
     socio?: {
       id_socio?: string;

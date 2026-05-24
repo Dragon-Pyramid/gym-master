@@ -63,6 +63,10 @@ export default function AsistenciasRecientesTable({
         socio_id: r.socio_id,
         fecha: r.fecha,
         hora_ingreso: r.hora_ingreso,
+        access_status: r.access_status,
+        alert_type: r.alert_type,
+        mensaje_acceso: r.mensaje_acceso ?? null,
+        estado_cuota: r.estado_cuota ?? null,
         socio:
           r.socio ??
           (r.nombre_completo || r.foto
@@ -245,11 +249,17 @@ export default function AsistenciasRecientesTable({
           asistencias.map((row) => {
             const nombre = row.socio?.nombre_completo ?? 'Socio';
             const foto = row.socio?.foto ?? null;
+            const tieneDeuda =
+              row.alert_type === 'debt' || row.access_status === 'deuda';
 
             return (
               <div
                 key={row.id}
-                className="flex items-center justify-between p-4 transition-colors border rounded-lg sm:p-5 hover:bg-muted/50"
+                className={`flex items-center justify-between p-4 transition-colors border rounded-lg sm:p-5 ${
+                  tieneDeuda
+                    ? 'border-red-300 bg-red-50 hover:bg-red-100 dark:border-red-700 dark:bg-red-950/40'
+                    : 'hover:bg-muted/50'
+                }`}
               >
                 <div className="flex items-center flex-1 min-w-0 gap-3 sm:gap-4">
                   <div className="flex items-center justify-center flex-shrink-0 w-10 h-10 rounded-full sm:w-12 sm:h-12 bg-primary/10 overflow-hidden">
@@ -271,6 +281,11 @@ export default function AsistenciasRecientesTable({
                     <p className="text-sm sm:text-base text-muted-foreground">
                       {formatFecha(row.fecha)}
                     </p>
+                    {tieneDeuda && (
+                      <p className="mt-1 text-xs font-semibold text-red-700 dark:text-red-300">
+                        Debe regularizar en administración
+                      </p>
+                    )}
                   </div>
                 </div>
 
