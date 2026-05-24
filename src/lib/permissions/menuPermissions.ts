@@ -257,6 +257,112 @@ export const DEFAULT_MENU_PERMISSIONS_BY_ROLE: Record<AppRole, string[]> = {
   ],
 };
 
+
+export type DashboardRoutePermission = {
+  path: string;
+  permissionKey: string;
+  roles: AppRole[];
+  exact?: boolean;
+};
+
+const MENU_DASHBOARD_ROUTE_PERMISSIONS: DashboardRoutePermission[] =
+  MENU_PERMISSION_GROUPS.flatMap((group) =>
+    group.items.map((item) => ({
+      path: item.path,
+      permissionKey: item.key,
+      roles: item.roles,
+      exact: true,
+    }))
+  );
+
+export const DASHBOARD_ROUTE_PERMISSIONS: DashboardRoutePermission[] = [
+  ...MENU_DASHBOARD_ROUTE_PERMISSIONS,
+  {
+    path: '/dashboard/admin',
+    permissionKey: 'Inicio',
+    roles: ['admin'],
+    exact: true,
+  },
+  {
+    path: '/dashboard/bi-cuotas-pagos',
+    permissionKey: 'Pagos',
+    roles: ['admin'],
+    exact: true,
+  },
+  {
+    path: '/dashboard/gestion-dietas',
+    permissionKey: 'Gestión de Dietas',
+    roles: ['admin'],
+    exact: true,
+  },
+  {
+    path: '/dashboard/ventas-detalle',
+    permissionKey: 'Ventas',
+    roles: ['admin', 'usuario'],
+    exact: true,
+  },
+];
+
+function normalizeDashboardPath(pathname?: string | null) {
+  if (!pathname) return '/dashboard';
+  const cleanPath = pathname.split('?')[0].split('#')[0];
+  if (cleanPath === '/') return '/';
+  return cleanPath.replace(/\/$/, '') || '/dashboard';
+}
+
+function normalizeAppRole(role?: string | null): AppRole | null {
+  if (role === 'admin' || role === 'usuario' || role === 'socio') {
+    return role;
+  }
+
+  return null;
+}
+
+export function getDashboardRoutePermission(pathname?: string | null) {
+  const normalizedPath = normalizeDashboardPath(pathname);
+
+  const exactMatch = DASHBOARD_ROUTE_PERMISSIONS.find(
+    (route) => normalizeDashboardPath(route.path) === normalizedPath
+  );
+
+  if (exactMatch) return exactMatch;
+
+  return DASHBOARD_ROUTE_PERMISSIONS
+    .filter((route) => route.exact === false)
+    .sort((a, b) => b.path.length - a.path.length)
+    .find((route) => {
+      const normalizedRoutePath = normalizeDashboardPath(route.path);
+      return normalizedPath.startsWith(`${normalizedRoutePath}/`);
+    });
+}
+
+export function canAccessDashboardPath(
+  role?: string | null,
+  permissions?: string[] | null,
+  pathname?: string | null
+) {
+  const normalizedRole = normalizeAppRole(role);
+  if (!normalizedRole) return false;
+
+  const routePermission = getDashboardRoutePermission(pathname);
+
+  if (!routePermission) {
+    return normalizedRole === 'admin';
+  }
+
+  if (!routePermission.roles.includes(normalizedRole)) {
+    return false;
+  }
+
+  if (normalizedRole === 'admin') {
+    return true;
+  }
+
+  return getEffectiveMenuPermissions(normalizedRole, permissions).includes(
+    routePermission.permissionKey
+  );
+}
+
 export function getAvailableMenuPermissionsForRole(role?: string | null) {
   const normalizedRole = (role || 'socio') as AppRole;
   if (!['admin', 'usuario', 'socio'].includes(normalizedRole)) return [];
