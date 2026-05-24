@@ -257,6 +257,7 @@ export default function DashboardPage() {
     )
     .reduce((acc, m) => acc + (m.costo || 0), 0);
 
+
   const userType = user?.rol;
 
   const showAdminAccessFeedback = (payload: {
@@ -285,17 +286,19 @@ export default function DashboardPage() {
       variant: payload.variant ?? 'success',
       message: payload.message ?? null,
     });
+
     setShowWelcome(true);
-    adminWelcomeTimeoutRef.current = setTimeout(() => setShowWelcome(false), 3500);
+    adminWelcomeTimeoutRef.current = setTimeout(() => {
+      setShowWelcome(false);
+    }, 3500);
   };
 
-  // Handler tipado con el mismo tipo que emite la tabla.
-  // Si la asistencia reciente corresponde a un socio moroso/sin pagos, el admin
-  // debe ver alerta roja de regularización, no mensaje de bienvenida.
   const handleNewAsistencia = (a: AsistenciaRecienteApi) => {
     const variant =
       a.alert_type === 'debt' || a.access_status === 'deuda'
         ? 'debt'
+        : a.alert_type === 'inactive' || a.access_status === 'desactivado'
+        ? 'inactive'
         : 'success';
 
     showAdminAccessFeedback({
@@ -308,6 +311,9 @@ export default function DashboardPage() {
         variant === 'debt'
           ? a.mensaje_acceso ||
             'El socio debe dirigirse a administración para regularizar su situación.'
+          : variant === 'inactive'
+          ? a.mensaje_acceso ||
+            'El socio está desactivado. Debe dirigirse a administración para regularizar su situación.'
           : null,
     });
   };
@@ -348,6 +354,7 @@ export default function DashboardPage() {
 
     return () => {
       supabaseBrowser.removeChannel(channel);
+
       if (adminWelcomeTimeoutRef.current) {
         clearTimeout(adminWelcomeTimeoutRef.current);
       }
