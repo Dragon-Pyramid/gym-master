@@ -4,7 +4,7 @@ import { useState, FormEvent, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/authStore';
-import { Sun, Moon, Check, ChevronsUpDown, Eye, EyeOff } from 'lucide-react';
+import { Sun, Moon, Check, ChevronsUpDown, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -96,6 +96,7 @@ export default function LoginPage() {
   );
   const [userTypeOpen, setUserTypeOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [loginAlert, setLoginAlert] = useState<string | null>(null);
   const { dark, toggle } = useDarkMode();
 
   useEffect(() => {
@@ -107,6 +108,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (error) {
+      setLoginAlert(error);
       toast.error(error);
       clearError();
     }
@@ -114,6 +116,7 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setLoginAlert(null);
 
     if (!email.trim()) {
       toast.error('El campo Usuario es obligatorio');
@@ -202,7 +205,10 @@ export default function LoginPage() {
                   type='email'
                   placeholder='usuario@correo.com'
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (loginAlert) setLoginAlert(null);
+                  }}
                   required
                 />
               </div>
@@ -215,7 +221,10 @@ export default function LoginPage() {
                     type={showPassword ? 'text' : 'password'}
                     placeholder='••••••••'
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (loginAlert) setLoginAlert(null);
+                    }}
                     className='pr-12'
                     autoComplete='current-password'
                     required
@@ -302,6 +311,19 @@ export default function LoginPage() {
                 </Popover>
               </div>
 
+
+              {loginAlert && (
+                <div
+                  role='alert'
+                  className='flex gap-3 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-700 dark:bg-red-950/50 dark:text-red-100'
+                >
+                  <AlertTriangle className='mt-0.5 h-5 w-5 flex-shrink-0' />
+                  <div>
+                    <p className='font-semibold'>Acceso restringido</p>
+                    <p className='mt-1 leading-relaxed'>{loginAlert}</p>
+                  </div>
+                </div>
+              )}
 
               <Button
                 type='submit'

@@ -637,13 +637,15 @@ const endpointDefinitions: EndpointDefinition[] = [
     ],
     "tag": "Autenticación",
     "summary": "Login personalizado",
-    "description": "Valida credenciales y tipo de usuario para iniciar sesión en el sistema.",
+    "description": "Valida credenciales y tipo de usuario para iniciar sesión en el sistema. Para socios, evalúa estado activo y mora mayor a 7 días; si corresponde, bloquea el ingreso normal y devuelve mensaje de regularización administrativa.",
     "auth": false,
     "admin": false,
     "notImplemented": false,
     "statuses": [
       200,
       400,
+      401,
+      403,
       500
     ],
     "queryParams": [],
