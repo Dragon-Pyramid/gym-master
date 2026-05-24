@@ -8,6 +8,27 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock, User } from 'lucide-react';
 import { supabaseBrowser } from '@/lib/supabase-browser';
 
+const RECENT_ADMIN_SPLASH_WINDOW_MS = 15000;
+
+function getAsistenciaLocalTimestamp(row: AsistenciaRecienteApi) {
+  const [year, month, day] = (row.fecha ?? '').split('-').map(Number);
+  const [hour = 0, minute = 0, second = 0] = (row.hora_ingreso ?? '')
+    .split(':')
+    .map(Number);
+
+  if (!year || !month || !day) return 0;
+
+  return new Date(
+    year,
+    month - 1,
+    day,
+    Number.isFinite(hour) ? hour : 0,
+    Number.isFinite(minute) ? minute : 0,
+    Number.isFinite(second) ? second : 0,
+    0
+  ).getTime();
+}
+
 interface AsistenciasRecientesTableProps {
   /** Forzar refetch externo cuando cambie */
   refreshTrigger?: number;
@@ -70,11 +91,21 @@ export default function AsistenciasRecientesTable({
         return a.id < b.id ? 1 : -1;
       });
 
-      // Detectar cambio en la primera fila (nueva asistencia)
+      // Detectar cambio en la primera fila (nueva asistencia).
+      // Si la tabla se monta justo después del escaneo, el primer fetch puede traer
+      // ya la asistencia nueva. En ese caso emitimos el splash admin solo si la
+      // asistencia es muy reciente, para no mostrar un ingreso viejo al abrir el QR.
       const top = uniq[0] ?? null;
       if (!initializedRef.current) {
         lastTopIdRef.current = top?.id ?? null;
         initializedRef.current = true;
+
+        if (
+          top &&
+          Date.now() - getAsistenciaLocalTimestamp(top) <= RECENT_ADMIN_SPLASH_WINDOW_MS
+        ) {
+          onNewAsistencia?.(top);
+        }
       } else if (top && top.id && top.id !== lastTopIdRef.current) {
         lastTopIdRef.current = top.id;
         onNewAsistencia?.(top);
@@ -119,7 +150,7 @@ export default function AsistenciasRecientesTable({
     // Fallback por si Realtime no está habilitado o hay cortes de red
     const interval = setInterval(() => {
       if (!inFlight.current) loadAsistencias();
-    }, 5000);
+    }, 2500);
 
     return () => {
       supabaseBrowser.removeChannel(channel);
@@ -141,17 +172,11 @@ export default function AsistenciasRecientesTable({
     });
   };
 
-  // Hora exacta "HH:MM:SS"
+  // Hora exacta guardada en base como string local Argentina "HH:MM:SS".
+  // No se convierte a Date para evitar dobles ajustes de timezone en navegador.
   const formatHora = (hhmmss: string) => {
-    const [hh = '0', mm = '0', ss = '0'] = (hhmmss ?? '').split(':');
-    const d = new Date();
-    d.setHours(Number(hh), Number(mm), Number(ss), 0);
-    return d.toLocaleTimeString('es-AR', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: true, // quitá esta línea si preferís 24h
-    });
+    const [hh = '00', mm = '00', ss = '00'] = (hhmmss ?? '').split(':');
+    return `${hh.padStart(2, '0')}:${mm.padStart(2, '0')}:${ss.padStart(2, '0')}`;
   };
 
   // ——— UI ———
