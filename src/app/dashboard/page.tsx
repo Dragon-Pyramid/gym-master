@@ -133,6 +133,7 @@ export default function DashboardPage() {
   const [welcomeData, setWelcomeData] = useState<{
     nombre?: string;
     foto?: string | null;
+    id_socio?: string;
   }>({});
 
   const [adherenciaRutinas, setAdherenciaRutinas] = useState<
@@ -258,6 +259,7 @@ export default function DashboardPage() {
     setWelcomeData({
       nombre: a.socio?.nombre_completo ?? '¡Bienvenido!',
       foto: a.socio?.foto ?? null,
+      id_socio: a.socio?.id_socio ?? a.socio_id,
     });
     setShowWelcome(true);
     setTimeout(() => setShowWelcome(false), 2500);
@@ -303,6 +305,8 @@ export default function DashboardPage() {
                   <BienvenidaSocio
                     nombre={welcomeData.nombre}
                     foto={welcomeData.foto ?? undefined}
+                    id_socio={welcomeData.id_socio}
+                    isAdminView
                     onClose={() => setShowWelcome(false)}
                   />
                 </div>

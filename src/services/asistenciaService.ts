@@ -11,42 +11,34 @@ import { JwtUser } from '@/interfaces/jwtUser.interface';
 import { conexionBD } from '@/middlewares/conexionBd.middleware';
 import { getSocioByIdUsuario } from './socioService';
 
-const ARGENTINA_TIME_ZONE = 'America/Argentina/Buenos_Aires';
+const ARGENTINA_UTC_OFFSET_HOURS = -3;
 
 function getArgentinaDateTimeParts(date = new Date()) {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: ARGENTINA_TIME_ZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  }).formatToParts(date);
+  // Argentina no utiliza horario de verano. Para evitar diferencias entre
+  // runtime local, Vercel/UTC e ICU de Node, calculamos la fecha/hora operativa
+  // con offset fijo UTC-03 y guardamos strings planos en la base.
+  const argentinaDate = new Date(
+    date.getTime() + ARGENTINA_UTC_OFFSET_HOURS * 60 * 60 * 1000
+  );
+  const iso = argentinaDate.toISOString();
 
-  const values = Object.fromEntries(
-    parts
-      .filter((part) => part.type !== 'literal')
-      .map((part) => [part.type, part.value])
-  ) as Record<string, string>;
-
-  const hour = values.hour === '24' ? '00' : values.hour;
+  const fecha = iso.slice(0, 10);
+  const hora = iso.slice(11, 19);
+  const [year, month, day] = fecha.split('-').map(Number);
 
   return {
-    year: Number(values.year),
-    month: Number(values.month),
-    day: Number(values.day),
-    fecha: `${values.year}-${values.month}-${values.day}`,
-    hora: `${hour}:${values.minute}:${values.second}`,
+    year,
+    month,
+    day,
+    fecha,
+    hora,
   };
 }
 
 function getArgentinaEndOfDayUnix(date = new Date()) {
   const argentinaNow = getArgentinaDateTimeParts(date);
 
-  // Argentina opera en UTC-03. El final del día local 23:59:59
-  // equivale a 02:59:59 UTC del día siguiente.
+  // Final del día Argentina 23:59:59 (UTC-03) = 02:59:59 UTC del día siguiente.
   return Math.floor(
     Date.UTC(
       argentinaNow.year,

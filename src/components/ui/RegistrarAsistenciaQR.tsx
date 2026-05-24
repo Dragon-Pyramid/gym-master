@@ -1,5 +1,4 @@
-import { useRef, useState } from 'react';
-import dynamic from 'next/dynamic';
+import { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,10 +9,23 @@ import BienvenidaSocio from './BienvenidaSocio';
 import { Socio } from '@/interfaces/socio.interface';
 import { Usuario } from '@/interfaces/usuario.interface';
 
-const QrReader = dynamic(
-  () => import('react-qr-reader').then((mod) => mod.QrReader),
-  { ssr: false }
-);
+type BrowserBarcodeDetector = {
+  detect: (source: HTMLVideoElement) => Promise<Array<{ rawValue?: string }>>;
+};
+
+type BrowserBarcodeDetectorConstructor = new (options?: {
+  formats?: string[];
+}) => BrowserBarcodeDetector;
+
+function getBarcodeDetectorConstructor() {
+  if (typeof window === 'undefined') return null;
+
+  return (
+    window as Window & {
+      BarcodeDetector?: BrowserBarcodeDetectorConstructor;
+    }
+  ).BarcodeDetector ?? null;
+}
 
 function getSocioDisplayData(res: RegistroAsistenciaQRResponse) {
   let nombre: string | undefined;
@@ -41,7 +53,12 @@ export function RegistrarAsistenciaQR() {
   const [error, setError] = useState('');
   const [cameraKey, setCameraKey] = useState(0);
   const [cameraHint, setCameraHint] = useState('');
+  const [cameraReady, setCameraReady] = useState(false);
   const lastScanRef = useRef<{ value: string; at: number } | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const scanTimerRef = useRef<number | null>(null);
+  const loadingRef = useRef(false);
 
   const [showWelcome, setShowWelcome] = useState(false);
   const [welcomeData, setWelcomeData] = useState<{
@@ -51,8 +68,30 @@ export function RegistrarAsistenciaQR() {
     message?: string | null;
   }>({});
 
+  useEffect(() => {
+    loadingRef.current = loading;
+  }, [loading]);
+
+  const stopCamera = () => {
+    if (scanTimerRef.current) {
+      window.clearInterval(scanTimerRef.current);
+      scanTimerRef.current = null;
+    }
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+
+    setCameraReady(false);
+  };
+
   const handleScan = async (data: string | null) => {
-    if (!data || loading) return;
+    if (!data || loadingRef.current) return;
 
     const now = Date.now();
     if (
@@ -63,71 +102,182 @@ export function RegistrarAsistenciaQR() {
     }
     lastScanRef.current = { value: data, at: now };
 
+    loadingRef.current = true;
     setLoading(true);
     setError('');
     setMessage('');
     setCameraHint('');
 
-    const res = await registrarAsistenciaQR(data);
+    try {
+      const res = await registrarAsistenciaQR(data);
 
-    const { nombre: responseNombre, foto } = getSocioDisplayData(res);
-    let nombre = responseNombre;
+      const { nombre: responseNombre, foto } = getSocioDisplayData(res);
+      let nombre = responseNombre;
 
-    if (!nombre && 'usuario' in res && res.usuario) {
-      const usuario = res.usuario as Usuario;
-      nombre = usuario.nombre || undefined;
-    }
+      if (!nombre && 'usuario' in res && res.usuario) {
+        const usuario = res.usuario as Usuario;
+        nombre = usuario.nombre || undefined;
+      }
 
-    if (!nombre) {
-      try {
-        const url = new URL(data);
-        const qname = url.searchParams.get('nombre');
-        if (qname) nombre = qname;
-      } catch {}
-    }
+      if (!nombre) {
+        try {
+          const url = new URL(data);
+          const qname = url.searchParams.get('nombre');
+          if (qname) nombre = qname;
+        } catch {}
+      }
 
-    if (res.alert_type === 'inactive' || res.access_status === 'desactivado') {
-      setWelcomeData({
-        nombre,
-        foto,
-        variant: 'inactive',
-        message:
-          res.error ||
-          'Usted está desactivado. Regularice su situación en administración.',
-      });
-      setError(res.error || 'Socio desactivado.');
-      setShowWelcome(true);
+      if (res.alert_type === 'inactive' || res.access_status === 'desactivado') {
+        setWelcomeData({
+          nombre,
+          foto,
+          variant: 'inactive',
+          message:
+            res.error ||
+            'Usted está desactivado. Regularice su situación en administración.',
+        });
+        setError(res.error || 'Socio desactivado.');
+        setShowWelcome(true);
+        return;
+      }
+
+      if (res.error && !res.valido) {
+        setError(res.error || 'No se pudo registrar la asistencia.');
+        return;
+      }
+
+      if (res.valido || res.message) {
+        const variant = res.alert_type === 'debt' ? 'debt' : 'success';
+        const finalMessage =
+          res.mensaje_acceso ||
+          res.message ||
+          'Asistencia registrada correctamente.';
+
+        setMessage(finalMessage);
+        setWelcomeData({
+          nombre,
+          foto,
+          variant,
+          message: variant === 'debt' ? finalMessage : null,
+        });
+        setShowWelcome(true);
+      } else {
+        setError('No se pudo registrar la asistencia.');
+      }
+    } finally {
+      loadingRef.current = false;
       setLoading(false);
-      return;
     }
-
-    if (res.error && !res.valido) {
-      setError(res.error || 'No se pudo registrar la asistencia.');
-      setLoading(false);
-      return;
-    }
-
-    if (res.valido || res.message) {
-      const variant = res.alert_type === 'debt' ? 'debt' : 'success';
-      const finalMessage =
-        res.mensaje_acceso ||
-        res.message ||
-        'Asistencia registrada correctamente.';
-
-      setMessage(finalMessage);
-      setWelcomeData({
-        nombre,
-        foto,
-        variant,
-        message: variant === 'debt' ? finalMessage : null,
-      });
-      setShowWelcome(true);
-    } else {
-      setError('No se pudo registrar la asistencia.');
-    }
-
-    setLoading(false);
   };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function startCamera() {
+      stopCamera();
+      setError('');
+      setMessage('');
+      setCameraHint('Iniciando cámara...');
+      setCameraReady(false);
+
+      try {
+        if (!navigator.mediaDevices?.getUserMedia) {
+          setCameraHint('Este navegador no permite acceder a la cámara desde esta página.');
+          return;
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+        });
+
+        if (cancelled) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        streamRef.current = stream;
+
+        const video = videoRef.current;
+        if (!video) return;
+
+        video.srcObject = stream;
+        video.setAttribute('playsinline', 'true');
+        video.muted = true;
+        await video.play();
+
+        if (cancelled) return;
+
+        setCameraReady(true);
+        setCameraHint('');
+
+        const BarcodeDetectorClass = getBarcodeDetectorConstructor();
+
+        if (!BarcodeDetectorClass) {
+          setCameraHint(
+            'La cámara está activa, pero este navegador no soporta detección QR nativa. Probá con Chrome actualizado.'
+          );
+          return;
+        }
+
+        const detector = new BarcodeDetectorClass({ formats: ['qr_code'] });
+
+        scanTimerRef.current = window.setInterval(async () => {
+          const currentVideo = videoRef.current;
+
+          if (
+            !currentVideo ||
+            currentVideo.readyState < HTMLMediaElement.HAVE_CURRENT_DATA ||
+            loadingRef.current
+          ) {
+            return;
+          }
+
+          try {
+            const codes = await detector.detect(currentVideo);
+            const text = codes.find((code) => code.rawValue)?.rawValue;
+
+            if (text) {
+              await handleScan(text);
+            }
+          } catch {
+            // Error transitorio de frame: no se corta la cámara.
+          }
+        }, 450);
+      } catch (cameraError: any) {
+        const name = cameraError?.name;
+
+        if (name === 'NotAllowedError') {
+          setCameraHint('No se pudo acceder a la cámara. Revisá los permisos del navegador.');
+          return;
+        }
+
+        if (name === 'NotFoundError') {
+          setCameraHint('No se encontró una cámara disponible para escanear.');
+          return;
+        }
+
+        if (name === 'NotReadableError') {
+          setCameraHint('La cámara está ocupada por otra aplicación o el navegador no pudo iniciarla.');
+          return;
+        }
+
+        setCameraHint('No se pudo iniciar la cámara. Reintentá o actualizá la página.');
+      }
+    }
+
+    startCamera();
+
+    return () => {
+      cancelled = true;
+      stopCamera();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cameraKey]);
 
   return (
     <Card className='w-full max-w-xl mx-auto'>
@@ -135,36 +285,29 @@ export function RegistrarAsistenciaQR() {
         <CardTitle>Escanear QR para registrar asistencia</CardTitle>
       </CardHeader>
       <CardContent className='flex flex-col items-center gap-6'>
-        <div className='flex items-center justify-center w-full max-w-xs overflow-hidden bg-gray-100 border rounded-lg aspect-square [&_section]:!static [&_section]:!h-full [&_section]:!w-full [&_section]:!p-0 [&_video]:!static [&_video]:!h-full [&_video]:!w-full [&_video]:!object-cover [&_video]:!opacity-100 [&_canvas]:!hidden'>
-          <QrReader
-            key={cameraKey}
-            constraints={{ facingMode: { ideal: 'environment' } }}
-            onResult={(result, scanError) => {
-              if (result && typeof result.getText === 'function') {
-                const text = result.getText();
-                if (text) handleScan(text);
-              }
-
-              const cameraError = scanError as { name?: string; message?: string } | null;
-
-              if (cameraError?.name === 'NotAllowedError') {
-                setCameraHint('No se pudo acceder a la cámara. Revisá los permisos del navegador.');
-              }
-
-              if (cameraError?.name === 'NotFoundError') {
-                setCameraHint('No se encontró una cámara disponible para escanear.');
-              }
-
-              if (cameraError?.name === 'NotReadableError') {
-                setCameraHint('La cámara está ocupada por otra aplicación o el navegador no pudo iniciarla.');
-              }
-            }}
+        <div className='relative flex items-center justify-center w-full max-w-xs overflow-hidden bg-slate-900 border rounded-lg aspect-square'>
+          <video
+            ref={videoRef}
+            className='absolute inset-0 object-cover w-full h-full'
+            playsInline
+            muted
+            autoPlay
           />
+
+          {!cameraReady && (
+            <div className='absolute inset-0 flex items-center justify-center px-6 text-sm text-center text-white bg-slate-900'>
+              Iniciando cámara...
+            </div>
+          )}
+
+          <div className='absolute inset-8 border-2 border-white/80 rounded-2xl shadow-[0_0_0_999px_rgba(15,23,42,0.28)]' />
+          <div className='absolute w-12 h-1 -translate-x-1/2 bg-[#02a8e1] rounded-full top-8 left-1/2' />
+          <div className='absolute w-12 h-1 -translate-x-1/2 bg-[#02a8e1] rounded-full bottom-8 left-1/2' />
         </div>
 
         <p className='max-w-sm text-xs text-center text-muted-foreground'>
-          Si ves un cuadro gris pero el QR se detecta, el permiso está activo y el problema
-          puede ser solo de previsualización del lector. Reintentá o actualizá la página.
+          Apuntá la cámara al QR del día. El lector usa la cámara nativa del navegador
+          para mostrar el preview y detectar el código.
         </p>
 
         {cameraHint && (
@@ -176,20 +319,21 @@ export function RegistrarAsistenciaQR() {
         {loading && <div className='text-blue-600'>Registrando...</div>}
         {message && (
           <div
-            className={`font-semibold ${
+            className={`font-semibold text-center ${
               welcomeData.variant === 'debt' ? 'text-red-600' : 'text-green-600'
             }`}
           >
             {message}
           </div>
         )}
-        {error && <div className='font-semibold text-red-600'>{error}</div>}
+        {error && <div className='font-semibold text-center text-red-600'>{error}</div>}
         <Button
           onClick={() => {
             setError('');
             setMessage('');
             setShowWelcome(false);
             setCameraHint('');
+            setCameraReady(false);
             setCameraKey((value) => value + 1);
             lastScanRef.current = null;
           }}
