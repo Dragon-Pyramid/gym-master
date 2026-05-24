@@ -11,6 +11,54 @@ import { JwtUser } from '@/interfaces/jwtUser.interface';
 import { conexionBD } from '@/middlewares/conexionBd.middleware';
 import { getSocioByIdUsuario } from './socioService';
 
+const ARGENTINA_TIME_ZONE = 'America/Argentina/Buenos_Aires';
+
+function getArgentinaDateTimeParts(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: ARGENTINA_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(date);
+
+  const values = Object.fromEntries(
+    parts
+      .filter((part) => part.type !== 'literal')
+      .map((part) => [part.type, part.value])
+  ) as Record<string, string>;
+
+  const hour = values.hour === '24' ? '00' : values.hour;
+
+  return {
+    year: Number(values.year),
+    month: Number(values.month),
+    day: Number(values.day),
+    fecha: `${values.year}-${values.month}-${values.day}`,
+    hora: `${hour}:${values.minute}:${values.second}`,
+  };
+}
+
+function getArgentinaEndOfDayUnix(date = new Date()) {
+  const argentinaNow = getArgentinaDateTimeParts(date);
+
+  // Argentina opera en UTC-03. El final del día local 23:59:59
+  // equivale a 02:59:59 UTC del día siguiente.
+  return Math.floor(
+    Date.UTC(
+      argentinaNow.year,
+      argentinaNow.month - 1,
+      argentinaNow.day + 1,
+      2,
+      59,
+      59
+    ) / 1000
+  );
+}
+
 export const getAllAsistencias = async (
   user: JwtUser
 ): Promise<Asistencia[]> => {
@@ -83,8 +131,9 @@ export const deleteAsistencia = async (
 };
 
 export const createQRDiario = async () => {
-  const hoy = dayjs().format('YYYY-MM-DD');
-  const expiracion = dayjs().endOf('day').unix();
+  const hoyArgentina = getArgentinaDateTimeParts();
+  const hoy = hoyArgentina.fecha;
+  const expiracion = getArgentinaEndOfDayUnix();
 
   //guardo la fecha de hoy
   const payload = { fecha: hoy };
@@ -189,7 +238,7 @@ export const registrarAsistenciaDesdeQR = async (
   const fechaAsistencia = payload.fecha;
 
   //VERIFICO QUE LA FECHA DEL TOKEN SEA LA DE HOY
-  const hoy = dayjs().format('YYYY-MM-DD');
+  const hoy = getArgentinaDateTimeParts().fecha;
   if (fechaAsistencia !== hoy) {
     return {
       valido: false,
@@ -273,7 +322,7 @@ export const registrarAsistenciaDesdeQR = async (
     .insert({
       socio_id: socio.id_socio,
       fecha: hoy,
-      hora_ingreso: dayjs().format('HH:mm:ss'),
+      hora_ingreso: getArgentinaDateTimeParts().hora,
     })
     .select(
       `

@@ -39,6 +39,8 @@ export function RegistrarAsistenciaQR() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [cameraKey, setCameraKey] = useState(0);
+  const [cameraHint, setCameraHint] = useState('');
   const lastScanRef = useRef<{ value: string; at: number } | null>(null);
 
   const [showWelcome, setShowWelcome] = useState(false);
@@ -64,6 +66,7 @@ export function RegistrarAsistenciaQR() {
     setLoading(true);
     setError('');
     setMessage('');
+    setCameraHint('');
 
     const res = await registrarAsistenciaQR(data);
 
@@ -132,9 +135,10 @@ export function RegistrarAsistenciaQR() {
         <CardTitle>Escanear QR para registrar asistencia</CardTitle>
       </CardHeader>
       <CardContent className='flex flex-col items-center gap-6'>
-        <div className='flex items-center justify-center w-full max-w-xs overflow-hidden bg-gray-100 border rounded-lg aspect-square'>
+        <div className='flex items-center justify-center w-full max-w-xs overflow-hidden bg-gray-100 border rounded-lg aspect-square [&_section]:!static [&_section]:!h-full [&_section]:!w-full [&_section]:!p-0 [&_video]:!static [&_video]:!h-full [&_video]:!w-full [&_video]:!object-cover [&_video]:!opacity-100 [&_canvas]:!hidden'>
           <QrReader
-            constraints={{ facingMode: 'environment' }}
+            key={cameraKey}
+            constraints={{ facingMode: { ideal: 'environment' } }}
             onResult={(result, scanError) => {
               if (result && typeof result.getText === 'function') {
                 const text = result.getText();
@@ -142,25 +146,32 @@ export function RegistrarAsistenciaQR() {
               }
 
               const cameraError = scanError as { name?: string; message?: string } | null;
+
               if (cameraError?.name === 'NotAllowedError') {
-                setError('No se pudo acceder a la cámara. Revisá los permisos del navegador.');
+                setCameraHint('No se pudo acceder a la cámara. Revisá los permisos del navegador.');
               }
 
               if (cameraError?.name === 'NotFoundError') {
-                setError('No se encontró una cámara disponible para escanear.');
+                setCameraHint('No se encontró una cámara disponible para escanear.');
               }
 
               if (cameraError?.name === 'NotReadableError') {
-                setError('La cámara está ocupada por otra aplicación o el navegador no pudo iniciarla.');
+                setCameraHint('La cámara está ocupada por otra aplicación o el navegador no pudo iniciarla.');
               }
             }}
           />
         </div>
 
         <p className='max-w-sm text-xs text-center text-muted-foreground'>
-          Si ves un cuadro gris, revisá permisos de cámara, que el sitio esté en
-          HTTPS o localhost, y que ninguna otra aplicación esté usando la cámara.
+          Si ves un cuadro gris pero el QR se detecta, el permiso está activo y el problema
+          puede ser solo de previsualización del lector. Reintentá o actualizá la página.
         </p>
+
+        {cameraHint && (
+          <div className='max-w-sm text-sm font-medium text-center text-amber-700'>
+            {cameraHint}
+          </div>
+        )}
 
         {loading && <div className='text-blue-600'>Registrando...</div>}
         {message && (
@@ -178,6 +189,8 @@ export function RegistrarAsistenciaQR() {
             setError('');
             setMessage('');
             setShowWelcome(false);
+            setCameraHint('');
+            setCameraKey((value) => value + 1);
             lastScanRef.current = null;
           }}
         >
