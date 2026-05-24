@@ -7,6 +7,7 @@ export interface Usuario {
   activo: boolean;
   creado_en?: Date;
   foto?: string;
+  permisos_menu?: string[] | null;
 }
 
 export interface CreateUsuarioDto {
@@ -16,6 +17,7 @@ export interface CreateUsuarioDto {
   rol?: string;
   dni?: string;
   foto?: string;
+  permisos_menu?: string[] | null;
 }
 
 export interface UpdateUsuarioDto {
@@ -26,6 +28,7 @@ export interface UpdateUsuarioDto {
   rol?: string;
   activo?: boolean;
   foto?: string;
+  permisos_menu?: string[] | null;
 }
 
 export interface ResponseUsuario {
@@ -36,4 +39,5 @@ export interface ResponseUsuario {
   activo: boolean;
   foto?: string;
   creado_en?: Date;
+  permisos_menu?: string[] | null;
 }

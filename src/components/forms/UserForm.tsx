@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Usuario,
   CreateUsuarioDto,
@@ -11,6 +12,11 @@ import {
 } from '@/interfaces/usuario.interface';
 import { createUsuarioApi, updateUsuarioApi } from '@/services/browser/usuarioApiClient';
 import { toast } from 'sonner';
+import {
+  DEFAULT_MENU_PERMISSIONS_BY_ROLE,
+  getAvailableMenuPermissionsForRole,
+  sanitizeMenuPermissionsForRole,
+} from '@/lib/permissions/menuPermissions';
 
 export interface UserFormProps {
   usuario?: Usuario | null;
@@ -24,7 +30,13 @@ const emptyForm = {
   password: '',
   rol: 'socio',
   dni: '',
+  permisos_menu: DEFAULT_MENU_PERMISSIONS_BY_ROLE.socio,
 };
+
+function getInitialPermissions(role: string, permisos?: string[] | null) {
+  const sanitized = sanitizeMenuPermissionsForRole(role, permisos);
+  return sanitized ?? [];
+}
 
 export default function UserForm({
   usuario,
@@ -42,6 +54,7 @@ export default function UserForm({
         rol: usuario.rol ?? 'socio',
         password: '',
         dni: '',
+        permisos_menu: getInitialPermissions(usuario.rol, usuario.permisos_menu),
       });
     } else {
       setForm(emptyForm);
@@ -50,7 +63,36 @@ export default function UserForm({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+
+    if (name === 'rol') {
+      setForm((prev) => ({
+        ...prev,
+        rol: value,
+        permisos_menu:
+          value === 'admin'
+            ? []
+            : getInitialPermissions(value, undefined),
+      }));
+      return;
+    }
+
     setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const togglePermission = (key: string) => {
+    setForm((prev) => {
+      const current = new Set(prev.permisos_menu);
+      if (current.has(key)) {
+        current.delete(key);
+      } else {
+        current.add(key);
+      }
+
+      return {
+        ...prev,
+        permisos_menu: Array.from(current),
+      };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -63,6 +105,10 @@ export default function UserForm({
           nombre: form.nombre,
           email: form.email,
           rol: form.rol,
+          permisos_menu:
+            form.rol === 'admin'
+              ? null
+              : sanitizeMenuPermissionsForRole(form.rol, form.permisos_menu),
           ...(form.password && { password: form.password }),
         };
 
@@ -75,6 +121,10 @@ export default function UserForm({
           email: form.email,
           password: form.password,
           rol,
+          permisos_menu:
+            rol === 'admin'
+              ? null
+              : sanitizeMenuPermissionsForRole(rol, form.permisos_menu),
           ...(rol === 'socio' && { dni: form.dni }),
         };
 
@@ -110,6 +160,8 @@ export default function UserForm({
   };
 
   const isSocio = form.rol === 'socio';
+  const isAdmin = form.rol === 'admin';
+  const availablePermissions = getAvailableMenuPermissionsForRole(form.rol);
 
   return (
     <form
@@ -152,7 +204,7 @@ export default function UserForm({
         >
           <option value='socio'>Socio</option>
           <option value='admin'>Administrador</option>
-          <option value='usuario'>Usuario</option>
+          <option value='usuario'>Usuario interno</option>
         </select>
       </div>
 
@@ -185,26 +237,70 @@ export default function UserForm({
         />
       </div>
 
-      <Button
-        type='submit'
-        className='col-span-full justify-self-end'
-        disabled={loading}
-      >
-        {loading
-          ? 'Guardando...'
-          : usuario
-          ? 'Actualizar Usuario'
-          : 'Crear Usuario'}
-      </Button>
+      <div className='col-span-full rounded-lg border bg-muted/20 p-4'>
+        <div className='mb-3'>
+          <h3 className='text-base font-semibold'>Permisos de menú</h3>
+          <p className='text-sm text-muted-foreground'>
+            Definí qué módulos verá este usuario al iniciar sesión. El administrador conserva acceso total.
+          </p>
+        </div>
 
-      <Button
-        type='button'
-        onClick={onCancel}
-        className='text-gray-800 bg-gray-200 col-span-full justify-self-end hover:bg-gray-300'
-        disabled={loading}
-      >
-        Cancelar
-      </Button>
+        {isAdmin ? (
+          <div className='rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100'>
+            El rol administrador tiene control total del panel.
+          </div>
+        ) : (
+          <div className='grid gap-4 md:grid-cols-2'>
+            {availablePermissions.map((group) => (
+              <div key={group.group} className='rounded-md border bg-background p-3'>
+                <p className='mb-2 text-sm font-semibold'>{group.group}</p>
+                <div className='space-y-2'>
+                  {group.items.map((item) => {
+                    const checked = form.permisos_menu.includes(item.key);
+
+                    return (
+                      <label
+                        key={item.key}
+                        className='flex cursor-pointer items-start gap-2 text-sm'
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={() => togglePermission(item.key)}
+                        />
+                        <span>
+                          <span className='font-medium'>{item.label}</span>
+                          <span className='block text-xs text-muted-foreground'>
+                            {item.path}
+                          </span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className='col-span-full flex justify-end gap-2'>
+        <Button
+          type='button'
+          onClick={onCancel}
+          className='text-gray-800 bg-gray-200 hover:bg-gray-300'
+          disabled={loading}
+        >
+          Cancelar
+        </Button>
+
+        <Button type='submit' disabled={loading}>
+          {loading
+            ? 'Guardando...'
+            : usuario
+            ? 'Actualizar Usuario'
+            : 'Crear Usuario'}
+        </Button>
+      </div>
     </form>
   );
 }

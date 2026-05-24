@@ -4,6 +4,7 @@ import * as jwt from 'jsonwebtoken';
 import { getSocioByIdUsuario } from './socioService';
 import { JwtUser } from '@/interfaces/jwtUser.interface';
 import { conexionBD } from '@/middlewares/conexionBd.middleware';
+import { sanitizeMenuPermissionsForRole } from '@/lib/permissions/menuPermissions';
 
 const DIAS_TOLERANCIA_MORA = 7;
 
@@ -121,7 +122,7 @@ export const signIn = async (login: SignInDto) => {
   //BUSCO EN ESA BD, EL USUARIO
   const { data, error } = await supabase
     .from('usuario')
-    .select()
+    .select('id,nombre,email,password_hash,rol,activo,foto,permisos_menu')
     .eq('email', email)
     .single();
 
@@ -183,6 +184,7 @@ export const signIn = async (login: SignInDto) => {
     rol: data.rol,
     nombre: data.nombre,
     foto: data.foto ? data.foto : null,
+    permisos_menu: sanitizeMenuPermissionsForRole(data.rol, data.permisos_menu),
   };
 
   if (rol === 'socio') {

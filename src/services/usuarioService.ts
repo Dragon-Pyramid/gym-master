@@ -3,6 +3,7 @@ import { Usuario, CreateUsuarioDto, UpdateUsuarioDto, ResponseUsuario } from "..
 import { JwtUser } from '@/interfaces/jwtUser.interface';
 import { conexionBD } from '@/middlewares/conexionBd.middleware';
 import { updateFotoSocioById } from './socioService';
+import { sanitizeMenuPermissionsForRole } from '@/lib/permissions/menuPermissions';
 
 export const fetchUsuarios = async (_user?: JwtUser): Promise<ResponseUsuario[]> => {
   const supabase = conexionBD();
@@ -22,7 +23,8 @@ const responseUsuario = (data : Usuario[]) : ResponseUsuario[]=>{
     email: usuario.email,
     rol: usuario.rol,
     activo: usuario.activo,
-    foto: usuario.foto 
+    foto: usuario.foto,
+    permisos_menu: usuario.permisos_menu ?? null,
   }))
 }
 
@@ -46,6 +48,7 @@ export const createUsuarios = async (_user: JwtUser | undefined, payload: Create
       rol,
       activo: true,
       foto: payload.foto ?? null,
+      permisos_menu: sanitizeMenuPermissionsForRole(rol, payload.permisos_menu),
     }])
     .select()
     .single();
@@ -82,6 +85,10 @@ export const updateUsuarios = async (
   const supabase = conexionBD();
 
   const payload: Record<string, unknown> = { ...updateData };
+
+  if (typeof updateData.rol === 'string' || 'permisos_menu' in updateData) {
+    payload.permisos_menu = sanitizeMenuPermissionsForRole(updateData.rol, updateData.permisos_menu);
+  }
 
   if (updateData.password) {
     payload.password_hash = await bcrypt.hash(updateData.password, 10);
@@ -137,7 +144,8 @@ const response : ResponseUsuario = {
   email: data.email,
   rol: data.rol,
   activo: data.activo,
-  foto: data.foto ? data.foto : "https://res.cloudinary.com/dxt4qdckz/image/upload/v1754954109/gym_master/socio/profile/1754954108698_imagen-generica.jpeg.jpg"
+  foto: data.foto ? data.foto : "https://res.cloudinary.com/dxt4qdckz/image/upload/v1754954109/gym_master/socio/profile/1754954108698_imagen-generica.jpeg.jpg",
+  permisos_menu: data.permisos_menu ?? null,
 }
 return response;
 } 
@@ -159,7 +167,7 @@ const supabase = conexionBD();
     throw new Error('No se encontró el usuario con ese ID');
   }
 
-  if(user.rol === "socio"){
+  if (user.rol === 'socio' && user.id_socio) {
     await updateFotoSocioById(user.id_socio, url);
   }
 console.log("profile_photo_updated: Foto de usuario actualizada:");

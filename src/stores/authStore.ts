@@ -15,6 +15,7 @@ type StoreUser = Partial<Usuario> & {
   id?: string;
   email?: string;
   rol?: string;
+  permisos_menu?: string[] | null;
 };
 
 interface AuthState {

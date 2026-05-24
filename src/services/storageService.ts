@@ -7,6 +7,7 @@ interface JwtPayload {
   email: string;
   rol: string;
   nombre?: string;
+  permisos_menu?: string[] | null;
   exp?: number;
 }
 

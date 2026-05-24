@@ -17,7 +17,7 @@ export const AppSidebar = () => {
   const pathname = usePathname();
 
   const userType = user?.rol;
-  const menuSections = useSidebarMenu(userType);
+  const menuSections = useSidebarMenu(userType, user?.permisos_menu ?? null);
 
   useEffect(() => {
     initializeAuth();
