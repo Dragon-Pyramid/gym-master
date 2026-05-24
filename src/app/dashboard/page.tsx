@@ -23,7 +23,7 @@ import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import DashboardInitialContent from '@/components/dashboard/DashboardInitialContent';
 import CuotasEstadoDashboard from '@/components/dashboard/cuotas/CuotasEstadoDashboard';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import QrDisplayModal from '@/components/ui/qr-display';
 import { Button } from '@/components/ui/button';
 import { getAllEquipamientos } from '@/services/equipamientoService';
@@ -43,9 +43,22 @@ import { Mantenimiento } from '@/interfaces/mantenimiento.interface';
 import AsistenciasRecientesTable from '@/components/ui/asistencias-recientes-table';
 import ClockCard from '@/components/ui/ClockCard';
 import BienvenidaSocio from '@/components/ui/BienvenidaSocio';
+import { supabaseBrowser } from '@/lib/supabase-browser';
 
 // ⬇️ IMPORTA EL TIPO QUE EMITE LA TABLA
 import type { AsistenciaReciente as AsistenciaRecienteApi } from '@/services/qrService';
+
+type AdminAccessEventPayload = {
+  event_id?: string;
+  access_status?: string;
+  alert_type?: 'success' | 'debt' | 'inactive' | 'error';
+  mensaje_acceso?: string | null;
+  socio?: {
+    id_socio?: string;
+    nombre_completo?: string;
+    foto?: string | null;
+  } | null;
+};
 
 ChartJS.register(
   CategoryScale,
@@ -134,7 +147,11 @@ export default function DashboardPage() {
     nombre?: string;
     foto?: string | null;
     id_socio?: string;
+    variant?: 'success' | 'debt' | 'inactive';
+    message?: string | null;
   }>({});
+  const lastAdminAccessEventRef = useRef<string | null>(null);
+  const adminWelcomeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [adherenciaRutinas, setAdherenciaRutinas] = useState<
     MetricaAdherencia[]
@@ -254,16 +271,101 @@ export default function DashboardPage() {
 
   const userType = user?.rol;
 
-  // ✅ Handler tipado con el mismo tipo que emite la tabla
-  const handleNewAsistencia = (a: AsistenciaRecienteApi) => {
+  const showAdminAccessFeedback = (payload: {
+    event_id?: string;
+    nombre?: string;
+    foto?: string | null;
+    id_socio?: string;
+    variant?: 'success' | 'debt' | 'inactive';
+    message?: string | null;
+  }) => {
+    const eventId =
+      payload.event_id ||
+      `${payload.variant ?? 'success'}-${payload.id_socio ?? payload.nombre}-${Date.now()}`;
+
+    if (lastAdminAccessEventRef.current === eventId) return;
+    lastAdminAccessEventRef.current = eventId;
+
+    if (adminWelcomeTimeoutRef.current) {
+      clearTimeout(adminWelcomeTimeoutRef.current);
+    }
+
     setWelcomeData({
-      nombre: a.socio?.nombre_completo ?? '¡Bienvenido!',
-      foto: a.socio?.foto ?? null,
-      id_socio: a.socio?.id_socio ?? a.socio_id,
+      nombre: payload.nombre ?? 'Socio',
+      foto: payload.foto ?? null,
+      id_socio: payload.id_socio,
+      variant: payload.variant ?? 'success',
+      message: payload.message ?? null,
     });
     setShowWelcome(true);
-    setTimeout(() => setShowWelcome(false), 2500);
+    adminWelcomeTimeoutRef.current = setTimeout(() => setShowWelcome(false), 3500);
   };
+
+  // Handler tipado con el mismo tipo que emite la tabla.
+  // Si la asistencia reciente corresponde a un socio moroso/sin pagos, el admin
+  // debe ver alerta roja de regularización, no mensaje de bienvenida.
+  const handleNewAsistencia = (a: AsistenciaRecienteApi) => {
+    const variant =
+      a.alert_type === 'debt' || a.access_status === 'deuda'
+        ? 'debt'
+        : 'success';
+
+    showAdminAccessFeedback({
+      event_id: `asistencia-${a.id}-${variant}`,
+      nombre: a.socio?.nombre_completo ?? 'Socio',
+      foto: a.socio?.foto ?? null,
+      id_socio: a.socio?.id_socio ?? a.socio_id,
+      variant,
+      message:
+        variant === 'debt'
+          ? a.mensaje_acceso ||
+            'El socio debe dirigirse a administración para regularizar su situación.'
+          : null,
+    });
+  };
+
+  useEffect(() => {
+    if (user?.rol !== 'admin') return;
+
+    const channel = supabaseBrowser
+      .channel('gym-master-asistencia-access-events')
+      .on(
+        'broadcast',
+        { event: 'access_event' },
+        ({ payload }: { payload: AdminAccessEventPayload }) => {
+          const variant =
+            payload.alert_type === 'inactive' ||
+            payload.access_status === 'desactivado'
+              ? 'inactive'
+              : payload.alert_type === 'debt' ||
+                payload.access_status === 'deuda'
+              ? 'debt'
+              : 'success';
+
+          if (variant === 'success') return;
+
+          showAdminAccessFeedback({
+            event_id: payload.event_id,
+            nombre: payload.socio?.nombre_completo ?? 'Socio',
+            foto: payload.socio?.foto ?? null,
+            id_socio: payload.socio?.id_socio,
+            variant,
+            message:
+              payload.mensaje_acceso ||
+              'El socio debe dirigirse a administración para regularizar su situación.',
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabaseBrowser.removeChannel(channel);
+      if (adminWelcomeTimeoutRef.current) {
+        clearTimeout(adminWelcomeTimeoutRef.current);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.rol]);
 
   return (
     <SidebarProvider>
@@ -307,6 +409,8 @@ export default function DashboardPage() {
                     foto={welcomeData.foto ?? undefined}
                     id_socio={welcomeData.id_socio}
                     isAdminView
+                    variant={welcomeData.variant}
+                    message={welcomeData.message}
                     onClose={() => setShowWelcome(false)}
                   />
                 </div>

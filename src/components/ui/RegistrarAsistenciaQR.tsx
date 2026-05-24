@@ -8,6 +8,7 @@ import {
 import BienvenidaSocio from './BienvenidaSocio';
 import { Socio } from '@/interfaces/socio.interface';
 import { Usuario } from '@/interfaces/usuario.interface';
+import { supabaseBrowser } from '@/lib/supabase-browser';
 
 type BrowserBarcodeDetector = {
   detect: (source: HTMLVideoElement) => Promise<Array<{ rawValue?: string }>>;
@@ -28,6 +29,7 @@ function getBarcodeDetectorConstructor() {
 }
 
 function getSocioDisplayData(res: RegistroAsistenciaQRResponse) {
+  let id_socio: string | undefined;
   let nombre: string | undefined;
   let foto: string | null | undefined;
 
@@ -35,16 +37,50 @@ function getSocioDisplayData(res: RegistroAsistenciaQRResponse) {
     const socio = res.asistencia.socio as Socio & {
       usuario_id?: { foto?: string | null; nombre?: string | null };
     };
+    id_socio = socio.id_socio || undefined;
     nombre = socio.nombre_completo || undefined;
     foto = socio.usuario_id?.foto || undefined;
   }
 
-  if (!nombre && res.socio) {
-    nombre = res.socio.nombre_completo || undefined;
-    foto = res.socio.foto ?? undefined;
+  if ((!nombre || !id_socio) && res.socio) {
+    id_socio = res.socio.id_socio || id_socio;
+    nombre = res.socio.nombre_completo || nombre;
+    foto = res.socio.foto ?? foto;
   }
 
-  return { nombre, foto };
+  return { id_socio, nombre, foto };
+}
+
+function broadcastAdminAccessEvent(payload: {
+  event_id: string;
+  access_status?: string;
+  alert_type?: 'success' | 'debt' | 'inactive' | 'error';
+  mensaje_acceso?: string | null;
+  socio?: {
+    id_socio?: string;
+    nombre_completo?: string;
+    foto?: string | null;
+  };
+}) {
+  const channel = supabaseBrowser.channel('gym-master-asistencia-access-events');
+  const timeout = window.setTimeout(() => {
+    supabaseBrowser.removeChannel(channel);
+  }, 2000);
+
+  channel.subscribe(async (status) => {
+    if (status !== 'SUBSCRIBED') return;
+
+    window.clearTimeout(timeout);
+    await channel.send({
+      type: 'broadcast',
+      event: 'access_event',
+      payload,
+    });
+
+    window.setTimeout(() => {
+      supabaseBrowser.removeChannel(channel);
+    }, 300);
+  });
 }
 
 export function RegistrarAsistenciaQR() {
@@ -111,7 +147,7 @@ export function RegistrarAsistenciaQR() {
     try {
       const res = await registrarAsistenciaQR(data);
 
-      const { nombre: responseNombre, foto } = getSocioDisplayData(res);
+      const { id_socio, nombre: responseNombre, foto } = getSocioDisplayData(res);
       let nombre = responseNombre;
 
       if (!nombre && 'usuario' in res && res.usuario) {
@@ -125,6 +161,31 @@ export function RegistrarAsistenciaQR() {
           const qname = url.searchParams.get('nombre');
           if (qname) nombre = qname;
         } catch {}
+      }
+
+      const shouldNotifyAdmin =
+        res.alert_type === 'debt' ||
+        res.alert_type === 'inactive' ||
+        res.access_status === 'deuda' ||
+        res.access_status === 'desactivado';
+
+      if (shouldNotifyAdmin) {
+        broadcastAdminAccessEvent({
+          event_id: `${res.access_status ?? res.alert_type ?? 'access'}-${
+            id_socio ?? 'socio'
+          }-${Date.now()}`,
+          access_status: res.access_status,
+          alert_type: res.alert_type,
+          mensaje_acceso:
+            res.mensaje_acceso ||
+            res.error ||
+            'El socio debe dirigirse a administración para regularizar su situación.',
+          socio: {
+            id_socio,
+            nombre_completo: nombre,
+            foto,
+          },
+        });
       }
 
       if (res.alert_type === 'inactive' || res.access_status === 'desactivado') {
