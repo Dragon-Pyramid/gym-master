@@ -476,7 +476,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     ],
     "tag": "Asistencias",
     "summary": "Registro de asistencia por QR",
-    "description": "Valida el token del QR diario y registra la asistencia del socio autenticado. Mantiene el caso normal con bienvenida, informa deuda con alerta roja si la cuota está vencida o sin pagos, y bloquea el ingreso con alerta amarillo/naranja si el socio está desactivado.",
+    "description": "Valida el token del QR diario y registra la asistencia del socio autenticado usando fecha y hora local de Argentina. Mantiene el caso normal con bienvenida, informa deuda con alerta roja si la cuota está vencida o sin pagos, y bloquea el ingreso con alerta amarillo/naranja si el socio está desactivado.",
     "auth": true,
     "admin": false,
     "notImplemented": false,
