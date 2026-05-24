@@ -3,19 +3,17 @@ import React, { useEffect, useState } from "react";
 import { Sidebar } from "../ui/sidebar";
 import { Menu, X } from "lucide-react";
 import { SidebarSection } from "./SidebarSection";
+import { SidebarLogoutButton } from "./SidebarLogoutButton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import "@/app/styles/scrollbar.css";
 import { useAuthStore } from "@/stores/authStore";
 import { useSidebarMenu } from "@/hooks/useSidebarSection";
-import { usePathname } from "next/navigation";
 
 export const AppSidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const isMobile = useIsMobile();
   const { user, isAuthenticated, isInitialized, initializeAuth } =
     useAuthStore();
-  const pathname = usePathname();
-
   const userType = user?.rol;
   const menuSections = useSidebarMenu(userType, user?.permisos_menu ?? null);
 
@@ -75,6 +73,11 @@ export const AppSidebar = () => {
             closeSidebar={() => setIsOpen(false)}
           />
         ))}
+
+        <SidebarLogoutButton
+          isMobile={isMobile}
+          closeSidebar={() => setIsOpen(false)}
+        />
       </Sidebar>
     </>
   );
