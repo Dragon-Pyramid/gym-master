@@ -167,7 +167,7 @@ const supabase = conexionBD();
     throw new Error('No se encontró el usuario con ese ID');
   }
 
-  if(user.rol === "socio"){
+  if (user.rol === 'socio' && user.id_socio) {
     await updateFotoSocioById(user.id_socio, url);
   }
 console.log("profile_photo_updated: Foto de usuario actualizada:");
