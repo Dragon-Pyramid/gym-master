@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { authMiddleware } from '@/middlewares/auth.middleware';
 import { createQRDiario } from '@/services/asistenciaService';
 
+
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
   try {
     const { user } = await authMiddleware(req);

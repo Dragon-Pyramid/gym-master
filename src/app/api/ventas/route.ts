@@ -2,6 +2,9 @@ import { authMiddleware } from "@/middlewares/auth.middleware";
 import { createVenta, deleteVenta, getAllVentas, updateVenta } from "@/services/ventaService";
 import { NextResponse } from "next/server";
 
+
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
   try {
     const{user} = await authMiddleware(req);

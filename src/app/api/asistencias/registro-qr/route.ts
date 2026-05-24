@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authMiddleware } from '@/middlewares/auth.middleware';
 import { registrarAsistenciaDesdeQR } from '@/services/asistenciaService';
 
+
+export const dynamic = 'force-dynamic';
+
 function getInvalidRegistroStatus(registro: any) {
   if (registro?.access_status === 'desactivado') return 403;
   if (registro?.access_status === 'qr_expirado') return 400;

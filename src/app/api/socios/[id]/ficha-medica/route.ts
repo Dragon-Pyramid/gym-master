@@ -3,6 +3,9 @@ import { authMiddleware } from '@/middlewares/auth.middleware';
 import { createFichaMedicaSocio } from '@/services/fichaMedicaService';
 import { FileUploadDTO } from '@/interfaces/fileUpload.interface';
 
+
+export const dynamic = 'force-dynamic';
+
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }

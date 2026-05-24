@@ -2,6 +2,9 @@ import { authMiddleware } from "@/middlewares/auth.middleware";
 import { getAllDietasSocio } from "@/services/dietaService";
 import { NextResponse } from "next/server";
 
+
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }

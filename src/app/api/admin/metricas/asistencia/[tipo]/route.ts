@@ -7,6 +7,9 @@ import {
 } from '@/services/asistenciaService';
 import { NextResponse } from 'next/server';
 
+
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ tipo: string }> }

@@ -4,6 +4,9 @@ import { uploadFile } from "@/services/fileUploadService";
 import { updateFotoUsuarioById } from "@/services/usuarioService";
 import { NextResponse } from "next/server";
 
+
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: Request) {
     try {
         const { user } = await authMiddleware(request);

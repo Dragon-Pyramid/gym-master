@@ -2,6 +2,9 @@ import { authMiddleware } from '@/middlewares/auth.middleware';
 import { NextResponse } from 'next/server';
 import { conexionBD } from '@/middlewares/conexionBd.middleware';
 
+
+export const dynamic = 'force-dynamic';
+
 type EstadoCuotaAcceso = {
   estado_cuota?: string | null;
   dias_vencido?: number;

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAllAvisos, createAviso } from "@/services/avisoService";
 
+
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const avisos = await getAllAvisos();
