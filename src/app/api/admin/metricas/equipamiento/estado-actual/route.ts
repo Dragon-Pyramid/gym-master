@@ -3,6 +3,9 @@ import { rolAdminMiddleware } from "@/middlewares/rolAdmin.middleware";
 import { dataEstadoEquipamientoSemaforo } from "@/services/equipamientoService";
 import { NextResponse } from "next/server";
 
+
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
     try {
         const { user } = await authMiddleware(req);

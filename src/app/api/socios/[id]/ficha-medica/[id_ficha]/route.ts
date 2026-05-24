@@ -2,6 +2,9 @@ import { authMiddleware } from '@/middlewares/auth.middleware';
 import { FindOneFichaMedicaSocio } from '@/services/fichaMedicaService';
 import { NextResponse } from 'next/server';
 
+
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string; id_ficha: string }> }

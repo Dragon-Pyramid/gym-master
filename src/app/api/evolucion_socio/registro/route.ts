@@ -2,6 +2,9 @@ import { authMiddleware } from "@/middlewares/auth.middleware";
 import { createEvolucionSocio } from "@/services/evolucionSocioService";
 import { NextResponse } from "next/server";
 
+
+export const dynamic = 'force-dynamic';
+
 const getStatusFromError = (message?: string) => {
   if (!message) return 500;
   if (

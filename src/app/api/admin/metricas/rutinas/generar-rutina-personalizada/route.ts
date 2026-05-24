@@ -3,6 +3,9 @@ import { rolAdminMiddleware } from "@/middlewares/rolAdmin.middleware";
 import { dataGeneracionRutinaPersonalizada } from "@/services/rutinaService";
 import { NextResponse } from "next/server";
 
+
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: Request) {
     try {
         const { user } = await authMiddleware(req);

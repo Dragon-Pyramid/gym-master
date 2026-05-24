@@ -7,6 +7,9 @@ import {
 } from '@/services/server/usuarioServerService';
 import { authMiddleware } from '@/middlewares/auth.middleware';
 
+
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
   try {
     const { user } = await authMiddleware(req);
