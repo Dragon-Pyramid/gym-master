@@ -7,6 +7,10 @@ import {
 } from "../interfaces/pago.interface";
 import dayjs from "dayjs";
 import { getSocioById } from "./socioService";
+import {
+  reactivarSocioPorPago,
+  registrarDesactivacionPorMorosidad,
+} from "./morosidadService";
 
 /*export const getAllPagos = async (): Promise<Pago[]> => {
   const { data, error } = await supabase.from("pago").select();
@@ -238,6 +242,14 @@ export const createPago = async (payload: CreatePagoDto): Promise<Pago> => {
     throw new Error("Error al crear el pago");
   }
 
+  await reactivarSocioPorPago(
+    supabase,
+    socioId,
+    data.id,
+    dto.metodo_pago === "stripe" ? "stripe_webhook" : "pago_manual",
+    dto.registrado_por ?? null
+  );
+
   const { data: dataSocio, error: errorSocio } = await supabase
     .from("socio")
     .update({ descuento_activo: false })
@@ -270,6 +282,16 @@ export const updatePago = async (
   if (error) throw new Error(error.message);
   if (!data) throw new Error("No se encontró pago con ese id");
 
+  if (data.socio_id && data.estado === "pagado" && data.activo !== false) {
+    await reactivarSocioPorPago(
+      supabase,
+      data.socio_id,
+      data.id,
+      "pago_update",
+      data.registrado_por ?? null
+    );
+  }
+
   return data as Pago;
 };
 
@@ -286,6 +308,15 @@ export const deletePago = async (id: string): Promise<Pago> => {
 
   if (error) throw new Error(error.message);
   if (!data) throw new Error("No se encontró pago con ese id");
+
+  if (data.socio_id) {
+    await registrarDesactivacionPorMorosidad(
+      supabase,
+      data.socio_id,
+      "pago_cancelado",
+      data.registrado_por ?? null
+    );
+  }
 
   return data as Pago;
 };

@@ -64,6 +64,18 @@ async function enrichAsistenciaConEstadoCuota(supabase: any, row: any) {
   }
 
   const estado = normalizeEstadoCuota(Array.isArray(data) ? data[0] : data);
+
+  if (row.socio?.activo === false) {
+    return {
+      ...row,
+      access_status: 'desactivado',
+      alert_type: 'inactive',
+      mensaje_acceso:
+        'El socio se encuentra desactivado. Debe regularizar su situación en administración.',
+      estado_cuota: estado,
+    };
+  }
+
   const tieneDeuda = isCuotaConDeuda(estado);
 
   return {
@@ -97,7 +109,8 @@ export async function GET(req: Request) {
         socio:socio_id (
           id_socio,
           nombre_completo,
-          foto
+          foto,
+          activo
         )
       `)
       .order('fecha', { ascending: false })
