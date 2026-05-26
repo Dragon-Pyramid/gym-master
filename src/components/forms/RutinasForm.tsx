@@ -27,12 +27,16 @@ export default function RutinasForm({
   loading,
   objetivos,
   niveles,
+  targetSocioId,
+  targetSocioName,
 }: {
   initialValues?: RutinaFormValues;
-  onSubmit: (values: RutinaFormValues) => void;
+  onSubmit: (values: RutinaFormValues) => void | Promise<void>;
   loading?: boolean;
   objetivos: Objetivo[];
   niveles: Nivel[];
+  targetSocioId?: string;
+  targetSocioName?: string;
 }) {
   const [values, setValues] = useState<RutinaFormValues>(
     initialValues || {
@@ -65,17 +69,24 @@ export default function RutinasForm({
         objetivo: parseInt(values.objetivo),
         nivel: parseInt(values.nivel),
         dias: parseInt(values.dias),
+        ...(targetSocioId ? { id_socio: targetSocioId } : {}),
       });
 
       if (!response.ok) {
-        throw new Error("Error al generar rutina");
+        throw new Error(response.data?.error || "Error al generar rutina");
       }
 
-      toast.success("Rutina generada correctamente");
-      onSubmit(values);
+      toast.success(
+        targetSocioName
+          ? `Rutina generada correctamente para ${targetSocioName}`
+          : "Rutina generada correctamente"
+      );
+      await onSubmit(values);
     } catch (error) {
       console.error("Error al generar rutina:", error);
-      toast.error("Error al generar la rutina");
+      toast.error(
+        error instanceof Error ? error.message : "Error al generar la rutina"
+      );
     } finally {
       setIsGenerating(false);
     }
@@ -113,6 +124,13 @@ export default function RutinasForm({
       onSubmit={handleSubmit}
       className="grid grid-cols-1 gap-4 md:grid-cols-2"
     >
+      {targetSocioName && (
+        <div className="col-span-full rounded-lg border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+          Generando rutina para:{" "}
+          <span className="font-semibold text-foreground">{targetSocioName}</span>
+        </div>
+      )}
+
       <div className="flex flex-col gap-1.5">
         <Label>Objetivo</Label>
         <DropdownMenu>
