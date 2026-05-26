@@ -10,6 +10,13 @@ import QRCode from 'qrcode';
 import { JwtUser } from '@/interfaces/jwtUser.interface';
 import { conexionBD } from '@/middlewares/conexionBd.middleware';
 import { getSocioByIdUsuario } from './socioService';
+import {
+  buildMensajeDeuda,
+  debeBloquearAccesoPorMorosidad,
+  getEstadoCuotaMorosidad,
+  isCuotaConDeuda,
+  registrarDesactivacionPorMorosidad,
+} from './morosidadService';
 
 const ARGENTINA_UTC_OFFSET_HOURS = -3;
 
@@ -153,64 +160,12 @@ export const createQRDiario = async () => {
   return { qrCode, url, token };
 };
 
-type EstadoCuotaAcceso = {
-  estado_cuota: string | null;
-  dias_vencido: number;
-  periodo_hasta: string | null;
-  ultimo_vencimiento: string | null;
-};
-
-function toAccessNumber(value: unknown): number {
-  const parsed = Number(value ?? 0);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function normalizeEstadoCuotaAcceso(row: any): EstadoCuotaAcceso | null {
-  if (!row) return null;
-
-  return {
-    estado_cuota: row.estado_cuota ?? null,
-    dias_vencido: toAccessNumber(row.dias_vencido),
-    periodo_hasta: row.periodo_hasta ?? null,
-    ultimo_vencimiento: row.ultimo_vencimiento ?? null,
-  };
-}
-
 function getSocioAccessPayload(socio: any) {
   return {
     id_socio: socio.id_socio,
     nombre_completo: socio.nombre_completo,
     foto: socio.foto ?? null,
   };
-}
-
-async function getEstadoCuotaAcceso(supabase: any, socioId: string) {
-  const { data, error } = await supabase.rpc('obtener_estado_cuota_socio', {
-    p_id_socio: socioId,
-  });
-
-  if (error) {
-    console.warn('No se pudo consultar estado de cuota para control de acceso:', error.message);
-    return null;
-  }
-
-  const row = Array.isArray(data) ? data[0] : data;
-  return normalizeEstadoCuotaAcceso(row);
-}
-
-function isCuotaConDeuda(estado: EstadoCuotaAcceso | null) {
-  return estado?.estado_cuota === 'vencido' || estado?.estado_cuota === 'sin_pagos';
-}
-
-function buildMensajeDeuda(estado: EstadoCuotaAcceso | null) {
-  if (estado?.estado_cuota === 'sin_pagos') {
-    return 'Usted no registra pagos activos. Regularice su situación en administración.';
-  }
-
-  const periodo = estado?.periodo_hasta || estado?.ultimo_vencimiento;
-  const periodoTexto = periodo ? ` con vencimiento ${periodo}` : ' correspondiente';
-
-  return `Usted adeuda la cuota${periodoTexto}. Regularice su situación en administración.`;
 }
 
 export const registrarAsistenciaDesdeQR = async (
@@ -265,7 +220,29 @@ export const registrarAsistenciaDesdeQR = async (
     };
   }
 
-  const estadoCuota = await getEstadoCuotaAcceso(supabase, socio.id_socio);
+  const estadoCuota = await getEstadoCuotaMorosidad(supabase, socio.id_socio);
+  const debeBloquearPorMora = debeBloquearAccesoPorMorosidad(estadoCuota);
+
+  if (debeBloquearPorMora) {
+    await registrarDesactivacionPorMorosidad(
+      supabase,
+      socio.id_socio,
+      'asistencia_qr',
+      user.id
+    );
+
+    return {
+      valido: false,
+      error: 'Usted fue desactivado por morosidad. Regularice su situación en administración.',
+      access_status: 'desactivado',
+      alert_type: 'inactive',
+      bloquea_ingreso: true,
+      socio: getSocioAccessPayload(socio),
+      estado_cuota: estadoCuota,
+      mensaje_acceso: buildMensajeDeuda(estadoCuota),
+    };
+  }
+
   const tieneDeuda = isCuotaConDeuda(estadoCuota);
   const mensajeDeuda = tieneDeuda ? buildMensajeDeuda(estadoCuota) : null;
 

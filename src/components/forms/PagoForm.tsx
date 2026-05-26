@@ -5,6 +5,16 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
+import {
   createPagoManualApi,
   fetchPagoFormOptionsApi,
   updatePagoApi,
@@ -13,6 +23,7 @@ import { PagoManualFormOptions, ResponsePago } from "@/interfaces/pago.interface
 import { CatalogoParametrizableItem } from "@/interfaces/parametrizacion.interface";
 import { useCatalogoParametrizable } from "@/hooks/useCatalogosParametrizables";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export interface PagoFormProps {
   pago?: ResponsePago | null;
@@ -82,6 +93,7 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
   });
   const [loading, setLoading] = useState(false);
   const [loadingOptions, setLoadingOptions] = useState(true);
+  const [socioComboboxOpen, setSocioComboboxOpen] = useState(false);
   const { items: mediosPago } = useCatalogoParametrizable(
     "medio_pago",
     fallbackMediosPago
@@ -138,6 +150,11 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
     }
   }, [pago, mediosPago]);
 
+  const selectedSocio = useMemo(
+    () => options.socios.find((socio) => socio.id_socio === form.socio_id),
+    [form.socio_id, options.socios]
+  );
+
   const selectedCuota = useMemo(
     () => options.cuotas.find((cuota) => cuota.id === form.cuota_id),
     [form.cuota_id, options.cuotas]
@@ -183,6 +200,14 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
     });
   };
 
+  const handleSocioSelect = (socioId: string) => {
+    setForm((prev) => ({
+      ...prev,
+      socio_id: socioId,
+    }));
+    setSocioComboboxOpen(false);
+  };
+
   const handleMedioPagoChange = (value: string) => {
     const selected = mediosPago.find((item) => item.id === value);
     setForm((prev) => ({
@@ -194,6 +219,12 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!form.socio_id) {
+      toast.error("Seleccioná un socio para registrar el pago");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -218,22 +249,82 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
     <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="socio_id">Socio</Label>
-        <select
-          id="socio_id"
-          name="socio_id"
-          value={form.socio_id}
-          onChange={handleChange}
-          required
-          disabled={loadingOptions || Boolean(pago)}
-          className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-        >
-          <option value="">Seleccionar socio</option>
-          {options.socios.map((socio) => (
-            <option key={socio.id_socio} value={socio.id_socio}>
-              {socio.nombre_completo}
-            </option>
-          ))}
-        </select>
+        <Popover open={socioComboboxOpen} onOpenChange={setSocioComboboxOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              id="socio_id"
+              type="button"
+              variant="outline"
+              role="combobox"
+              aria-expanded={socioComboboxOpen}
+              disabled={loadingOptions || Boolean(pago)}
+              className={cn(
+                "h-10 w-full justify-between px-3 text-left font-normal",
+                !selectedSocio && "text-muted-foreground"
+              )}
+            >
+              <span className="truncate">
+                {selectedSocio
+                  ? `${selectedSocio.nombre_completo}${
+                      selectedSocio.activo ? "" : " (inactivo / regularizar)"
+                    }`
+                  : loadingOptions
+                    ? "Cargando socios..."
+                    : "Buscar o seleccionar socio"}
+              </span>
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="start"
+            className="w-[var(--radix-popover-trigger-width)] min-w-[320px] p-0"
+          >
+            <Command>
+              <CommandInput placeholder="Buscar por nombre o email..." className="h-9" />
+              <CommandList className="max-h-[320px]">
+                <CommandEmpty>No se encontraron socios.</CommandEmpty>
+                <CommandGroup>
+                  {options.socios.map((socio) => {
+                    const socioLabel = `${socio.nombre_completo}${
+                      socio.activo ? "" : " (inactivo / regularizar)"
+                    }`;
+                    const searchValue = `${socio.nombre_completo} ${
+                      socio.email ?? ""
+                    } ${socio.activo ? "activo" : "inactivo regularizar"}`;
+
+                    return (
+                      <CommandItem
+                        key={socio.id_socio}
+                        value={searchValue}
+                        onSelect={() => handleSocioSelect(socio.id_socio)}
+                      >
+                        <div className="flex min-w-0 flex-col">
+                          <span className="truncate">{socioLabel}</span>
+                          {socio.email ? (
+                            <span className="truncate text-xs text-muted-foreground">
+                              {socio.email}
+                            </span>
+                          ) : null}
+                        </div>
+                        <Check
+                          className={cn(
+                            "ml-auto h-4 w-4",
+                            form.socio_id === socio.id_socio ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+        {!pago ? (
+          <p className="text-xs text-muted-foreground">
+            Escribí el nombre o email para encontrar al socio sin recorrer todo el listado.
+          </p>
+        ) : null}
       </div>
 
       <div className="flex flex-col gap-1.5">

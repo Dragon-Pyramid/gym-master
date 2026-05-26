@@ -7,6 +7,10 @@ import {
   UpdatePagoDto,
 } from '@/interfaces/pago.interface';
 import { getSupabaseServerClient } from '@/services/supabaseServerClient';
+import {
+  reactivarSocioPorPago,
+  registrarDesactivacionPorMorosidad,
+} from '@/services/morosidadService';
 
 const allowedManagerRoles = new Set(['admin', 'usuario']);
 
@@ -111,7 +115,7 @@ export async function fetchPagoFormOptionsServer(
     supabase
       .from('socio')
       .select('id_socio,nombre_completo,email,activo,descuento_activo')
-      .eq('activo', true)
+      .order('activo', { ascending: false })
       .order('nombre_completo', { ascending: true }),
     supabase
       .from('cuota')
@@ -179,7 +183,6 @@ async function resolveSocio(socioId: string) {
     .single();
 
   if (error || !data) throw new Error('No se encontró el socio seleccionado');
-  if (!data.activo) throw new Error('El socio seleccionado está inactivo');
   return data;
 }
 
@@ -236,6 +239,14 @@ export async function createPagoManualServer(
 
   if (error) throw new Error(error.message);
 
+  await reactivarSocioPorPago(
+    supabase,
+    payload.socio_id,
+    data.id,
+    'pago_manual',
+    user.id
+  );
+
   if (socio.descuento_activo) {
     await supabase
       .from('socio')
@@ -272,6 +283,16 @@ export async function updatePagoServer(
   if (error) throw new Error(error.message);
   if (!data) throw new Error('No se encontró el pago');
 
+  if (data.socio_id && data.estado === 'pagado' && data.activo !== false) {
+    await reactivarSocioPorPago(
+      supabase,
+      data.socio_id,
+      data.id,
+      'pago_update',
+      user.id
+    );
+  }
+
   return normalizePago(data);
 }
 
@@ -292,6 +313,15 @@ export async function deactivatePagoServer(
 
   if (error) throw new Error(error.message);
   if (!data) throw new Error('No se encontró el pago');
+
+  if (data.socio_id) {
+    await registrarDesactivacionPorMorosidad(
+      supabase,
+      data.socio_id,
+      'pago_cancelado',
+      user.id
+    );
+  }
 
   return normalizePago(data);
 }
