@@ -8,7 +8,7 @@ import { AppFooter } from '@/components/footer/AppFooter';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Printer, FileSpreadsheet } from 'lucide-react';
+import { Search, Printer, FileSpreadsheet, MonitorUp } from 'lucide-react';
 import {
   getAllAsistencias,
   deleteAsistencia,
@@ -176,6 +176,16 @@ export default function AsistenciasPage() {
                   >
                     <FileSpreadsheet className='w-4 h-4' />
                     <span className='hidden sm:inline'>Exportar</span>
+                  </Button>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    onClick={() => window.open('/dashboard/asistencias/terminal', '_blank', 'noopener,noreferrer')}
+                    className='flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]'
+                  >
+                    <MonitorUp className='w-4 h-4' />
+                    <span className='hidden sm:inline'>Modo terminal</span>
+                    <span className='sm:hidden'>Terminal</span>
                   </Button>
                   <Button
                     onClick={() => setOpenModal(true)}
