@@ -21,12 +21,14 @@ export default function AsistenciaTable({
   onEdit,
   onView,
   onDelete,
+  totalAsistencias,
 }: {
   asistencias: Asistencia[];
   loading?: boolean;
   onEdit: (asistencia: Asistencia) => void;
   onView?: (asistencia: Asistencia) => void;
   onDelete?: (asistencia: Asistencia) => void | Promise<void>;
+  totalAsistencias?: number;
 }) {
   if (loading) {
     return (
@@ -96,7 +98,9 @@ export default function AsistenciaTable({
       <TableFooter>
         <TableRow>
           <TableCell colSpan={4}>Total de asistencias</TableCell>
-          <TableCell className="text-right">{asistencias.length}</TableCell>
+          <TableCell className="text-right">
+            {totalAsistencias ?? asistencias.length}
+          </TableCell>
         </TableRow>
       </TableFooter>
 
