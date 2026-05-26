@@ -199,7 +199,14 @@ export default function CuotasPagosBI() {
                     <td className="py-3 text-gray-600">{date(pago.periodo_desde)} - {date(pago.periodo_hasta)}</td>
                     <td className="py-3 text-gray-600">{pago.metodo_pago ?? "-"}</td>
                     <td className="py-3 text-gray-600">{statusLabel(pago.estado)}</td>
-                    <td className="py-3 text-right font-semibold text-gray-950">{money(pago.monto_pagado)}</td>
+                    <td className="py-3 text-right">
+                      <div className="font-semibold text-gray-950">{money(pago.monto_pagado)}</div>
+                      {Number(pago.descuento_monto ?? 0) > 0 ? (
+                        <div className="text-xs text-emerald-700">
+                          Desc. {money(pago.descuento_monto)}
+                        </div>
+                      ) : null}
+                    </td>
                   </tr>
                 ))
               ) : (

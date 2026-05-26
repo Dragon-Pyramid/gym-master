@@ -14,6 +14,7 @@ export type MorosidadOrigen =
   | 'asistencia_qr'
   | 'pago_manual'
   | 'stripe_webhook'
+  | 'stripe_success_sync'
   | 'pago_update'
   | 'pago_cancelado'
   | 'scheduler'

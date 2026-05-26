@@ -80,6 +80,9 @@ export default function PagosPage() {
       { header: "Meses", key: "meses", width: 10 },
       { header: "Método", key: "metodo", width: 14 },
       { header: "Estado", key: "estado", width: 14 },
+      { header: "Subtotal", key: "subtotal", width: 15 },
+      { header: "Descuento %", key: "descuento_porcentaje", width: 14 },
+      { header: "Descuento Monto", key: "descuento_monto", width: 18 },
       { header: "Monto Pagado", key: "monto_pagado", width: 15 },
       { header: "Registrado Por", key: "registrado_por", width: 20 },
     ];
@@ -94,6 +97,9 @@ export default function PagosPage() {
         meses: p.meses_cubiertos || 1,
         metodo: p.metodo_pago || "",
         estado: p.estado || "",
+        subtotal: p.subtotal ?? p.monto_pagado,
+        descuento_porcentaje: p.descuento_porcentaje ?? 0,
+        descuento_monto: p.descuento_monto ?? 0,
         monto_pagado: p.monto_pagado,
         registrado_por: p.registrado_por?.nombre || "",
       });

@@ -11,6 +11,8 @@ import {
   reactivarSocioPorPago,
   registrarDesactivacionPorMorosidad,
 } from '@/services/morosidadService';
+import { calcularDescuentoPago } from '@/lib/cuotas/descuentoPago';
+import { fetchCuotaDescuentoConfig } from '@/services/cuotaDescuentoService';
 
 const allowedManagerRoles = new Set(['admin', 'usuario']);
 
@@ -57,6 +59,16 @@ function normalizePago(row: any): ResponsePago {
     periodo_hasta: row.periodo_hasta ?? null,
     meses_cubiertos: row.meses_cubiertos ?? null,
     monto_pagado: Number(row.monto_pagado ?? 0),
+    subtotal: row.subtotal === null || row.subtotal === undefined ? null : Number(row.subtotal),
+    descuento_porcentaje:
+      row.descuento_porcentaje === null || row.descuento_porcentaje === undefined
+        ? null
+        : Number(row.descuento_porcentaje),
+    descuento_monto:
+      row.descuento_monto === null || row.descuento_monto === undefined
+        ? null
+        : Number(row.descuento_monto),
+    descuento_motivo: row.descuento_motivo ?? null,
     total: row.total === null || row.total === undefined ? null : Number(row.total),
     metodo_pago: row.metodo_pago ?? null,
     id_medio_pago: row.id_medio_pago ?? null,
@@ -127,9 +139,12 @@ export async function fetchPagoFormOptionsServer(
   if (sociosResult.error) throw new Error(sociosResult.error.message);
   if (cuotasResult.error) throw new Error(cuotasResult.error.message);
 
+  const descuentoConfig = await fetchCuotaDescuentoConfig(supabase);
+
   return {
     socios: sociosResult.data ?? [],
     cuotas: cuotasResult.data ?? [],
+    descuento_config: descuentoConfig,
   };
 }
 
@@ -207,9 +222,22 @@ export async function createPagoManualServer(
   const periodoHasta =
     normalizeString(payload.periodo_hasta) ?? addMonthsIso(periodoDesde, mesesCubiertos);
 
-  const montoBase = toNumber(cuota.monto, 0) * mesesCubiertos;
-  const montoConDescuento = socio.descuento_activo ? montoBase * 0.9 : montoBase;
-  const montoPagado = toNumber(payload.monto_pagado, montoConDescuento);
+  const descuentoConfig = await fetchCuotaDescuentoConfig(supabase);
+  const previewDescuento = calcularDescuentoPago({
+    cuotaMonto: toNumber(cuota.monto, 0),
+    mesesCubiertos,
+    config: descuentoConfig,
+  });
+  const montoPagadoCalculado = toNumber(payload.monto_pagado, previewDescuento.total);
+  const montoPagado = montoPagadoCalculado > 0 ? montoPagadoCalculado : previewDescuento.total;
+  const descuentoMonto =
+    payload.descuento_monto === undefined || payload.descuento_monto === null
+      ? Math.max(previewDescuento.subtotal - montoPagado, 0)
+      : toNumber(payload.descuento_monto, previewDescuento.descuento_monto);
+  const descuentoPorcentaje =
+    payload.descuento_porcentaje === undefined || payload.descuento_porcentaje === null
+      ? previewDescuento.descuento_porcentaje
+      : toNumber(payload.descuento_porcentaje, previewDescuento.descuento_porcentaje);
 
   if (montoPagado <= 0) throw new Error('El monto pagado debe ser mayor a 0');
 
@@ -222,6 +250,11 @@ export async function createPagoManualServer(
     periodo_hasta: periodoHasta,
     meses_cubiertos: mesesCubiertos,
     monto_pagado: montoPagado,
+    subtotal: toNumber(payload.subtotal, previewDescuento.subtotal),
+    descuento_porcentaje: descuentoPorcentaje,
+    descuento_monto: descuentoMonto,
+    descuento_motivo:
+      normalizeString(payload.descuento_motivo) ?? previewDescuento.mensaje ?? null,
     registrado_por: user.id,
     metodo_pago: payload.metodo_pago ?? 'efectivo',
     id_medio_pago: normalizeString(payload.id_medio_pago),
@@ -246,13 +279,6 @@ export async function createPagoManualServer(
     'pago_manual',
     user.id
   );
-
-  if (socio.descuento_activo) {
-    await supabase
-      .from('socio')
-      .update({ descuento_activo: false })
-      .eq('id_socio', payload.socio_id);
-  }
 
   return normalizePago(data);
 }

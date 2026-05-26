@@ -115,6 +115,15 @@ export default function PagoViewModal({
           <Field label="Periodo desde" value={date(periodoDesde)} />
           <Field label="Periodo hasta" value={date(periodoHasta)} />
           <Field label="Meses cubiertos" value={pago.meses_cubiertos ?? 1} />
+          <Field label="Subtotal" value={money(pago.subtotal ?? pago.monto_pagado)} />
+          <Field
+            label="Descuento"
+            value={
+              Number(pago.descuento_monto ?? 0) > 0
+                ? `${money(pago.descuento_monto)} (${pago.descuento_porcentaje ?? 0}%)`
+                : money(0)
+            }
+          />
           <Field label="Monto pagado" value={money(pago.monto_pagado)} />
           <Field label="Total" value={money(pago.total ?? pago.monto_pagado)} />
           <Field label="Registrado por" value={pago.registrado_por?.nombre} />

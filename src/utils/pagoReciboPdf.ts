@@ -320,14 +320,20 @@ export async function descargarPagoReciboPdf(pago: ResponsePago) {
   doc.setTextColor(15, 23, 42);
   doc.text(formatMoney(pago.monto_pagado), amountBoxX + 6, y + 25);
 
+  const descuentoMonto = Number(pago.descuento_monto ?? 0);
+  const subtotalPago = Number(pago.subtotal ?? 0);
+
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.2);
   doc.setTextColor(71, 85, 105);
+
+  const resumenPago =
+    descuentoMonto > 0
+      ? `Subtotal ${formatMoney(subtotalPago)} · Descuento ${formatMoney(descuentoMonto)} (${pago.descuento_porcentaje ?? 0}%). Código: ${codigo}`
+      : `Comprobante emitido por Gym Master. Código: ${codigo}`;
+
   doc.text(
-    doc.splitTextToSize(
-      `Comprobante emitido por Gym Master. Código: ${codigo}`,
-      amountBoxW - 12
-    ),
+    doc.splitTextToSize(resumenPago, amountBoxW - 12),
     amountBoxX + 6,
     y + 36
   );
