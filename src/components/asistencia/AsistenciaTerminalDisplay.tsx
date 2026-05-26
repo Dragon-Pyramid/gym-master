@@ -48,7 +48,7 @@ type TerminalEvent = {
   timestamp: Date;
 };
 
-const RESULT_VISIBLE_MS = 12000;
+const RESULT_VISIBLE_MS = 5000;
 
 const variantStyles: Record<
   TerminalVariant,
@@ -508,7 +508,7 @@ export default function AsistenciaTerminalDisplay() {
                       <span className='rounded-full bg-black/10 px-4 py-2 dark:bg-white/10'>ID socio: {event.idSocio}</span>
                     )}
                     <span className='rounded-full bg-black/10 px-4 py-2 dark:bg-white/10'>
-                      Volviendo al QR en unos segundos
+                      Volviendo al QR en 5 segundos
                     </span>
                   </div>
                 </div>
