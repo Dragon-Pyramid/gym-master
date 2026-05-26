@@ -24,6 +24,7 @@ import ExcelJS from "exceljs";
 import { JwtUser } from "@/interfaces/jwtUser.interface";
 
 const ASISTENCIAS_PAGE_SIZE = 10;
+const ASISTENCIAS_AUTO_REFRESH_MS = 5000;
 
 function getAsistenciaSortValue(asistencia: Asistencia) {
   const fecha = asistencia.fecha || "";
@@ -48,6 +49,8 @@ export default function AsistenciasPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [isAutoRefreshing, setIsAutoRefreshing] = useState(false);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
   const [openModal, setOpenModal] = useState(false);
   const [selectedAsistencia, setSelectedAsistencia] =
     useState<Asistencia | null>(null);
@@ -64,15 +67,37 @@ export default function AsistenciasPage() {
     }
   }, [isAuthenticated, isInitialized, router]);
 
-  const loadAsistencias = useCallback(async () => {
-    setLoading(true);
-    const data = await getAllAsistencias(user as JwtUser);
-    const orderedData = sortAsistenciasByIngresoDesc(data ?? []);
-    setAsistencias(orderedData);
-    setFilteredAsistencias(orderedData);
-    setCurrentPage(1);
-    setLoading(false);
-  }, [user]);
+  const loadAsistencias = useCallback(
+    async (options?: { silent?: boolean; resetPage?: boolean }) => {
+      const silent = options?.silent ?? false;
+      const resetPage = options?.resetPage ?? true;
+
+      try {
+        if (silent) {
+          setIsAutoRefreshing(true);
+        } else {
+          setLoading(true);
+        }
+
+        const data = await getAllAsistencias(user as JwtUser);
+        const orderedData = sortAsistenciasByIngresoDesc(data ?? []);
+        setAsistencias(orderedData);
+
+        if (resetPage) {
+          setCurrentPage(1);
+        }
+
+        setLastUpdatedAt(new Date());
+      } finally {
+        if (silent) {
+          setIsAutoRefreshing(false);
+        } else {
+          setLoading(false);
+        }
+      }
+    },
+    [user],
+  );
 
   const handlePrint = () => {
     window.print();
@@ -129,8 +154,20 @@ export default function AsistenciasPage() {
 
   useEffect(() => {
     if (isInitialized && isAuthenticated) {
-      loadAsistencias();
+      void loadAsistencias();
     }
+  }, [isInitialized, isAuthenticated, loadAsistencias]);
+
+  useEffect(() => {
+    if (!isInitialized || !isAuthenticated) return;
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        void loadAsistencias({ silent: true, resetPage: false });
+      }
+    }, ASISTENCIAS_AUTO_REFRESH_MS);
+
+    return () => window.clearInterval(intervalId);
   }, [isInitialized, isAuthenticated, loadAsistencias]);
 
   useEffect(() => {
@@ -138,7 +175,6 @@ export default function AsistenciasPage() {
 
     if (normalizedSearch === "") {
       setFilteredAsistencias(asistencias);
-      setCurrentPage(1);
       return;
     }
 
@@ -155,8 +191,11 @@ export default function AsistenciasPage() {
     });
 
     setFilteredAsistencias(sortAsistenciasByIngresoDesc(filtered));
-    setCurrentPage(1);
   }, [searchTerm, asistencias]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   const totalAsistencias = filteredAsistencias.length;
   const totalPages = Math.max(
@@ -246,6 +285,19 @@ export default function AsistenciasPage() {
                 </div>
               </CardHeader>
               <CardContent className="p-4 space-y-4">
+                <div className="flex flex-col gap-1 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+                  <span>
+                    Actualización automática cada {ASISTENCIAS_AUTO_REFRESH_MS / 1000}
+                    s.
+                    {isAutoRefreshing ? " Sincronizando asistencias..." : ""}
+                  </span>
+                  {lastUpdatedAt && (
+                    <span>
+                      Última actualización: {lastUpdatedAt.toLocaleTimeString("es-AR")}
+                    </span>
+                  )}
+                </div>
+
                 <div className="overflow-x-auto">
                   <AsistenciaTable
                     asistencias={paginatedAsistencias}
