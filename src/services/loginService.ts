@@ -10,6 +10,7 @@ import {
   debeBloquearAccesoPorMorosidad,
   getEstadoCuotaMorosidad,
   registrarDesactivacionPorMorosidad,
+  reactivarSocioPorPago,
 } from './morosidadService';
 
 class LoginBusinessError extends Error {
@@ -127,8 +128,23 @@ export const signIn = async (login: SignInDto) => {
         'login',
         data.id
       );
+      socio.activo = false;
       console.log(
         `Socio ${socio.id_socio} desactivado por morosidad (${estadoCuota?.estado_cuota}, ${estadoCuota?.dias_vencido} días vencido).`
+      );
+    }
+
+    if (!debeDesactivarsePorMora && !socio.activo && estadoCuota?.estado_cuota === 'al_dia') {
+      await reactivarSocioPorPago(
+        supabase,
+        socio.id_socio,
+        null,
+        'login',
+        data.id
+      );
+      socio.activo = true;
+      console.log(
+        `Socio ${socio.id_socio} reactivado en login porque registra cuota al día.`
       );
     }
 

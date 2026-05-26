@@ -52,13 +52,24 @@ export interface RegistroAsistenciaQRResponse {
   } | null;
 }
 
-export const fetchQrCode = async (): Promise<string> => {
-  const response = await axios.get('api/asistencias/qr-dia', {
+export interface QrDiarioResponse {
+  qrCode: string;
+  url: string;
+  token: string;
+}
+
+export const fetchQrDiario = async (): Promise<QrDiarioResponse> => {
+  const response = await axios.get('/api/asistencias/qr-dia', {
     headers: {
       ...authHeader(),
     },
   });
-  return response.data.qrCode;
+  return response.data as QrDiarioResponse;
+};
+
+export const fetchQrCode = async (): Promise<string> => {
+  const data = await fetchQrDiario();
+  return data.qrCode;
 };
 
 export const registrarAsistenciaQR = async (

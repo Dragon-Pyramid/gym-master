@@ -2,7 +2,6 @@
 
 import Image from 'next/image';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import QRCodeGenerator from 'qrcode';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -19,6 +18,7 @@ import ProfileImage from '@/components/perfil/ProfileImage';
 import { supabaseBrowser } from '@/lib/supabase-browser';
 import {
   fetchAsistenciasRecientes,
+  fetchQrDiario,
   type AsistenciaReciente,
   type RegistroAsistenciaAlertType,
 } from '@/services/qrService';
@@ -218,6 +218,7 @@ export default function AsistenciaTerminalDisplay() {
   const [error, setError] = useState<string | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [checkInUrl, setCheckInUrl] = useState<string>('');
+  const [qrLoading, setQrLoading] = useState<boolean>(true);
   const lastEventIdRef = useRef<string>('idle');
   const lastAsistenciaIdRef = useRef<string | null>(null);
   const initialRecentLoadedRef = useRef(false);
@@ -270,22 +271,39 @@ export default function AsistenciaTerminalDisplay() {
   };
 
   useEffect(() => {
-    const url = new URL('/dashboard/control-asistencia', window.location.origin);
-    url.searchParams.set('origen', 'terminal');
-    const nextCheckInUrl = url.toString();
-    setCheckInUrl(nextCheckInUrl);
+    let cancelled = false;
 
-    QRCodeGenerator.toDataURL(nextCheckInUrl, {
-      width: 460,
-      margin: 2,
-      errorCorrectionLevel: 'M',
-      color: {
-        dark: '#020617',
-        light: '#ffffff',
-      },
-    })
-      .then(setQrDataUrl)
-      .catch(() => setError('No se pudo generar el QR de asistencia.'));
+    const loadDailyQr = async () => {
+      try {
+        setQrLoading(true);
+        const qr = await fetchQrDiario();
+
+        if (cancelled) return;
+
+        setQrDataUrl(qr.qrCode);
+        setCheckInUrl(qr.url);
+      } catch (err) {
+        if (cancelled) return;
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : 'No se pudo cargar el QR diario de asistencia.'
+        );
+      } finally {
+        if (!cancelled) {
+          setQrLoading(false);
+        }
+      }
+    };
+
+    loadDailyQr();
+    const qrRefreshInterval = window.setInterval(loadDailyQr, 5 * 60 * 1000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(qrRefreshInterval);
+    };
   }, []);
 
   useEffect(() => {
@@ -391,9 +409,14 @@ export default function AsistenciaTerminalDisplay() {
                 <div className='mx-auto w-full max-w-[440px] rounded-[2rem] border border-cyan-200 bg-white p-5 shadow-2xl dark:border-cyan-600/40'>
                   <div className='flex aspect-square items-center justify-center rounded-[1.5rem] bg-white'>
                     {qrDataUrl ? (
-                      <Image src={qrDataUrl} alt='QR para registrar asistencia' width={460} height={460} priority />
+                      <Image src={qrDataUrl} alt='QR diario para registrar asistencia' width={460} height={460} priority />
                     ) : (
-                      <QrCode className='h-40 w-40 text-slate-900' />
+                      <div className='flex flex-col items-center gap-3 text-slate-900'>
+                        <QrCode className='h-40 w-40' />
+                        <span className='text-sm font-bold'>
+                          {qrLoading ? 'Cargando QR diario...' : 'QR no disponible'}
+                        </span>
+                      </div>
                     )}
                   </div>
                   <div className='mt-4 rounded-2xl bg-slate-950 p-4 text-center text-white'>
@@ -433,7 +456,7 @@ export default function AsistenciaTerminalDisplay() {
 
                   {checkInUrl && (
                     <p className='mt-5 break-all rounded-2xl bg-black/10 p-3 text-xs font-semibold opacity-70 dark:bg-white/10'>
-                      URL del QR: {checkInUrl}
+                      Token diario activo: {checkInUrl}
                     </p>
                   )}
                 </div>
