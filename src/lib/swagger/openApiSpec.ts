@@ -881,7 +881,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     ],
     "tag": "Archivos",
     "summary": "Subida de archivo",
-    "description": "Sube archivos/fotos mediante servicio de almacenamiento y puede actualizar la foto del usuario.",
+    "description": "Sube imágenes de perfil desde archivo o captura de cámara móvil mediante Cloudinary y actualiza la foto del usuario/socio autenticado.",
     "auth": true,
     "admin": false,
     "notImplemented": false,

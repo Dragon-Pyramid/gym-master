@@ -32,6 +32,7 @@ interface AuthState {
   }) => Promise<boolean>;
   logout: () => void;
   initializeAuth: () => void;
+  updateUser: (patch: Partial<StoreUser>) => void;
   clearError: () => void;
 }
 
@@ -104,6 +105,12 @@ export const useAuthStore = create<AuthState>()(
             isInitialized: true,
           });
         }
+      },
+      updateUser: (patch) => {
+        const currentUser = get().user;
+        set({
+          user: currentUser ? { ...currentUser, ...patch } : currentUser,
+        });
       },
       clearError: () => {
         set({ error: null });
