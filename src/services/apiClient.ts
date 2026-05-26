@@ -226,11 +226,12 @@ export async function getNiveles() {
   const data = await res.json();
   return { ok: res.ok, data };
 }
-
 export async function generarNuevaRutina(body: {
   objetivo: number;
   nivel: number;
   dias: number;
+  id_socio?: string;
+  idSocio?: string;
 }) {
   const token = getToken();
   const res = await fetch('/api/rutina/generar', {
@@ -244,12 +245,24 @@ export async function generarNuevaRutina(body: {
   const data = await res.json();
   return { ok: res.ok, data };
 }
-
 export async function getRutinasPorSocio(idSocio: number | string) {
   const token = getToken();
+
+  if (!token) {
+    return {
+      ok: false,
+      data: [],
+      error: 'Token no disponible para consultar rutinas del socio',
+    };
+  }
+
   const res = await fetch(`/api/rutina/${idSocio}`, {
     method: 'GET',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Cache-Control': 'no-cache',
+    },
+    cache: 'no-store',
   });
   const data = await res.json();
   return { ok: res.ok, data };
@@ -679,3 +692,4 @@ export async function getAdminCuotasResumen() {
   const data = await res.json();
   return { ok: res.ok, ...data };
 }
+

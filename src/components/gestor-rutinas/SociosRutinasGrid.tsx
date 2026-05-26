@@ -1,15 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Socio } from "@/interfaces/socio.interface";
 import { Rutina } from "@/interfaces/rutina.interface";
+import { Objetivo } from "@/interfaces/objetivo.interface";
+import { Nivel } from "@/interfaces/niveles.interface";
 import { Skeleton } from "@/components/ui/skeleton";
 import SocioRutinaCard from "./SocioRutinaCard";
-import { getRutinasPorSocio } from "@/services/apiClient";
+import { getHistorialRutinas, getRutinasPorSocio } from "@/services/apiClient";
 
 interface SociosRutinasGridProps {
   socios: Socio[];
   loading: boolean;
+  objetivos: Objetivo[];
+  niveles: Nivel[];
 }
 
 interface SocioConRutina extends Socio {
@@ -17,9 +21,31 @@ interface SocioConRutina extends Socio {
   loadingRutina?: boolean;
 }
 
+const getSocioIdFromRutina = (rutina: Rutina): string | null => {
+  return rutina.id_socio ?? rutina.socio?.id_socio ?? null;
+};
+
+const buildUltimaRutinaBySocio = (rutinas: Rutina[]): Map<string, Rutina> => {
+  const latestBySocio = new Map<string, Rutina>();
+
+  rutinas.forEach((rutina) => {
+    const socioId = getSocioIdFromRutina(rutina);
+
+    if (!socioId || latestBySocio.has(socioId)) {
+      return;
+    }
+
+    latestBySocio.set(socioId, rutina);
+  });
+
+  return latestBySocio;
+};
+
 export default function SociosRutinasGrid({
   socios,
   loading,
+  objetivos,
+  niveles,
 }: SociosRutinasGridProps) {
   const [sociosConRutinas, setSociosConRutinas] = useState<SocioConRutina[]>(
     []
@@ -51,7 +77,27 @@ export default function SociosRutinasGrid({
     }
   };
 
+  const refrescarRutinaSocio = useCallback(async (socioId: string) => {
+    setSociosConRutinas((prev) =>
+      prev.map((socio) =>
+        socio.id_socio === socioId ? { ...socio, loadingRutina: true } : socio
+      )
+    );
+
+    const rutina = await obtenerUltimaRutina(socioId);
+
+    setSociosConRutinas((prev) =>
+      prev.map((socio) =>
+        socio.id_socio === socioId
+          ? { ...socio, ultimaRutina: rutina, loadingRutina: false }
+          : socio
+      )
+    );
+  }, []);
+
   useEffect(() => {
+    let isMounted = true;
+
     const cargarRutinas = async () => {
       if (!socios.length) {
         setSociosConRutinas([]);
@@ -65,19 +111,47 @@ export default function SociosRutinasGrid({
       }));
       setSociosConRutinas(sociosIniciales);
 
-      for (const socio of socios) {
-        const rutina = await obtenerUltimaRutina(socio.id_socio);
-        setSociosConRutinas((prev) =>
-          prev.map((s) =>
-            s.id_socio === socio.id_socio
-              ? { ...s, ultimaRutina: rutina, loadingRutina: false }
-              : s
-          )
+      try {
+        const response = await getHistorialRutinas();
+
+        const rutinas: Rutina[] =
+          response.ok && Array.isArray(response.data) ? response.data : [];
+
+        const latestBySocio = buildUltimaRutinaBySocio(rutinas);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setSociosConRutinas(
+          socios.map((socio) => ({
+            ...socio,
+            ultimaRutina: latestBySocio.get(socio.id_socio) ?? null,
+            loadingRutina: false,
+          }))
+        );
+      } catch (error) {
+        console.error("Error al cargar rutinas de socios:", error);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setSociosConRutinas(
+          socios.map((socio) => ({
+            ...socio,
+            ultimaRutina: null,
+            loadingRutina: false,
+          }))
         );
       }
     };
 
     cargarRutinas();
+
+    return () => {
+      isMounted = false;
+    };
   }, [socios]);
 
   if (loading) {
@@ -106,6 +180,9 @@ export default function SociosRutinasGrid({
           socio={socio}
           rutina={socio.ultimaRutina}
           loadingRutina={socio.loadingRutina}
+          objetivos={objetivos}
+          niveles={niveles}
+          onRutinaCreated={refrescarRutinaSocio}
         />
       ))}
     </div>

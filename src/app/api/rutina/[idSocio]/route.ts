@@ -35,8 +35,18 @@ export async function GET(
 
     return NextResponse.json(rutinas, { status: 200 });
   } catch (error: any) {
+    const message = error?.message ?? 'Error al obtener las rutinas del socio';
+
+    if (
+      message.includes('Token no proporcionado') ||
+      message.includes('Token inválido') ||
+      message.includes('JWT_SECRET')
+    ) {
+      return NextResponse.json({ error: message }, { status: 401 });
+    }
+
     console.error('Error al obtener las rutinas del socio:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -64,6 +74,14 @@ export async function DELETE(
     console.error('Error al eliminar rutina:', error);
 
     const message = error?.message ?? 'Error al eliminar rutina';
+
+    if (
+      message.includes('Token no proporcionado') ||
+      message.includes('Token inválido') ||
+      message.includes('JWT_SECRET')
+    ) {
+      return NextResponse.json({ error: message }, { status: 401 });
+    }
 
     if (message.includes('no es válido')) {
       return NextResponse.json({ error: message }, { status: 400 });
