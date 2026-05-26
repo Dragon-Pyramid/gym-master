@@ -1059,11 +1059,12 @@ const endpointDefinitions: EndpointDefinition[] = [
   {
     "path": "/api/pagar-cuota",
     "methods": [
+      "GET",
       "POST"
     ],
     "tag": "Cuotas y pagos",
-    "summary": "Crear sesión de pago de cuota",
-    "description": "Crea una sesión de pago online para la cuota del socio.",
+    "summary": "Vista previa y sesión de pago de cuota",
+    "description": "GET devuelve vista previa de pago con subtotal, descuento por pago adelantado y total. POST crea una sesión Stripe con la misma parametrización de descuento vigente.",
     "auth": true,
     "admin": false,
     "notImplemented": false,
@@ -1073,8 +1074,32 @@ const endpointDefinitions: EndpointDefinition[] = [
       403,
       500
     ],
-    "queryParams": [],
+    "queryParams": [
+      "meses_cubiertos"
+    ],
     "source": "src/app/api/pagar-cuota/route.ts"
+  },
+
+  {
+    "path": "/api/pagar-cuota/confirmar",
+    "methods": [
+      "POST"
+    ],
+    "tag": "Cuotas y pagos",
+    "summary": "Confirma y sincroniza un pago Stripe de cuota",
+    "description": "Recibe un session_id de Stripe Checkout, valida la sesión pagada y registra el pago en Gym Master si el webhook todavía no lo había registrado. Funciona como respaldo seguro post-checkout y evita duplicados por session/payment intent.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401,
+      403,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/pagar-cuota/confirmar/route.ts"
   },
   {
     "path": "/api/pagos/{id}",
@@ -1103,7 +1128,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     ],
     "tag": "Cuotas y pagos",
     "summary": "Operaciones de pagos",
-    "description": "Consulta y administra pagos manuales. El alta/actualización de pagos pagados puede reactivar automáticamente socios regularizados; la baja lógica/cancelación sincroniza morosidad y registra auditoría cuando corresponde. Implementación relacionada: createPagoManualServer, deactivatePagoServer, fetchPagoFormOptionsServer, fetchPagosServer, updatePagoServer.",
+    "description": "Consulta y administra pagos manuales. El alta/actualización de pagos pagados puede reactivar automáticamente socios regularizados; la baja lógica/cancelación sincroniza morosidad y registra auditoría. El formulario de opciones incluye configuración de descuento por pago adelantado para calcular subtotal, descuento y total final. Implementación relacionada: createPagoManualServer, deactivatePagoServer, fetchPagoFormOptionsServer, fetchPagosServer, updatePagoServer.",
     "auth": true,
     "admin": false,
     "notImplemented": false,
@@ -1116,6 +1141,27 @@ const endpointDefinitions: EndpointDefinition[] = [
       "options"
     ],
     "source": "src/app/api/pagos/route.ts"
+  },
+  {
+    "path": "/api/parametrizacion/cuotas-descuento",
+    "methods": [
+      "GET",
+      "PATCH"
+    ],
+    "tag": "Parametrización",
+    "summary": "Descuento por pago adelantado de cuotas",
+    "description": "Consulta y actualiza la configuración administrativa del descuento por pago adelantado: activo, cuotas mínimas, porcentaje y descripción. Impacta en pagos manuales, Stripe, recibos e historial.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      403,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/parametrizacion/cuotas-descuento/route.ts"
   },
   {
     "path": "/api/parametrizacion/catalogos",

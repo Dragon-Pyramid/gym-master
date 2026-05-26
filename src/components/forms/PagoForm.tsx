@@ -24,6 +24,7 @@ import { CatalogoParametrizableItem } from "@/interfaces/parametrizacion.interfa
 import { useCatalogoParametrizable } from "@/hooks/useCatalogosParametrizables";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { calcularDescuentoPago, formatDiscountPercent } from "@/lib/cuotas/descuentoPago";
 
 export interface PagoFormProps {
   pago?: ResponsePago | null;
@@ -37,6 +38,14 @@ function addMonthsIso(dateIso: string, months: number) {
   const date = new Date(Date.UTC(year, month - 1, day));
   date.setUTCMonth(date.getUTCMonth() + months);
   return date.toISOString().slice(0, 10);
+}
+
+function formatMoney(value: number) {
+  return new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency: "ARS",
+    maximumFractionDigits: 0,
+  }).format(Number.isFinite(value) ? value : 0);
 }
 
 const fallbackMediosPago: CatalogoParametrizableItem[] = [
@@ -79,6 +88,10 @@ const emptyForm = {
   periodo_desde: todayIso(),
   periodo_hasta: addMonthsIso(todayIso(), 1),
   meses_cubiertos: 1,
+  subtotal: 0,
+  descuento_porcentaje: 0,
+  descuento_monto: 0,
+  descuento_motivo: "",
   monto_pagado: 0,
   metodo_pago: "efectivo",
   id_medio_pago: "",
@@ -108,6 +121,10 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
         const data = await fetchPagoFormOptionsApi();
         if (!mounted) return;
         setOptions(data);
+        setForm((prev) => ({
+          ...prev,
+          cuota_id: prev.cuota_id || data.cuotas?.[0]?.id || "",
+        }));
       } catch (error: any) {
         toast.error(error.message || "Error al cargar opciones de pago");
       } finally {
@@ -136,6 +153,10 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
         periodo_hasta:
           pago.periodo_hasta ?? pago.fecha_vencimiento ?? addMonthsIso(todayIso(), 1),
         meses_cubiertos: pago.meses_cubiertos ?? 1,
+        subtotal: pago.subtotal ?? pago.monto_pagado ?? 0,
+        descuento_porcentaje: pago.descuento_porcentaje ?? 0,
+        descuento_monto: pago.descuento_monto ?? 0,
+        descuento_motivo: pago.descuento_motivo ?? "",
         monto_pagado: pago.monto_pagado ?? 0,
         metodo_pago: medioPago?.codigo ?? metodoPago,
         id_medio_pago: pago.id_medio_pago ?? medioPago?.id ?? "",
@@ -160,15 +181,40 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
     [form.cuota_id, options.cuotas]
   );
 
+  const descuentoPreview = useMemo(
+    () =>
+      calcularDescuentoPago({
+        cuotaMonto: Number(selectedCuota?.monto ?? 0),
+        mesesCubiertos: Number(form.meses_cubiertos || 1),
+        config: options.descuento_config,
+      }),
+    [selectedCuota?.monto, form.meses_cubiertos, options.descuento_config]
+  );
+
+  const descuentoConfigActivo =
+    options.descuento_config?.activo === true &&
+    Number(options.descuento_config?.porcentaje ?? 0) > 0;
+
   useEffect(() => {
     if (!selectedCuota || pago) return;
 
-    const monto = Number(selectedCuota.monto || 0) * Number(form.meses_cubiertos || 1);
     setForm((prev) => ({
       ...prev,
-      monto_pagado: monto,
+      subtotal: descuentoPreview.subtotal,
+      descuento_porcentaje: descuentoPreview.descuento_porcentaje,
+      descuento_monto: descuentoPreview.descuento_monto,
+      descuento_motivo: descuentoPreview.mensaje ?? "",
+      monto_pagado: descuentoPreview.total,
     }));
-  }, [selectedCuota, form.meses_cubiertos, pago]);
+  }, [
+    selectedCuota,
+    descuentoPreview.subtotal,
+    descuentoPreview.descuento_porcentaje,
+    descuentoPreview.descuento_monto,
+    descuentoPreview.mensaje,
+    descuentoPreview.total,
+    pago,
+  ]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -194,6 +240,10 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
           name === "periodo_desde" ? value : next.periodo_desde,
           Number(name === "meses_cubiertos" ? value : next.meses_cubiertos || 1)
         );
+      }
+
+      if (name === "monto_pagado") {
+        next.descuento_monto = Math.max(Number(next.subtotal || 0) - Number(value || 0), 0);
       }
 
       return next;
@@ -409,6 +459,40 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
           min={0}
         />
       </div>
+
+      {descuentoConfigActivo ? (
+        <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-3 text-sm text-cyan-900 md:col-span-2">
+          <p className="font-semibold">
+            Descuento por pago adelantado
+          </p>
+          <p className="mt-1">
+            {descuentoPreview.mensaje ??
+              `Pagando ${options.descuento_config?.cuotas_minimas ?? 2} o más cuotas se aplicará ${formatDiscountPercent(
+                Number(options.descuento_config?.porcentaje ?? 0)
+              )} de descuento.`}
+          </p>
+          <div className="mt-3 grid gap-2 text-xs md:grid-cols-4">
+            <div>
+              <span className="text-cyan-700">Subtotal</span>
+              <p className="font-semibold">{formatMoney(descuentoPreview.subtotal)}</p>
+            </div>
+            <div>
+              <span className="text-cyan-700">Descuento</span>
+              <p className="font-semibold">
+                {formatMoney(descuentoPreview.descuento_monto)} ({formatDiscountPercent(descuentoPreview.descuento_porcentaje)})
+              </p>
+            </div>
+            <div>
+              <span className="text-cyan-700">Total sugerido</span>
+              <p className="font-semibold">{formatMoney(descuentoPreview.total)}</p>
+            </div>
+            <div>
+              <span className="text-cyan-700">Meses cubiertos</span>
+              <p className="font-semibold">{form.meses_cubiertos}</p>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="id_medio_pago">Método de pago</Label>

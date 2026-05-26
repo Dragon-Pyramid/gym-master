@@ -11,6 +11,7 @@ import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getToken } from '@/services/storageService';
+import type { PagoDescuentoPreview } from '@/interfaces/pago.interface';
 import { useAuthStore } from '@/stores/authStore';
 
 type EstadoCuota = {
@@ -29,6 +30,14 @@ type EstadoCuota = {
 function formatDate(value?: string | null) {
   if (!value) return '-';
   return new Date(`${value}T00:00:00`).toLocaleDateString('es-AR');
+}
+
+function formatMoney(value?: number | null) {
+  return new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    maximumFractionDigits: 0,
+  }).format(Number(value ?? 0));
 }
 
 function estadoLabel(estado?: string | null) {
@@ -52,6 +61,8 @@ export default function PagarCuotaSocioPage() {
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
   const [meses, setMeses] = useState(1);
+  const [preview, setPreview] = useState<PagoDescuentoPreview | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
   useEffect(() => {
     initializeAuth();
@@ -83,11 +94,36 @@ export default function PagarCuotaSocioPage() {
     }
   };
 
+  const loadPreview = async (mesesSeleccionados: number) => {
+    try {
+      setLoadingPreview(true);
+      const token = getToken();
+      const res = await fetch(`/api/pagar-cuota?meses_cubiertos=${mesesSeleccionados}`, {
+        method: 'GET',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'No se pudo calcular el pago');
+      setPreview(json.data ?? null);
+    } catch (error: any) {
+      setPreview(null);
+      toast.error(error.message || 'Error al calcular el pago');
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
   useEffect(() => {
     if (isInitialized && isAuthenticated) {
       loadEstado();
     }
   }, [isInitialized, isAuthenticated]);
+
+  useEffect(() => {
+    if (isInitialized && isAuthenticated && user?.rol === 'socio') {
+      loadPreview(meses);
+    }
+  }, [isInitialized, isAuthenticated, user?.rol, meses]);
 
   const detallePago = useMemo(() => {
     const suffix = meses === 1 ? 'mes' : 'meses';
@@ -200,7 +236,38 @@ export default function PagarCuotaSocioPage() {
                   <div className='p-4 border rounded-lg'>
                     <p className='text-sm font-medium'>Detalle</p>
                     <p className='mt-2 text-sm text-muted-foreground'>{detallePago}</p>
-                    <p className='mt-1 text-xs text-muted-foreground'>
+                    {loadingPreview ? (
+                      <p className='mt-2 text-xs text-muted-foreground'>Calculando total...</p>
+                    ) : preview ? (
+                      <div className='mt-3 space-y-1 text-sm'>
+                        <div className='flex justify-between gap-3'>
+                          <span className='text-muted-foreground'>Subtotal</span>
+                          <span className='font-medium'>{formatMoney(preview.subtotal)}</span>
+                        </div>
+                        {preview.config?.activo && Number(preview.config?.porcentaje ?? 0) > 0 ? (
+                          <div className='flex justify-between gap-3'>
+                            <span className='text-muted-foreground'>Descuento</span>
+                            <span className='font-medium text-emerald-700'>
+                              -{formatMoney(preview.descuento_monto)}
+                            </span>
+                          </div>
+                        ) : null}
+                        <div className='flex justify-between gap-3 border-t pt-2'>
+                          <span className='font-semibold'>Total a pagar</span>
+                          <span className='font-bold'>{formatMoney(preview.total)}</span>
+                        </div>
+                        {preview.mensaje ? (
+                          <p className={`rounded-md border p-2 text-xs ${
+                            preview.descuento_aplicado
+                              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                              : 'border-cyan-200 bg-cyan-50 text-cyan-700'
+                          }`}>
+                            {preview.mensaje}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    <p className='mt-3 text-xs text-muted-foreground'>
                       Al finalizar el checkout, Stripe notificará el pago al webhook y se actualizará tu estado de cuota.
                     </p>
                   </div>
@@ -211,7 +278,7 @@ export default function PagarCuotaSocioPage() {
                     Ver historial de pagos
                   </Button>
                   <Button
-                    disabled={!puedePagar || paying}
+                    disabled={!puedePagar || paying || loadingPreview}
                     onClick={handlePagar}
                     className='bg-[#02a8e1] hover:bg-[#0288b1] text-white'
                   >

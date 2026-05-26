@@ -13,6 +13,7 @@ import {
   Edit3,
   Loader2,
   Package,
+  Percent,
   Plus,
   ReceiptText,
   RefreshCcw,
@@ -48,10 +49,13 @@ import {
   CatalogoParametrizableSummary,
   ParametrizacionCatalogosResponse,
 } from "@/interfaces/parametrizacion.interface";
+import type { PagoDescuentoConfig } from "@/interfaces/pago.interface";
 import {
   createParametrizacionCatalogoItem,
+  getCuotaDescuentoConfig,
   getParametrizacionCatalogos,
   toggleParametrizacionCatalogoItem,
+  updateCuotaDescuentoConfig,
   updateParametrizacionCatalogoItem,
 } from "@/services/parametrizacionService";
 import { useAuthStore } from "@/stores/authStore";
@@ -72,6 +76,13 @@ type CatalogFormState = {
   es_online: boolean;
   frecuencia_dias: string;
   alerta_dias_anticipacion: string;
+};
+
+type CuotaDescuentoFormState = {
+  activo: boolean;
+  cuotas_minimas: string;
+  porcentaje: string;
+  descripcion: string;
 };
 
 const catalogUiDefinitions: Record<CatalogoParametrizableKey, CatalogUiDefinition> = {
@@ -170,6 +181,17 @@ function parseOptionalNumber(value: string) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function descuentoFormFromConfig(config: PagoDescuentoConfig | null): CuotaDescuentoFormState {
+  return {
+    activo: config?.activo === true,
+    cuotas_minimas: String(config?.cuotas_minimas ?? 2),
+    porcentaje: String(config?.porcentaje ?? 0),
+    descripcion:
+      config?.descripcion ??
+      "Descuento por pago adelantado de cuotas aplicado en administración y Stripe.",
+  };
+}
+
 export default function ParametrizacionPage() {
   const { user, isAuthenticated, initializeAuth, isInitialized } = useAuthStore();
   const router = useRouter();
@@ -182,6 +204,11 @@ export default function ParametrizacionPage() {
   const [selectedItem, setSelectedItem] = useState<CatalogoParametrizableItem | null>(null);
   const [formState, setFormState] = useState<CatalogFormState>(emptyFormState());
   const [saving, setSaving] = useState(false);
+  const [descuentoConfig, setDescuentoConfig] = useState<PagoDescuentoConfig | null>(null);
+  const [descuentoForm, setDescuentoForm] = useState<CuotaDescuentoFormState>(
+    descuentoFormFromConfig(null)
+  );
+  const [savingDescuento, setSavingDescuento] = useState(false);
 
   useEffect(() => {
     initializeAuth();
@@ -198,8 +225,13 @@ export default function ParametrizacionPage() {
     setCatalogosError(null);
 
     try {
-      const data = await getParametrizacionCatalogos();
+      const [data, descuento] = await Promise.all([
+        getParametrizacionCatalogos(),
+        getCuotaDescuentoConfig(),
+      ]);
       setCatalogosData(data);
+      setDescuentoConfig(descuento);
+      setDescuentoForm(descuentoFormFromConfig(descuento));
     } catch (error) {
       setCatalogosError(
         error instanceof Error ? error.message : "No se pudieron cargar los catálogos"
@@ -310,6 +342,35 @@ export default function ParametrizacionPage() {
     }
   };
 
+  const handleSaveDescuento = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    setSavingDescuento(true);
+    setCatalogosError(null);
+    setActionMessage(null);
+
+    try {
+      const saved = await updateCuotaDescuentoConfig({
+        activo: descuentoForm.activo,
+        cuotas_minimas: Number(descuentoForm.cuotas_minimas || 2),
+        porcentaje: Number(descuentoForm.porcentaje || 0),
+        descripcion: descuentoForm.descripcion || null,
+      });
+
+      setDescuentoConfig(saved);
+      setDescuentoForm(descuentoFormFromConfig(saved));
+      setActionMessage("Descuento por pago adelantado actualizado correctamente.");
+    } catch (error) {
+      setCatalogosError(
+        error instanceof Error
+          ? error.message
+          : "No se pudo actualizar el descuento por pago adelantado"
+      );
+    } finally {
+      setSavingDescuento(false);
+    }
+  };
+
   if (!isInitialized) {
     return <div>Cargando...</div>;
   }
@@ -388,6 +449,116 @@ export default function ParametrizacionPage() {
                     </CardContent>
                   </Card>
                 </div>
+
+                <Card className="border-cyan-100">
+                  <CardHeader className="flex flex-col gap-3 border-b p-4 md:flex-row md:items-center md:justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className="rounded-xl bg-cyan-50 p-2 text-cyan-700">
+                        <Percent className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold">Descuento por pago adelantado</h2>
+                        <p className="text-sm text-gray-500">
+                          Configura la promoción que se aplica cuando un socio paga varias cuotas juntas. Impacta en pago manual, Stripe, recibos e historial.
+                        </p>
+                      </div>
+                    </div>
+                    <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                      descuentoConfig?.activo
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : "border-slate-200 bg-slate-50 text-slate-600"
+                    }`}>
+                      {descuentoConfig?.activo ? "Activo" : "Desactivado"}
+                    </span>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <form onSubmit={handleSaveDescuento} className="grid gap-4 md:grid-cols-4">
+                      <div className="flex items-center gap-2 rounded-xl border bg-white p-3 md:col-span-1">
+                        <Checkbox
+                          id="descuento_activo"
+                          checked={descuentoForm.activo}
+                          onCheckedChange={(checked) =>
+                            setDescuentoForm((prev) => ({ ...prev, activo: checked === true }))
+                          }
+                        />
+                        <Label htmlFor="descuento_activo" className="text-sm font-medium">
+                          Activar descuento
+                        </Label>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label htmlFor="cuotas_minimas_descuento">Cuotas mínimas</Label>
+                        <Input
+                          id="cuotas_minimas_descuento"
+                          type="number"
+                          min={1}
+                          max={24}
+                          value={descuentoForm.cuotas_minimas}
+                          onChange={(event) =>
+                            setDescuentoForm((prev) => ({
+                              ...prev,
+                              cuotas_minimas: event.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label htmlFor="porcentaje_descuento">Porcentaje</Label>
+                        <Input
+                          id="porcentaje_descuento"
+                          type="number"
+                          min={0}
+                          max={100}
+                          step="0.01"
+                          value={descuentoForm.porcentaje}
+                          onChange={(event) =>
+                            setDescuentoForm((prev) => ({
+                              ...prev,
+                              porcentaje: event.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+
+                      <div className="flex items-end">
+                        <Button
+                          type="submit"
+                          disabled={savingDescuento}
+                          className="w-full bg-[#02a8e1] hover:bg-[#0288b1]"
+                        >
+                          {savingDescuento ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : null}
+                          Guardar descuento
+                        </Button>
+                      </div>
+
+                      <div className="space-y-1 md:col-span-4">
+                        <Label htmlFor="descripcion_descuento">Mensaje interno</Label>
+                        <Input
+                          id="descripcion_descuento"
+                          value={descuentoForm.descripcion}
+                          onChange={(event) =>
+                            setDescuentoForm((prev) => ({
+                              ...prev,
+                              descripcion: event.target.value,
+                            }))
+                          }
+                          placeholder="Ejemplo: pagando 2 o más cuotas se aplica 10% de descuento"
+                        />
+                      </div>
+
+                      {Number(descuentoForm.porcentaje || 0) > 0 ? (
+                        <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-3 text-sm text-cyan-800 md:col-span-4">
+                          {descuentoForm.activo
+                            ? `Mensaje al socio/admin: pagando ${descuentoForm.cuotas_minimas || 2} o más cuotas por adelantado obtiene ${descuentoForm.porcentaje || 0}% de descuento.`
+                            : "El porcentaje está configurado pero no se aplica porque el descuento está desactivado."}
+                        </div>
+                      ) : null}
+                    </form>
+                  </CardContent>
+                </Card>
 
                 <Card>
                   <CardHeader className="flex flex-col gap-3 border-b p-4 md:flex-row md:items-center md:justify-between">

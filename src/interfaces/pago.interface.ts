@@ -1,6 +1,34 @@
 export type MetodoPago = 'efectivo' | 'stripe' | 'transferencia' | 'otro';
 export type EstadoPago = 'pagado' | 'pendiente' | 'cancelado';
 
+export interface PagoDescuentoConfig {
+  id?: string;
+  codigo: string;
+  activo: boolean;
+  cuotas_minimas: number;
+  porcentaje: number;
+  descripcion?: string | null;
+  creado_en?: string | null;
+  actualizado_en?: string | null;
+}
+
+export interface PagoDescuentoPreview {
+  cuota_monto: number;
+  meses_cubiertos: number;
+  subtotal: number;
+  descuento_aplicado: boolean;
+  descuento_porcentaje: number;
+  descuento_monto: number;
+  total: number;
+  mensaje?: string | null;
+  config?: PagoDescuentoConfig | null;
+  cuota_id?: string;
+  cuota_descripcion?: string;
+  periodo_desde?: string;
+  periodo_hasta?: string;
+  fecha_vencimiento?: string;
+}
+
 export interface Pago {
   id: string;
   socio_id: string;
@@ -8,6 +36,10 @@ export interface Pago {
   fecha_pago: string;
   fecha_vencimiento: string;
   monto_pagado: number;
+  subtotal?: number | null;
+  descuento_porcentaje?: number | null;
+  descuento_monto?: number | null;
+  descuento_motivo?: string | null;
   total: number | null;
   registrado_por: string | null;
   enviar_email: boolean;
@@ -35,6 +67,10 @@ export interface CreatePagoDto {
   meses_cubiertos?: number;
 
   monto_pagado?: number;
+  subtotal?: number;
+  descuento_porcentaje?: number;
+  descuento_monto?: number;
+  descuento_motivo?: string | null;
 
   metodo_pago?: string;
   id_medio_pago?: string | null;
@@ -58,6 +94,10 @@ export interface UpdatePagoDto {
   periodo_hasta?: string;
   meses_cubiertos?: number;
   monto_pagado?: number;
+  subtotal?: number;
+  descuento_porcentaje?: number;
+  descuento_monto?: number;
+  descuento_motivo?: string | null;
   registrado_por?: string;
   metodo_pago?: MetodoPago | string;
   id_medio_pago?: string | null;
@@ -78,6 +118,10 @@ export interface ResponsePago {
   meses_cubiertos?: number | null;
 
   monto_pagado: number;
+  subtotal?: number | null;
+  descuento_porcentaje?: number | null;
+  descuento_monto?: number | null;
+  descuento_motivo?: string | null;
   total: number | null;
 
   metodo_pago?: string | null;
@@ -126,6 +170,7 @@ export interface PagoManualFormOptions {
     fecha_fin: string;
     activo?: boolean | null;
   }>;
+  descuento_config?: PagoDescuentoConfig | null;
 }
 
 
@@ -142,6 +187,10 @@ export interface PagoVerificationResponse {
     periodo_hasta?: string | null;
     meses_cubiertos?: number | null;
     monto_pagado: number;
+    subtotal?: number | null;
+    descuento_porcentaje?: number | null;
+    descuento_monto?: number | null;
+    descuento_motivo?: string | null;
     metodo_pago?: string | null;
     estado?: string | null;
     activo?: boolean | null;

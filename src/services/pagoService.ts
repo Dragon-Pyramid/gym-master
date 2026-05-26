@@ -6,11 +6,12 @@ import {
   ResponsePago,
 } from "../interfaces/pago.interface";
 import dayjs from "dayjs";
-import { getSocioById } from "./socioService";
 import {
   reactivarSocioPorPago,
   registrarDesactivacionPorMorosidad,
 } from "./morosidadService";
+import { calcularDescuentoPago } from "@/lib/cuotas/descuentoPago";
+import { fetchCuotaDescuentoConfig } from "@/services/cuotaDescuentoService";
 
 /*export const getAllPagos = async (): Promise<Pago[]> => {
   const { data, error } = await supabase.from("pago").select();
@@ -29,6 +30,10 @@ type PagoRow = {
   periodo_hasta?: string | null;
   meses_cubiertos?: number | null;
   monto_pagado: number;
+  subtotal?: number | null;
+  descuento_porcentaje?: number | null;
+  descuento_monto?: number | null;
+  descuento_motivo?: string | null;
   total?: number | null;
   metodo_pago?: string | null;
   estado?: string | null;
@@ -109,6 +114,10 @@ const responsePago = (data: PagoRow): ResponsePago => {
     meses_cubiertos: data.meses_cubiertos ?? null,
 
     monto_pagado: data.monto_pagado,
+    subtotal: data.subtotal ?? null,
+    descuento_porcentaje: data.descuento_porcentaje ?? null,
+    descuento_monto: data.descuento_monto ?? null,
+    descuento_motivo: data.descuento_motivo ?? null,
     total: data.total ?? null,
 
     metodo_pago: data.metodo_pago ?? null,
@@ -164,6 +173,10 @@ export const createPago = async (payload: CreatePagoDto): Promise<Pago> => {
     periodo_hasta?: string;
     meses_cubiertos?: number;
     monto_pagado?: number;
+    subtotal?: number;
+    descuento_porcentaje?: number;
+    descuento_monto?: number;
+    descuento_motivo?: string | null;
     metodo_pago?: string;
     estado?: string;
     registrado_por?: string | null;
@@ -202,17 +215,19 @@ export const createPago = async (payload: CreatePagoDto): Promise<Pago> => {
 
   const fechaVencimiento = dto.fecha_vencimiento ?? periodoHasta;
 
-  const socio = await getSocioById(socioId);
+  const descuentoConfig = await fetchCuotaDescuentoConfig(supabase);
+  const previewDescuento = calcularDescuentoPago({
+    cuotaMonto: Number(cuota.monto ?? 0),
+    mesesCubiertos,
+    config: descuentoConfig,
+  });
 
-  let montoPagado = dto.monto_pagado;
-
-  if (!montoPagado) {
-    if (socio.descuento_activo) {
-      montoPagado = cuota.monto - cuota.monto * 0.1;
-    } else {
-      montoPagado = cuota.monto;
-    }
-  }
+  const montoPagadoCalculado = dto.monto_pagado ?? previewDescuento.total;
+  const montoPagado = Number(montoPagadoCalculado) > 0 ? montoPagadoCalculado : previewDescuento.total;
+  const descuentoMonto =
+    dto.descuento_monto ?? Math.max(previewDescuento.subtotal - Number(montoPagado), 0);
+  const descuentoPorcentaje =
+    dto.descuento_porcentaje ?? previewDescuento.descuento_porcentaje;
 
   const { data, error } = await supabase
     .from("pago")
@@ -225,6 +240,10 @@ export const createPago = async (payload: CreatePagoDto): Promise<Pago> => {
       periodo_hasta: periodoHasta,
       meses_cubiertos: mesesCubiertos,
       monto_pagado: montoPagado,
+      subtotal: dto.subtotal ?? previewDescuento.subtotal,
+      descuento_porcentaje: descuentoPorcentaje,
+      descuento_monto: descuentoMonto,
+      descuento_motivo: dto.descuento_motivo ?? previewDescuento.mensaje ?? null,
       metodo_pago: dto.metodo_pago ?? "efectivo",
       estado: dto.estado ?? "pagado",
       registrado_por: dto.registrado_por ?? null,
@@ -250,20 +269,6 @@ export const createPago = async (payload: CreatePagoDto): Promise<Pago> => {
     dto.registrado_por ?? null
   );
 
-  const { data: dataSocio, error: errorSocio } = await supabase
-    .from("socio")
-    .update({ descuento_activo: false })
-    .eq("id_socio", socioId);
-
-  if (errorSocio) {
-    console.log(errorSocio.message);
-    throw new Error("Error al actualizar el socio para desactivar el descuento");
-  }
-
-  if (dataSocio) {
-    console.log("Descuento del socio desactivado correctamente");
-    console.log("dataSocio", dataSocio);
-  }
 
   return data as Pago;
 };

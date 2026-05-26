@@ -23,6 +23,10 @@ type PagoSocio = {
   periodo_hasta: string | null;
   meses_cubiertos: number | null;
   monto_pagado: number;
+  subtotal?: number | null;
+  descuento_porcentaje?: number | null;
+  descuento_monto?: number | null;
+  descuento_motivo?: string | null;
   total: number | null;
   metodo_pago: string | null;
   estado: string | null;
@@ -244,8 +248,13 @@ export default function HistorialPagosSocioPage() {
                                 {label(pago.estado)}
                               </span>
                             </td>
-                            <td className='px-4 py-3 font-semibold text-right whitespace-nowrap'>
-                              {formatMoney(pago.monto_pagado)}
+                            <td className='px-4 py-3 text-right whitespace-nowrap'>
+                              <div className='font-semibold'>{formatMoney(pago.monto_pagado)}</div>
+                              {Number(pago.descuento_monto ?? 0) > 0 ? (
+                                <div className='text-xs text-emerald-700'>
+                                  Desc. {formatMoney(pago.descuento_monto)}
+                                </div>
+                              ) : null}
                             </td>
                             <td className='px-4 py-3 text-right'>
                               <Button

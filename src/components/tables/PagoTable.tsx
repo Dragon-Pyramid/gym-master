@@ -88,7 +88,16 @@ export default function PagoTable({
             </TableCell>
             <TableCell className="capitalize">{p.metodo_pago ?? "-"}</TableCell>
             <TableCell className="capitalize">{p.estado ?? "-"}</TableCell>
-            <TableCell>{money(p.monto_pagado)}</TableCell>
+            <TableCell>
+              <div className="flex flex-col">
+                <span>{money(p.monto_pagado)}</span>
+                {Number(p.descuento_monto ?? 0) > 0 ? (
+                  <span className="text-xs text-emerald-700">
+                    Desc. {money(p.descuento_monto)} ({p.descuento_porcentaje ?? 0}%)
+                  </span>
+                ) : null}
+              </div>
+            </TableCell>
             <TableCell>{p.registrado_por?.nombre ?? "-"}</TableCell>
             <TableCell className="flex gap-2">
               <Button

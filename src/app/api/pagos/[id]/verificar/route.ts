@@ -61,6 +61,10 @@ export async function GET(
         periodo_hasta,
         meses_cubiertos,
         monto_pagado,
+        subtotal,
+        descuento_porcentaje,
+        descuento_monto,
+        descuento_motivo,
         metodo_pago,
         estado,
         activo,
@@ -100,6 +104,16 @@ export async function GET(
         periodo_hasta: data.periodo_hasta,
         meses_cubiertos: data.meses_cubiertos,
         monto_pagado: Number(data.monto_pagado ?? 0),
+        subtotal: data.subtotal === null || data.subtotal === undefined ? null : Number(data.subtotal),
+        descuento_porcentaje:
+          data.descuento_porcentaje === null || data.descuento_porcentaje === undefined
+            ? null
+            : Number(data.descuento_porcentaje),
+        descuento_monto:
+          data.descuento_monto === null || data.descuento_monto === undefined
+            ? null
+            : Number(data.descuento_monto),
+        descuento_motivo: data.descuento_motivo ?? null,
         metodo_pago: data.metodo_pago,
         estado: data.estado,
         activo: data.activo,

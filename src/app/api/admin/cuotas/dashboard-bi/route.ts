@@ -27,6 +27,8 @@ type PagoRow = {
   metodo_pago: string | null;
   estado: string | null;
   monto_pagado: number;
+  descuento_monto?: number | null;
+  descuento_porcentaje?: number | null;
   socio?: {
     nombre_completo?: string | null;
   } | null;
@@ -53,6 +55,8 @@ export async function GET() {
           metodo_pago,
           estado,
           monto_pagado,
+          descuento_monto,
+          descuento_porcentaje,
           socio:socio_id (
             nombre_completo
           )
@@ -133,6 +137,8 @@ export async function GET() {
         metodo_pago: pago.metodo_pago,
         estado: pago.estado,
         monto_pagado: toNumber(pago.monto_pagado),
+        descuento_monto: toNumber(pago.descuento_monto),
+        descuento_porcentaje: toNumber(pago.descuento_porcentaje),
       })),
       socios_vencidos: estados
         .filter((socio) => socio.estado_cuota === "vencido")

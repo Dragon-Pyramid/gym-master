@@ -43,6 +43,8 @@ export interface PagoRecienteBi {
   metodo_pago: string | null;
   estado: string | null;
   monto_pagado: number;
+  descuento_monto?: number | null;
+  descuento_porcentaje?: number | null;
 }
 
 export interface CuotasPagosDashboardBiResponse {
