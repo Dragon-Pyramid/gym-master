@@ -296,6 +296,12 @@ export const DASHBOARD_ROUTE_PERMISSIONS: DashboardRoutePermission[] = [
     exact: true,
   },
   {
+    path: '/dashboard/asistencias/terminal',
+    permissionKey: 'Asistencias',
+    roles: ['admin', 'usuario'],
+    exact: true,
+  },
+  {
     path: '/dashboard/ventas-detalle',
     permissionKey: 'Ventas',
     roles: ['admin', 'usuario'],

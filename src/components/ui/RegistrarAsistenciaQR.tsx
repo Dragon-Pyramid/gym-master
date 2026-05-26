@@ -163,23 +163,33 @@ export function RegistrarAsistenciaQR() {
         } catch {}
       }
 
-      const shouldNotifyAdmin =
+      const shouldNotifyAccessDisplay =
+        res.alert_type === 'success' ||
         res.alert_type === 'debt' ||
         res.alert_type === 'inactive' ||
+        res.access_status === 'al_dia' ||
         res.access_status === 'deuda' ||
         res.access_status === 'desactivado';
 
-      if (shouldNotifyAdmin) {
+      if (shouldNotifyAccessDisplay) {
+        const asistenciaId =
+          res.asistencia && 'id' in res.asistencia
+            ? String((res.asistencia as { id?: string }).id ?? '')
+            : '';
+
         broadcastAdminAccessEvent({
-          event_id: `${res.access_status ?? res.alert_type ?? 'access'}-${
-            id_socio ?? 'socio'
-          }-${Date.now()}`,
+          event_id: asistenciaId
+            ? `asistencia-${asistenciaId}-${res.alert_type ?? 'success'}`
+            : `${res.access_status ?? res.alert_type ?? 'access'}-${
+                id_socio ?? 'socio'
+              }-${Date.now()}`,
           access_status: res.access_status,
           alert_type: res.alert_type,
           mensaje_acceso:
             res.mensaje_acceso ||
+            res.message ||
             res.error ||
-            'El socio debe dirigirse a administración para regularizar su situación.',
+            'Asistencia registrada correctamente.',
           socio: {
             id_socio,
             nombre_completo: nombre,
