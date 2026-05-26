@@ -1,26 +1,42 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Socio } from "@/interfaces/socio.interface";
 import { Rutina } from "@/interfaces/rutina.interface";
+import { Objetivo } from "@/interfaces/objetivo.interface";
+import { Nivel } from "@/interfaces/niveles.interface";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Eye, User, Calendar, Dumbbell } from "lucide-react";
-import RutinaModalView from "@/components/modal/RutinaModalView";
+import RutinaModal from "@/components/modal/RutinaModal";
 
 interface SocioRutinaCardProps {
   socio: Socio;
   rutina?: Rutina | null;
   loadingRutina?: boolean;
+  objetivos: Objetivo[];
+  niveles: Nivel[];
+  onRutinaCreated?: (socioId: string) => void | Promise<void>;
 }
 
 export default function SocioRutinaCard({
   socio,
   rutina,
   loadingRutina,
+  objetivos,
+  niveles,
+  onRutinaCreated,
 }: SocioRutinaCardProps) {
-  const [modalOpen, setModalOpen] = useState(false);
+  const router = useRouter();
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+
+  const handleVerRutina = () => {
+    if (!rutina?.id_rutina) return;
+
+    router.push(`/dashboard/gestor-rutinas/rutina/${rutina.id_rutina}`);
+  };
 
   const formatearFecha = (fecha?: string) => {
     if (!fecha) return "No disponible";
@@ -152,20 +168,32 @@ export default function SocioRutinaCard({
             size="sm"
             className="w-full"
             disabled={!rutina || loadingRutina}
-            onClick={() => setModalOpen(true)}
+            onClick={handleVerRutina}
           >
             <Eye className="w-4 h-4 mr-2" />
             Ver Rutina
           </Button>
-          <Button variant="default" size="sm" className="w-full">
+          <Button
+            variant="default"
+            size="sm"
+            className="w-full"
+            disabled={loadingRutina || objetivos.length === 0 || niveles.length === 0}
+            onClick={() => setCreateModalOpen(true)}
+          >
             Nueva Rutina
           </Button>
         </div>
       </CardContent>
-      <RutinaModalView
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        rutina={rutina}
+      <RutinaModal
+        open={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        onCreated={async () => {
+          await onRutinaCreated?.(socio.id_socio);
+        }}
+        objetivos={objetivos}
+        niveles={niveles}
+        targetSocioId={socio.id_socio}
+        targetSocioName={socio.nombre_completo}
       />
     </Card>
   );

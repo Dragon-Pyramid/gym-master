@@ -5,7 +5,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { getHistorialRutinas } from "@/services/apiClient";
 import { Rutina } from "@/interfaces/rutina.interface";
 import Image from "next/image";
-import { Download, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Download, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { descargarRutinaPdf } from "@/utils/rutinaPdf";
 
@@ -157,6 +157,16 @@ const obtenerImagen = (ejercicio: any): string | null => {
   return ejercicio?.imagen || ejercicio?.imagen_url || ejercicio?.gif_url || null;
 };
 
+const obtenerVideoYoutube = (ejercicio: any): string | null => {
+  return (
+    ejercicio?.video_youtube_url ||
+    ejercicio?.youtube_url ||
+    ejercicio?.videoUrl ||
+    ejercicio?.video_url ||
+    null
+  );
+};
+
 const obtenerTituloRutina = (rutina: Rutina): string => {
   if (rutina.nombre) return rutina.nombre;
 
@@ -170,11 +180,19 @@ export default function RutinaEjercicios({
   onView,
   onEdit,
   onDelete,
+  singleRutinaId,
+  singleMode = false,
+  backLabel = "VOLVER",
+  onBack,
 }: {
   refreshKey?: number;
   onView?: (rutina: Rutina) => void;
   onEdit?: (rutina: Rutina) => void;
   onDelete?: (rutina: Rutina) => Promise<void> | void;
+  singleRutinaId?: number | string;
+  singleMode?: boolean;
+  backLabel?: string;
+  onBack?: () => void;
 }) {
   const { user, token } = useAuthStore();
   const usuarioEsAdmin = isAdmin(user?.rol);
@@ -217,6 +235,16 @@ export default function RutinaEjercicios({
     fetchRutinas();
   }, [fetchRutinas, refreshKey]);
 
+  useEffect(() => {
+    if (singleRutinaId === undefined || singleRutinaId === null) return;
+
+    const parsedId = Number(singleRutinaId);
+
+    if (!Number.isInteger(parsedId) || parsedId <= 0) return;
+
+    setViendoRutina(parsedId);
+  }, [singleRutinaId]);
+
   const toggleDia = (dia: string) => {
     setDiasExpandidos((prev) => ({
       ...prev,
@@ -237,6 +265,11 @@ export default function RutinaEjercicios({
   };
 
   const volverALista = () => {
+    if (onBack) {
+      onBack();
+      return;
+    }
+
     setViendoRutina(null);
     setDiasExpandidos({});
   };
@@ -302,7 +335,24 @@ export default function RutinaEjercicios({
   if (viendoRutina !== null) {
     const rutina = rutinas.find((r) => r.id_rutina === viendoRutina);
 
-    if (!rutina) return null;
+    if (!rutina) {
+      return (
+        <div className="min-h-screen">
+          <div className="max-w-3xl p-8 mx-auto bg-white border border-gray-200 shadow-xl rounded-2xl">
+            <p className="mb-6 text-sm text-gray-600">
+              No se encontró la rutina solicitada o no tenés permisos para verla.
+            </p>
+            <button
+              onClick={volverALista}
+              className="inline-flex items-center gap-2 px-5 py-2 text-sm font-medium text-white transition-colors bg-gray-900 rounded-full hover:bg-gray-800"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              {backLabel}
+            </button>
+          </div>
+        </div>
+      );
+    }
 
     const ejerciciosPorDia = normalizarRutinaPorDia(rutina);
     const diasDisponibles = Object.keys(ejerciciosPorDia);
@@ -352,9 +402,10 @@ export default function RutinaEjercicios({
 
               <button
                 onClick={volverALista}
-                className="self-start px-4 py-2 text-xs font-light tracking-wide text-white transition-colors bg-transparent border rounded-full cursor-pointer sm:px-6 sm:py-3 sm:text-sm sm:tracking-wider border-white/30 hover:bg-white/10 sm:self-auto"
+                className="inline-flex items-center self-start gap-2 px-4 py-2 text-xs font-light tracking-wide text-white transition-colors bg-transparent border rounded-full cursor-pointer sm:px-6 sm:py-3 sm:text-sm sm:tracking-wider border-white/30 hover:bg-white/10 sm:self-auto"
               >
-                ← VOLVER
+                <ArrowLeft className="w-4 h-4" />
+                {backLabel}
               </button>
             </div>
           </div>
@@ -409,6 +460,7 @@ export default function RutinaEjercicios({
                               obtenerRepeticiones(ejercicio);
                             const descanso = obtenerDescanso(ejercicio);
                             const imagen = obtenerImagen(ejercicio);
+                            const videoYoutube = obtenerVideoYoutube(ejercicio);
 
                             return (
                               <div
@@ -446,6 +498,17 @@ export default function RutinaEjercicios({
                                     <p className="m-0 text-sm font-light tracking-wide text-gray-600 sm:text-base">
                                       Descanso: {descanso}
                                     </p>
+
+                                    {videoYoutube && (
+                                      <a
+                                        href={videoYoutube}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="inline-flex items-center gap-2 px-3 py-2 mt-3 text-xs font-semibold tracking-wide text-gray-900 transition-colors border border-gray-300 rounded-full hover:bg-gray-100"
+                                      >
+                                        ▶ Ver video
+                                      </a>
+                                    )}
                                   </div>
 
                                   {imagenVisible[ejercicioKey] && imagen && (
@@ -479,6 +542,14 @@ export default function RutinaEjercicios({
             )}
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (singleMode && viendoRutina === null) {
+    return (
+      <div className="py-10 text-center text-muted-foreground">
+        Preparando detalle de rutina...
       </div>
     );
   }

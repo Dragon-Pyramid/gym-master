@@ -18,13 +18,17 @@ export default function RutinaModal({
   rutina,
   objetivos,
   niveles,
+  targetSocioId,
+  targetSocioName,
 }: {
   open: boolean;
   onClose: () => void;
-  onCreated: () => void;
+  onCreated: () => void | Promise<void>;
   rutina?: any | null;
   objetivos: Objetivo[];
   niveles: Nivel[];
+  targetSocioId?: string;
+  targetSocioName?: string;
 }) {
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -45,6 +49,8 @@ export default function RutinaModal({
           }}
           objetivos={objetivos}
           niveles={niveles}
+          targetSocioId={targetSocioId}
+          targetSocioName={targetSocioName}
         />
       </DialogContent>
     </Dialog>

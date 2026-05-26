@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import { AppHeader } from '@/components/header/AppHeader';
@@ -12,8 +12,11 @@ import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import SociosRutinasGrid from '@/components/gestor-rutinas/SociosRutinasGrid';
 import { fetchSocios } from '@/services/socioService';
+import { getObjetivos, getNiveles } from '@/services/apiClient';
 import { Socio } from '@/interfaces/socio.interface';
 import { JwtUser } from '@/interfaces/jwtUser.interface';
+import { Objetivo } from '@/interfaces/objetivo.interface';
+import { Nivel } from '@/interfaces/niveles.interface';
 
 export default function GestorRutinasPage() {
   const { isAuthenticated, initializeAuth, isInitialized, user } =
@@ -21,6 +24,8 @@ export default function GestorRutinasPage() {
   const router = useRouter();
   const [socios, setSocios] = useState<Socio[]>([]);
   const [filteredSocios, setFilteredSocios] = useState<Socio[]>([]);
+  const [objetivos, setObjetivos] = useState<Objetivo[]>([]);
+  const [niveles, setNiveles] = useState<Nivel[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -34,24 +39,37 @@ export default function GestorRutinasPage() {
     }
   }, [isAuthenticated, isInitialized, router]);
 
-  const loadSocios = async () => {
+  const loadSocios = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchSocios(user as JwtUser);
-      setSocios(data ?? []);
-      setFilteredSocios(data ?? []);
+      const [sociosData, objetivosResponse, nivelesResponse] = await Promise.all([
+        fetchSocios(user as JwtUser),
+        getObjetivos(),
+        getNiveles(),
+      ]);
+
+      setSocios(sociosData ?? []);
+      setFilteredSocios(sociosData ?? []);
+
+      if (objetivosResponse.ok) {
+        setObjetivos(objetivosResponse.data ?? []);
+      }
+
+      if (nivelesResponse.ok) {
+        setNiveles(nivelesResponse.data ?? []);
+      }
     } catch (error) {
-      console.error('Error al cargar socios:', error);
+      console.error('Error al cargar socios/objetivos/niveles:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
-    if (isInitialized && isAuthenticated) {
+    if (isInitialized && isAuthenticated && user) {
       loadSocios();
     }
-  }, [isInitialized, isAuthenticated]);
+  }, [isInitialized, isAuthenticated, user, loadSocios]);
 
   useEffect(() => {
     if (searchTerm.trim() === '') {
@@ -101,7 +119,12 @@ export default function GestorRutinasPage() {
                 </div>
               </CardHeader>
               <CardContent className='p-4'>
-                <SociosRutinasGrid socios={filteredSocios} loading={loading} />
+                <SociosRutinasGrid
+                  socios={filteredSocios}
+                  loading={loading}
+                  objetivos={objetivos}
+                  niveles={niveles}
+                />
               </CardContent>
             </Card>
           </main>
