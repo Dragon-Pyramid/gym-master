@@ -1705,6 +1705,25 @@ const endpointDefinitions: EndpointDefinition[] = [
     "source": "src/app/api/swagger-json/route.ts"
   },
   {
+    "path": "/api/rutinas/rag-assistant/generar",
+    "methods": [
+      "POST"
+    ],
+    "tag": "Rutinas",
+    "summary": "Generar rutina desde asistente RAG",
+    "description": "Endpoint puente para el futuro gym-master-rag-coach. Si el microservicio RAG está configurado, consulta el servicio externo para sugerir parámetros; si no, usa fallback local con el generador formal de Gym Master. No expone claves en frontend.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      401,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/rutinas/rag-assistant/generar/route.ts"
+  },
+  {
     "path": "/api/rutinas/ejercicios-media",
     "methods": [
       "GET",
