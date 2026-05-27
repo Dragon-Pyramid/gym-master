@@ -25,12 +25,13 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
-import { EjercicioMediaCatalogItem } from '@/interfaces/ejercicioMedia.interface';
+import { EjercicioMediaCatalogItem, EjercicioMediaEquivalenceSyncResponse } from '@/interfaces/ejercicioMedia.interface';
 import { Nivel } from '@/interfaces/niveles.interface';
 import { Objetivo } from '@/interfaces/objetivo.interface';
 import {
   getEjerciciosMediaCatalog,
   importEjercicioMediaFromUrl,
+  syncEjercicioMediaEquivalences,
   getNiveles,
   getObjetivos,
   updateEjercicioMediaCatalog,
@@ -93,6 +94,9 @@ export default function RutinasExerciseMediaCatalogPage() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [syncingEquivalences, setSyncingEquivalences] = useState(false);
+  const [applyingEquivalences, setApplyingEquivalences] = useState(false);
+  const [equivalenceSyncReport, setEquivalenceSyncReport] = useState<EjercicioMediaEquivalenceSyncResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -334,6 +338,57 @@ export default function RutinasExerciseMediaCatalogPage() {
     }
   };
 
+
+
+  const handlePreviewEquivalenceSync = async () => {
+    setSyncingEquivalences(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await syncEjercicioMediaEquivalences({ apply: false, limit: 500 });
+
+      if (!response.ok) {
+        throw new Error(response.error || 'No se pudieron detectar equivalencias de media.');
+      }
+
+      setEquivalenceSyncReport(response as EjercicioMediaEquivalenceSyncResponse);
+      setSuccess(`Se detectaron ${response.total_candidates ?? 0} equivalencias seguras para revisar.`);
+    } catch (syncError: any) {
+      setError(syncError?.message ?? 'No se pudieron detectar equivalencias de media.');
+    } finally {
+      setSyncingEquivalences(false);
+    }
+  };
+
+  const handleApplyEquivalenceSync = async () => {
+    const confirmed = window.confirm(
+      'Se copiará media desde ejercicios equivalentes hacia ejercicios con fallback o imagen vacía. ¿Querés continuar?'
+    );
+
+    if (!confirmed) return;
+
+    setApplyingEquivalences(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await syncEjercicioMediaEquivalences({ apply: true, limit: 500 });
+
+      if (!response.ok) {
+        throw new Error(response.error || 'No se pudo aplicar la sincronización de media equivalente.');
+      }
+
+      setEquivalenceSyncReport(response as EjercicioMediaEquivalenceSyncResponse);
+      setSuccess(`Se sincronizaron ${response.applied ?? 0} ejercicios equivalentes.`);
+      await loadCatalog();
+    } catch (syncError: any) {
+      setError(syncError?.message ?? 'No se pudo aplicar la sincronización de media equivalente.');
+    } finally {
+      setApplyingEquivalences(false);
+    }
+  };
+
   if (loading && !items.length) {
     return <div className='flex items-center justify-center min-h-screen'>Cargando catálogo de media...</div>;
   }
@@ -361,6 +416,14 @@ export default function RutinasExerciseMediaCatalogPage() {
                 <Button variant='outline' onClick={loadCatalog} disabled={loading}>
                   {loading ? <Loader2 className='w-4 h-4 mr-2 animate-spin' /> : <RefreshCcw className='w-4 h-4 mr-2' />}
                   Actualizar
+                </Button>
+                <Button variant='outline' onClick={handlePreviewEquivalenceSync} disabled={syncingEquivalences || applyingEquivalences}>
+                  {syncingEquivalences ? <Loader2 className='w-4 h-4 mr-2 animate-spin' /> : <RefreshCcw className='w-4 h-4 mr-2' />}
+                  Detectar equivalencias
+                </Button>
+                <Button onClick={handleApplyEquivalenceSync} disabled={syncingEquivalences || applyingEquivalences}>
+                  {applyingEquivalences ? <Loader2 className='w-4 h-4 mr-2 animate-spin' /> : <Cloud className='w-4 h-4 mr-2' />}
+                  Aplicar equivalencias
                 </Button>
                 <Button asChild variant='outline'>
                   <Link href='/dashboard/gestor-rutinas'>Volver a Gestor</Link>
@@ -408,6 +471,60 @@ export default function RutinasExerciseMediaCatalogPage() {
                   <span>{error ?? success}</span>
                 </div>
               </div>
+            )}
+
+
+
+            {equivalenceSyncReport && (
+              <Card className='border-sky-200 bg-sky-50'>
+                <CardContent className='p-4 space-y-3'>
+                  <div className='flex flex-col gap-2 md:flex-row md:items-center md:justify-between'>
+                    <div>
+                      <p className='text-sm font-bold text-sky-900'>Sincronización de media equivalente</p>
+                      <p className='text-xs text-sky-700'>
+                        {equivalenceSyncReport.dryRun ? 'Previsualización sin modificar datos.' : 'Cambios aplicados sobre ejercicios con fallback o imagen vacía.'}
+                      </p>
+                    </div>
+                    <div className='grid grid-cols-2 gap-2 text-xs md:grid-cols-4'>
+                      <span className='rounded-lg border border-sky-200 bg-white px-3 py-2 text-sky-800'>Fuentes: {equivalenceSyncReport.source_pool}</span>
+                      <span className='rounded-lg border border-sky-200 bg-white px-3 py-2 text-sky-800'>Candidatos: {equivalenceSyncReport.total_candidates}</span>
+                      <span className='rounded-lg border border-sky-200 bg-white px-3 py-2 text-sky-800'>Aplicados: {equivalenceSyncReport.applied}</span>
+                      <span className='rounded-lg border border-sky-200 bg-white px-3 py-2 text-sky-800'>Pendientes: {equivalenceSyncReport.skipped}</span>
+                    </div>
+                  </div>
+
+                  {equivalenceSyncReport.candidates.length > 0 && (
+                    <div className='overflow-x-auto rounded-lg border border-sky-200 bg-white'>
+                      <table className='w-full text-xs'>
+                        <thead className='text-left bg-sky-100 text-sky-900'>
+                          <tr>
+                            <th className='px-3 py-2'>Origen</th>
+                            <th className='px-3 py-2'>Destino</th>
+                            <th className='px-3 py-2'>Nombre canónico</th>
+                            <th className='px-3 py-2'>Media</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {equivalenceSyncReport.candidates.slice(0, 8).map((candidate) => (
+                            <tr key={`${candidate.source_id_ejercicio}-${candidate.target_id_ejercicio}`} className='border-t'>
+                              <td className='px-3 py-2'>
+                                <p className='font-semibold'>{candidate.source_nombre_ejercicio}</p>
+                                <p className='text-slate-500'>{candidate.source_objetivo} · {candidate.source_nivel}</p>
+                              </td>
+                              <td className='px-3 py-2'>
+                                <p className='font-semibold'>{candidate.target_nombre_ejercicio}</p>
+                                <p className='text-slate-500'>{candidate.target_objetivo} · {candidate.target_nivel}</p>
+                              </td>
+                              <td className='px-3 py-2 text-slate-600'>{candidate.canonical_name}</td>
+                              <td className='px-3 py-2 text-slate-600'>{candidate.imagen_origen ?? 'externa'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             )}
 
             <div className='grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_420px]'>

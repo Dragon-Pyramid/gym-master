@@ -1733,6 +1733,27 @@ const endpointDefinitions: EndpointDefinition[] = [
     ],
     "source": "src/app/api/rutinas/ejercicios-media/route.ts"
   },
+
+  {
+    "path": "/api/rutinas/ejercicios-media/equivalence-sync",
+    "methods": [
+      "POST"
+    ],
+    "tag": "Rutinas",
+    "summary": "Sincronización de media entre ejercicios equivalentes",
+    "description": "Detecta ejercicios equivalentes por nombre canónico y grupo muscular, usando Volumen Avanzado como fuente prioritaria, para copiar imagen/GIF y video hacia ejercicios con fallback o imagen vacía. Soporta modo previsualización y aplicación. Requiere rol administrador.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      401,
+      403,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/rutinas/ejercicios-media/equivalence-sync/route.ts"
+  },
   {
     "path": "/api/rutinas/ejercicios-media/import",
     "methods": [

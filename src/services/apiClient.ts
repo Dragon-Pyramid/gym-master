@@ -773,3 +773,21 @@ export async function importEjercicioMediaFromUrl(payload: {
   const data = await res.json();
   return { ok: res.ok, ...data };
 }
+
+
+export async function syncEjercicioMediaEquivalences(payload?: {
+  apply?: boolean;
+  limit?: number;
+}) {
+  const token = getToken();
+  const res = await fetch('/api/rutinas/ejercicios-media/equivalence-sync', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(payload ?? { apply: false }),
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data };
+}
