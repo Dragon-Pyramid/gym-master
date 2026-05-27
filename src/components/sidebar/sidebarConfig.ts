@@ -61,6 +61,11 @@ export const sections: SidebarSectionType[] = [
       { title: 'Actividades', link: '/dashboard/actividades', level: 2 },
       { title: 'Entrenadores', link: '/dashboard/entrenadores', level: 2 },
       { title: 'Rutinas', link: '/dashboard/rutinas', level: 2 },
+      {
+        title: 'Media de Ejercicios',
+        link: '/dashboard/rutinas/media',
+        level: 2,
+      },
       { title: 'Dietas', link: '/dashboard/dietas', level: 2 },
       {
         title: 'Evolución Física',

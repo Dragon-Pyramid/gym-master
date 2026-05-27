@@ -96,6 +96,13 @@ export const MENU_PERMISSION_GROUPS: Array<{
         roles: ['admin', 'usuario', 'socio'],
       },
       {
+        key: 'Media de Ejercicios',
+        label: 'Media de Ejercicios',
+        path: '/dashboard/rutinas/media',
+        group: 'Gestión de gimnasio',
+        roles: ['admin'],
+      },
+      {
         key: 'Dietas',
         label: 'Dietas',
         path: '/dashboard/dietas',

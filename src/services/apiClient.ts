@@ -693,3 +693,63 @@ export async function getAdminCuotasResumen() {
   return { ok: res.ok, ...data };
 }
 
+
+export async function getEjerciciosMediaCatalog(params?: {
+  q?: string;
+  objetivo?: string | number;
+  nivel?: string | number;
+  mediaStatus?: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  const token = getToken();
+  const searchParams = new URLSearchParams();
+
+  if (params?.q) searchParams.set('q', params.q);
+  if (params?.objetivo) searchParams.set('objetivo', String(params.objetivo));
+  if (params?.nivel) searchParams.set('nivel', String(params.nivel));
+  if (params?.mediaStatus) searchParams.set('mediaStatus', params.mediaStatus);
+  if (params?.page) searchParams.set('page', String(params.page));
+  if (params?.pageSize) searchParams.set('pageSize', String(params.pageSize));
+
+  const query = searchParams.toString();
+  const res = await fetch(`/api/rutinas/ejercicios-media${query ? `?${query}` : ''}`, {
+    method: 'GET',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    cache: 'no-store',
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data };
+}
+
+export async function updateEjercicioMediaCatalog(payload: Record<string, unknown>) {
+  const token = getToken();
+  const res = await fetch('/api/rutinas/ejercicios-media', {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data };
+}
+
+export async function uploadEjercicioMedia(file: File, idEjercicio?: number | string) {
+  const token = getToken();
+  const form = new FormData();
+  form.append('file', file);
+
+  if (idEjercicio) {
+    form.append('id_ejercicio', String(idEjercicio));
+  }
+
+  const res = await fetch('/api/rutinas/ejercicios-media/upload', {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: form,
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data };
+}

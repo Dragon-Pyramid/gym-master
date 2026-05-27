@@ -1703,6 +1703,56 @@ const endpointDefinitions: EndpointDefinition[] = [
     ],
     "queryParams": [],
     "source": "src/app/api/swagger-json/route.ts"
+  },
+  {
+    "path": "/api/rutinas/ejercicios-media",
+    "methods": [
+      "GET",
+      "PATCH"
+    ],
+    "tag": "Rutinas",
+    "summary": "Catálogo administrativo de media de ejercicios",
+    "description": "Permite listar ejercicios con su media asociada, filtrar por objetivo/nivel/estado y actualizar imagen principal o video de YouTube del ejercicio. Requiere rol administrador.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401,
+      403,
+      500
+    ],
+    "queryParams": [
+      "q",
+      "objetivo",
+      "nivel",
+      "mediaStatus",
+      "page",
+      "pageSize"
+    ],
+    "source": "src/app/api/rutinas/ejercicios-media/route.ts"
+  },
+  {
+    "path": "/api/rutinas/ejercicios-media/upload",
+    "methods": [
+      "POST"
+    ],
+    "tag": "Rutinas",
+    "summary": "Subida de imagen/GIF de ejercicio a Cloudinary",
+    "description": "Sube una imagen o GIF de ejercicio a Cloudinary para luego asociarla como media principal del ejercicio desde el catálogo administrativo.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401,
+      403,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/rutinas/ejercicios-media/upload/route.ts"
   }
 ];
 
