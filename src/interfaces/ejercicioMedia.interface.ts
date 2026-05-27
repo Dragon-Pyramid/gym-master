@@ -67,3 +67,31 @@ export interface EjercicioMediaUpdatePayload {
   titulo?: string | null;
   descripcion_media?: string | null;
 }
+
+export interface EjercicioMediaEquivalenceCandidate {
+  source_id_ejercicio: number;
+  source_nombre_ejercicio: string;
+  source_objetivo?: string | null;
+  source_nivel?: string | null;
+  target_id_ejercicio: number;
+  target_nombre_ejercicio: string;
+  target_objetivo?: string | null;
+  target_nivel?: string | null;
+  canonical_name: string;
+  image_url: string;
+  imagen_origen?: string | null;
+  cloudinary_public_id?: string | null;
+  video_youtube_url?: string | null;
+  youtube_video_id?: string | null;
+  confidence: 'alta' | 'media';
+  reason: string;
+}
+
+export interface EjercicioMediaEquivalenceSyncResponse {
+  dryRun: boolean;
+  total_candidates: number;
+  applied: number;
+  skipped: number;
+  source_pool: number;
+  candidates: EjercicioMediaEquivalenceCandidate[];
+}

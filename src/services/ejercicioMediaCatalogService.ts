@@ -4,6 +4,8 @@ import {
   EjercicioMediaCatalogItem,
   EjercicioMediaCatalogResponse,
   EjercicioMediaItem,
+  EjercicioMediaEquivalenceCandidate,
+  EjercicioMediaEquivalenceSyncResponse,
   EjercicioMediaUpdatePayload,
 } from '@/interfaces/ejercicioMedia.interface';
 import { uploadRemoteUrlCloudinaryWithResult } from '@/lib/cloudinary';
@@ -471,6 +473,335 @@ export async function importExerciseMediaFromRemoteUrl(
       width: uploadResult.width,
       height: uploadResult.height,
     },
+  };
+}
+
+
+type ExerciseMediaSyncRow = SupabaseExerciseRow & {
+  _canonical?: string;
+  _sourcePriority?: number;
+  _imageUrl?: string;
+  _imageOrigin?: string | null;
+  _cloudinaryPublicId?: string | null;
+  _youtubeUrl?: string | null;
+  _youtubeVideoId?: string | null;
+};
+
+const EXERCISE_FALLBACK_PATH = '/images/exercises/gym-master-exercise-fallback.svg';
+const SYNC_SOURCE_OBJECTIVE = 'volumen';
+const SYNC_SOURCE_LEVEL = 'avanzado';
+
+const OBJECTIVE_PREFIXES_TO_STRIP = [
+  'definicion',
+  'definición',
+  'metabolico',
+  'metabólico',
+  'fuerza',
+  'resistencia',
+  'rehabilitacion',
+  'rehabilitación',
+  'salud general',
+  'competencia',
+  'postparto',
+  'estres',
+  'estrés',
+  'control del estres',
+  'control del estrés',
+];
+
+const CANONICAL_EXERCISE_ALIASES: Record<string, string> = {
+  'press de pecho con barra': 'press plano con barra',
+  'press inclinado': 'press inclinado con barra',
+  'press inclinado con barra': 'press inclinado con barra',
+  'aperturas de pecho': 'apertura con mancuernas en banco plano',
+  'aperturas de pecho con mancuernas': 'apertura con mancuernas en banco plano',
+  'jalon al pecho con barra': 'dominadas en polea',
+  'remo sentado': 'remo en polea',
+  'remo unilateral': 'remo con mancuerna',
+  'pullover en polea': 'pull over en polea',
+  'pull over en polea': 'pull over en polea',
+  'sentadilla con barra': 'sentadilla',
+  'prensa de piernas': 'prensa',
+  'hip thrust con barra': 'elevacion de cadera con barra',
+  'patada de gluteo': 'patada de gluteos',
+  'curl de biceps con barra': 'curl con barra',
+  'curl inclinado': 'curl en banco inclinado con mancuernas',
+  'curl martillo': 'martillo con mancuernas',
+  'jalon de triceps': 'triceps en polea con soga',
+  'extension sobre cabeza': 'extension de triceps por encima de la cabeza',
+  'elevaciones laterales': 'vuelo lateral con mancuernas',
+  'elevacion de piernas': 'elevacion de piernas colgado',
+  'plancha con barra': 'plancha con carga',
+  'pallof press': 'pallof press',
+};
+
+function normalizeForEquivalence(value?: string | null) {
+  return (value ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[º°]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function stripObjectivePrefixFromExerciseName(value?: string | null) {
+  const rawValue = value ?? '';
+  const parts = rawValue.split(' - ');
+
+  if (parts.length < 2) {
+    return rawValue;
+  }
+
+  const normalizedPrefix = normalizeForEquivalence(parts[0]);
+
+  if (OBJECTIVE_PREFIXES_TO_STRIP.includes(normalizedPrefix)) {
+    return parts.slice(1).join(' - ');
+  }
+
+  return rawValue;
+}
+
+function canonicalizeExerciseName(value?: string | null) {
+  let normalized = normalizeForEquivalence(stripObjectivePrefixFromExerciseName(value));
+
+  normalized = normalized
+    .replace(/\b(pesado|pesada|avanzado|avanzada|controlado|controlada|con pausa|en pausa)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return CANONICAL_EXERCISE_ALIASES[normalized] ?? normalized;
+}
+
+function isFallbackImageUrl(url?: string | null) {
+  const cleanUrl = url?.trim().toLowerCase();
+  return !cleanUrl || cleanUrl.includes('fallback') || cleanUrl === EXERCISE_FALLBACK_PATH;
+}
+
+function getRowPrimaryImage(row: ExerciseMediaSyncRow) {
+  const mediaPrincipal = getPrimaryMedia(row, ['imagen', 'gif']);
+  return {
+    url: mediaPrincipal?.url ?? row.imagen ?? null,
+    origen: mediaPrincipal?.origen ?? row.imagen_origen ?? null,
+    publicId: mediaPrincipal?.cloudinary_public_id ?? row.cloudinary_public_id ?? null,
+  };
+}
+
+function getRowPrimaryYoutube(row: ExerciseMediaSyncRow) {
+  const youtubePrincipal = getPrimaryMedia(row, ['youtube']);
+  return {
+    url: row.video_youtube_url ?? youtubePrincipal?.youtube_url ?? youtubePrincipal?.url ?? null,
+    videoId: row.youtube_video_id ?? youtubePrincipal?.youtube_video_id ?? null,
+  };
+}
+
+function getRelatedNameForSync(row: ExerciseMediaSyncRow, relationName: string, key: string) {
+  return extractRelatedName(row[relationName], key);
+}
+
+function getSourcePriority(row: ExerciseMediaSyncRow) {
+  const objetivoNombre = normalizeForEquivalence(getRelatedNameForSync(row, 'objetivo', 'nombre_objetivo'));
+  const nivelNombre = normalizeForEquivalence(getRelatedNameForSync(row, 'nivel', 'nombre_nivel'));
+  const image = getRowPrimaryImage(row);
+  const youtube = getRowPrimaryYoutube(row);
+
+  let priority = 0;
+
+  if (objetivoNombre === SYNC_SOURCE_OBJECTIVE && nivelNombre === SYNC_SOURCE_LEVEL) {
+    priority += 1000;
+  }
+
+  if (image.origen === 'cloudinary' || image.publicId) {
+    priority += 250;
+  }
+
+  if (image.url && !isFallbackImageUrl(image.url)) {
+    priority += 100;
+  }
+
+  if (youtube.url) {
+    priority += 15;
+  }
+
+  return priority;
+}
+
+function canUseAsMediaSource(row: ExerciseMediaSyncRow) {
+  const image = getRowPrimaryImage(row);
+  return Boolean(image.url && !isFallbackImageUrl(image.url));
+}
+
+function needsMediaSync(row: ExerciseMediaSyncRow) {
+  const image = getRowPrimaryImage(row);
+  return isFallbackImageUrl(image.url) || row.imagen_origen === 'fallback';
+}
+
+function buildCandidateFromRows(source: ExerciseMediaSyncRow, target: ExerciseMediaSyncRow): EjercicioMediaEquivalenceCandidate {
+  const image = getRowPrimaryImage(source);
+  const youtube = getRowPrimaryYoutube(source);
+
+  return {
+    source_id_ejercicio: source.id_ejercicio,
+    source_nombre_ejercicio: source.nombre_ejercicio,
+    source_objetivo: getRelatedNameForSync(source, 'objetivo', 'nombre_objetivo'),
+    source_nivel: getRelatedNameForSync(source, 'nivel', 'nombre_nivel'),
+    target_id_ejercicio: target.id_ejercicio,
+    target_nombre_ejercicio: target.nombre_ejercicio,
+    target_objetivo: getRelatedNameForSync(target, 'objetivo', 'nombre_objetivo'),
+    target_nivel: getRelatedNameForSync(target, 'nivel', 'nombre_nivel'),
+    canonical_name: target._canonical ?? canonicalizeExerciseName(target.nombre_ejercicio),
+    image_url: image.url ?? '',
+    imagen_origen: image.origen ?? null,
+    cloudinary_public_id: image.publicId ?? null,
+    video_youtube_url: youtube.url ?? null,
+    youtube_video_id: youtube.videoId ?? null,
+    confidence: 'alta',
+    reason: 'Coincidencia conservadora por nombre canónico y mismo grupo muscular. Fuente prioritaria: Volumen Avanzado cuando existe.',
+  };
+}
+
+async function loadExercisesForMediaSync(): Promise<ExerciseMediaSyncRow[]> {
+  const supabase = conexionBD();
+
+  const { data, error } = await supabase
+    .from('ejercicio')
+    .select(
+      `
+      id_ejercicio,
+      nombre_ejercicio,
+      id_objetivo,
+      id_nivel,
+      id_gm,
+      imagen,
+      imagen_origen,
+      cloudinary_public_id,
+      video_youtube_url,
+      youtube_video_id,
+      media_actualizada_en,
+      activo,
+      objetivo:objetivo!ejercicio_id_objetivo_fkey(nombre_objetivo),
+      nivel:nivel!ejercicio_id_nivel_fkey(nombre_nivel),
+      grupo_muscular:grupo_muscular!ejercicio_id_gm_fkey(nombre_gp),
+      ejercicio_media(*)
+    `
+    )
+    .eq('activo', true);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as ExerciseMediaSyncRow[];
+}
+
+export async function syncExerciseMediaEquivalences(
+  user: JwtUser,
+  options: { apply?: boolean; limit?: number } = {}
+): Promise<EjercicioMediaEquivalenceSyncResponse> {
+  assertCanManageExerciseMedia(user);
+
+  const apply = options.apply === true;
+  const limit = Math.min(Math.max(Number(options.limit ?? 500), 1), 1000);
+  const exercises = await loadExercisesForMediaSync();
+  const sourceMap = new Map<string, ExerciseMediaSyncRow>();
+
+  exercises.forEach((exercise) => {
+    const canonical = canonicalizeExerciseName(exercise.nombre_ejercicio);
+    exercise._canonical = canonical;
+
+    if (!canonical || !canUseAsMediaSource(exercise)) {
+      return;
+    }
+
+    const key = `${exercise.id_gm}:${canonical}`;
+    const priority = getSourcePriority(exercise);
+    exercise._sourcePriority = priority;
+
+    const current = sourceMap.get(key);
+    const currentPriority = current?._sourcePriority ?? -1;
+
+    if (!current || priority > currentPriority) {
+      sourceMap.set(key, exercise);
+    }
+  });
+
+  const candidates = exercises
+    .filter((target) => needsMediaSync(target))
+    .map((target) => {
+      const canonical = target._canonical ?? canonicalizeExerciseName(target.nombre_ejercicio);
+      target._canonical = canonical;
+      const source = sourceMap.get(`${target.id_gm}:${canonical}`);
+
+      if (!source || source.id_ejercicio === target.id_ejercicio) {
+        return null;
+      }
+
+      return buildCandidateFromRows(source, target);
+    })
+    .filter(Boolean) as EjercicioMediaEquivalenceCandidate[];
+
+  const limitedCandidates = candidates.slice(0, limit);
+  let applied = 0;
+
+  if (apply) {
+    const supabase = conexionBD();
+
+    for (const candidate of limitedCandidates) {
+      const now = new Date().toISOString();
+      const imageType = getImageMediaType(candidate.image_url);
+
+      const { error } = await supabase
+        .from('ejercicio')
+        .update({
+          imagen: candidate.image_url,
+          imagen_origen: candidate.imagen_origen ?? 'externa',
+          cloudinary_public_id: candidate.cloudinary_public_id ?? null,
+          video_youtube_url: candidate.video_youtube_url ?? null,
+          youtube_video_id: candidate.youtube_video_id ?? null,
+          media_actualizada_en: now,
+          actualizado_en: now,
+        })
+        .eq('id_ejercicio', candidate.target_id_ejercicio);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      await replacePrimaryMedia({
+        id_ejercicio: candidate.target_id_ejercicio,
+        tipo_media: imageType,
+        origen: candidate.imagen_origen ?? 'externa',
+        url: candidate.image_url,
+        cloudinary_public_id: candidate.cloudinary_public_id ?? null,
+        titulo: candidate.target_nombre_ejercicio,
+        descripcion: `Media principal sincronizada desde ejercicio equivalente ${candidate.source_nombre_ejercicio}.`,
+      });
+
+      if (candidate.video_youtube_url) {
+        await replacePrimaryMedia({
+          id_ejercicio: candidate.target_id_ejercicio,
+          tipo_media: 'youtube',
+          origen: 'youtube',
+          url: candidate.video_youtube_url,
+          youtube_url: candidate.video_youtube_url,
+          youtube_video_id: candidate.youtube_video_id ?? null,
+          titulo: candidate.target_nombre_ejercicio,
+          descripcion: `Video sincronizado desde ejercicio equivalente ${candidate.source_nombre_ejercicio}.`,
+        });
+      }
+
+      applied += 1;
+    }
+  }
+
+  return {
+    dryRun: !apply,
+    total_candidates: candidates.length,
+    applied,
+    skipped: Math.max(0, candidates.length - applied),
+    source_pool: sourceMap.size,
+    candidates: limitedCandidates,
   };
 }
 
