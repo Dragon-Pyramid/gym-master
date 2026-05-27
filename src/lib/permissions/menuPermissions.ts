@@ -42,6 +42,13 @@ export const MENU_PERMISSION_GROUPS: Array<{
         roles: ['socio'],
       },
       {
+        key: 'Asistente de Rutinas',
+        label: 'Asistente de Rutinas',
+        path: '/dashboard/rutinas/asistente',
+        group: 'Menú personal / socio',
+        roles: ['socio', 'admin'],
+      },
+      {
         key: 'Pagar cuota',
         label: 'Pagar cuota',
         path: '/dashboard/mi-cuenta/pagar-cuota',
@@ -254,6 +261,7 @@ export const DEFAULT_MENU_PERMISSIONS_BY_ROLE: Record<AppRole, string[]> = {
     'Inicio',
     'Control de Asistencia',
     'Ficha Médica',
+    'Asistente de Rutinas',
     'Pagar cuota',
     'Historial de pagos',
     'Rutinas',

@@ -14,6 +14,7 @@ Esta carpeta documenta la preparación del dataset/corpus inicial para el futuro
 | `prompts/prompt-generacion-pdf-dieta.md` | Prompt para PDF de dieta. |
 | `datasets/rag-rutinas-matriz-prioritaria.csv` | Matriz de combinaciones prioritaria. |
 | `datasets/rag-rutinas-prompts-prioritarios.md` | Bloques de parámetros para ejecutar prompts. |
+| `rag-rutinas-assistant-bridge.md` | Puente inicial entre Gym Master y el futuro microservicio `gym-master-rag-coach`. |
 
 ## Nota
 
