@@ -1734,6 +1734,27 @@ const endpointDefinitions: EndpointDefinition[] = [
     "source": "src/app/api/rutinas/ejercicios-media/route.ts"
   },
   {
+    "path": "/api/rutinas/ejercicios-media/import",
+    "methods": [
+      "POST"
+    ],
+    "tag": "Rutinas",
+    "summary": "Importación de imagen/GIF remoto a Cloudinary",
+    "description": "Importa una imagen o GIF desde una URL pública externa hacia Cloudinary y la asocia como media principal de un ejercicio. Requiere rol administrador.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401,
+      403,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/rutinas/ejercicios-media/import/route.ts"
+  },
+  {
     "path": "/api/rutinas/ejercicios-media/upload",
     "methods": [
       "POST"

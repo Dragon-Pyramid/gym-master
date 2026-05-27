@@ -1,3 +1,4 @@
+import { isIP } from 'node:net';
 import { JwtUser } from '@/interfaces/jwtUser.interface';
 import {
   EjercicioMediaCatalogItem,
@@ -5,9 +6,22 @@ import {
   EjercicioMediaItem,
   EjercicioMediaUpdatePayload,
 } from '@/interfaces/ejercicioMedia.interface';
+import { uploadRemoteUrlCloudinaryWithResult } from '@/lib/cloudinary';
 import { conexionBD } from '@/middlewares/conexionBd.middleware';
 
 type SupabaseExerciseRow = Record<string, any>;
+
+type EjercicioMediaImportPayload = {
+  id_ejercicio: number;
+  url: string;
+  titulo?: string | null;
+  descripcion_media?: string | null;
+};
+
+const MAX_REMOTE_IMAGE_BYTES = 10 * 1024 * 1024;
+const REMOTE_IMAGE_HEAD_TIMEOUT_MS = 8000;
+const VALID_REMOTE_IMAGE_TYPES = /^image\/(png|jpe?g|webp|gif|svg\+xml|heic|heif)$/i;
+
 
 const DEFAULT_PAGE_SIZE = 24;
 const MAX_PAGE_SIZE = 100;
@@ -291,6 +305,175 @@ async function replacePrimaryMedia(params: {
     throw new Error(insertError.message);
   }
 }
+
+
+function isPrivateIpAddress(hostname: string) {
+  const ipVersion = isIP(hostname);
+
+  if (ipVersion === 0) {
+    return false;
+  }
+
+  if (ipVersion === 6) {
+    const lower = hostname.toLowerCase();
+    return (
+      lower === '::1' ||
+      lower.startsWith('fc') ||
+      lower.startsWith('fd') ||
+      lower.startsWith('fe80')
+    );
+  }
+
+  const parts = hostname.split('.').map(Number);
+
+  if (parts.length !== 4 || parts.some((part) => Number.isNaN(part))) {
+    return true;
+  }
+
+  const [a, b] = parts;
+
+  return (
+    a === 0 ||
+    a === 10 ||
+    a === 127 ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168)
+  );
+}
+
+function assertPublicRemoteImageUrl(rawUrl?: string | null) {
+  const cleanUrl = rawUrl?.trim();
+
+  if (!cleanUrl) {
+    throw new Error('Debe indicar una URL de imagen o GIF para importar.');
+  }
+
+  let parsedUrl: URL;
+
+  try {
+    parsedUrl = new URL(cleanUrl);
+  } catch {
+    throw new Error('La URL de imagen no es válida.');
+  }
+
+  if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+    throw new Error('La URL debe usar protocolo http o https.');
+  }
+
+  const hostname = parsedUrl.hostname.toLowerCase();
+
+  if (
+    hostname === 'localhost' ||
+    hostname.endsWith('.local') ||
+    hostname.endsWith('.internal') ||
+    isPrivateIpAddress(hostname)
+  ) {
+    throw new Error('No se permiten URLs locales, privadas o internas.');
+  }
+
+  if (hostname.includes('cloudinary.com')) {
+    throw new Error('La imagen ya pertenece a Cloudinary. No es necesario importarla nuevamente.');
+  }
+
+  return parsedUrl;
+}
+
+function getRemoteOriginalName(parsedUrl: URL, fallback: string) {
+  const lastSegment = parsedUrl.pathname.split('/').filter(Boolean).pop();
+  const decodedSegment = lastSegment ? decodeURIComponent(lastSegment) : '';
+
+  return decodedSegment || `${fallback}.image`;
+}
+
+async function assertRemoteImageMetadata(parsedUrl: URL) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REMOTE_IMAGE_HEAD_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(parsedUrl.toString(), {
+      method: 'HEAD',
+      redirect: 'follow',
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`La URL externa respondió con estado ${response.status}.`);
+    }
+
+    const contentType = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase() ?? '';
+
+    if (!VALID_REMOTE_IMAGE_TYPES.test(contentType)) {
+      throw new Error('La URL externa no parece ser una imagen/GIF válido.');
+    }
+
+    const contentLength = Number(response.headers.get('content-length') ?? 0);
+
+    if (contentLength > MAX_REMOTE_IMAGE_BYTES) {
+      throw new Error('La imagen/GIF remoto supera el máximo permitido de 10MB.');
+    }
+  } catch (error: any) {
+    if (error?.name === 'AbortError') {
+      throw new Error('La URL externa tardó demasiado en responder.');
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function importExerciseMediaFromRemoteUrl(
+  user: JwtUser,
+  payload: EjercicioMediaImportPayload
+) {
+  assertCanManageExerciseMedia(user);
+
+  if (!Number.isInteger(Number(payload.id_ejercicio))) {
+    throw new Error('Debe indicar un id_ejercicio válido.');
+  }
+
+  const parsedUrl = assertPublicRemoteImageUrl(payload.url);
+  await assertRemoteImageMetadata(parsedUrl);
+
+  const folder = `gym-master/exercises/${payload.id_ejercicio}`;
+  const originalName = getRemoteOriginalName(parsedUrl, `ejercicio-${payload.id_ejercicio}`);
+
+  const uploadResult = await uploadRemoteUrlCloudinaryWithResult(
+    parsedUrl.toString(),
+    originalName,
+    folder
+  );
+
+  if (!uploadResult.secure_url || !uploadResult.public_id) {
+    throw new Error('Cloudinary no devolvió URL segura o public_id para la imagen importada.');
+  }
+
+  const data = await updateExerciseMediaCatalogItem(user, {
+    id_ejercicio: Number(payload.id_ejercicio),
+    imagen: uploadResult.secure_url,
+    imagen_origen: 'cloudinary',
+    cloudinary_public_id: uploadResult.public_id,
+    titulo: payload.titulo ?? null,
+    descripcion_media:
+      payload.descripcion_media ??
+      `Media principal importada automáticamente a Cloudinary desde URL externa: ${parsedUrl.hostname}`,
+  });
+
+  return {
+    data,
+    cloudinary: {
+      secure_url: uploadResult.secure_url,
+      public_id: uploadResult.public_id,
+      resource_type: uploadResult.resource_type,
+      format: uploadResult.format,
+      bytes: uploadResult.bytes,
+      width: uploadResult.width,
+      height: uploadResult.height,
+    },
+  };
+}
+
 
 export async function updateExerciseMediaCatalogItem(
   user: JwtUser,

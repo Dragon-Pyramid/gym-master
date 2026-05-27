@@ -15,6 +15,28 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_CLOUD_API_SECRET,
 });
 
+function getSafePublicIdBase(originalName: string) {
+  return originalName
+    .replace(/\.[^/.]+$/, "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase();
+}
+
+function buildUploadOptions(originalName: string, folder: string): UploadApiOptions {
+  const timestamp = Date.now();
+  const safeOriginalName = getSafePublicIdBase(originalName);
+
+  return {
+    folder,
+    public_id: `${timestamp}_${safeOriginalName || "gym-master-file"}`,
+    resource_type: "auto",
+    overwrite: false,
+  };
+}
+
 export async function uploadFileCloudinary(
   buffer: Buffer,
   originalName: string,
@@ -29,21 +51,7 @@ export async function uploadFileCloudinaryWithResult(
   originalName: string,
   folder: string
 ): Promise<UploadApiResponse> {
-  const timestamp = Date.now();
-  const safeOriginalName = originalName
-    .replace(/\.[^/.]+$/, "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9_-]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .toLowerCase();
-
-  const options: UploadApiOptions = {
-    folder,
-    public_id: `${timestamp}_${safeOriginalName || "gym-master-file"}`,
-    resource_type: "auto",
-    overwrite: false,
-  };
+  const options = buildUploadOptions(originalName, folder);
 
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(options, (error, result) => {
@@ -63,4 +71,14 @@ export async function uploadFileCloudinaryWithResult(
     stream.write(buffer);
     stream.end();
   });
+}
+
+export async function uploadRemoteUrlCloudinaryWithResult(
+  remoteUrl: string,
+  originalName: string,
+  folder: string
+): Promise<UploadApiResponse> {
+  const options = buildUploadOptions(originalName, folder);
+
+  return cloudinary.uploader.upload(remoteUrl, options);
 }

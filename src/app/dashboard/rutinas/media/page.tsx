@@ -30,6 +30,7 @@ import { Nivel } from '@/interfaces/niveles.interface';
 import { Objetivo } from '@/interfaces/objetivo.interface';
 import {
   getEjerciciosMediaCatalog,
+  importEjercicioMediaFromUrl,
   getNiveles,
   getObjetivos,
   updateEjercicioMediaCatalog,
@@ -91,6 +92,7 @@ export default function RutinasExerciseMediaCatalogPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -266,6 +268,43 @@ export default function RutinasExerciseMediaCatalogPage() {
       setSaving(false);
     }
   };
+
+
+  const handleImportExternalImage = async () => {
+    if (!selectedExercise) return;
+
+    const sourceUrl = externalImageUrl.trim() || selectedExercise.imagen?.trim();
+
+    if (!sourceUrl) {
+      setError('Debe indicar una URL externa o usar la imagen actual del ejercicio.');
+      return;
+    }
+
+    setImporting(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await importEjercicioMediaFromUrl({
+        id_ejercicio: selectedExercise.id_ejercicio,
+        url: sourceUrl,
+        titulo: selectedExercise.nombre_ejercicio,
+        descripcion_media: 'Media principal importada automáticamente a Cloudinary desde el catálogo administrativo.',
+      });
+
+      if (!response.ok) {
+        throw new Error(response.error || 'No se pudo importar la imagen/GIF a Cloudinary.');
+      }
+
+      setSuccess('Imagen/GIF importada a Cloudinary y asociada al ejercicio.');
+      await loadCatalog();
+    } catch (importError: any) {
+      setError(importError?.message ?? 'No se pudo importar la media remota.');
+    } finally {
+      setImporting(false);
+    }
+  };
+
 
   const handleSaveYoutube = async () => {
     if (!selectedExercise) return;
@@ -553,7 +592,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                             <p className='text-xs text-slate-500'>Recomendado para evitar URLs rotas.</p>
                           </div>
                           <input ref={fileInputRef} type='file' accept='image/*' className='hidden' onChange={handleFileChange} />
-                          <Button onClick={handleSelectFile} disabled={uploading || saving}>
+                          <Button onClick={handleSelectFile} disabled={uploading || saving || importing}>
                             {uploading ? <Loader2 className='w-4 h-4 mr-2 animate-spin' /> : <UploadCloud className='w-4 h-4 mr-2' />}
                             Subir
                           </Button>
@@ -568,10 +607,19 @@ export default function RutinasExerciseMediaCatalogPage() {
                           onChange={(event) => setExternalImageUrl(event.target.value)}
                           placeholder='https://...'
                         />
-                        <Button variant='outline' className='w-full' onClick={handleSaveExternalImage} disabled={saving || uploading}>
-                          <ImageIcon className='w-4 h-4 mr-2' />
-                          Guardar URL de imagen
-                        </Button>
+                        <div className='grid grid-cols-1 gap-2'>
+                          <Button variant='outline' className='w-full' onClick={handleSaveExternalImage} disabled={saving || uploading || importing}>
+                            <ImageIcon className='w-4 h-4 mr-2' />
+                            Guardar URL de imagen
+                          </Button>
+                          <Button className='w-full' onClick={handleImportExternalImage} disabled={saving || uploading || importing || !externalImageUrl.trim()}>
+                            {importing ? <Loader2 className='w-4 h-4 mr-2 animate-spin' /> : <Cloud className='w-4 h-4 mr-2' />}
+                            Importar URL a Cloudinary
+                          </Button>
+                        </div>
+                        <p className='text-xs text-slate-500'>
+                          Usa este botón para tomar una URL externa existente, importarla a Cloudinary y reemplazar la imagen del ejercicio por la URL segura nueva.
+                        </p>
                       </div>
 
                       <div className='space-y-2'>
@@ -583,7 +631,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                           placeholder='https://www.youtube.com/watch?v=...'
                         />
                         <div className='flex gap-2'>
-                          <Button className='flex-1' onClick={handleSaveYoutube} disabled={saving || uploading}>
+                          <Button className='flex-1' onClick={handleSaveYoutube} disabled={saving || uploading || importing}>
                             {saving ? <Loader2 className='w-4 h-4 mr-2 animate-spin' /> : <Video className='w-4 h-4 mr-2' />}
                             Guardar video
                           </Button>
@@ -598,7 +646,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                       </div>
 
                       <div className='p-3 text-xs border rounded-lg bg-blue-50 text-blue-700 border-blue-200'>
-                        Cloudinary debe ser la fuente principal para imágenes/GIFs. YouTube queda como apoyo didáctico para que el socio vea la técnica del ejercicio.
+                        Cloudinary debe ser la fuente principal para imágenes/GIFs. Podés subir archivos locales o importar URLs externas para evitar descargas manuales. YouTube queda como apoyo didáctico para que el socio vea la técnica del ejercicio.
                       </div>
                     </>
                   )}

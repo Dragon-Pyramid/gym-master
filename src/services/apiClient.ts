@@ -753,3 +753,23 @@ export async function uploadEjercicioMedia(file: File, idEjercicio?: number | st
   const data = await res.json();
   return { ok: res.ok, ...data };
 }
+
+
+export async function importEjercicioMediaFromUrl(payload: {
+  id_ejercicio: number | string;
+  url: string;
+  titulo?: string | null;
+  descripcion_media?: string | null;
+}) {
+  const token = getToken();
+  const res = await fetch('/api/rutinas/ejercicios-media/import', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data };
+}
