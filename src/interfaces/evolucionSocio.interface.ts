@@ -100,3 +100,24 @@ export interface EvolucionSocioResumen {
   diferencia_grasa: number | null;
   diferencia_masa_muscular: number | null;
 }
+
+
+export interface EvolucionFisicaAdminResumen {
+  id_socio: string;
+  nombre_completo: string;
+  dni: string;
+  email?: string | null;
+  foto?: string | null;
+  activo: boolean;
+  total_registros: number;
+  tiene_evolucion: boolean;
+  ultima_fecha: string | null;
+  ultimo_peso: number | null;
+  ultima_altura: number | null;
+  ultimo_imc: number | null;
+  ultima_cintura: number | null;
+  ultimo_porcentaje_grasa: number | null;
+  ultima_masa_muscular: number | null;
+  ultimo_tipo_corporal: TipoCorporal | null;
+  ultimo_sexo_referencia: SexoReferencia | null;
+}

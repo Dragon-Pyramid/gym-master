@@ -2,6 +2,7 @@ import { getToken } from "./storageService";
 import {
   CreateEvolucionSocioDto,
   EvolucionSocio,
+  EvolucionFisicaAdminResumen,
 } from "@/interfaces/evolucionSocio.interface";
 
 export interface SocioBasico {
@@ -102,5 +103,28 @@ export async function getSociosBasicos() {
   return {
     ok: true,
     data: rows as SocioBasico[],
+  };
+}
+
+export async function getEvolucionFisicaAdminResumen() {
+  const res = await fetch("/api/evolucion_socio/admin/resumen", {
+    method: "GET",
+    headers: authHeaders(),
+    cache: "no-store",
+  });
+
+  const data = await readJson(res);
+
+  if (!res.ok) {
+    throw new Error(
+      data?.error || data?.message || "Error al obtener resumen administrativo de evolución física"
+    );
+  }
+
+  return {
+    ok: res.ok,
+    data: Array.isArray(data?.data)
+      ? (data.data as EvolucionFisicaAdminResumen[])
+      : [],
   };
 }

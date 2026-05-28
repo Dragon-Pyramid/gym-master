@@ -94,6 +94,11 @@ export const sections: SidebarSectionType[] = [
         link: '/dashboard/gestor-dietas',
         level: 2,
       },
+      {
+        title: 'Gestión Evolución Física',
+        link: '/dashboard/gestor-evolucion-fisica',
+        level: 2,
+      },
       { title: 'Pagos', link: '/dashboard/pagos', level: 2 },
       { title: 'Ventas', link: '/dashboard/ventas', level: 2 },
       { title: 'Cuotas', link: '/dashboard/cuotas', level: 2 },

@@ -858,6 +858,26 @@ const endpointDefinitions: EndpointDefinition[] = [
     "source": "src/app/api/evolucion_socio/[socio_id]/route.ts"
   },
   {
+    "path": "/api/evolucion_socio/admin/resumen",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Evolución física",
+    "summary": "Resumen administrativo de evolución física",
+    "description": "Devuelve una vista consolidada solo lectura de socios con cantidad de registros y última medición de evolución física para el gestor administrativo.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      401,
+      403,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/evolucion_socio/admin/resumen/route.ts"
+  },
+  {
     "path": "/api/evolucion_socio/registro",
     "methods": [
       "POST"
