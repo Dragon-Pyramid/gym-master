@@ -3,7 +3,17 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Bot, CheckCircle2, Loader2, MessageSquareText, Mic, MicOff, Sparkles, Square } from 'lucide-react';
+import {
+  Bot,
+  CheckCircle2,
+  HelpCircle,
+  Loader2,
+  MessageSquareText,
+  Mic,
+  MicOff,
+  Sparkles,
+  Square,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 import { AppFooter } from '@/components/footer/AppFooter';
@@ -11,6 +21,14 @@ import { AppHeader } from '@/components/header/AppHeader';
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
@@ -22,7 +40,6 @@ import { generarRutinaConAsistente } from '@/services/ragRutinasAssistantService
 import { useAuthStore } from '@/stores/authStore';
 
 const DIAS_DISPONIBLES = [1, 2, 3, 4, 5, 6];
-
 
 type SpeechRecognitionAlternativeLite = {
   transcript: string;
@@ -73,12 +90,11 @@ declare global {
   }
 }
 
-
-
 type DetectedAssistantIntent = {
   objetivoNombre?: string;
   nivelNombre?: string;
   dias?: number;
+  prioridadesMusculares?: string[];
   restriccionesDetectadas?: string[];
 };
 
@@ -137,6 +153,29 @@ function appendUniqueRestriction(current: string, restriction: string) {
   return `${current}${current.trim() ? ' | ' : ''}${restriction}`.slice(0, 1200);
 }
 
+function extractMusclePriorities(text: string) {
+  const normalized = normalizeAssistantText(text);
+  const priorities: string[] = [];
+
+  const candidates: Array<[string, RegExp]> = [
+    ['Pecho', /\b(pecho|pectorales?)\b/],
+    ['Espalda', /\b(espalda|dorsales?)\b/],
+    ['Hombros', /\b(hombros?|deltoides?)\b/],
+    ['Brazos', /\b(brazos?)\b/],
+    ['Bíceps', /\b(biceps)\b/],
+    ['Tríceps', /\b(triceps)\b/],
+    ['Piernas', /\b(piernas?|cuadriceps|isquios?)\b/],
+    ['Glúteos', /\b(gluteos?)\b/],
+    ['Abdominales', /\b(abdominales?|core|zona media)\b/],
+  ];
+
+  for (const [label, pattern] of candidates) {
+    if (pattern.test(normalized)) priorities.push(label);
+  }
+
+  return priorities;
+}
+
 function isAdminRole(role?: string | null) {
   const normalized = role?.trim().toLowerCase();
   return normalized === 'admin' || normalized === 'administrador';
@@ -160,6 +199,8 @@ export default function RutinasAssistantPage() {
   const [isListening, setIsListening] = useState(false);
   const [interimTranscript, setInterimTranscript] = useState('');
   const [detectedIntent, setDetectedIntent] = useState<DetectedAssistantIntent>({});
+  const [reviewMode, setReviewMode] = useState(false);
+  const [guidanceMessage, setGuidanceMessage] = useState('');
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const shouldKeepListeningRef = useRef(false);
   const restartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -240,7 +281,6 @@ export default function RutinasAssistantPage() {
     [nivel, niveles]
   );
 
-
   const inferIntentFromText = useCallback((rawText: string) => {
     const normalized = normalizeAssistantText(rawText);
     if (!normalized) {
@@ -296,6 +336,11 @@ export default function RutinasAssistantPage() {
       nextIntent.nivelNombre = detectedLevel.nombre_nivel;
     }
 
+    const priorities = extractMusclePriorities(rawText);
+    if (priorities.length > 0) {
+      nextIntent.prioridadesMusculares = priorities;
+    }
+
     const detectedRestrictions: string[] = [];
 
     if (/(lumbalgia|dolor lumbar|zona lumbar|hernia|ciatica|ciatico)/.test(normalized)) {
@@ -318,6 +363,11 @@ export default function RutinasAssistantPage() {
   useEffect(() => {
     inferIntentFromText(`${mensajeSocio} ${restricciones}`);
   }, [inferIntentFromText, mensajeSocio, restricciones]);
+
+  useEffect(() => {
+    setReviewMode(false);
+    setGuidanceMessage('');
+  }, [mensajeSocio, restricciones]);
 
   const buildSpeechRecognition = useCallback(() => {
     if (typeof window === 'undefined') return null;
@@ -443,8 +493,34 @@ export default function RutinasAssistantPage() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setLoading(true);
     setResult(null);
+
+    const cleanMessage = mensajeSocio.trim();
+
+    if (!cleanMessage) {
+      setGuidanceMessage('Contale al asistente qué querés lograr antes de generar la rutina. Podés escribir o usar el micrófono.');
+      toast.error('Primero contale al asistente qué querés lograr');
+      return;
+    }
+
+    const missingFields: string[] = [];
+    if (!detectedIntent.objetivoNombre) missingFields.push('objetivo');
+    if (!detectedIntent.dias) missingFields.push('cantidad de días');
+
+    if (missingFields.length > 0) {
+      setGuidanceMessage(`Agregá en tu mensaje: ${missingFields.join(' y ')}. Ejemplo: “Quiero ganar masa muscular y entrenar 4 días por semana”.`);
+      toast.info('Faltan algunos datos para interpretar bien tu pedido');
+      return;
+    }
+
+    if (!reviewMode) {
+      setReviewMode(true);
+      setGuidanceMessage('Revisá el resumen interpretado. Si está correcto, presioná “Confirmar y generar rutina”. Si no, ajustá tu mensaje.');
+      toast.info('Revisá el resumen antes de generar la rutina');
+      return;
+    }
+
+    setLoading(true);
 
     try {
       const response = await generarRutinaConAsistente({
@@ -461,6 +537,8 @@ export default function RutinasAssistantPage() {
       }
 
       setResult(response.data);
+      setReviewMode(false);
+      setGuidanceMessage('');
       toast.success('Rutina generada correctamente');
     } catch (error) {
       console.error('Error al generar rutina con asistente:', error);
@@ -488,26 +566,80 @@ export default function RutinasAssistantPage() {
           <main className='flex-1 bg-muted/30 px-4 py-6 md:px-8'>
             <div className='mx-auto flex max-w-6xl flex-col gap-6'>
               <section className='rounded-3xl border bg-card p-6 shadow-sm'>
-                <div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
-                  <div className='space-y-2'>
+                <div className='flex flex-col gap-4 md:flex-row md:items-start md:justify-between'>
+                  <div className='space-y-3'>
                     <div className='inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary'>
                       <Bot className='h-4 w-4' />
-                      Gym Master RAG Coach · puente inicial
+                      Asistente inteligente
                     </div>
                     <h1 className='text-3xl font-bold tracking-tight text-foreground'>
-                      Generá tu rutina con asistencia inteligente
+                      Contale qué rutina necesitás
                     </h1>
                     <p className='max-w-3xl text-sm leading-6 text-muted-foreground'>
-                      Este flujo prepara la integración con el futuro microservicio{' '}
-                      <strong>gym-master-rag-coach</strong>. Por ahora usa el generador formal
-                      de Gym Master como respaldo seguro y deja listo el contrato para RAG.
+                      Escribí o dictá tu pedido con tus palabras. El asistente va a interpretar tu objetivo,
+                      días disponibles, nivel, prioridades y restricciones antes de generar la rutina.
                     </p>
+                    <div className='rounded-2xl border bg-background p-4 text-sm text-muted-foreground'>
+                      <p className='font-medium text-foreground'>Ejemplo</p>
+                      <p>
+                        “Quiero ganar masa muscular, entrenar 6 días, priorizar espalda y hombros. Soy intermedio y tengo lumbalgia.”
+                      </p>
+                    </div>
                   </div>
 
-                  <div className='rounded-2xl border bg-background p-4 text-sm text-muted-foreground'>
-                    <p className='font-medium text-foreground'>Resultado esperado</p>
-                    <p>La rutina queda guardada en el menú Rutinas.</p>
-                  </div>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button type='button' variant='outline' className='w-full md:w-auto'>
+                        <HelpCircle className='h-4 w-4' />
+                        Ayuda
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className='max-h-[85vh] overflow-y-auto sm:max-w-2xl'>
+                      <DialogHeader>
+                        <DialogTitle>Cómo pedir tu rutina</DialogTitle>
+                        <DialogDescription>
+                          Podés escribir como hablás. No hace falta usar palabras técnicas.
+                        </DialogDescription>
+                      </DialogHeader>
+
+                      <div className='space-y-5 text-sm leading-6 text-muted-foreground'>
+                        <section>
+                          <h3 className='font-semibold text-foreground'>Qué conviene contar</h3>
+                          <ul className='mt-2 list-disc space-y-1 pl-5'>
+                            <li>Qué querés lograr: ganar masa muscular, bajar de peso, definir, fuerza o resistencia.</li>
+                            <li>Cuántos días podés entrenar por semana.</li>
+                            <li>Tu nivel aproximado: principiante, intermedio o avanzado.</li>
+                            <li>Si querés priorizar algún grupo muscular.</li>
+                            <li>Si tenés lesiones, molestias o algo que el asistente deba cuidar.</li>
+                          </ul>
+                        </section>
+
+                        <section>
+                          <h3 className='font-semibold text-foreground'>Objetivos posibles</h3>
+                          <p className='mt-2'>
+                            Podés pedir volumen, definición, bajar de peso, fuerza, resistencia o volver a entrenar de a poco.
+                          </p>
+                        </section>
+
+                        <section>
+                          <h3 className='font-semibold text-foreground'>Frecuencia muscular</h3>
+                          <p className='mt-2'>
+                            Si entrenás pocos días, normalmente se reparte el cuerpo completo o torso/pierna. Si entrenás 5 o 6 días,
+                            se puede tocar cada grupo muscular una o dos veces por semana según tu objetivo y recuperación.
+                          </p>
+                        </section>
+
+                        <section>
+                          <h3 className='font-semibold text-foreground'>Ejemplos</h3>
+                          <div className='mt-2 space-y-2 rounded-2xl bg-muted p-4'>
+                            <p>“Quiero bajar de peso. Puedo entrenar 4 días por semana y soy principiante.”</p>
+                            <p>“Quiero una rutina de fuerza de 5 días. Soy avanzado, pero tengo molestias lumbares.”</p>
+                            <p>“Hace tiempo que no entreno y quiero volver de a poco. Puedo ir 3 veces por semana.”</p>
+                          </div>
+                        </section>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </section>
 
@@ -516,133 +648,79 @@ export default function RutinasAssistantPage() {
                   <CardHeader>
                     <CardTitle className='flex items-center gap-2'>
                       <MessageSquareText className='h-5 w-5 text-primary' />
-                      Entrevista rápida
+                      Tu pedido
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <form className='space-y-5' onSubmit={handleSubmit}>
                       {usuarioEsAdmin && (
                         <div className='rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200'>
-                          Estás ingresando como admin. Esta primera versión está orientada al socio
-                          logueado; para asignación administrativa avanzada se integrará luego con
-                          Gestor de Rutinas.
+                          Estás ingresando como admin. Esta experiencia está orientada al socio logueado.
                         </div>
                       )}
 
-                      <div className='grid gap-4 md:grid-cols-3'>
-                        <div className='space-y-2'>
-                          <Label htmlFor='objetivo'>Objetivo</Label>
-                          <select
-                            id='objetivo'
-                            className='h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
-                            value={objetivo}
-                            onChange={(event) => setObjetivo(event.target.value)}
+                      <div className='space-y-2'>
+                        <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
+                          <Label htmlFor='mensaje'>Escribí o dictá tu pedido</Label>
+                          <Button
+                            type='button'
+                            variant={isListening ? 'destructive' : 'outline'}
+                            size='sm'
+                            onClick={handleVoiceInput}
+                            disabled={!speechSupported || loading}
+                            title={speechSupported ? 'Dictar texto con el micrófono' : 'Dictado no disponible en este navegador'}
                           >
-                            {objetivos.map((item) => (
-                              <option key={item.id_objetivo} value={String(item.id_objetivo)}>
-                                {item.nombre_objetivo}
-                              </option>
-                            ))}
-                          </select>
+                            {isListening ? (
+                              <>
+                                <Square className='h-4 w-4' />
+                                Detener dictado
+                              </>
+                            ) : speechSupported ? (
+                              <>
+                                <Mic className='h-4 w-4' />
+                                Dictar con voz
+                              </>
+                            ) : (
+                              <>
+                                <MicOff className='h-4 w-4' />
+                                Voz no disponible
+                              </>
+                            )}
+                          </Button>
                         </div>
-
-                        <div className='space-y-2'>
-                          <Label htmlFor='nivel'>Nivel</Label>
-                          <select
-                            id='nivel'
-                            className='h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
-                            value={nivel}
-                            onChange={(event) => setNivel(event.target.value)}
-                          >
-                            {niveles.map((item) => (
-                              <option key={item.id_nivel} value={String(item.id_nivel)}>
-                                {item.nombre_nivel}
-                              </option>
-                            ))}
-                          </select>
+                        <textarea
+                          id='mensaje'
+                          className='min-h-40 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+                          placeholder='Ejemplo: quiero ganar masa muscular, entrenar 6 días, priorizar espalda y hombros. Soy intermedio y tengo lumbalgia.'
+                          value={mensajeSocio}
+                          maxLength={1200}
+                          onChange={(event) => setMensajeSocio(event.target.value)}
+                        />
+                        <div className='flex flex-col gap-1 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between'>
+                          <span>
+                            {isListening
+                              ? 'Dictado continuo activo. Podés pausar al hablar; detenelo cuando termines.'
+                              : 'Incluí objetivo y días para que el asistente pueda interpretar mejor tu rutina.'}
+                          </span>
+                          <span>{mensajeSocio.length}/1200</span>
                         </div>
-
-                        <div className='space-y-2'>
-                          <Label htmlFor='dias'>Días por semana</Label>
-                          <select
-                            id='dias'
-                            className='h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
-                            value={dias}
-                            onChange={(event) => setDias(Number(event.target.value))}
-                          >
-                            {DIAS_DISPONIBLES.map((item) => (
-                              <option key={item} value={item}>
-                                {item} {item === 1 ? 'día' : 'días'}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
+                        {isListening && interimTranscript && (
+                          <p className='rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-primary'>
+                            Escuchando: {interimTranscript}
+                          </p>
+                        )}
                       </div>
 
                       <div className='grid gap-4 md:grid-cols-[1fr_180px]'>
                         <div className='space-y-2'>
-                          <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
-                            <Label htmlFor='mensaje'>Qué querés lograr o priorizar</Label>
-                            <Button
-                              type='button'
-                              variant={isListening ? 'destructive' : 'outline'}
-                              size='sm'
-                              onClick={handleVoiceInput}
-                              disabled={!speechSupported || loading}
-                              title={speechSupported ? 'Dictar texto con el micrófono' : 'Dictado no disponible en este navegador'}
-                            >
-                              {isListening ? (
-                                <>
-                                  <Square className='h-4 w-4' />
-                                  Detener dictado
-                                </>
-                              ) : speechSupported ? (
-                                <>
-                                  <Mic className='h-4 w-4' />
-                                  Dictar con voz
-                                </>
-                              ) : (
-                                <>
-                                  <MicOff className='h-4 w-4' />
-                                  Voz no disponible
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                          <textarea
-                            id='mensaje'
-                            className='min-h-28 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
-                            placeholder='Ejemplo: quiero ganar masa muscular, priorizar pecho y espalda, entrenar 6 días y no repetir exactamente mi rutina anterior.'
-                            value={mensajeSocio}
+                          <Label htmlFor='restricciones'>Algo que el asistente deba cuidar</Label>
+                          <Input
+                            id='restricciones'
+                            placeholder='Ejemplo: lumbalgia, dolor de rodilla, evitar impacto, prefiero máquinas.'
+                            value={restricciones}
                             maxLength={1200}
-                            onChange={(event) => setMensajeSocio(event.target.value)}
+                            onChange={(event) => setRestricciones(event.target.value)}
                           />
-                          <div className='flex flex-col gap-1 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between'>
-                            <span>
-                              {isListening
-                                ? 'Dictado continuo activo. Podés pausar al hablar; detenelo cuando termines.'
-                                : 'Podés escribir o dictar el texto. Si decís objetivo, nivel o días, el asistente intentará sincronizar los campos.'}
-                            </span>
-                            <span>{mensajeSocio.length}/1200</span>
-                          </div>
-                          {isListening && interimTranscript && (
-                            <p className='rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-primary'>
-                              Escuchando: {interimTranscript}
-                            </p>
-                          )}
-                          {(detectedIntent.objetivoNombre || detectedIntent.nivelNombre || detectedIntent.dias || detectedIntent.restriccionesDetectadas?.length) && (
-                            <div className='rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-100'>
-                              <p className='font-semibold'>Detectado desde texto/voz</p>
-                              <ul className='mt-1 list-disc space-y-1 pl-4'>
-                                {detectedIntent.objetivoNombre && <li>Objetivo: {detectedIntent.objetivoNombre}</li>}
-                                {detectedIntent.nivelNombre && <li>Nivel: {detectedIntent.nivelNombre}</li>}
-                                {detectedIntent.dias && <li>Días: {detectedIntent.dias}</li>}
-                                {detectedIntent.restriccionesDetectadas?.map((item) => (
-                                  <li key={item}>Restricción: {item}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
                         </div>
 
                         <div className='space-y-2'>
@@ -659,16 +737,11 @@ export default function RutinasAssistantPage() {
                         </div>
                       </div>
 
-                      <div className='space-y-2'>
-                        <Label htmlFor='restricciones'>Restricciones o aclaraciones</Label>
-                        <Input
-                          id='restricciones'
-                          placeholder='Ejemplo: sin lesiones, evitar impacto, no tengo poleas, prefiero máquinas.'
-                          value={restricciones}
-                          maxLength={1200}
-                          onChange={(event) => setRestricciones(event.target.value)}
-                        />
-                      </div>
+                      {guidanceMessage && (
+                        <div className='rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-100'>
+                          {guidanceMessage}
+                        </div>
+                      )}
 
                       <div className='flex flex-col gap-3 sm:flex-row sm:items-center'>
                         <Button type='submit' disabled={usuarioEsAdmin || loading || objetivos.length === 0 || niveles.length === 0}>
@@ -680,7 +753,11 @@ export default function RutinasAssistantPage() {
                           ) : (
                             <>
                               <Sparkles className='h-4 w-4' />
-                              {usuarioEsAdmin ? 'Disponible para socio' : 'Generar rutina'}
+                              {usuarioEsAdmin
+                                ? 'Disponible para socio'
+                                : reviewMode
+                                  ? 'Confirmar y generar rutina'
+                                  : 'Revisar pedido'}
                             </>
                           )}
                         </Button>
@@ -695,21 +772,38 @@ export default function RutinasAssistantPage() {
                 <div className='space-y-6'>
                   <Card>
                     <CardHeader>
-                      <CardTitle>Parámetros actuales</CardTitle>
+                      <CardTitle>Resumen interpretado</CardTitle>
                     </CardHeader>
                     <CardContent className='space-y-3 text-sm'>
                       <div className='rounded-2xl bg-muted p-4'>
                         <p className='text-muted-foreground'>Objetivo</p>
-                        <p className='font-semibold'>{objetivoSeleccionado}</p>
+                        <p className='font-semibold'>{detectedIntent.objetivoNombre ?? objetivoSeleccionado}</p>
                       </div>
                       <div className='rounded-2xl bg-muted p-4'>
                         <p className='text-muted-foreground'>Nivel</p>
-                        <p className='font-semibold'>{nivelSeleccionado}</p>
+                        <p className='font-semibold'>{detectedIntent.nivelNombre ?? `${nivelSeleccionado} por defecto`}</p>
                       </div>
                       <div className='rounded-2xl bg-muted p-4'>
                         <p className='text-muted-foreground'>Frecuencia</p>
-                        <p className='font-semibold'>{dias} días por semana</p>
+                        <p className='font-semibold'>{detectedIntent.dias ?? dias} días por semana</p>
                       </div>
+                      {detectedIntent.prioridadesMusculares?.length ? (
+                        <div className='rounded-2xl bg-muted p-4'>
+                          <p className='text-muted-foreground'>Prioridades</p>
+                          <p className='font-semibold'>{detectedIntent.prioridadesMusculares.join(', ')}</p>
+                        </div>
+                      ) : null}
+                      {detectedIntent.restriccionesDetectadas?.length ? (
+                        <div className='rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200'>
+                          <p className='font-semibold'>Cuidado detectado</p>
+                          <p>{detectedIntent.restriccionesDetectadas.join(', ')}</p>
+                        </div>
+                      ) : null}
+                      {reviewMode && (
+                        <div className='rounded-2xl border border-green-200 bg-green-50 p-4 text-green-900 dark:border-green-900/60 dark:bg-green-950/20 dark:text-green-100'>
+                          Revisá estos datos. Si están bien, confirmá para generar la rutina.
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
 
@@ -724,11 +818,7 @@ export default function RutinasAssistantPage() {
                       <CardContent className='space-y-4 text-sm text-green-900 dark:text-green-100'>
                         <p>{result.mensajeFinal}</p>
                         <div className='rounded-xl bg-background/80 p-3 text-muted-foreground'>
-                          <p>
-                            Modo: <strong>{result.modo === 'rag_bridge' ? 'RAG Coach' : 'Fallback local'}</strong>
-                          </p>
                           <p>{result.resumen}</p>
-                          {result.ragError && <p>RAG externo: {result.ragError}</p>}
                         </div>
                         <Button asChild>
                           <Link href='/dashboard/rutinas'>Ir al menú Rutinas</Link>
