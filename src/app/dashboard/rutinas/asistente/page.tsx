@@ -1,9 +1,9 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Bot, CheckCircle2, Loader2, MessageSquareText, Sparkles } from 'lucide-react';
+import { Bot, CheckCircle2, Loader2, MessageSquareText, Mic, MicOff, Sparkles, Square } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { AppFooter } from '@/components/footer/AppFooter';
@@ -22,6 +22,120 @@ import { generarRutinaConAsistente } from '@/services/ragRutinasAssistantService
 import { useAuthStore } from '@/stores/authStore';
 
 const DIAS_DISPONIBLES = [1, 2, 3, 4, 5, 6];
+
+
+type SpeechRecognitionAlternativeLite = {
+  transcript: string;
+  confidence?: number;
+};
+
+type SpeechRecognitionResultLite = {
+  isFinal: boolean;
+  length: number;
+  [index: number]: SpeechRecognitionAlternativeLite;
+};
+
+type SpeechRecognitionResultListLite = {
+  length: number;
+  [index: number]: SpeechRecognitionResultLite;
+};
+
+type SpeechRecognitionEventLite = Event & {
+  resultIndex: number;
+  results: SpeechRecognitionResultListLite;
+};
+
+type SpeechRecognitionErrorEventLite = Event & {
+  error: string;
+  message?: string;
+};
+
+type BrowserSpeechRecognition = EventTarget & {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  maxAlternatives: number;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+  onstart: (() => void) | null;
+  onend: (() => void) | null;
+  onresult: ((event: SpeechRecognitionEventLite) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEventLite) => void) | null;
+};
+
+type BrowserSpeechRecognitionConstructor = new () => BrowserSpeechRecognition;
+
+declare global {
+  interface Window {
+    SpeechRecognition?: BrowserSpeechRecognitionConstructor;
+    webkitSpeechRecognition?: BrowserSpeechRecognitionConstructor;
+  }
+}
+
+
+
+type DetectedAssistantIntent = {
+  objetivoNombre?: string;
+  nivelNombre?: string;
+  dias?: number;
+  restriccionesDetectadas?: string[];
+};
+
+function normalizeAssistantText(value: string) {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function findCatalogItemByKeywords<T>(
+  items: T[],
+  getLabel: (item: T) => string | undefined,
+  keywords: string[]
+): T | undefined {
+  return items.find((item) => {
+    const label = normalizeAssistantText(getLabel(item) ?? '');
+    return keywords.some((keyword) => label.includes(normalizeAssistantText(keyword)));
+  });
+}
+
+function extractTrainingDays(text: string): number | undefined {
+  const normalized = normalizeAssistantText(text);
+  const directMatch = normalized.match(/(?:^|\D)([1-6])\s*(?:dias?|veces|entrenamientos?)(?:\s+por\s+semana)?(?:\D|$)/);
+
+  if (directMatch?.[1]) {
+    return Number(directMatch[1]);
+  }
+
+  const wordMap: Record<string, number> = {
+    un: 1,
+    una: 1,
+    uno: 1,
+    dos: 2,
+    tres: 3,
+    cuatro: 4,
+    cinco: 5,
+    seis: 6,
+  };
+
+  for (const [word, value] of Object.entries(wordMap)) {
+    const pattern = new RegExp(`\\b${word}\\s+(dias?|veces|entrenamientos?)(\\s+por\\s+semana)?\\b`);
+    if (pattern.test(normalized)) return value;
+  }
+
+  return undefined;
+}
+
+function appendUniqueRestriction(current: string, restriction: string) {
+  if (normalizeAssistantText(current).includes(normalizeAssistantText(restriction))) {
+    return current;
+  }
+
+  return `${current}${current.trim() ? ' | ' : ''}${restriction}`.slice(0, 1200);
+}
 
 function isAdminRole(role?: string | null) {
   const normalized = role?.trim().toLowerCase();
@@ -42,12 +156,41 @@ export default function RutinasAssistantPage() {
   const [restricciones, setRestricciones] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<RagRutinasAssistantResponseData | null>(null);
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [interimTranscript, setInterimTranscript] = useState('');
+  const [detectedIntent, setDetectedIntent] = useState<DetectedAssistantIntent>({});
+  const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
+  const shouldKeepListeningRef = useRef(false);
+  const restartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const voiceSessionBaseRef = useRef('');
+  const finalTranscriptRef = useRef('');
+  const latestMessageRef = useRef('');
 
   const usuarioEsAdmin = isAdminRole(user?.rol);
 
   useEffect(() => {
     initializeAuth();
   }, [initializeAuth]);
+
+  useEffect(() => {
+    latestMessageRef.current = mensajeSocio;
+  }, [mensajeSocio]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    setSpeechSupported(Boolean(window.SpeechRecognition || window.webkitSpeechRecognition));
+
+    return () => {
+      shouldKeepListeningRef.current = false;
+      if (restartTimeoutRef.current) {
+        clearTimeout(restartTimeoutRef.current);
+      }
+      recognitionRef.current?.abort();
+      recognitionRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     if (isInitialized && !isAuthenticated) {
@@ -96,6 +239,207 @@ export default function RutinasAssistantPage() {
     () => niveles.find((item) => String(item.id_nivel) === nivel)?.nombre_nivel ?? `Nivel ${nivel}`,
     [nivel, niveles]
   );
+
+
+  const inferIntentFromText = useCallback((rawText: string) => {
+    const normalized = normalizeAssistantText(rawText);
+    if (!normalized) {
+      setDetectedIntent({});
+      return;
+    }
+
+    const nextIntent: DetectedAssistantIntent = {};
+
+    const detectedDays = extractTrainingDays(rawText);
+    if (detectedDays && detectedDays !== dias) {
+      setDias(detectedDays);
+      nextIntent.dias = detectedDays;
+    } else if (detectedDays) {
+      nextIntent.dias = detectedDays;
+    }
+
+    let detectedObjective: Objetivo | undefined;
+
+    if (/(volumen|hipertrofia|masa muscular|ganar masa|aumentar masa|crear musculo|ganar musculo)/.test(normalized)) {
+      detectedObjective = findCatalogItemByKeywords(objetivos, (item) => item.nombre_objetivo, ['volumen']);
+    } else if (/(definicion|definir|marcar|marcado)/.test(normalized)) {
+      detectedObjective = findCatalogItemByKeywords(objetivos, (item) => item.nombre_objetivo, ['definicion']);
+    } else if (/(bajar de peso|perder peso|adelgazar|bajar grasa|perder grasa|descenso de grasa)/.test(normalized)) {
+      detectedObjective = findCatalogItemByKeywords(objetivos, (item) => item.nombre_objetivo, ['bajar de peso']);
+    } else if (/(fuerza|mas fuerte|aumentar fuerza)/.test(normalized)) {
+      detectedObjective = findCatalogItemByKeywords(objetivos, (item) => item.nombre_objetivo, ['aumentar fuerza', 'fuerza']);
+    } else if (/(resistencia|aguante|cardio|capacidad aerobica)/.test(normalized)) {
+      detectedObjective = findCatalogItemByKeywords(objetivos, (item) => item.nombre_objetivo, ['mejorar resistencia', 'resistencia']);
+    }
+
+    if (detectedObjective?.id_objetivo && String(detectedObjective.id_objetivo) !== objetivo) {
+      setObjetivo(String(detectedObjective.id_objetivo));
+      nextIntent.objetivoNombre = detectedObjective.nombre_objetivo;
+    } else if (detectedObjective?.nombre_objetivo) {
+      nextIntent.objetivoNombre = detectedObjective.nombre_objetivo;
+    }
+
+    let detectedLevel: Nivel | undefined;
+
+    if (/(inicial|principiante|empiezo|recien empiezo|nuevo)/.test(normalized)) {
+      detectedLevel = findCatalogItemByKeywords(niveles, (item) => item.nombre_nivel, ['inicial']);
+    } else if (/(intermedio|hace rato|algo de experiencia)/.test(normalized)) {
+      detectedLevel = findCatalogItemByKeywords(niveles, (item) => item.nombre_nivel, ['intermedio']);
+    } else if (/(avanzado|experto|muchos anos|mucha experiencia)/.test(normalized)) {
+      detectedLevel = findCatalogItemByKeywords(niveles, (item) => item.nombre_nivel, ['avanzado']);
+    }
+
+    if (detectedLevel?.id_nivel && String(detectedLevel.id_nivel) !== nivel) {
+      setNivel(String(detectedLevel.id_nivel));
+      nextIntent.nivelNombre = detectedLevel.nombre_nivel;
+    } else if (detectedLevel?.nombre_nivel) {
+      nextIntent.nivelNombre = detectedLevel.nombre_nivel;
+    }
+
+    const detectedRestrictions: string[] = [];
+
+    if (/(lumbalgia|dolor lumbar|zona lumbar|hernia|ciatica|ciatico)/.test(normalized)) {
+      const lumbarRestriction = 'Lumbalgia/dolor lumbar informado: evitar ejercicios de alto riesgo lumbar y priorizar variantes controladas.';
+      setRestricciones((current) => appendUniqueRestriction(current, lumbarRestriction));
+      detectedRestrictions.push('lumbalgia/dolor lumbar');
+    }
+
+    if (/(lesion|lesionado|dolor|molestia)/.test(normalized) && detectedRestrictions.length === 0) {
+      detectedRestrictions.push('posible restricción física');
+    }
+
+    if (detectedRestrictions.length > 0) {
+      nextIntent.restriccionesDetectadas = detectedRestrictions;
+    }
+
+    setDetectedIntent(nextIntent);
+  }, [dias, nivel, niveles, objetivo, objetivos]);
+
+  useEffect(() => {
+    inferIntentFromText(`${mensajeSocio} ${restricciones}`);
+  }, [inferIntentFromText, mensajeSocio, restricciones]);
+
+  const buildSpeechRecognition = useCallback(() => {
+    if (typeof window === 'undefined') return null;
+
+    const RecognitionConstructor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!RecognitionConstructor) return null;
+
+    return new RecognitionConstructor();
+  }, []);
+
+  const startSpeechRecognition = useCallback(() => {
+    const recognition = buildSpeechRecognition();
+    if (!recognition) {
+      toast.error('Tu navegador no soporta dictado por voz. Podés escribir el texto manualmente.');
+      shouldKeepListeningRef.current = false;
+      setIsListening(false);
+      return;
+    }
+
+    voiceSessionBaseRef.current = latestMessageRef.current.trim();
+    finalTranscriptRef.current = '';
+    setInterimTranscript('');
+
+    recognition.lang = idioma === 'en' ? 'en-US' : 'es-AR';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+    };
+
+    recognition.onresult = (event) => {
+      let finalText = '';
+      let interimText = '';
+
+      for (let index = 0; index < event.results.length; index += 1) {
+        const resultItem = event.results[index];
+        const transcript = resultItem?.[0]?.transcript ?? '';
+
+        if (resultItem?.isFinal) {
+          finalText += ` ${transcript}`;
+        } else {
+          interimText += ` ${transcript}`;
+        }
+      }
+
+      finalTranscriptRef.current = finalText.replace(/\s+/g, ' ').trim();
+      const cleanInterim = interimText.replace(/\s+/g, ' ').trim();
+      setInterimTranscript(cleanInterim);
+
+      const nextText = `${voiceSessionBaseRef.current}${voiceSessionBaseRef.current && (finalTranscriptRef.current || cleanInterim) ? ' ' : ''}${finalTranscriptRef.current}${finalTranscriptRef.current && cleanInterim ? ' ' : ''}${cleanInterim}`
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 1200);
+
+      latestMessageRef.current = nextText;
+      setMensajeSocio(nextText);
+    };
+
+    recognition.onerror = (event) => {
+      console.error('Error en dictado por voz:', event.error, event.message);
+
+      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+        shouldKeepListeningRef.current = false;
+        setIsListening(false);
+        toast.error('No se pudo usar el micrófono. Revisá los permisos del navegador.');
+        return;
+      }
+
+      if (event.error === 'no-speech') {
+        return;
+      }
+
+      toast.error('El dictado se interrumpió. Podés continuar hablando o escribir manualmente.');
+    };
+
+    recognition.onend = () => {
+      recognitionRef.current = null;
+      setInterimTranscript('');
+
+      if (shouldKeepListeningRef.current) {
+        restartTimeoutRef.current = setTimeout(() => {
+          if (shouldKeepListeningRef.current) {
+            startSpeechRecognition();
+          }
+        }, 350);
+        return;
+      }
+
+      setIsListening(false);
+    };
+
+    recognitionRef.current = recognition;
+
+    try {
+      recognition.start();
+    } catch (error) {
+      console.error('No se pudo iniciar el dictado:', error);
+      shouldKeepListeningRef.current = false;
+      setIsListening(false);
+      toast.error('No se pudo iniciar el dictado. Probá nuevamente o escribí el texto.');
+    }
+  }, [buildSpeechRecognition, idioma]);
+
+  const handleVoiceInput = useCallback(() => {
+    if (isListening) {
+      shouldKeepListeningRef.current = false;
+      if (restartTimeoutRef.current) {
+        clearTimeout(restartTimeoutRef.current);
+        restartTimeoutRef.current = null;
+      }
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      setInterimTranscript('');
+      return;
+    }
+
+    shouldKeepListeningRef.current = true;
+    toast.info('Dictado continuo activado. Podés hacer pausas y detenerlo cuando termines.');
+    startSpeechRecognition();
+  }, [isListening, startSpeechRecognition]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -237,7 +581,34 @@ export default function RutinasAssistantPage() {
 
                       <div className='grid gap-4 md:grid-cols-[1fr_180px]'>
                         <div className='space-y-2'>
-                          <Label htmlFor='mensaje'>Qué querés lograr o priorizar</Label>
+                          <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
+                            <Label htmlFor='mensaje'>Qué querés lograr o priorizar</Label>
+                            <Button
+                              type='button'
+                              variant={isListening ? 'destructive' : 'outline'}
+                              size='sm'
+                              onClick={handleVoiceInput}
+                              disabled={!speechSupported || loading}
+                              title={speechSupported ? 'Dictar texto con el micrófono' : 'Dictado no disponible en este navegador'}
+                            >
+                              {isListening ? (
+                                <>
+                                  <Square className='h-4 w-4' />
+                                  Detener dictado
+                                </>
+                              ) : speechSupported ? (
+                                <>
+                                  <Mic className='h-4 w-4' />
+                                  Dictar con voz
+                                </>
+                              ) : (
+                                <>
+                                  <MicOff className='h-4 w-4' />
+                                  Voz no disponible
+                                </>
+                              )}
+                            </Button>
+                          </div>
                           <textarea
                             id='mensaje'
                             className='min-h-28 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
@@ -246,6 +617,32 @@ export default function RutinasAssistantPage() {
                             maxLength={1200}
                             onChange={(event) => setMensajeSocio(event.target.value)}
                           />
+                          <div className='flex flex-col gap-1 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between'>
+                            <span>
+                              {isListening
+                                ? 'Dictado continuo activo. Podés pausar al hablar; detenelo cuando termines.'
+                                : 'Podés escribir o dictar el texto. Si decís objetivo, nivel o días, el asistente intentará sincronizar los campos.'}
+                            </span>
+                            <span>{mensajeSocio.length}/1200</span>
+                          </div>
+                          {isListening && interimTranscript && (
+                            <p className='rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-primary'>
+                              Escuchando: {interimTranscript}
+                            </p>
+                          )}
+                          {(detectedIntent.objetivoNombre || detectedIntent.nivelNombre || detectedIntent.dias || detectedIntent.restriccionesDetectadas?.length) && (
+                            <div className='rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-100'>
+                              <p className='font-semibold'>Detectado desde texto/voz</p>
+                              <ul className='mt-1 list-disc space-y-1 pl-4'>
+                                {detectedIntent.objetivoNombre && <li>Objetivo: {detectedIntent.objetivoNombre}</li>}
+                                {detectedIntent.nivelNombre && <li>Nivel: {detectedIntent.nivelNombre}</li>}
+                                {detectedIntent.dias && <li>Días: {detectedIntent.dias}</li>}
+                                {detectedIntent.restriccionesDetectadas?.map((item) => (
+                                  <li key={item}>Restricción: {item}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
                         </div>
 
                         <div className='space-y-2'>
