@@ -422,12 +422,16 @@ export async function asignarDieta(
 
 export async function getDietasPorSocio(socioId: number | string) {
   const token = getToken();
+  if (!token) {
+    return { ok: false, status: 401, data: { error: 'Token no disponible' } };
+  }
+
   const res = await fetch(`/api/dieta/socio/${socioId}`, {
     method: 'GET',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: { Authorization: `Bearer ${token}` },
   });
   const data = await res.json();
-  return { ok: res.ok, data };
+  return { ok: res.ok, status: res.status, data };
 }
 
 export async function eliminarDietaDeSocio(

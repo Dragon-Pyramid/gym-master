@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Socio } from '@/interfaces/socio.interface';
-import { Dieta } from '@/interfaces/dieta.interface';
-import { Skeleton } from '@/components/ui/skeleton';
-import SocioDietaCard from './SocioDietaCard';
-import { getDietasPorSocio } from '@/services/apiClient';
+import { useState, useEffect } from "react";
+import { Socio } from "@/interfaces/socio.interface";
+import { Dieta } from "@/interfaces/dieta.interface";
+import { Skeleton } from "@/components/ui/skeleton";
+import SocioDietaCard from "./SocioDietaCard";
+import { getDietasPorSocio } from "@/services/apiClient";
 
 interface SociosDietasGridProps {
   socios: Socio[];
@@ -28,10 +28,7 @@ export default function SocioDietaGrid({
       const response = await getDietasPorSocio(socioId);
 
       if (!response.ok) {
-        console.error(
-          `Error al obtener dietas del socio ${socioId}:`,
-          response
-        );
+        console.error(`Error al obtener dietas del socio ${socioId}:`, response);
         return null;
       }
 
@@ -74,11 +71,21 @@ export default function SocioDietaGrid({
     cargarDietas();
   }, [socios]);
 
+  const handleDietaCreated = (socioId: string, dieta: Dieta) => {
+    setSociosConDietas((prev) =>
+      prev.map((socio) =>
+        socio.id_socio === socioId
+          ? { ...socio, ultimaDieta: dieta, loadingDieta: false }
+          : socio
+      )
+    );
+  };
+
   if (loading) {
     return (
-      <div className='grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {[...Array(8)].map((_, i) => (
-          <Skeleton key={i} className='w-full h-48 rounded-lg' />
+          <Skeleton key={i} className="w-full h-48 rounded-lg" />
         ))}
       </div>
     );
@@ -86,20 +93,21 @@ export default function SocioDietaGrid({
 
   if (sociosConDietas.length === 0) {
     return (
-      <div className='py-12 text-center text-muted-foreground'>
+      <div className="py-12 text-center text-muted-foreground">
         No hay socios registrados aún.
       </div>
     );
   }
 
   return (
-    <div className='grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {sociosConDietas.map((socio) => (
         <SocioDietaCard
           key={socio.id_socio}
           socio={socio}
           dieta={socio.ultimaDieta}
           loadingDieta={socio.loadingDieta}
+          onDietaCreated={handleDietaCreated}
         />
       ))}
     </div>
