@@ -672,13 +672,13 @@ const endpointDefinitions: EndpointDefinition[] = [
     "source": "src/app/api/dieta/generar/route.ts"
   },
   {
-    "path": "/api/dieta/socio/{id}",
+    "path": "/api/dieta/{id}",
     "methods": [
       "GET"
     ],
     "tag": "Dietas",
-    "summary": "Dietas de un socio",
-    "description": "Lista dietas asociadas a un socio específico.",
+    "summary": "Detalle de dieta",
+    "description": "Consulta una dieta puntual por identificador para vistas administrativas y detalle moderno.",
     "auth": true,
     "admin": false,
     "notImplemented": false,
@@ -687,6 +687,26 @@ const endpointDefinitions: EndpointDefinition[] = [
       400,
       401,
       404,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/dieta/[id]/route.ts"
+  },
+  {
+    "path": "/api/dieta/socio/{id}",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Dietas",
+    "summary": "Dietas de un socio",
+    "description": "Lista dietas asociadas a un socio específico. Si el socio no tiene dietas, devuelve una lista vacía.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401,
       500
     ],
     "queryParams": [],

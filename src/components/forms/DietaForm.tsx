@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import type { CreateDietaDto } from "@/interfaces/dieta.interface";
+import type { CreateDietaDto, Dieta } from "@/interfaces/dieta.interface";
 import {
   crearDieta,
   getObjetivos,
@@ -14,11 +14,24 @@ import { useAuthStore } from "@/stores/authStore";
 
 import type { Objetivo } from "@/interfaces/objetivo.interface";
 
-export default function DietaForm() {
+interface DietaFormProps {
+  initialSocioId?: string;
+  socioNombre?: string;
+  onSuccess?: (dieta: Dieta) => void;
+  submitLabel?: string;
+}
+
+export default function DietaForm({
+  initialSocioId,
+  socioNombre,
+  onSuccess,
+  submitLabel = "Generar dieta",
+}: DietaFormProps) {
   const [objetivo, setObjetivo] = useState<CreateDietaDto["objetivo"]>("");
   const [fechaInicio, setFechaInicio] =
     useState<CreateDietaDto["fecha_inicio"]>("");
-  const [result, setResult] = useState<any>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [fechaFin, setFechaFin] = useState<CreateDietaDto["fecha_fin"]>("");
   const [objetivos, setObjetivos] = useState<Objetivo[]>([]);
@@ -30,36 +43,67 @@ export default function DietaForm() {
     });
   }, []);
 
+  const resolveSocioId = async () => {
+    if (initialSocioId) return initialSocioId;
+
+    if (!user?.id) return null;
+
+    const socio = await getSocioByUsuarioId(user.id.toString());
+    return socio?.id_socio?.toString() ?? null;
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
+    setMessage(null);
+    setErrorMessage(null);
 
-    if (!user?.id) {
+    try {
+      const socioId = await resolveSocioId();
+      if (!socioId) {
+        setErrorMessage("No se pudo identificar el socio para generar la dieta.");
+        return;
+      }
+
+      const body = {
+        socio_id: socioId,
+        objetivo,
+        fecha_inicio: fechaInicio,
+        fecha_fin: fechaFin,
+      };
+
+      const res = await crearDieta(body);
+      if (!res.ok) {
+        setErrorMessage(
+          res.data?.error || res.data?.message || "No se pudo generar la dieta."
+        );
+        return;
+      }
+
+      setMessage("Dieta generada correctamente.");
+      if (res.data && onSuccess) {
+        onSuccess(res.data as Dieta);
+      }
+    } catch (error) {
+      console.error("Error al generar dieta:", error);
+      setErrorMessage("Ocurrió un error al generar la dieta.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const socio = await getSocioByUsuarioId(user.id.toString());
-    if (!socio) {
-      setLoading(false);
-      return;
-    }
-
-    const body = {
-      socio_id: socio.id_socio.toString(),
-      objetivo,
-      fecha_inicio: fechaInicio,
-      fecha_fin: fechaFin,
-    };
-    const res = await crearDieta(body);
-    setResult(res);
-    setLoading(false);
   };
+
   return (
     <form
       onSubmit={handleSubmit}
       className="grid grid-cols-1 gap-4 md:grid-cols-2"
     >
+      {socioNombre && (
+        <div className="p-3 border rounded-md col-span-full bg-muted/40">
+          <p className="text-xs text-muted-foreground">Socio seleccionado</p>
+          <p className="text-sm font-semibold">{socioNombre}</p>
+        </div>
+      )}
+
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="objetivo">Objetivo nutricional</Label>
         <select
@@ -105,16 +149,18 @@ export default function DietaForm() {
         className="col-span-full justify-self-end"
         disabled={loading}
       >
-        {loading ? "Generando..." : "Generar dieta"}
+        {loading ? "Generando..." : submitLabel}
       </Button>
-      {result && (
-        <div className="mt-6 col-span-full">
-          <div className="flex items-center justify-between mb-2">
-            <span className="font-semibold">Respuesta</span>
-          </div>
-          <pre className="p-4 overflow-x-auto text-xs rounded bg-muted max-h-64">
-            {JSON.stringify(result, null, 2)}
-          </pre>
+
+      {message && (
+        <div className="p-3 text-sm text-green-700 border border-green-200 rounded-md col-span-full bg-green-50">
+          {message}
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="p-3 text-sm text-red-700 border border-red-200 rounded-md col-span-full bg-red-50">
+          {errorMessage}
         </div>
       )}
     </form>
