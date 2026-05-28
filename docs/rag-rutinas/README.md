@@ -11,6 +11,7 @@ Esta carpeta documenta la preparación del dataset/corpus inicial, la base de co
 | `rag-rutinas-validation-rules.md` | Reglas de validación deportiva/técnica. |
 | `rag-rutinas-assistant-bridge.md` | Puente inicial entre Gym Master y el futuro microservicio `gym-master-rag-coach`. |
 | `rag-rutinas-voice-input.md` | Entrada por voz para que el socio pueda dictar texto en el asistente. |
+| `rag-rutinas-conversational-flow.md` | Evolución del asistente hacia un flujo conversacional con ayuda y resumen previo. |
 | `knowledge-base/README.md` | Base de conocimiento funcional del coach de rutinas. |
 | `prompts/prompt-maestro-rutina-dieta-json.md` | Prompt principal para generar rutina, dieta y JSON. |
 | `prompts/prompt-generacion-pdf-rutina.md` | Prompt para PDF de rutina. |
