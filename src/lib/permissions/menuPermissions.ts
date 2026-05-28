@@ -143,6 +143,13 @@ export const MENU_PERMISSION_GROUPS: Array<{
         roles: ['admin'],
       },
       {
+        key: 'Gestión Evolución Física',
+        label: 'Gestión Evolución Física',
+        path: '/dashboard/gestor-evolucion-fisica',
+        group: 'Administración',
+        roles: ['admin'],
+      },
+      {
         key: 'Pagos',
         label: 'Pagos',
         path: '/dashboard/pagos',
