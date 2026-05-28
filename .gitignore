@@ -30,9 +30,11 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-
-.env.local
+# env files
+.env
+.env.*
+!.env.example
+*.local
 
 # vercel
 .vercel
@@ -41,3 +43,62 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# ------------------------------------------------------------
+# Private DB / SQL / backup artifacts
+# ------------------------------------------------------------
+# The public application repository must not version operational SQL,
+# dumps, backups, private migrations, private seeds or production DB scripts.
+# Keep executable DB assets in a private repository or local ignored folder.
+
+# Generic SQL and DB backup artifacts
+*.sql
+*.sql.gz
+*.sql.zip
+*.dump
+*.backup
+*.bak
+*.pgdump
+*.psql
+*.sqlite
+*.sqlite3
+*.db
+
+# Common backup/export folders
+/backups/
+/backup/
+/dumps/
+/dump/
+/exports/
+/logs/
+
+# Project DB folders that must stay private in the public repo
+/database/scripts/
+/database/migrations/
+/database/pending_migrations/
+/database/private/
+/database/local/
+/database/remote/
+/database/backups/
+/database/dumps/
+/database/seeds/
+/database/tmp/
+
+# Supabase runtime/private DB artifacts
+/supabase/.branches/
+/supabase/.temp/
+/supabase/.shadow/
+/supabase/.data/
+/supabase/db/
+/supabase/seed.sql
+/supabase/seeds/
+/supabase/snippets/
+/supabase/migrations/
+
+# Secret-like generated files
+*secret*
+*token*
+*password*
+*service-role*
+*service_role*
+*anon-key*
+*anon_key*
