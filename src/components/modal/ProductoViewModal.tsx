@@ -7,15 +7,22 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Producto } from "@/interfaces/producto.interface";
+import {
+  formatCurrencyARS,
+  getProductoStockEstadoLabel,
+  getProductoStockMinimo,
+} from "@/lib/comercial/productos";
 
 export default function ProductoViewModal({
   open,
   onClose,
   producto,
+  getProveedorNombre,
 }: {
   open: boolean;
   onClose: () => void;
   producto?: Producto | null;
+  getProveedorNombre?: (proveedorId?: string | null) => string;
 }) {
   if (!producto) return null;
 
@@ -24,7 +31,7 @@ export default function ProductoViewModal({
       <DialogContent className="!max-w-[90vw] sm:!max-w-[800px] !w-full bg-background text-foreground">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-foreground">
-            Detalle Producto
+            Detalle de producto
           </DialogTitle>
           <div className="text-sm text-right text-muted-foreground">
             {new Date().toLocaleString()}
@@ -45,23 +52,41 @@ export default function ProductoViewModal({
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Precio</label>
+              <label className="text-sm font-medium">Precio de venta</label>
               <div className="p-2 border rounded-md bg-muted text-foreground">
-                {producto.precio}
+                {formatCurrencyARS(producto.precio)}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Categoría</label>
+              <div className="p-2 border rounded-md bg-muted text-foreground">
+                {producto.id_categoria_producto || "Sin categoría"}
               </div>
             </div>
           </div>
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Stock</label>
+              <label className="text-sm font-medium">Stock actual</label>
               <div className="p-2 border rounded-md bg-muted text-foreground">
                 {producto.stock}
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Proveedor ID</label>
+              <label className="text-sm font-medium">Stock mínimo operativo</label>
               <div className="p-2 border rounded-md bg-muted text-foreground">
-                {producto.proveedor_id || "-"}
+                {getProductoStockMinimo(producto)}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Estado comercial</label>
+              <div className="p-2 border rounded-md bg-muted text-foreground">
+                {getProductoStockEstadoLabel(producto)}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Proveedor</label>
+              <div className="p-2 border rounded-md bg-muted text-foreground">
+                {getProveedorNombre?.(producto.proveedor_id) ?? producto.proveedor_id ?? "Sin proveedor asignado"}
               </div>
             </div>
           </div>
