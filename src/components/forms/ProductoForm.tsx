@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { createProducto, updateProducto } from "@/services/productoService";
+import { getAllProveedores } from "@/services/proveedorService";
 import { CatalogoParametrizableItem } from "@/interfaces/parametrizacion.interface";
+import { Proveedor } from "@/interfaces/proveedor.interface";
 import { useCatalogoParametrizable } from "@/hooks/useCatalogosParametrizables";
 import { toast } from "sonner";
 
@@ -48,10 +50,24 @@ export default function ProductoForm({
 }: ProductoFormProps) {
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
+  const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const { items: categoriasProducto } = useCatalogoParametrizable(
     "categoria_producto",
     fallbackCategoriasProducto
   );
+
+  useEffect(() => {
+    async function loadProveedores() {
+      try {
+        const data = await getAllProveedores();
+        setProveedores(data ?? []);
+      } catch {
+        setProveedores([]);
+      }
+    }
+
+    loadProveedores();
+  }, []);
 
   useEffect(() => {
     if (producto) {
@@ -84,6 +100,8 @@ export default function ProductoForm({
     try {
       const payload = {
         ...form,
+        precio: Math.max(Number(form.precio), 0),
+        stock: Math.max(Number(form.stock), 0),
         id_categoria_producto: form.id_categoria_producto || null,
       };
 
@@ -97,7 +115,7 @@ export default function ProductoForm({
       setForm(emptyForm);
       onCreated();
     } catch (error: any) {
-      let msg = error.message || "Error al guardar producto";
+      const msg = error.message || "Error al guardar producto";
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -110,22 +128,22 @@ export default function ProductoForm({
       className="grid grid-cols-1 gap-4 md:grid-cols-2"
     >
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="nombre">Nombre</Label>
+        <Label htmlFor="nombre">Nombre comercial</Label>
         <Input
           id="nombre"
           name="nombre"
-          placeholder="Ingrese nombre"
+          placeholder="Ej: Proteína Whey 1 kg"
           value={form.nombre}
           onChange={handleChange}
           required
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="descripcion">Descripción</Label>
+        <Label htmlFor="descripcion">Descripción / presentación</Label>
         <Input
           id="descripcion"
           name="descripcion"
-          placeholder="Ingrese descripción"
+          placeholder="Ej: vainilla, 1 kg, frasco"
           value={form.descripcion}
           onChange={handleChange}
           required
@@ -149,11 +167,41 @@ export default function ProductoForm({
         </select>
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="precio">Precio</Label>
+        <Label htmlFor="proveedor_id">Proveedor</Label>
+        {proveedores.length > 0 ? (
+          <select
+            id="proveedor_id"
+            name="proveedor_id"
+            value={form.proveedor_id}
+            onChange={handleChange}
+            className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+            required
+          >
+            <option value="">Seleccionar proveedor</option>
+            {proveedores.map((proveedor) => (
+              <option key={proveedor.id} value={proveedor.id}>
+                {proveedor.nombre}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <Input
+            id="proveedor_id"
+            name="proveedor_id"
+            placeholder="ID del proveedor"
+            value={form.proveedor_id}
+            onChange={handleChange}
+            required
+          />
+        )}
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="precio">Precio de venta</Label>
         <Input
           id="precio"
           name="precio"
           type="number"
+          min={0}
           placeholder="Ingrese precio"
           value={form.precio}
           onChange={handleChange}
@@ -161,27 +209,20 @@ export default function ProductoForm({
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="stock">Stock</Label>
+        <Label htmlFor="stock">Stock actual</Label>
         <Input
           id="stock"
           name="stock"
           type="number"
+          min={0}
           placeholder="Ingrese stock"
           value={form.stock}
           onChange={handleChange}
           required
         />
       </div>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="proveedor_id">Proveedor ID</Label>
-        <Input
-          id="proveedor_id"
-          name="proveedor_id"
-          placeholder="Ingrese proveedor ID"
-          value={form.proveedor_id}
-          onChange={handleChange}
-          required
-        />
+      <div className="col-span-full rounded-lg border bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground">
+        En esta etapa el stock mínimo operativo se calcula con el valor base 5. La parametrización por producto quedará disponible cuando se aplique la evolución privada de base de datos.
       </div>
       <Button
         type="submit"

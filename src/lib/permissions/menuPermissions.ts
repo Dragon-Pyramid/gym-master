@@ -157,6 +157,13 @@ export const MENU_PERMISSION_GROUPS: Array<{
         roles: ['admin', 'usuario'],
       },
       {
+        key: 'Comercial / Kiosco',
+        label: 'Comercial / Kiosco',
+        path: '/dashboard/comercial',
+        group: 'Administración',
+        roles: ['admin', 'usuario'],
+      },
+      {
         key: 'Ventas',
         label: 'Ventas',
         path: '/dashboard/ventas',

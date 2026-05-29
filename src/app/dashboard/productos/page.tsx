@@ -1,31 +1,44 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuthStore } from "@/stores/authStore";
 import { AppHeader } from "@/components/header/AppHeader";
 import { AppFooter } from "@/components/footer/AppFooter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Printer, FileSpreadsheet } from "lucide-react";
+import { AlertTriangle, FileSpreadsheet, Package, Search, Store } from "lucide-react";
 import { getAllProductos, deleteProducto } from "@/services/productoService";
+import { getAllProveedores } from "@/services/proveedorService";
 import ProductoModal from "@/components/modal/ProductoModal";
 import ProductoViewModal from "@/components/modal/ProductoViewModal";
 import ProductoTable from "@/components/tables/ProductoTable";
 import { Producto } from "@/interfaces/producto.interface";
+import { Proveedor } from "@/interfaces/proveedor.interface";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 import ExcelJS from "exceljs";
+import {
+  calcularValorInventario,
+  formatCurrencyARS,
+  getProductoStockEstado,
+  isProductoStockCritico,
+} from "@/lib/comercial/productos";
+
+type StockFilter = "todos" | "activos" | "critico" | "sin_stock" | "inactivos";
 
 export default function ProductoPage() {
-  const { user, isAuthenticated, initializeAuth, isInitialized } =
+  const { isAuthenticated, initializeAuth, isInitialized } =
     useAuthStore();
   const router = useRouter();
   const [productos, setProductos] = useState<Producto[]>([]);
+  const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const [filteredProductos, setFilteredProductos] = useState<Producto[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [stockFilter, setStockFilter] = useState<StockFilter>("todos");
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [selectedProducto, setSelectedProducto] = useState<Producto | null>(
@@ -46,15 +59,43 @@ export default function ProductoPage() {
 
   const loadProductos = async () => {
     setLoading(true);
-    const data = await getAllProductos();
-    setProductos(data ?? []);
-    setFilteredProductos(data ?? []);
-    setLoading(false);
+    try {
+      const [productosData, proveedoresData] = await Promise.all([
+        getAllProductos(),
+        getAllProveedores().catch(() => [] as Proveedor[]),
+      ]);
+
+      setProductos(productosData ?? []);
+      setProveedores(proveedoresData ?? []);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handlePrint = () => {
-    window.print();
+  const proveedorById = useMemo(() => {
+    return new Map(proveedores.map((proveedor) => [proveedor.id, proveedor]));
+  }, [proveedores]);
+
+  const getProveedorNombre = (proveedorId?: string | null) => {
+    if (!proveedorId) return "Sin proveedor asignado";
+
+    const proveedor = proveedorById.get(proveedorId);
+    return proveedor?.nombre || "Proveedor no encontrado";
   };
+
+  const metrics = useMemo(() => {
+    const activos = productos.filter((p) => p.activo !== false);
+    const criticos = activos.filter(isProductoStockCritico);
+    const sinStock = activos.filter((p) => getProductoStockEstado(p) === "sin_stock");
+
+    return {
+      activos: activos.length,
+      inactivos: productos.length - activos.length,
+      criticos: criticos.length,
+      sinStock: sinStock.length,
+      valorInventario: calcularValorInventario(activos),
+    };
+  }, [productos]);
 
   const handleExportExcel = async () => {
     const workbook = new ExcelJS.Workbook();
@@ -65,7 +106,8 @@ export default function ProductoPage() {
       { header: "Descripción", key: "descripcion", width: 30 },
       { header: "Precio", key: "precio", width: 15 },
       { header: "Stock", key: "stock", width: 10 },
-      { header: "Proveedor ID", key: "proveedor_id", width: 20 },
+      { header: "Proveedor", key: "proveedor", width: 30 },
+      { header: "Activo", key: "activo", width: 12 },
     ];
 
     filteredProductos.forEach((p) => {
@@ -74,7 +116,8 @@ export default function ProductoPage() {
         descripcion: p.descripcion,
         precio: p.precio,
         stock: p.stock,
-        proveedor_id: p.proveedor_id,
+        proveedor: getProveedorNombre(p.proveedor_id),
+        activo: p.activo === false ? "No" : "Sí",
       });
     });
 
@@ -97,21 +140,27 @@ export default function ProductoPage() {
   }, [isInitialized, isAuthenticated]);
 
   useEffect(() => {
-    if (searchTerm.trim() === "") {
-      setFilteredProductos(productos);
-      return;
-    }
+    const lowercaseSearch = searchTerm.toLowerCase().trim();
 
-    const lowercaseSearch = searchTerm.toLowerCase();
-    const filtered = productos.filter(
-      (p) =>
+    const filtered = productos.filter((p) => {
+      const matchesSearch =
+        lowercaseSearch.length === 0 ||
         p.nombre.toLowerCase().includes(lowercaseSearch) ||
-        p.descripcion.toLowerCase().includes(lowercaseSearch) ||
-        p.proveedor_id?.toLowerCase().includes(lowercaseSearch)
-    );
+        (p.descripcion ?? "").toLowerCase().includes(lowercaseSearch) ||
+        getProveedorNombre(p.proveedor_id).toLowerCase().includes(lowercaseSearch);
+
+      if (!matchesSearch) return false;
+
+      if (stockFilter === "activos") return p.activo !== false;
+      if (stockFilter === "inactivos") return p.activo === false;
+      if (stockFilter === "critico") return p.activo !== false && isProductoStockCritico(p);
+      if (stockFilter === "sin_stock") return p.activo !== false && getProductoStockEstado(p) === "sin_stock";
+
+      return true;
+    });
 
     setFilteredProductos(filtered);
-  }, [searchTerm, productos]);
+  }, [searchTerm, stockFilter, productos, proveedorById]);
 
   if (!isInitialized) {
     return <div>Cargando...</div>;
@@ -128,28 +177,67 @@ export default function ProductoPage() {
         <SidebarInset>
           <AppHeader title="Productos" />
           <main className="flex-1 p-6 space-y-6">
+            <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
+              <Card>
+                <CardContent className="p-5">
+                  <p className="text-sm text-muted-foreground">Productos activos</p>
+                  <p className="text-2xl font-bold">{metrics.activos}</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-5">
+                  <p className="text-sm text-muted-foreground">Stock crítico</p>
+                  <p className="text-2xl font-bold text-amber-700">{metrics.criticos}</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-5">
+                  <p className="text-sm text-muted-foreground">Sin stock</p>
+                  <p className="text-2xl font-bold text-red-700">{metrics.sinStock}</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-5">
+                  <p className="text-sm text-muted-foreground">Inventario estimado</p>
+                  <p className="text-2xl font-bold">{formatCurrencyARS(metrics.valorInventario)}</p>
+                </CardContent>
+              </Card>
+            </section>
+
+            {metrics.criticos > 0 && (
+              <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                <AlertTriangle className="h-5 w-5 shrink-0" />
+                <p>
+                  Hay productos con stock crítico. Revisá reposición para evitar quiebres de stock en ventas del kiosco.
+                </p>
+              </div>
+            )}
+
             <Card className="w-full">
               <CardHeader className="flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap">
-                <h2 className="text-xl font-bold">Listado de Productos</h2>
+                <div className="space-y-1">
+                  <h2 className="text-xl font-bold">Productos del kiosco</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Control operativo de productos, stock y estado comercial.
+                  </p>
+                </div>
                 <div className="flex flex-wrap items-center w-full gap-2 md:w-auto">
+                  <Button asChild variant="outline" className="flex items-center gap-2">
+                    <Link href="/dashboard/comercial">
+                      <Store className="w-4 h-4" />
+                      <span className="hidden sm:inline">Comercial</span>
+                    </Link>
+                  </Button>
                   <div className="relative flex-grow md:flex-grow-0">
                     <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                       type="search"
-                      placeholder="Buscar por nombre, descripción, proveedor..."
+                      placeholder="Buscar producto, descripción o proveedor..."
                       className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] w-full"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
                   </div>
-                  <Button
-                    onClick={handlePrint}
-                    variant="outline"
-                    className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
-                  >
-                    <Printer className="w-4 h-4" />
-                    <span className="hidden sm:inline">Imprimir</span>
-                  </Button>
                   <Button
                     variant="outline"
                     onClick={handleExportExcel}
@@ -162,12 +250,32 @@ export default function ProductoPage() {
                     onClick={() => setOpenModal(true)}
                     className="bg-[#02a8e1] hover:bg-[#0288b1]"
                   >
+                    <Package className="w-4 h-4" />
                     <span className="hidden sm:inline">Añadir Producto</span>
                     <span className="sm:hidden">Añadir</span>
                   </Button>
                 </div>
               </CardHeader>
               <CardContent className="p-4 space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    ["todos", "Todos"],
+                    ["activos", "Activos"],
+                    ["critico", "Stock crítico"],
+                    ["sin_stock", "Sin stock"],
+                    ["inactivos", "Inactivos / discontinuados"],
+                  ].map(([value, label]) => (
+                    <Button
+                      key={value}
+                      type="button"
+                      size="sm"
+                      variant={stockFilter === value ? "default" : "outline"}
+                      onClick={() => setStockFilter(value as StockFilter)}
+                    >
+                      {label}
+                    </Button>
+                  ))}
+                </div>
                 <div className="overflow-x-auto">
                   <ProductoTable
                     productos={filteredProductos}
@@ -180,18 +288,19 @@ export default function ProductoPage() {
                       setProductoVer(producto as Producto);
                       setOpenModalVer(true);
                     }}
+                    getProveedorNombre={getProveedorNombre}
                     onDelete={async (producto) => {
                       const confirmar = window.confirm(
-                        "¿Está seguro de eliminar el producto?"
+                        "¿Querés desactivar este producto? No se borra el histórico."
                       );
                       if (!confirmar) return;
 
                       try {
                         await deleteProducto(producto.id);
-                        toast.success("Producto eliminado correctamente");
+                        toast.success("Producto desactivado correctamente");
                         await loadProductos();
                       } catch (err) {
-                        toast.error("Error al eliminar producto");
+                        toast.error("Error al desactivar producto");
                       }
                     }}
                   />
@@ -220,6 +329,7 @@ export default function ProductoPage() {
           setProductoVer(null);
         }}
         producto={productoVer}
+        getProveedorNombre={getProveedorNombre}
       />
     </SidebarProvider>
   );
