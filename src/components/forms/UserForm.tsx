@@ -1,5 +1,6 @@
 'use client';
 
+import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -168,6 +169,7 @@ export default function UserForm({
       onSubmit={handleSubmit}
       className='grid grid-cols-1 gap-4 md:grid-cols-2'
     >
+      <QaFileNameBadge file="src/components/forms/UserForm.tsx" />
       <div className='flex flex-col gap-1.5'>
         <Label htmlFor='nombre'>Nombre</Label>
         <Input

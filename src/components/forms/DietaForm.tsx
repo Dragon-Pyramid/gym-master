@@ -1,5 +1,6 @@
 "use client";
 
+import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -97,6 +98,7 @@ export default function DietaForm({
       onSubmit={handleSubmit}
       className="grid grid-cols-1 gap-4 md:grid-cols-2"
     >
+      <QaFileNameBadge file="src/components/forms/DietaForm.tsx" />
       {socioNombre && (
         <div className="p-3 border rounded-md col-span-full bg-muted/40">
           <p className="text-xs text-muted-foreground">Socio seleccionado</p>

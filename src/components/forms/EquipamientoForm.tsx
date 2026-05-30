@@ -1,5 +1,6 @@
 "use client";
 
+import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
 import { useState } from "react";
 import {
   createEquipamiento,
@@ -180,6 +181,7 @@ export default function EquipamientoForm({
       onSubmit={handleSubmit}
       className="grid grid-cols-1 gap-4 md:grid-cols-2"
     >
+      <QaFileNameBadge file="src/components/forms/EquipamientoForm.tsx" />
       <div className="flex flex-col gap-1.5">
         <Input
           className="bg-background text-foreground border-border placeholder:text-muted-foreground"

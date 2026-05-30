@@ -1,5 +1,6 @@
 "use client";
 
+import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
 import {
   Dialog,
   DialogContent,
@@ -179,6 +180,7 @@ export default function DietasViewModal({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[95vh] flex flex-col p-3 sm:p-4 md:p-6">
+        <QaFileNameBadge file="src/components/modal/DietasViewModal.tsx" />
         <div className="flex justify-end mb-2">
           <Button
             variant="outline"

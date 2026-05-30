@@ -1,4 +1,5 @@
 "use client";
+import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
 import {
   Dialog,
   DialogContent,
@@ -86,6 +87,7 @@ function EjerciciosModal({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="w-full max-w-lg bg-background text-foreground">
+        <QaFileNameBadge file="src/components/modal/RutinaModalView.tsx" />
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold text-foreground">
             Ejercicios por día

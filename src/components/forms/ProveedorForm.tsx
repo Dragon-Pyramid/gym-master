@@ -1,5 +1,6 @@
 "use client";
 
+import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -120,6 +121,7 @@ export default function ProveedorForm({
       onSubmit={handleSubmit}
       className="grid grid-cols-1 gap-4 md:grid-cols-2"
     >
+      <QaFileNameBadge file="src/components/forms/ProveedorForm.tsx" />
       <div className="col-span-full rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
         El nombre comercial queda como dato principal visible en productos, ventas y reportes. Los datos fiscales, ubicación y banco son opcionales, pero recomendados para compras, reposición y trazabilidad.
       </div>

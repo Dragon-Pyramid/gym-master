@@ -1,5 +1,6 @@
 "use client";
 
+import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -124,6 +125,7 @@ export default function RutinasForm({
       onSubmit={handleSubmit}
       className="grid grid-cols-1 gap-4 md:grid-cols-2"
     >
+      <QaFileNameBadge file="src/components/forms/RutinasForm.tsx" />
       {targetSocioName && (
         <div className="col-span-full rounded-lg border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
           Generando rutina para:{" "}

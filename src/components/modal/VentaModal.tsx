@@ -1,5 +1,6 @@
 "use client";
 
+import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +24,7 @@ export default function VentaModal({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-h-[90vh] w-full max-w-6xl overflow-y-auto sm:max-w-5xl">
+        <QaFileNameBadge file="src/components/modal/VentaModal.tsx" />
         <DialogHeader>
           <div className="flex gap-4 justify-between items-center w-full">
             <DialogTitle>{venta ? "Editar Venta" : "Nueva Venta de Kiosco"}</DialogTitle>

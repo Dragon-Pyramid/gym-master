@@ -1,5 +1,6 @@
 "use client";
 
+import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
 import React, { useEffect, useState } from "react";
 import {
   Dialog,
@@ -43,6 +44,7 @@ export default function EquipamientoViewModal({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="!max-w-[90vw] sm:!max-w-[800px] !w-full !max-h-[85vh] flex flex-col">
+        <QaFileNameBadge file="src/components/modal/EquipamientoViewModal.tsx" />
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="text-xl font-semibold">
             Detalles de Equipamiento

@@ -1,5 +1,6 @@
 "use client";
 
+import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +24,7 @@ export default function EntrenadorModal({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="w-full max-w-5xl sm:max-w-4xl">
+        <QaFileNameBadge file="src/components/modal/EntrenadorModal.tsx" />
         <DialogHeader>
           <div className="flex gap-4 justify-between items-center w-full">
             <DialogTitle>

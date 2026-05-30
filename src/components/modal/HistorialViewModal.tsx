@@ -1,4 +1,5 @@
 'use client';
+import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
 import React from 'react';
 
 type HistItem = {
@@ -79,6 +80,7 @@ export default function HistorialViewModal({
     <div className='fixed inset-0 z-50 flex items-center justify-center p-4'>
       <div className='absolute inset-0 backdrop-blur-sm' onClick={onClose} />
       <div className='relative w-full max-w-3xl p-4 rounded-lg shadow-lg page-bg'>
+        <QaFileNameBadge file="src/components/modal/HistorialViewModal.tsx" />
         <div className='relative p-6 rounded-lg panel'>
           <div className='flex items-start justify-between gap-4'>
             <div>

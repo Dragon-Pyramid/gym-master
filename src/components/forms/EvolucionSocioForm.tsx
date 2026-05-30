@@ -1,5 +1,6 @@
 "use client";
 
+import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -166,6 +167,7 @@ export default function EvolucionSocioForm({
 
   return (
     <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <QaFileNameBadge file="src/components/forms/EvolucionSocioForm.tsx" />
       <SectionTitle>Datos principales</SectionTitle>
 
       <div className="flex flex-col gap-1.5">

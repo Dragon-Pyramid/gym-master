@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Toaster } from 'sonner';
 import { SessionWrapper } from '@/components/SessionWrapper';
+import { QaCurrentPageBadge } from '@/components/qa/QaCurrentPageBadge';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -24,6 +25,7 @@ export default function RootLayout({
       <body className={`${inter.variable} font-sans antialiased`}>
         <SessionWrapper>
           {children}
+          <QaCurrentPageBadge />
           <Toaster position='top-right' richColors />
         </SessionWrapper>
       </body>

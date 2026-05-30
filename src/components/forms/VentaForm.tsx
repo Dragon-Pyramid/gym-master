@@ -1,5 +1,6 @@
 'use client';
 
+import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
 import { useEffect, useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -291,6 +292,7 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className='space-y-5'>
+      <QaFileNameBadge file="src/components/forms/VentaForm.tsx" />
       <section className='grid grid-cols-1 gap-4 md:grid-cols-3'>
         <div className='flex flex-col gap-1.5'>
           <Label htmlFor='cliente_tipo'>Tipo de cliente</Label>
