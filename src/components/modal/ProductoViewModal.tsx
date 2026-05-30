@@ -18,11 +18,13 @@ export default function ProductoViewModal({
   onClose,
   producto,
   getProveedorNombre,
+  getCategoriaNombre,
 }: {
   open: boolean;
   onClose: () => void;
   producto?: Producto | null;
   getProveedorNombre?: (proveedorId?: string | null) => string;
+  getCategoriaNombre?: (categoriaId?: string | null) => string;
 }) {
   if (!producto) return null;
 
@@ -60,7 +62,7 @@ export default function ProductoViewModal({
             <div className="space-y-2">
               <label className="text-sm font-medium">Categoría</label>
               <div className="p-2 border rounded-md bg-muted text-foreground">
-                {producto.id_categoria_producto || "Sin categoría"}
+                {getCategoriaNombre?.(producto.id_categoria_producto) ?? producto.id_categoria_producto ?? "Sin categoría"}
               </div>
             </div>
           </div>

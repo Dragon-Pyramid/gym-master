@@ -198,12 +198,21 @@ export default function ProductoForm({
             className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
             required
           >
-            <option value="">Seleccionar proveedor</option>
-            {proveedores.map((proveedor) => (
-              <option key={proveedor.id} value={proveedor.id}>
-                {proveedor.nombre}
-              </option>
-            ))}
+            <option value="">Seleccionar proveedor activo</option>
+            {proveedores
+              .filter(
+                (proveedor) =>
+                  (proveedor.estado ?? "activo") === "activo" ||
+                  proveedor.id === producto?.proveedor_id
+              )
+              .map((proveedor) => (
+                <option key={proveedor.id} value={proveedor.id}>
+                  {proveedor.nombre}
+                  {(proveedor.estado ?? "activo") !== "activo"
+                    ? ` (${proveedor.estado})`
+                    : ""}
+                </option>
+              ))}
           </select>
         ) : (
           <Input

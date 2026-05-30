@@ -9,7 +9,7 @@ import { AppFooter } from "@/components/footer/AppFooter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AlertTriangle, FileSpreadsheet, Package, Search, Store } from "lucide-react";
+import { AlertTriangle, FileSpreadsheet, FileText, Package, Search, Store } from "lucide-react";
 import { getAllProductos, deleteProducto } from "@/services/productoService";
 import { getAllProveedores } from "@/services/proveedorService";
 import ProductoModal from "@/components/modal/ProductoModal";
@@ -17,10 +17,13 @@ import ProductoViewModal from "@/components/modal/ProductoViewModal";
 import ProductoTable from "@/components/tables/ProductoTable";
 import { Producto } from "@/interfaces/producto.interface";
 import { Proveedor } from "@/interfaces/proveedor.interface";
+import { CatalogoParametrizableItem } from "@/interfaces/parametrizacion.interface";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 import ExcelJS from "exceljs";
+import { useCatalogoParametrizable } from "@/hooks/useCatalogosParametrizables";
+import { downloadCommercialReportPdf } from "@/utils/commercialReportPdf";
 import {
   calcularValorInventario,
   formatCurrencyARS,
@@ -29,6 +32,17 @@ import {
 } from "@/lib/comercial/productos";
 
 type StockFilter = "todos" | "activos" | "critico" | "sin_stock" | "inactivos";
+
+const fallbackCategoriasProducto: CatalogoParametrizableItem[] = [
+  {
+    id: "fallback-otros",
+    codigo: "otros",
+    nombre: "Otros",
+    descripcion: "Productos no clasificados.",
+    activo: true,
+    orden: 90,
+  },
+];
 
 export default function ProductoPage() {
   const { isAuthenticated, initializeAuth, isInitialized } =
@@ -46,6 +60,10 @@ export default function ProductoPage() {
   );
   const [openModalVer, setOpenModalVer] = useState(false);
   const [productoVer, setProductoVer] = useState<Producto | null>(null);
+  const { items: categoriasProducto } = useCatalogoParametrizable(
+    "categoria_producto",
+    fallbackCategoriasProducto
+  );
 
   useEffect(() => {
     initializeAuth();
@@ -81,6 +99,17 @@ export default function ProductoPage() {
 
     const proveedor = proveedorById.get(proveedorId);
     return proveedor?.nombre || "Proveedor no encontrado";
+  };
+
+  const categoriaById = useMemo(() => {
+    return new Map(categoriasProducto.map((categoria) => [categoria.id, categoria]));
+  }, [categoriasProducto]);
+
+  const getCategoriaNombre = (categoriaId?: string | null) => {
+    if (!categoriaId) return "Sin categoría";
+
+    const categoria = categoriaById.get(categoriaId);
+    return categoria?.nombre || "Categoría no encontrada";
   };
 
   const metrics = useMemo(() => {
@@ -131,6 +160,37 @@ export default function ProductoPage() {
     a.download = "Listado_Productos.xlsx";
     a.click();
     window.URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadPdf = async () => {
+    try {
+      await downloadCommercialReportPdf({
+        title: "Listado de Productos",
+        subtitle: "Control operativo de productos, stock, proveedores y estado comercial.",
+        fileName: "listado-productos-gym-master",
+        rows: filteredProductos,
+        metrics: [
+          { label: "Productos activos", value: metrics.activos },
+          { label: "Stock crítico", value: metrics.criticos },
+          { label: "Sin stock", value: metrics.sinStock },
+          { label: "Inventario estimado", value: formatCurrencyARS(metrics.valorInventario) },
+        ],
+        filtersLabel: `Filtro: ${stockFilter.replace(/_/g, " ")}${searchTerm.trim() ? ` · Búsqueda: ${searchTerm.trim()}` : ""}`,
+        columns: [
+          { header: "Producto", width: 34, getValue: (p) => p.nombre },
+          { header: "Descripción", width: 38, getValue: (p) => p.descripcion || "-" },
+          { header: "Categoría", width: 28, getValue: (p) => getCategoriaNombre(p.id_categoria_producto) },
+          { header: "Proveedor", width: 34, getValue: (p) => getProveedorNombre(p.proveedor_id) },
+          { header: "Precio", width: 20, getValue: (p) => formatCurrencyARS(p.precio), align: "right" },
+          { header: "Stock", width: 15, getValue: (p) => p.stock, align: "right" },
+          { header: "Stock mínimo", width: 20, getValue: (p) => p.stock_minimo ?? 5, align: "right" },
+          { header: "Estado", width: 24, getValue: (p) => getProductoStockEstado(p).replace(/_/g, " ") },
+          { header: "Activo", width: 16, getValue: (p) => (p.activo === false ? "No" : "Sí") },
+        ],
+      });
+    } catch {
+      toast.error("No se pudo generar el PDF de productos");
+    }
   };
 
   useEffect(() => {
@@ -240,6 +300,14 @@ export default function ProductoPage() {
                   </div>
                   <Button
                     variant="outline"
+                    onClick={handleDownloadPdf}
+                    className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
+                  >
+                    <FileText className="w-4 h-4" />
+                    <span className="hidden sm:inline">Descargar PDF</span>
+                  </Button>
+                  <Button
+                    variant="outline"
                     onClick={handleExportExcel}
                     className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
                   >
@@ -330,6 +398,7 @@ export default function ProductoPage() {
         }}
         producto={productoVer}
         getProveedorNombre={getProveedorNombre}
+        getCategoriaNombre={getCategoriaNombre}
       />
     </SidebarProvider>
   );
