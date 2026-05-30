@@ -1,19 +1,67 @@
-"use client";
+'use client';
 
-import { Pencil } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Pencil } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
+  TableCaption,
   TableCell,
   TableFooter,
   TableHead,
   TableHeader,
   TableRow,
-  TableCaption,
-} from "@/components/ui/table";
-import { Venta } from "@/interfaces/venta.interface";
+} from '@/components/ui/table';
+import { Venta } from '@/interfaces/venta.interface';
+import { VentaDetalle } from '@/interfaces/venta_detalle.interface';
+import { formatCurrencyARS } from '@/lib/comercial/productos';
+
+function getVentaClienteLabel(venta: Venta) {
+  if (venta.socio?.nombre_completo) return venta.socio.nombre_completo;
+  if (venta.cliente_nombre) return venta.cliente_nombre;
+  if (venta.cliente_tipo === 'visitante') return 'Visitante';
+  return 'Consumidor Final';
+}
+
+function getVentaDetalles(venta: Venta): VentaDetalle[] {
+  return venta.venta_detalle ?? venta.detalles ?? [];
+}
+
+function getItemsResumen(venta: Venta) {
+  const detalles = getVentaDetalles(venta);
+
+  if (!detalles.length) return 'Sin detalle cargado';
+
+  const resumen = detalles
+    .slice(0, 2)
+    .map((detalle) => {
+      const nombre =
+        detalle.item_tipo === 'servicio'
+          ? detalle.servicio?.nombre ?? 'Servicio'
+          : detalle.producto?.nombre ?? 'Producto';
+      return `${detalle.cantidad} x ${nombre}`;
+    })
+    .join(', ');
+
+  return detalles.length > 2 ? `${resumen} +${detalles.length - 2}` : resumen;
+}
+
+function EstadoBadge({ venta }: { venta: Venta }) {
+  const estado = venta.estado ?? (venta.activo === false ? 'anulada' : 'pagada');
+  const className =
+    estado === 'anulada'
+      ? 'bg-red-100 text-red-700 border-red-200'
+      : estado === 'pendiente'
+      ? 'bg-amber-100 text-amber-800 border-amber-200'
+      : 'bg-emerald-100 text-emerald-700 border-emerald-200';
+
+  return (
+    <span className={`rounded-full border px-2 py-1 text-xs font-semibold ${className}`}>
+      {estado === 'anulada' ? 'Anulada' : estado === 'pendiente' ? 'Pendiente' : 'Pagada'}
+    </span>
+  );
+}
 
 export default function VentaTable({
   ventas,
@@ -30,9 +78,9 @@ export default function VentaTable({
 }) {
   if (loading) {
     return (
-      <div className="space-y-2">
+      <div className='space-y-2'>
         {[...Array(5)].map((_, i) => (
-          <Skeleton key={i} className="w-full rounded-md h-9" />
+          <Skeleton key={i} className='h-9 w-full rounded-md' />
         ))}
       </div>
     );
@@ -40,57 +88,65 @@ export default function VentaTable({
 
   if (ventas.length === 0 && !loading) {
     return (
-      <div className="py-10 text-center text-muted-foreground">
+      <div className='py-10 text-center text-muted-foreground'>
         No hay ventas registradas aún.
       </div>
     );
   }
 
   return (
-    <Table className="w-full overflow-hidden text-sm border rounded-md border-border">
+    <Table className='w-full overflow-hidden rounded-md border border-border text-sm'>
       <TableHeader>
-        <TableRow className="bg-muted/50 text-muted-foreground">
-          <TableHead>Socio</TableHead>
+        <TableRow className='bg-muted/50 text-muted-foreground'>
+          <TableHead>Cliente</TableHead>
+          <TableHead>Detalle</TableHead>
+          <TableHead>Método</TableHead>
           <TableHead>Total</TableHead>
           <TableHead>Fecha</TableHead>
+          <TableHead>Estado</TableHead>
           <TableHead>Acciones</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {ventas.map((v, i) => (
+        {ventas.map((venta) => (
           <TableRow
-            key={i}
-            className="odd:bg-muted/40 hover:bg-[#a8d9f9] transition-colors"
+            key={venta.id}
+            className='odd:bg-muted/40 transition-colors hover:bg-[#a8d9f9]'
           >
-            <TableCell className="font-medium">
-              {"socio" in v && v.socio && v.socio.nombre_completo
-                ? v.socio.nombre_completo
-                : v.socio_id}
+            <TableCell>
+              <div className='space-y-1'>
+                <p className='font-medium'>{getVentaClienteLabel(venta)}</p>
+                <p className='text-xs capitalize text-muted-foreground'>
+                  {(venta.cliente_tipo ?? 'consumidor_final').replace('_', ' ')}
+                  {venta.cliente_documento ? ` · ${venta.cliente_documento}` : ''}
+                </p>
+              </div>
             </TableCell>
-            <TableCell>${v.total}</TableCell>
-            <TableCell>{v.fecha}</TableCell>
-            <TableCell className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onView && onView(v)}
-              >
+            <TableCell className='max-w-[320px]'>
+              <p className='truncate'>{getItemsResumen(venta)}</p>
+            </TableCell>
+            <TableCell className='capitalize'>
+              {(venta.metodo_pago ?? 'efectivo').replace('_', ' ')}
+            </TableCell>
+            <TableCell className='font-semibold'>{formatCurrencyARS(venta.total)}</TableCell>
+            <TableCell>{venta.fecha}</TableCell>
+            <TableCell>
+              <EstadoBadge venta={venta} />
+            </TableCell>
+            <TableCell className='flex gap-2'>
+              <Button size='sm' variant='outline' onClick={() => onView && onView(venta)}>
                 Ver
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onEdit(v)}
-                title="Editar"
-              >
-                <Pencil className="w-4 h-4" />
+              <Button size='sm' variant='outline' onClick={() => onEdit(venta)} title='Editar'>
+                <Pencil className='h-4 w-4' />
               </Button>
               <Button
-                size="sm"
-                className="bg-red-500 hover:bg-red-600 text-white w-[100px]"
-                onClick={() => onDelete && onDelete(v)}
+                size='sm'
+                className='w-[100px] bg-red-500 text-white hover:bg-red-600'
+                onClick={() => onDelete && onDelete(venta)}
+                disabled={venta.activo === false || venta.estado === 'anulada'}
               >
-                Eliminar
+                Anular
               </Button>
             </TableCell>
           </TableRow>
@@ -98,8 +154,8 @@ export default function VentaTable({
       </TableBody>
       <TableFooter>
         <TableRow>
-          <TableCell colSpan={3}>Total de ventas</TableCell>
-          <TableCell className="text-right">{ventas.length}</TableCell>
+          <TableCell colSpan={6}>Total de ventas</TableCell>
+          <TableCell className='text-right'>{ventas.length}</TableCell>
         </TableRow>
       </TableFooter>
       <TableCaption>Listado de ventas registradas.</TableCaption>

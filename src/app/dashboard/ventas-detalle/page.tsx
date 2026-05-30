@@ -15,9 +15,8 @@ import {
 } from "@/services/ventaDetalleService";
 import VentaDetalleModal from "@/components/modal/VentaDetalleModal";
 import VentaDetalleViewModal from "@/components/modal/VentaDetalleViewModal";
-import VentaDetalleTable, {
-  VentaDetalle,
-} from "@/components/tables/VentaDetalleTable";
+import VentaDetalleTable from "@/components/tables/VentaDetalleTable";
+import { VentaDetalle } from "@/interfaces/venta_detalle.interface";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
@@ -66,7 +65,9 @@ export default function VentaDetallePage() {
 
     worksheet.columns = [
       { header: "Venta", key: "venta_id", width: 20 },
+      { header: "Tipo", key: "item_tipo", width: 14 },
       { header: "Producto", key: "producto_id", width: 20 },
+      { header: "Servicio", key: "servicio_id", width: 20 },
       { header: "Cantidad", key: "cantidad", width: 10 },
       { header: "Precio Unitario", key: "precio_unitario", width: 15 },
       { header: "Subtotal", key: "subtotal", width: 15 },
@@ -75,7 +76,9 @@ export default function VentaDetallePage() {
     filteredDetalles.forEach((d) => {
       worksheet.addRow({
         venta_id: d.venta_id,
-        producto_id: d.producto_id,
+        item_tipo: d.item_tipo,
+        producto_id: d.producto?.nombre ?? d.producto_id ?? "",
+        servicio_id: d.servicio?.nombre ?? d.servicio_id ?? "",
         cantidad: d.cantidad,
         precio_unitario: d.precio_unitario,
         subtotal: d.subtotal,
@@ -110,7 +113,10 @@ export default function VentaDetallePage() {
     const filtered = detalles.filter(
       (d) =>
         d.venta_id.toLowerCase().includes(lowercaseSearch) ||
-        d.producto_id.toLowerCase().includes(lowercaseSearch)
+        (d.producto_id ?? '').toLowerCase().includes(lowercaseSearch) ||
+        (d.servicio_id ?? '').toLowerCase().includes(lowercaseSearch) ||
+        (d.producto?.nombre ?? '').toLowerCase().includes(lowercaseSearch) ||
+        (d.servicio?.nombre ?? '').toLowerCase().includes(lowercaseSearch)
     );
 
     setFilteredDetalles(filtered);

@@ -38,8 +38,8 @@ const fallbackCategoriasProducto: CatalogoParametrizableItem[] = [
 const emptyForm = {
   nombre: "",
   descripcion: "",
-  precio: 0,
-  stock: 0,
+  precio: "",
+  stock: "",
   proveedor_id: "",
   id_categoria_producto: "",
 };
@@ -74,8 +74,8 @@ export default function ProductoForm({
       setForm({
         nombre: producto.nombre ?? "",
         descripcion: producto.descripcion ?? "",
-        precio: producto.precio ?? 0,
-        stock: producto.stock ?? 0,
+        precio: producto.precio != null ? String(Math.trunc(Number(producto.precio))) : "",
+        stock: producto.stock != null ? String(Math.trunc(Number(producto.stock))) : "",
         proveedor_id: producto.proveedor_id ?? "",
         id_categoria_producto: producto.id_categoria_producto ?? "",
       });
@@ -87,10 +87,20 @@ export default function ProductoForm({
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
-    const { name, value, type } = e.target;
+    const { name, value } = e.target;
+
+    if (name === "precio" || name === "stock") {
+      const normalized = value.replace(/\D/g, "").replace(/^0+(?=\d)/, "");
+      setForm((prev) => ({
+        ...prev,
+        [name]: normalized,
+      }));
+      return;
+    }
+
     setForm((prev) => ({
       ...prev,
-      [name]: type === "number" ? Number(value) : value,
+      [name]: value,
     }));
   };
 
@@ -98,10 +108,21 @@ export default function ProductoForm({
     e.preventDefault();
     setLoading(true);
     try {
+      const precio = Number(form.precio);
+      const stock = Number(form.stock);
+
+      if (!Number.isInteger(precio) || precio < 0) {
+        throw new Error("El precio debe ser un número entero en pesos argentinos");
+      }
+
+      if (!Number.isInteger(stock) || stock < 0) {
+        throw new Error("El stock debe ser un número entero mayor o igual a 0");
+      }
+
       const payload = {
         ...form,
-        precio: Math.max(Number(form.precio), 0),
-        stock: Math.max(Number(form.stock), 0),
+        precio,
+        stock,
         id_categoria_producto: form.id_categoria_producto || null,
       };
 
@@ -200,9 +221,10 @@ export default function ProductoForm({
         <Input
           id="precio"
           name="precio"
-          type="number"
-          min={0}
-          placeholder="Ingrese precio"
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          placeholder="Ej: 15000"
           value={form.precio}
           onChange={handleChange}
           required
@@ -213,16 +235,17 @@ export default function ProductoForm({
         <Input
           id="stock"
           name="stock"
-          type="number"
-          min={0}
-          placeholder="Ingrese stock"
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          placeholder="Ej: 25"
           value={form.stock}
           onChange={handleChange}
           required
         />
       </div>
       <div className="col-span-full rounded-lg border bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground">
-        En esta etapa el stock mínimo operativo se calcula con el valor base 5. La parametrización por producto quedará disponible cuando se aplique la evolución privada de base de datos.
+Los precios y el stock se cargan como enteros para evitar ceros iniciales, decimales accidentales o formatos incómodos. El stock mínimo operativo se calcula con valor base 5 hasta aplicar la evolución privada de base de datos.
       </div>
       <Button
         type="submit"

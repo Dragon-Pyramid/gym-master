@@ -22,10 +22,10 @@ export default function VentaModal({
 }) {
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-5xl sm:max-w-4xl">
+      <DialogContent className="max-h-[90vh] w-full max-w-6xl overflow-y-auto sm:max-w-5xl">
         <DialogHeader>
           <div className="flex gap-4 justify-between items-center w-full">
-            <DialogTitle>{venta ? "Editar Venta" : "Nueva Venta"}</DialogTitle>
+            <DialogTitle>{venta ? "Editar Venta" : "Nueva Venta de Kiosco"}</DialogTitle>
             <FechaHora />
           </div>
         </DialogHeader>

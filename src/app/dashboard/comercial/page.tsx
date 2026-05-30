@@ -160,7 +160,10 @@ export default function ComercialKioscoPage() {
   const metrics = useMemo(() => {
     const productosActivos = data.productos.filter((p) => p.activo !== false);
     const productosCriticos = productosActivos.filter(isProductoStockCritico);
-    const ventasTotal = data.ventas.reduce(
+    const ventasActivas = data.ventas.filter(
+      (venta) => venta.activo !== false && venta.estado !== 'anulada'
+    );
+    const ventasTotal = ventasActivas.reduce(
       (total, venta) => total + Number(venta.total ?? 0),
       0
     );
@@ -235,7 +238,7 @@ export default function ComercialKioscoPage() {
               <DashboardMetric
                 title='Ventas registradas'
                 value={loading ? '...' : formatCurrencyARS(metrics.ventasTotal)}
-                description='Total histórico leído desde ventas actuales.'
+                description='Total vendido sin ventas anuladas.'
                 icon={BarChart3}
               />
             </section>
