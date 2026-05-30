@@ -1,6 +1,8 @@
 import { createProducto, deleteProducto, getAllProductos, updateProducto } from "@/services/productoService";
 import { NextResponse } from "next/server";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const productos = await getAllProductos();
@@ -13,7 +15,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    if (!body.nombre || !body.descripcion || !body.precio || !body.stock || !body.proveedor_id) {
+    if (!body.nombre || body.precio === undefined || body.stock === undefined || !body.proveedor_id) {
       return NextResponse.json({ error: "Todos los campos son obligatorios" }, { status: 400 });
     }
     const producto = await createProducto(body);

@@ -2,7 +2,6 @@ import { authMiddleware } from '@/middlewares/auth.middleware';
 import { getVentaById } from '@/services/ventaService';
 import { NextRequest, NextResponse } from 'next/server';
 
-
 export const dynamic = 'force-dynamic';
 
 export async function GET(
@@ -17,10 +16,14 @@ export async function GET(
         { status: 401 }
       );
     }
+
     const { id } = await params;
     const venta = await getVentaById(user, id);
     return NextResponse.json({ data: venta }, { status: 200 });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message });
+    return NextResponse.json(
+      { error: error.message || 'Error al obtener la venta' },
+      { status: 500 }
+    );
   }
 }

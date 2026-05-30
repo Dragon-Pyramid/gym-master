@@ -1,6 +1,8 @@
 import { createServicio, deleteServicio, getAllServicios, updateServicio } from "@/services/servicioService";
 import { NextResponse } from "next/server";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const servicios = await getAllServicios();

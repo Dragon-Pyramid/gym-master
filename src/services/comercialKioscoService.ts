@@ -17,7 +17,11 @@ async function fetchApiData<T>(url: string): Promise<T[]> {
   }
 
   const payload = await res.json();
-  const data = Array.isArray(payload?.data) ? payload.data : [];
+  const data = Array.isArray(payload?.data)
+    ? payload.data
+    : Array.isArray(payload)
+    ? payload
+    : [];
   return data as T[];
 }
 

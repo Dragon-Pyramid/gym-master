@@ -1,10 +1,12 @@
 import { getAllProveedores, createProveedor, updateProveedor, deleteProveedor } from "@/services/proveedorService";
 import { NextResponse } from "next/server";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const proveedores = await getAllProveedores();
-    return NextResponse.json(proveedores, { status: 200 });
+    return NextResponse.json({ data: proveedores }, { status: 200 });
   } catch (error) {
     return NextResponse.json({ error: "Error al obtener los proveedores" }, { status: 500 });
   }
@@ -26,8 +28,6 @@ export async function POST(req: Request) {
 export async function PUT(req: Request) {
   try {
     const { id, updateData } = await req.json();
-    console.log(updateData);
-    
     if (!id || typeof id !== "string") {
       return NextResponse.json({ error: "ID inválido para actualizar" }, { status: 400 });
     }
