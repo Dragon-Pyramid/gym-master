@@ -1243,6 +1243,28 @@ const endpointDefinitions: EndpointDefinition[] = [
     "queryParams": [],
     "source": "src/app/api/productos/[id]/route.ts"
   },
+
+  {
+    "path": "/api/productos/historial-precios-costos",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Comercial / Kiosco",
+    "summary": "Historial de precios y costos de producto",
+    "description": "Devuelve el historial auditable de cambios de precio de venta y costo de compra de un producto. Requiere query param producto_id.",
+    "auth": false,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      500
+    ],
+    "queryParams": [
+      "producto_id"
+    ],
+    "source": "src/app/api/productos/historial-precios-costos/route.ts"
+  },
   {
     "path": "/api/productos",
     "methods": [
@@ -1253,7 +1275,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     ],
     "tag": "Comercial",
     "summary": "Operaciones de productos",
-    "description": "Consulta datos de productos. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: createProducto, deleteProducto, getAllProductos, updateProducto.",
+    "description": "Gestiona productos del kiosco/comercial, incluyendo costo, stock mínimo e historial de precio/costo cuando se modifica el valor comercial. Implementación relacionada: createProducto, deleteProducto, getAllProductos, updateProducto.",
     "auth": false,
     "admin": false,
     "notImplemented": false,
