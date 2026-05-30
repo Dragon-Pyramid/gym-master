@@ -20,6 +20,9 @@ import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { toast } from 'sonner';
 import ExcelJS from 'exceljs';
 import { formatCurrencyARS } from '@/lib/comercial/productos';
+import { PaginationControls } from '@/components/ui/PaginationControls';
+
+const VENTAS_PAGE_SIZE = 10;
 
 type VentaFilter = 'todas' | 'socio' | 'consumidor_final' | 'visitante' | 'anuladas';
 
@@ -52,6 +55,7 @@ export default function VentasPage() {
   const [filteredVentas, setFilteredVentas] = useState<ResponseVenta[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [ventaFilter, setVentaFilter] = useState<VentaFilter>('todas');
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [selectedVenta, setSelectedVenta] = useState<ResponseVenta | null>(null);
@@ -186,6 +190,24 @@ export default function VentasPage() {
     setFilteredVentas(filtered);
   }, [searchTerm, ventaFilter, ventas]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, ventaFilter]);
+
+  const totalVentas = filteredVentas.length;
+  const totalPages = Math.max(1, Math.ceil(totalVentas / VENTAS_PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedVentas = filteredVentas.slice(
+    (safeCurrentPage - 1) * VENTAS_PAGE_SIZE,
+    safeCurrentPage * VENTAS_PAGE_SIZE
+  );
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   if (!isInitialized) {
     return <div>Cargando...</div>;
   }
@@ -293,7 +315,7 @@ export default function VentasPage() {
                 </div>
                 <div className='overflow-x-auto'>
                   <VentaTable
-                    ventas={filteredVentas}
+                    ventas={paginatedVentas}
                     loading={loading}
                     onEdit={(venta) => {
                       setSelectedVenta(venta as ResponseVenta);
@@ -319,6 +341,13 @@ export default function VentasPage() {
                     }}
                   />
                 </div>
+                <PaginationControls
+                  currentPage={safeCurrentPage}
+                  totalItems={totalVentas}
+                  pageSize={VENTAS_PAGE_SIZE}
+                  onPageChange={setCurrentPage}
+                  itemLabel="ventas"
+                />
               </CardContent>
             </Card>
           </main>

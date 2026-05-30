@@ -95,27 +95,9 @@ export const MENU_PERMISSION_GROUPS: Array<{
         group: 'Gestión de gimnasio',
         roles: ['admin'],
       },
-      {
-        key: 'Rutinas',
-        label: 'Rutinas',
-        path: '/dashboard/rutinas',
-        group: 'Gestión de gimnasio',
-        roles: ['admin', 'usuario', 'socio'],
-      },
-      {
-        key: 'Media de Ejercicios',
-        label: 'Media de Ejercicios',
-        path: '/dashboard/rutinas/media',
-        group: 'Gestión de gimnasio',
-        roles: ['admin'],
-      },
-      {
-        key: 'Dietas',
-        label: 'Dietas',
-        path: '/dashboard/dietas',
-        group: 'Gestión de gimnasio',
-        roles: ['admin', 'usuario', 'socio'],
-      },
+      // Opciones legacy deshabilitadas del selector de permisos: Rutinas y Dietas.
+      // La operación actual se concentra en Gestión de Rutinas y Gestión de Dietas.
+
     ],
   },
   {
@@ -146,6 +128,13 @@ export const MENU_PERMISSION_GROUPS: Array<{
         key: 'Gestión Evolución Física',
         label: 'Gestión Evolución Física',
         path: '/dashboard/gestor-evolucion-fisica',
+        group: 'Administración',
+        roles: ['admin'],
+      },
+      {
+        key: 'Media de Ejercicios',
+        label: 'Media de Ejercicios',
+        path: '/dashboard/rutinas/media',
         group: 'Administración',
         roles: ['admin'],
       },

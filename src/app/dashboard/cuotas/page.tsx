@@ -8,7 +8,7 @@ import { AppFooter } from "@/components/footer/AppFooter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Printer, FileSpreadsheet } from "lucide-react";
+import { Search, FileText, FileSpreadsheet } from "lucide-react";
 import { getAllCuotas, deleteCuota } from "@/services/cuotaService";
 import CuotasModal from "@/components/modal/CuotasModal";
 import CuotasViewModal from "@/components/modal/CuotasViewModal";
@@ -24,6 +24,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { PaginationControls } from "@/components/ui/PaginationControls";
+import { downloadCommercialReportPdf } from "@/utils/commercialReportPdf";
+
+const CUOTAS_PAGE_SIZE = 10;
 
 export default function CuotasPage() {
   const { user, isAuthenticated, initializeAuth, isInitialized } =
@@ -32,6 +36,7 @@ export default function CuotasPage() {
   const [cuotas, setCuotas] = useState<Cuota[]>([]);
   const [filteredCuotas, setFilteredCuotas] = useState<Cuota[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [selectedCuota, setSelectedCuota] = useState<Cuota | null>(null);
@@ -60,8 +65,30 @@ export default function CuotasPage() {
     setLoading(false);
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownloadPdf = async () => {
+    try {
+      await downloadCommercialReportPdf({
+        title: "Listado de Cuotas",
+        subtitle: "Reporte de cuotas, períodos y estado vigente.",
+        fileName: "listado-cuotas-gym-master",
+        rows: filteredCuotas,
+        metrics: [
+          { label: "Cuotas filtradas", value: filteredCuotas.length },
+          { label: "Activas", value: filteredCuotas.filter((c) => c.activo).length },
+        ],
+        filtersLabel: `Estado: ${filtroLabel} · Orden: ${ordenamientoLabel}${searchTerm.trim() ? ` · Búsqueda: ${searchTerm.trim()}` : ""}`,
+        columns: [
+          { header: "Descripción", width: 55, getValue: (c) => c.descripcion },
+          { header: "Monto", width: 26, getValue: (c) => `$${Number(c.monto || 0).toLocaleString("es-AR")}`, align: "right" },
+          { header: "Período", width: 30, getValue: (c) => c.periodo || "-" },
+          { header: "Fecha inicio", width: 30, getValue: (c) => c.fecha_inicio || "-" },
+          { header: "Fecha fin", width: 30, getValue: (c) => c.fecha_fin || "-" },
+          { header: "Estado", width: 24, getValue: (c) => (c.activo ? "Activa" : "Inactiva") },
+        ],
+      });
+    } catch {
+      toast.error("No se pudo generar el PDF de cuotas");
+    }
   };
 
   const handleExportExcel = async () => {
@@ -130,6 +157,25 @@ export default function CuotasPage() {
 
     setFilteredCuotas(cuotasFiltradas);
   }, [searchTerm, cuotas, filtroActivo, ordenamiento]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filtroActivo, ordenamiento]);
+
+  const totalCuotas = filteredCuotas.length;
+  const totalPages = Math.max(1, Math.ceil(totalCuotas / CUOTAS_PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedCuotas = filteredCuotas.slice(
+    (safeCurrentPage - 1) * CUOTAS_PAGE_SIZE,
+    safeCurrentPage * CUOTAS_PAGE_SIZE
+  );
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   const filtroLabel =
     filtroActivo === "todos"
       ? "Todos"
@@ -232,12 +278,12 @@ export default function CuotasPage() {
                     </div>
                   </div>
                   <Button
-                    onClick={handlePrint}
+                    onClick={handleDownloadPdf}
                     variant="outline"
                     className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
                   >
-                    <Printer className="w-4 h-4" />
-                    <span className="hidden sm:inline">Imprimir</span>
+                    <FileText className="w-4 h-4" />
+                    <span className="hidden sm:inline">Descargar PDF</span>
                   </Button>
                   <Button
                     variant="outline"
@@ -261,7 +307,7 @@ export default function CuotasPage() {
               <CardContent className="p-4 space-y-4">
                 <div className="overflow-x-auto">
                   <CuotaTable
-                    cuotas={filteredCuotas}
+                    cuotas={paginatedCuotas}
                     loading={loading}
                     onEdit={(cuota) => {
                       setSelectedCuota(cuota);
@@ -287,6 +333,13 @@ export default function CuotasPage() {
                     }}
                   />
                 </div>
+                <PaginationControls
+                  currentPage={safeCurrentPage}
+                  totalItems={totalCuotas}
+                  pageSize={CUOTAS_PAGE_SIZE}
+                  onPageChange={setCurrentPage}
+                  itemLabel="cuotas"
+                />
               </CardContent>
             </Card>
           </main>

@@ -65,18 +65,9 @@ export const sections: SidebarSectionType[] = [
       { title: 'Socios', link: '/dashboard/socios', level: 2 },
       { title: 'Actividades', link: '/dashboard/actividades', level: 2 },
       { title: 'Entrenadores', link: '/dashboard/entrenadores', level: 2 },
-      { title: 'Rutinas', link: '/dashboard/rutinas', level: 2 },
-      {
-        title: 'Media de Ejercicios',
-        link: '/dashboard/rutinas/media',
-        level: 2,
-      },
-      { title: 'Dietas', link: '/dashboard/dietas', level: 2 },
-      {
-        title: 'Evolución Física',
-        link: '/dashboard/evolucion-fisica',
-        level: 2,
-      },
+      // Rutas legacy deshabilitadas del menú visual: Rutinas, Dietas y Evolución Física.
+      // Se conservan los archivos/rutas para trazabilidad y compatibilidad, pero la operación actual usa los gestores administrativos.
+
     ],
   },
   {
@@ -97,6 +88,11 @@ export const sections: SidebarSectionType[] = [
       {
         title: 'Gestión Evolución Física',
         link: '/dashboard/gestor-evolucion-fisica',
+        level: 2,
+      },
+      {
+        title: 'Media de Ejercicios',
+        link: '/dashboard/rutinas/media',
         level: 2,
       },
       { title: 'Pagos', link: '/dashboard/pagos', level: 2 },

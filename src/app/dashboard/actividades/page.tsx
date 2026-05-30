@@ -8,7 +8,7 @@ import { AppFooter } from "@/components/footer/AppFooter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Printer, FileSpreadsheet } from "lucide-react";
+import { Search, FileText, FileSpreadsheet } from "lucide-react";
 import {
   fetchAllActividades,
   deleteActividad,
@@ -21,6 +21,10 @@ import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 import ExcelJS from "exceljs";
+import { PaginationControls } from "@/components/ui/PaginationControls";
+import { downloadCommercialReportPdf } from "@/utils/commercialReportPdf";
+
+const ACTIVIDADES_PAGE_SIZE = 10;
 
 export default function ActividadesPage() {
   const { user, isAuthenticated, initializeAuth, isInitialized } =
@@ -31,6 +35,7 @@ export default function ActividadesPage() {
     []
   );
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [selectedActividad, setSelectedActividad] = useState<Actividad | null>(
@@ -57,8 +62,24 @@ export default function ActividadesPage() {
     setLoading(false);
   }, []);
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownloadPdf = async () => {
+    try {
+      await downloadCommercialReportPdf({
+        title: "Listado de Actividades",
+        subtitle: "Reporte operativo de actividades registradas.",
+        fileName: "listado-actividades-gym-master",
+        rows: filteredActividades,
+        metrics: [{ label: "Actividades filtradas", value: filteredActividades.length }],
+        filtersLabel: searchTerm.trim() ? `Búsqueda: ${searchTerm.trim()}` : "Sin filtros aplicados",
+        columns: [
+          { header: "Actividad", width: 70, getValue: (a) => a.nombre_actividad },
+          { header: "Creado en", width: 45, getValue: (a) => new Date(a.creado_en).toLocaleString("es-AR") },
+          { header: "Actualizado en", width: 45, getValue: (a) => new Date(a.actualizado_en).toLocaleString("es-AR") },
+        ],
+      });
+    } catch {
+      toast.error("No se pudo generar el PDF de actividades");
+    }
   };
 
   const handleExportExcel = async () => {
@@ -128,6 +149,24 @@ export default function ActividadesPage() {
     setFilteredActividades(filtered);
   }, [searchTerm, actividades]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const totalActividades = filteredActividades.length;
+  const totalPages = Math.max(1, Math.ceil(totalActividades / ACTIVIDADES_PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedActividades = filteredActividades.slice(
+    (safeCurrentPage - 1) * ACTIVIDADES_PAGE_SIZE,
+    safeCurrentPage * ACTIVIDADES_PAGE_SIZE
+  );
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   if (!isInitialized) {
     return <div>Cargando...</div>;
   }
@@ -158,12 +197,12 @@ export default function ActividadesPage() {
                     />
                   </div>
                   <Button
-                    onClick={handlePrint}
+                    onClick={handleDownloadPdf}
                     variant="outline"
                     className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
                   >
-                    <Printer className="w-4 h-4" />
-                    <span className="hidden sm:inline">Imprimir</span>
+                    <FileText className="w-4 h-4" />
+                    <span className="hidden sm:inline">Descargar PDF</span>
                   </Button>
                   <Button
                     variant="outline"
@@ -185,7 +224,7 @@ export default function ActividadesPage() {
               <CardContent className="p-4 space-y-4">
                 <div className="overflow-x-auto">
                   <ActividadTable
-                    actividades={filteredActividades}
+                    actividades={paginatedActividades}
                     loading={loading}
                     onEdit={(actividad) => {
                       setSelectedActividad(actividad);
@@ -198,6 +237,13 @@ export default function ActividadesPage() {
                     onDelete={handleDeleteActividad}
                   />
                 </div>
+                <PaginationControls
+                  currentPage={safeCurrentPage}
+                  totalItems={totalActividades}
+                  pageSize={ACTIVIDADES_PAGE_SIZE}
+                  onPageChange={setCurrentPage}
+                  itemLabel="actividades"
+                />
               </CardContent>
             </Card>
           </main>

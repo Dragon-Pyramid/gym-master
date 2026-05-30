@@ -16,10 +16,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PaginationControls } from "@/components/ui/PaginationControls";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { EvolucionFisicaAdminResumen } from "@/interfaces/evolucionSocio.interface";
 import { getEvolucionFisicaAdminResumen } from "@/services/evolucionSocioClient";
 import { useAuthStore } from "@/stores/authStore";
+
+const GESTOR_EVOLUCION_PAGE_SIZE = 12;
 
 const isAdminRole = (rol?: string | null) => {
   const normalized = rol?.trim().toLowerCase();
@@ -143,6 +146,7 @@ export default function GestorEvolucionFisicaPage() {
   const { isAuthenticated, initializeAuth, isInitialized, user } = useAuthStore();
   const [rows, setRows] = useState<EvolucionFisicaAdminResumen[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -187,14 +191,36 @@ export default function GestorEvolucionFisicaPage() {
 
   const filteredRows = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
-    if (!q) return rows;
+    const orderedRows = [...rows].sort((a, b) =>
+      a.nombre_completo.localeCompare(b.nombre_completo, "es")
+    );
 
-    return rows.filter((row) =>
+    if (!q) return orderedRows;
+
+    return orderedRows.filter((row) =>
       [row.nombre_completo, row.dni, row.email]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(q))
     );
   }, [rows, searchTerm]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const totalFilteredRows = filteredRows.length;
+  const totalPages = Math.max(1, Math.ceil(totalFilteredRows / GESTOR_EVOLUCION_PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedRows = filteredRows.slice(
+    (safeCurrentPage - 1) * GESTOR_EVOLUCION_PAGE_SIZE,
+    safeCurrentPage * GESTOR_EVOLUCION_PAGE_SIZE
+  );
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const totalSocios = rows.length;
   const sociosConEvolucion = rows.filter((row) => row.tiene_evolucion).length;
@@ -275,7 +301,7 @@ export default function GestorEvolucionFisicaPage() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {filteredRows.map((socio) => (
+                    {paginatedRows.map((socio) => (
                       <SocioEvolucionCard
                         key={socio.id_socio}
                         socio={socio}
@@ -286,6 +312,13 @@ export default function GestorEvolucionFisicaPage() {
                     ))}
                   </div>
                 )}
+                <PaginationControls
+                  currentPage={safeCurrentPage}
+                  totalItems={totalFilteredRows}
+                  pageSize={GESTOR_EVOLUCION_PAGE_SIZE}
+                  onPageChange={setCurrentPage}
+                  itemLabel="socios"
+                />
               </CardContent>
             </Card>
           </main>

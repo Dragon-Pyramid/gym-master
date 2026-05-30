@@ -8,7 +8,7 @@ import { AppFooter } from "@/components/footer/AppFooter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Printer, FileSpreadsheet } from "lucide-react";
+import { Search, FileText, FileSpreadsheet } from "lucide-react";
 import {
   deletePagoApi,
   fetchPagosApi,
@@ -22,6 +22,10 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 import ExcelJS from "exceljs";
 import { descargarPagoReciboPdf } from "@/utils/pagoReciboPdf";
+import { PaginationControls } from "@/components/ui/PaginationControls";
+import { downloadCommercialReportPdf } from "@/utils/commercialReportPdf";
+
+const PAGOS_PAGE_SIZE = 10;
 
 function numberOrZero(value: unknown) {
   const parsed = Number(value);
@@ -34,6 +38,10 @@ export default function PagosPage() {
   const [pagos, setPagos] = useState<ResponsePago[]>([]);
   const [filteredPagos, setFilteredPagos] = useState<ResponsePago[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [periodFilter, setPeriodFilter] = useState("todos");
+  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaHasta, setFechaHasta] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [selectedPago, setSelectedPago] = useState<ResponsePago | null>(null);
@@ -63,8 +71,32 @@ export default function PagosPage() {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownloadPdf = async () => {
+    try {
+      await downloadCommercialReportPdf({
+        title: "Listado de Pagos",
+        subtitle: "Reporte de pagos manuales, Stripe, períodos y estados.",
+        fileName: "listado-pagos-gym-master",
+        rows: filteredPagos,
+        metrics: [
+          { label: "Pagos filtrados", value: filteredPagos.length },
+          { label: "Total efectivo", value: `$${totalEfectivo.toLocaleString("es-AR")}` },
+        ],
+        filtersLabel: `Período: ${periodFilter}${fechaDesde ? ` · Desde: ${fechaDesde}` : ""}${fechaHasta ? ` · Hasta: ${fechaHasta}` : ""}${searchTerm.trim() ? ` · Búsqueda: ${searchTerm.trim()}` : ""}`,
+        columns: [
+          { header: "Socio", width: 42, getValue: (p) => p.socio?.nombre_completo || "-" },
+          { header: "Cuota", width: 36, getValue: (p) => p.cuota?.descripcion || "-" },
+          { header: "Fecha pago", width: 24, getValue: (p) => p.fecha_pago },
+          { header: "Período", width: 36, getValue: (p) => `${p.periodo_desde || p.fecha_pago} / ${p.periodo_hasta || p.fecha_vencimiento}` },
+          { header: "Método", width: 22, getValue: (p) => p.metodo_pago || "-" },
+          { header: "Estado", width: 22, getValue: (p) => p.estado || "-" },
+          { header: "Monto", width: 24, getValue: (p) => `$${numberOrZero(p.monto_pagado).toLocaleString("es-AR")}`, align: "right" },
+          { header: "Registrado por", width: 34, getValue: (p) => p.registrado_por?.nombre || "-" },
+        ],
+      });
+    } catch {
+      toast.error("No se pudo generar el PDF de pagos");
+    }
   };
 
   const handleExportExcel = async () => {
@@ -135,25 +167,56 @@ export default function PagosPage() {
   }, [isInitialized, isAuthenticated]);
 
   useEffect(() => {
-    if (searchTerm.trim() === "") {
-      setFilteredPagos(pagos);
-      return;
-    }
+    const lowercaseSearch = searchTerm.toLowerCase().trim();
+    const today = new Date();
+    const todayIso = today.toISOString().slice(0, 10);
+    const startOfWeekDate = new Date(today);
+    startOfWeekDate.setDate(today.getDate() - 6);
+    const startOfWeek = startOfWeekDate.toISOString().slice(0, 10);
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
+    const startOfYear = new Date(today.getFullYear(), 0, 1).toISOString().slice(0, 10);
 
-    const lowercaseSearch = searchTerm.toLowerCase();
-    const filtered = pagos.filter(
-      (p) =>
-        (p.socio?.nombre_completo || "")
-          .toLowerCase()
-          .includes(lowercaseSearch) ||
+    const filtered = pagos.filter((p) => {
+      const fecha = p.fecha_pago || "";
+      const matchesSearch =
+        lowercaseSearch === "" ||
+        (p.socio?.nombre_completo || "").toLowerCase().includes(lowercaseSearch) ||
         (p.cuota?.descripcion || "").toLowerCase().includes(lowercaseSearch) ||
         (p.registrado_por?.nombre || "").toLowerCase().includes(lowercaseSearch) ||
         (p.metodo_pago || "").toLowerCase().includes(lowercaseSearch) ||
-        (p.estado || "").toLowerCase().includes(lowercaseSearch)
-    );
+        (p.estado || "").toLowerCase().includes(lowercaseSearch);
+
+      if (!matchesSearch) return false;
+      if (fechaDesde && fecha < fechaDesde) return false;
+      if (fechaHasta && fecha > fechaHasta) return false;
+      if (periodFilter === "dia" && fecha !== todayIso) return false;
+      if (periodFilter === "semana" && fecha < startOfWeek) return false;
+      if (periodFilter === "mes" && fecha < startOfMonth) return false;
+      if (periodFilter === "anio" && fecha < startOfYear) return false;
+
+      return true;
+    });
 
     setFilteredPagos(filtered);
-  }, [searchTerm, pagos]);
+  }, [searchTerm, pagos, periodFilter, fechaDesde, fechaHasta]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, periodFilter, fechaDesde, fechaHasta]);
+
+  const totalPagos = filteredPagos.length;
+  const totalPages = Math.max(1, Math.ceil(totalPagos / PAGOS_PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedPagos = filteredPagos.slice(
+    (safeCurrentPage - 1) * PAGOS_PAGE_SIZE,
+    safeCurrentPage * PAGOS_PAGE_SIZE
+  );
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const totalEfectivo = filteredPagos
     .filter((p) => p.metodo_pago === "efectivo" && p.estado !== "cancelado")
@@ -193,13 +256,38 @@ export default function PagosPage() {
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
                   </div>
+                  <select
+                    value={periodFilter}
+                    onChange={(e) => setPeriodFilter(e.target.value)}
+                    className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="todos">Todos los períodos</option>
+                    <option value="dia">Hoy</option>
+                    <option value="semana">Últimos 7 días</option>
+                    <option value="mes">Mes actual</option>
+                    <option value="anio">Año actual</option>
+                  </select>
+                  <Input
+                    type="date"
+                    value={fechaDesde}
+                    onChange={(e) => setFechaDesde(e.target.value)}
+                    className="w-[150px]"
+                    title="Fecha desde"
+                  />
+                  <Input
+                    type="date"
+                    value={fechaHasta}
+                    onChange={(e) => setFechaHasta(e.target.value)}
+                    className="w-[150px]"
+                    title="Fecha hasta"
+                  />
                   <Button
-                    onClick={handlePrint}
+                    onClick={handleDownloadPdf}
                     variant="outline"
                     className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
                   >
-                    <Printer className="w-4 h-4" />
-                    <span className="hidden sm:inline">Imprimir</span>
+                    <FileText className="w-4 h-4" />
+                    <span className="hidden sm:inline">Descargar PDF</span>
                   </Button>
                   <Button
                     variant="outline"
@@ -221,7 +309,7 @@ export default function PagosPage() {
               <CardContent className="p-4 space-y-4">
                 <div className="overflow-x-auto">
                   <PagoTable
-                    pagos={filteredPagos}
+                    pagos={paginatedPagos}
                     loading={loading}
                     onEdit={(pago) => {
                       setSelectedPago(pago);
@@ -248,6 +336,13 @@ export default function PagosPage() {
                     }}
                   />
                 </div>
+                <PaginationControls
+                  currentPage={safeCurrentPage}
+                  totalItems={totalPagos}
+                  pageSize={PAGOS_PAGE_SIZE}
+                  onPageChange={setCurrentPage}
+                  itemLabel="pagos"
+                />
               </CardContent>
             </Card>
           </main>

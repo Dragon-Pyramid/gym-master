@@ -8,7 +8,7 @@ import { AppFooter } from "@/components/footer/AppFooter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Printer, FileSpreadsheet } from "lucide-react";
+import { Search, FileText, FileSpreadsheet } from "lucide-react";
 import {
   deactivateUsuarioApi,
   fetchUsuariosApi,
@@ -28,6 +28,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { PaginationControls } from "@/components/ui/PaginationControls";
+import { downloadCommercialReportPdf } from "@/utils/commercialReportPdf";
+
+const USUARIOS_PAGE_SIZE = 10;
 
 export default function UsuariosPage() {
   const { isAuthenticated, initializeAuth, isInitialized } =
@@ -36,6 +40,7 @@ export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [filteredUsuarios, setFilteredUsuarios] = useState<Usuario[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [selectedUsuario, setSelectedUsuario] = useState<Usuario | null>(null);
@@ -61,8 +66,29 @@ export default function UsuariosPage() {
     setLoading(false);
   }, []);
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownloadPdf = async () => {
+    try {
+      await downloadCommercialReportPdf({
+        title: "Listado de Usuarios",
+        subtitle: "Reporte de usuarios internos, socios y administradores.",
+        fileName: "listado-usuarios-gym-master",
+        rows: filteredUsuarios,
+        metrics: [
+          { label: "Usuarios filtrados", value: filteredUsuarios.length },
+          { label: "Activos", value: filteredUsuarios.filter((u) => u.activo).length },
+          { label: "Inactivos", value: filteredUsuarios.filter((u) => !u.activo).length },
+        ],
+        filtersLabel: `Estado: ${filtroLabel}${searchTerm.trim() ? ` · Búsqueda: ${searchTerm.trim()}` : ""}`,
+        columns: [
+          { header: "Nombre", width: 46, getValue: (u) => u.nombre },
+          { header: "Email", width: 58, getValue: (u) => u.email },
+          { header: "Rol", width: 28, getValue: (u) => u.rol },
+          { header: "Estado", width: 24, getValue: (u) => (u.activo ? "Activo" : "Inactivo") },
+        ],
+      });
+    } catch {
+      toast.error("No se pudo generar el PDF de usuarios");
+    }
   };
 
   const handleExportExcel = async () => {
@@ -146,6 +172,24 @@ export default function UsuariosPage() {
     setFilteredUsuarios(usuariosFiltrados);
   }, [searchTerm, usuarios, filtroActivo]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filtroActivo]);
+
+  const totalUsuarios = filteredUsuarios.length;
+  const totalPages = Math.max(1, Math.ceil(totalUsuarios / USUARIOS_PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedUsuarios = filteredUsuarios.slice(
+    (safeCurrentPage - 1) * USUARIOS_PAGE_SIZE,
+    safeCurrentPage * USUARIOS_PAGE_SIZE
+  );
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   const filtroLabel =
     filtroActivo === "todos"
       ? "Todos"
@@ -218,12 +262,12 @@ export default function UsuariosPage() {
                     </div>
                   </div>
                   <Button
-                    onClick={handlePrint}
+                    onClick={handleDownloadPdf}
                     variant="outline"
                     className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
                   >
-                    <Printer className="w-4 h-4" />
-                    <span className="hidden sm:inline">Imprimir</span>
+                    <FileText className="w-4 h-4" />
+                    <span className="hidden sm:inline">Descargar PDF</span>
                   </Button>
                   <Button
                     variant="outline"
@@ -246,7 +290,7 @@ export default function UsuariosPage() {
               <CardContent className="space-y-4">
                 <div className="overflow-x-auto">
                   <UsersTable
-                    usuarios={filteredUsuarios}
+                    usuarios={paginatedUsuarios}
                     loading={loading}
                     onEdit={(usuario) => {
                       setSelectedUsuario(usuario);
@@ -259,6 +303,13 @@ export default function UsuariosPage() {
                     onDelete={toggleUsuarioActivo}
                   />
                 </div>
+                <PaginationControls
+                  currentPage={safeCurrentPage}
+                  totalItems={totalUsuarios}
+                  pageSize={USUARIOS_PAGE_SIZE}
+                  onPageChange={setCurrentPage}
+                  itemLabel="usuarios"
+                />
               </CardContent>
             </Card>
           </main>
