@@ -9,6 +9,23 @@ import {
 } from "@/components/ui/dialog";
 import { Socio } from "@/interfaces/socio.interface";
 
+const sexoLabel = (value?: string | null) => {
+  if (value === "M") return "Masculino";
+  if (value === "F") return "Femenino";
+  return "-";
+};
+
+function DetailField({ label, value }: { label: string; value?: string | number | null }) {
+  return (
+    <div className="space-y-2">
+      <label className="text-sm font-medium">{label}</label>
+      <div className="min-h-10 rounded-md border bg-muted p-2 text-foreground">
+        {value || "-"}
+      </div>
+    </div>
+  );
+}
+
 export default function SocioViewModal({
   open,
   onClose,
@@ -22,7 +39,7 @@ export default function SocioViewModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="!max-w-[90vw] sm:!max-w-[800px] !w-full bg-background text-foreground">
+      <DialogContent className="!max-w-[90vw] sm:!max-w-[900px] !w-full bg-background text-foreground">
         <QaFileNameBadge file="src/components/modal/SocioViewModal.tsx" />
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-foreground">
@@ -33,50 +50,38 @@ export default function SocioViewModal({
           </div>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 gap-6 mt-4 md:grid-cols-2">
-          {/* Columna izquierda */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Nombre completo</label>
-              <div className="p-2 border rounded-md bg-muted text-foreground">
-                {socio.nombre_completo || "-"}
-              </div>
+        <div className="mt-4 space-y-6">
+          <section>
+            <h3 className="mb-3 text-sm font-semibold text-muted-foreground">Datos personales</h3>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <DetailField label="Nombre completo" value={socio.nombre_completo} />
+              <DetailField label="DNI" value={socio.dni} />
+              <DetailField label="Sexo" value={sexoLabel(socio.sexo)} />
+              <DetailField label="Fecha de nacimiento" value={socio.fecnac} />
+              <DetailField label="Fecha alta" value={socio.fecha_alta} />
+              <DetailField label="Estado" value={socio.activo ? "Activo" : "Inactivo"} />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">DNI</label>
-              <div className="p-2 border rounded-md bg-muted text-foreground">
-                {socio.dni || "-"}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Dirección</label>
-              <div className="p-2 border rounded-md bg-muted text-foreground">
-                {socio.direccion || "-"}
-              </div>
-            </div>
-          </div>
+          </section>
 
-          {/* Columna derecha */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Teléfono</label>
-              <div className="p-2 border rounded-md bg-muted text-foreground">
-                {socio.telefono || "-"}
-              </div>
+          <section>
+            <h3 className="mb-3 text-sm font-semibold text-muted-foreground">Contacto y ubicación</h3>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <DetailField label="Teléfono" value={socio.telefono} />
+              <DetailField label="Email" value={socio.email} />
+              <DetailField label="Dirección" value={socio.direccion} />
+              <DetailField label="Ciudad" value={socio.ciudad} />
+              <DetailField label="Provincia" value={socio.provincia} />
+              <DetailField label="País" value={socio.pais} />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Email</label>
-              <div className="p-2 border rounded-md bg-muted text-foreground">
-                {socio.email || "-"}
-              </div>
+          </section>
+
+          <section>
+            <h3 className="mb-3 text-sm font-semibold text-muted-foreground">Contacto de emergencia</h3>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <DetailField label="Nombre del contacto" value={socio.contacto_emergencia_nombre} />
+              <DetailField label="Teléfono de emergencia" value={socio.contacto_emergencia_telefono} />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Fecha Alta</label>
-              <div className="p-2 border rounded-md bg-muted text-foreground">
-                {socio.fecha_alta || "-"}
-              </div>
-            </div>
-          </div>
+          </section>
         </div>
       </DialogContent>
     </Dialog>

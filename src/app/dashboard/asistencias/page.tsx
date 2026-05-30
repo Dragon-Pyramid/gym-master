@@ -8,7 +8,7 @@ import { AppFooter } from "@/components/footer/AppFooter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Printer, FileSpreadsheet, MonitorUp } from "lucide-react";
+import { Search, FileText, FileSpreadsheet, MonitorUp } from "lucide-react";
 import {
   getAllAsistencias,
   deleteAsistencia,
@@ -21,6 +21,7 @@ import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 import ExcelJS from "exceljs";
+import { downloadCommercialReportPdf } from "@/utils/commercialReportPdf";
 import { JwtUser } from "@/interfaces/jwtUser.interface";
 
 const ASISTENCIAS_PAGE_SIZE = 10;
@@ -47,6 +48,9 @@ export default function AsistenciasPage() {
     [],
   );
   const [searchTerm, setSearchTerm] = useState("");
+  const [periodFilter, setPeriodFilter] = useState("todos");
+  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaHasta, setFechaHasta] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [isAutoRefreshing, setIsAutoRefreshing] = useState(false);
@@ -99,8 +103,26 @@ export default function AsistenciasPage() {
     [user],
   );
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownloadPdf = async () => {
+    try {
+      await downloadCommercialReportPdf({
+        title: "Listado de Asistencias",
+        subtitle: "Reporte de ingresos, egresos y filtros de asistencia.",
+        fileName: "listado-asistencias-gym-master",
+        rows: filteredAsistencias,
+        metrics: [{ label: "Asistencias filtradas", value: filteredAsistencias.length }],
+        filtersLabel: `Período: ${periodFilter}${fechaDesde ? ` · Desde: ${fechaDesde}` : ""}${fechaHasta ? ` · Hasta: ${fechaHasta}` : ""}${searchTerm.trim() ? ` · Búsqueda: ${searchTerm.trim()}` : ""}`,
+        columns: [
+          { header: "Socio", width: 48, getValue: (a) => a.socio?.nombre_completo || a.socio_id },
+          { header: "Fecha", width: 26, getValue: (a) => a.fecha },
+          { header: "Hora ingreso", width: 28, getValue: (a) => a.hora_ingreso || "-" },
+          { header: "Hora egreso", width: 28, getValue: (a) => a.hora_egreso || "-" },
+          { header: "ID socio", width: 56, getValue: (a) => a.socio_id },
+        ],
+      });
+    } catch {
+      toast.error("No se pudo generar el PDF de asistencias");
+    }
   };
 
   const handleExportExcel = async () => {
@@ -172,30 +194,44 @@ export default function AsistenciasPage() {
 
   useEffect(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
-
-    if (normalizedSearch === "") {
-      setFilteredAsistencias(asistencias);
-      return;
-    }
+    const today = new Date();
+    const startOfToday = today.toISOString().slice(0, 10);
+    const startOfWeekDate = new Date(today);
+    startOfWeekDate.setDate(today.getDate() - 6);
+    const startOfWeek = startOfWeekDate.toISOString().slice(0, 10);
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
+    const startOfYear = new Date(today.getFullYear(), 0, 1).toISOString().slice(0, 10);
 
     const filtered = asistencias.filter((a) => {
       const socioNombre =
         "socio" in a && a.socio?.nombre_completo ? a.socio.nombre_completo : "";
+      const fecha = a.fecha || "";
 
-      return (
+      const matchesSearch =
+        normalizedSearch === "" ||
         a.socio_id.toLowerCase().includes(normalizedSearch) ||
-        a.fecha.toLowerCase().includes(normalizedSearch) ||
+        fecha.toLowerCase().includes(normalizedSearch) ||
         (a.hora_ingreso ?? "").toLowerCase().includes(normalizedSearch) ||
-        socioNombre.toLowerCase().includes(normalizedSearch)
-      );
+        socioNombre.toLowerCase().includes(normalizedSearch);
+
+      if (!matchesSearch) return false;
+
+      if (fechaDesde && fecha < fechaDesde) return false;
+      if (fechaHasta && fecha > fechaHasta) return false;
+      if (periodFilter === "dia" && fecha !== startOfToday) return false;
+      if (periodFilter === "semana" && fecha < startOfWeek) return false;
+      if (periodFilter === "mes" && fecha < startOfMonth) return false;
+      if (periodFilter === "anio" && fecha < startOfYear) return false;
+
+      return true;
     });
 
     setFilteredAsistencias(sortAsistenciasByIngresoDesc(filtered));
-  }, [searchTerm, asistencias]);
+  }, [searchTerm, asistencias, periodFilter, fechaDesde, fechaHasta]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [searchTerm, periodFilter, fechaDesde, fechaHasta]);
 
   const totalAsistencias = filteredAsistencias.length;
   const totalPages = Math.max(
@@ -243,13 +279,38 @@ export default function AsistenciasPage() {
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
                   </div>
+                  <select
+                    value={periodFilter}
+                    onChange={(e) => setPeriodFilter(e.target.value)}
+                    className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="todos">Todos los períodos</option>
+                    <option value="dia">Hoy</option>
+                    <option value="semana">Últimos 7 días</option>
+                    <option value="mes">Mes actual</option>
+                    <option value="anio">Año actual</option>
+                  </select>
+                  <Input
+                    type="date"
+                    value={fechaDesde}
+                    onChange={(e) => setFechaDesde(e.target.value)}
+                    className="w-[150px]"
+                    title="Fecha desde"
+                  />
+                  <Input
+                    type="date"
+                    value={fechaHasta}
+                    onChange={(e) => setFechaHasta(e.target.value)}
+                    className="w-[150px]"
+                    title="Fecha hasta"
+                  />
                   <Button
-                    onClick={handlePrint}
+                    onClick={handleDownloadPdf}
                     variant="outline"
                     className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
                   >
-                    <Printer className="w-4 h-4" />
-                    <span className="hidden sm:inline">Imprimir</span>
+                    <FileText className="w-4 h-4" />
+                    <span className="hidden sm:inline">Descargar PDF</span>
                   </Button>
                   <Button
                     variant="outline"

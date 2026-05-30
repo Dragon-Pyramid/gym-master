@@ -22,6 +22,9 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 import ExcelJS from "exceljs";
 import { downloadCommercialReportPdf } from "@/utils/commercialReportPdf";
+import { PaginationControls } from "@/components/ui/PaginationControls";
+
+const PROVEEDORES_PAGE_SIZE = 10;
 
 type EstadoFiltro = "todos" | ProveedorEstado;
 
@@ -41,6 +44,7 @@ export default function ProveedoresPage() {
   );
   const [searchTerm, setSearchTerm] = useState("");
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoFiltro>("todos");
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [selectedProveedor, setSelectedProveedor] = useState<Proveedor | null>(
@@ -235,6 +239,24 @@ export default function ProveedoresPage() {
     setFilteredProveedores(filtered);
   }, [searchTerm, estadoFiltro, proveedores]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, estadoFiltro]);
+
+  const totalProveedores = filteredProveedores.length;
+  const totalPages = Math.max(1, Math.ceil(totalProveedores / PROVEEDORES_PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedProveedores = filteredProveedores.slice(
+    (safeCurrentPage - 1) * PROVEEDORES_PAGE_SIZE,
+    safeCurrentPage * PROVEEDORES_PAGE_SIZE
+  );
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   if (!isInitialized) {
     return <div>Cargando...</div>;
   }
@@ -334,7 +356,7 @@ export default function ProveedoresPage() {
               <CardContent className="p-4 space-y-4">
                 <div className="overflow-x-auto">
                   <ProveedoresTable
-                    proveedores={filteredProveedores}
+                    proveedores={paginatedProveedores}
                     loading={loading}
                     onEdit={(proveedor) => {
                       setSelectedProveedor(proveedor);
@@ -347,6 +369,13 @@ export default function ProveedoresPage() {
                     onDelete={handleDeleteProveedor}
                   />
                 </div>
+                <PaginationControls
+                  currentPage={safeCurrentPage}
+                  totalItems={totalProveedores}
+                  pageSize={PROVEEDORES_PAGE_SIZE}
+                  onPageChange={setCurrentPage}
+                  itemLabel="proveedores"
+                />
               </CardContent>
             </Card>
           </main>

@@ -6,6 +6,13 @@ export interface Socio {
   direccion?: string;
   telefono?: string;
   email: string;
+  sexo?: 'M' | 'F' | null;
+  fecnac?: string | null;
+  ciudad?: string | null;
+  provincia?: string | null;
+  pais?: string | null;
+  contacto_emergencia_nombre?: string | null;
+  contacto_emergencia_telefono?: string | null;
   foto?: string;
   activo: boolean;
   fecha_baja?: string;
@@ -20,6 +27,13 @@ export interface CreateSocioDto {
   direccion?: string;
   telefono?: string;
   email: string;
+  sexo?: 'M' | 'F' | null;
+  fecnac?: string | null;
+  ciudad?: string | null;
+  provincia?: string | null;
+  pais?: string | null;
+  contacto_emergencia_nombre?: string | null;
+  contacto_emergencia_telefono?: string | null;
   foto?: string;
 }
 
@@ -30,6 +44,13 @@ export interface UpdateSocioDto {
   direccion?: string;
   telefono?: string;
   email?: string;
+  sexo?: 'M' | 'F' | null;
+  fecnac?: string | null;
+  ciudad?: string | null;
+  provincia?: string | null;
+  pais?: string | null;
+  contacto_emergencia_nombre?: string | null;
+  contacto_emergencia_telefono?: string | null;
   foto?: string;
   activo?: boolean;
   fecha_baja?: string;

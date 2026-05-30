@@ -8,7 +8,7 @@ import { AppFooter } from '@/components/footer/AppFooter';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Printer, FileSpreadsheet } from 'lucide-react';
+import { Search, FileText, FileSpreadsheet } from 'lucide-react';
 import { fetchSociosApi, setSocioActivoApi } from '@/services/browser/socioApiClient';
 import SocioModal from '@/components/modal/SocioModal';
 import SocioViewModal from '@/components/modal/SocioViewModal';
@@ -18,12 +18,17 @@ import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { toast } from 'sonner';
 import ExcelJS from 'exceljs';
+import { PaginationControls } from '@/components/ui/PaginationControls';
+import { downloadCommercialReportPdf } from '@/utils/commercialReportPdf';
+
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
+
+const SOCIOS_PAGE_SIZE = 10;
 
 export default function SociosPage() {
   const { isAuthenticated, initializeAuth, isInitialized } =
@@ -32,6 +37,7 @@ export default function SociosPage() {
   const [socios, setSocios] = useState<Socio[]>([]);
   const [filteredSocios, setFilteredSocios] = useState<Socio[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [selectedSocio, setSelectedSocio] = useState<Socio | null>(null);
@@ -57,8 +63,34 @@ export default function SociosPage() {
     setLoading(false);
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownloadPdf = async () => {
+    try {
+      await downloadCommercialReportPdf({
+        title: 'Listado de Socios',
+        subtitle: 'Reporte de socios con datos de contacto, estado y ubicación.',
+        fileName: 'listado-socios-gym-master',
+        rows: filteredSocios,
+        metrics: [
+          { label: 'Socios filtrados', value: filteredSocios.length },
+          { label: 'Activos', value: filteredSocios.filter((s) => s.activo).length },
+          { label: 'Inactivos', value: filteredSocios.filter((s) => !s.activo).length },
+        ],
+        filtersLabel: `Estado: ${filtroLabel}${searchTerm.trim() ? ` · Búsqueda: ${searchTerm.trim()}` : ''}`,
+        columns: [
+          { header: 'Socio', width: 40, getValue: (s) => s.nombre_completo },
+          { header: 'DNI', width: 22, getValue: (s) => s.dni },
+          { header: 'Sexo', width: 18, getValue: (s) => (s.sexo === 'M' ? 'Masculino' : s.sexo === 'F' ? 'Femenino' : '-') },
+          { header: 'Nacimiento', width: 24, getValue: (s) => s.fecnac || '-' },
+          { header: 'Teléfono', width: 26, getValue: (s) => s.telefono || '-' },
+          { header: 'Email', width: 40, getValue: (s) => s.email || '-' },
+          { header: 'Ciudad', width: 26, getValue: (s) => s.ciudad || '-' },
+          { header: 'Provincia', width: 28, getValue: (s) => s.provincia || '-' },
+          { header: 'Estado', width: 20, getValue: (s) => (s.activo ? 'Activo' : 'Inactivo') },
+        ],
+      });
+    } catch {
+      toast.error('No se pudo generar el PDF de socios');
+    }
   };
 
   const handleExportExcel = async () => {
@@ -122,6 +154,24 @@ export default function SociosPage() {
     }
     setFilteredSocios(sociosFiltrados);
   }, [searchTerm, socios, filtroActivo]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filtroActivo]);
+
+  const totalSocios = filteredSocios.length;
+  const totalPages = Math.max(1, Math.ceil(totalSocios / SOCIOS_PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedSocios = filteredSocios.slice(
+    (safeCurrentPage - 1) * SOCIOS_PAGE_SIZE,
+    safeCurrentPage * SOCIOS_PAGE_SIZE
+  );
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const filtroLabel =
     filtroActivo === 'todos'
@@ -199,12 +249,12 @@ export default function SociosPage() {
                     </div>
                   </div>
                   <Button
-                    onClick={handlePrint}
+                    onClick={handleDownloadPdf}
                     variant='outline'
                     className='flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]'
                   >
-                    <Printer className='w-4 h-4' />
-                    <span className='hidden sm:inline'>Imprimir</span>
+                    <FileText className='w-4 h-4' />
+                    <span className='hidden sm:inline'>Descargar PDF</span>
                   </Button>
                   <Button
                     variant='outline'
@@ -226,7 +276,7 @@ export default function SociosPage() {
               <CardContent className='p-4 space-y-4'>
                 <div className='overflow-x-auto'>
                   <SociosTable
-                    socios={filteredSocios}
+                    socios={paginatedSocios}
                     loading={loading}
                     onEdit={(socio) => {
                       setSelectedSocio(socio);
@@ -258,6 +308,13 @@ export default function SociosPage() {
                     }}
                   />
                 </div>
+                <PaginationControls
+                  currentPage={safeCurrentPage}
+                  totalItems={totalSocios}
+                  pageSize={SOCIOS_PAGE_SIZE}
+                  onPageChange={setCurrentPage}
+                  itemLabel="socios"
+                />
               </CardContent>
             </Card>
           </main>

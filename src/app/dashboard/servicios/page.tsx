@@ -8,7 +8,7 @@ import { AppFooter } from "@/components/footer/AppFooter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Printer, FileSpreadsheet } from "lucide-react";
+import { Search, FileText, FileSpreadsheet } from "lucide-react";
 import { getAllServicios, deleteServicio } from "@/services/servicioService";
 import ServicioModal from "@/components/modal/ServicioModal";
 import ServicioViewModal from "@/components/modal/ServicioViewModal";
@@ -23,6 +23,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { PaginationControls } from "@/components/ui/PaginationControls";
+import { downloadCommercialReportPdf } from "@/utils/commercialReportPdf";
+
+const SERVICIOS_PAGE_SIZE = 10;
 
 export default function ServiciosPage() {
   const { user, isAuthenticated, initializeAuth, isInitialized } =
@@ -31,6 +35,7 @@ export default function ServiciosPage() {
   const [servicios, setServicios] = useState<Servicio[]>([]);
   const [filteredServicios, setFilteredServicios] = useState<Servicio[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [selectedServicio, setSelectedServicio] = useState<Servicio | null>(
@@ -58,8 +63,28 @@ export default function ServiciosPage() {
     setLoading(false);
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownloadPdf = async () => {
+    try {
+      await downloadCommercialReportPdf({
+        title: "Listado de Servicios",
+        subtitle: "Reporte de servicios adicionales disponibles para venta.",
+        fileName: "listado-servicios-gym-master",
+        rows: filteredServicios,
+        metrics: [
+          { label: "Servicios filtrados", value: filteredServicios.length },
+          { label: "Activos", value: filteredServicios.filter((s) => s.activo).length },
+        ],
+        filtersLabel: `Estado: ${filtroLabel}${searchTerm.trim() ? ` · Búsqueda: ${searchTerm.trim()}` : ""}`,
+        columns: [
+          { header: "Servicio", width: 46, getValue: (s) => s.nombre },
+          { header: "Descripción", width: 70, getValue: (s) => s.descripcion || "-" },
+          { header: "Precio", width: 24, getValue: (s) => `$${Number(s.precio || 0).toLocaleString("es-AR")}`, align: "right" },
+          { header: "Estado", width: 24, getValue: (s) => (s.activo ? "Activo" : "Inactivo") },
+        ],
+      });
+    } catch {
+      toast.error("No se pudo generar el PDF de servicios");
+    }
   };
 
   const handleExportExcel = async () => {
@@ -117,6 +142,24 @@ export default function ServiciosPage() {
     }
     setFilteredServicios(serviciosFiltrados);
   }, [searchTerm, servicios, filtroActivo]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filtroActivo]);
+
+  const totalServicios = filteredServicios.length;
+  const totalPages = Math.max(1, Math.ceil(totalServicios / SERVICIOS_PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedServicios = filteredServicios.slice(
+    (safeCurrentPage - 1) * SERVICIOS_PAGE_SIZE,
+    safeCurrentPage * SERVICIOS_PAGE_SIZE
+  );
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const filtroLabel =
     filtroActivo === "todos"
@@ -190,12 +233,12 @@ export default function ServiciosPage() {
                     </div>
                   </div>
                   <Button
-                    onClick={handlePrint}
+                    onClick={handleDownloadPdf}
                     variant="outline"
                     className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
                   >
-                    <Printer className="w-4 h-4" />
-                    <span className="hidden sm:inline">Imprimir</span>
+                    <FileText className="w-4 h-4" />
+                    <span className="hidden sm:inline">Descargar PDF</span>
                   </Button>
                   <Button
                     variant="outline"
@@ -217,7 +260,7 @@ export default function ServiciosPage() {
               <CardContent className="p-4 space-y-4">
                 <div className="overflow-x-auto">
                   <ServicioTable
-                    servicios={filteredServicios}
+                    servicios={paginatedServicios}
                     loading={loading}
                     onEdit={(servicio) => {
                       setSelectedServicio(servicio);
@@ -249,6 +292,13 @@ export default function ServiciosPage() {
                     }}
                   />
                 </div>
+                <PaginationControls
+                  currentPage={safeCurrentPage}
+                  totalItems={totalServicios}
+                  pageSize={SERVICIOS_PAGE_SIZE}
+                  onPageChange={setCurrentPage}
+                  itemLabel="servicios"
+                />
               </CardContent>
             </Card>
           </main>

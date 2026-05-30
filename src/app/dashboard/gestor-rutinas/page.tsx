@@ -9,6 +9,7 @@ import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { PaginationControls } from '@/components/ui/PaginationControls';
 import { Search } from 'lucide-react';
 import SociosRutinasGrid from '@/components/gestor-rutinas/SociosRutinasGrid';
 import { fetchSocios } from '@/services/socioService';
@@ -17,6 +18,8 @@ import { Socio } from '@/interfaces/socio.interface';
 import { JwtUser } from '@/interfaces/jwtUser.interface';
 import { Objetivo } from '@/interfaces/objetivo.interface';
 import { Nivel } from '@/interfaces/niveles.interface';
+
+const GESTOR_RUTINAS_PAGE_SIZE = 12;
 
 export default function GestorRutinasPage() {
   const { isAuthenticated, initializeAuth, isInitialized, user } =
@@ -27,6 +30,7 @@ export default function GestorRutinasPage() {
   const [objetivos, setObjetivos] = useState<Objetivo[]>([]);
   const [niveles, setNiveles] = useState<Nivel[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -72,11 +76,15 @@ export default function GestorRutinasPage() {
   }, [isInitialized, isAuthenticated, user, loadSocios]);
 
   useEffect(() => {
+    const orderedSocios = [...socios].sort((a, b) =>
+      a.nombre_completo.localeCompare(b.nombre_completo, 'es')
+    );
+
     if (searchTerm.trim() === '') {
-      setFilteredSocios(socios);
+      setFilteredSocios(orderedSocios);
     } else {
       const lowercaseSearch = searchTerm.toLowerCase();
-      const filtered = socios.filter(
+      const filtered = orderedSocios.filter(
         (s) =>
           s.nombre_completo.toLowerCase().includes(lowercaseSearch) ||
           s.dni.toLowerCase().includes(lowercaseSearch)
@@ -84,6 +92,24 @@ export default function GestorRutinasPage() {
       setFilteredSocios(filtered);
     }
   }, [searchTerm, socios]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const totalSocios = filteredSocios.length;
+  const totalPages = Math.max(1, Math.ceil(totalSocios / GESTOR_RUTINAS_PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedSocios = filteredSocios.slice(
+    (safeCurrentPage - 1) * GESTOR_RUTINAS_PAGE_SIZE,
+    safeCurrentPage * GESTOR_RUTINAS_PAGE_SIZE
+  );
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   if (loading || !isInitialized) {
     return (
@@ -120,10 +146,17 @@ export default function GestorRutinasPage() {
               </CardHeader>
               <CardContent className='p-4'>
                 <SociosRutinasGrid
-                  socios={filteredSocios}
+                  socios={paginatedSocios}
                   loading={loading}
                   objetivos={objetivos}
                   niveles={niveles}
+                />
+                <PaginationControls
+                  currentPage={safeCurrentPage}
+                  totalItems={totalSocios}
+                  pageSize={GESTOR_RUTINAS_PAGE_SIZE}
+                  onPageChange={setCurrentPage}
+                  itemLabel="socios"
                 />
               </CardContent>
             </Card>

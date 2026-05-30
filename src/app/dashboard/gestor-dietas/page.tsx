@@ -9,11 +9,14 @@ import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { PaginationControls } from '@/components/ui/PaginationControls';
 import { Search } from 'lucide-react';
 import SocioDietaGrid from '@/components/gestor-dietas/SocioDietaGrid';
 import { fetchSocios } from '@/services/socioService';
 import { Socio } from '@/interfaces/socio.interface';
 import { JwtUser } from '@/interfaces/jwtUser.interface';
+
+const GESTOR_DIETAS_PAGE_SIZE = 12;
 
 export default function DietasPage() {
   const { isAuthenticated, initializeAuth, isInitialized, user } =
@@ -22,6 +25,7 @@ export default function DietasPage() {
   const [socios, setSocios] = useState<Socio[]>([]);
   const [filteredSocios, setFilteredSocios] = useState<Socio[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -54,11 +58,15 @@ export default function DietasPage() {
   }, [isInitialized, isAuthenticated]);
 
   useEffect(() => {
+    const orderedSocios = [...socios].sort((a, b) =>
+      a.nombre_completo.localeCompare(b.nombre_completo, 'es')
+    );
+
     if (searchTerm.trim() === '') {
-      setFilteredSocios(socios);
+      setFilteredSocios(orderedSocios);
     } else {
       const lowercaseSearch = searchTerm.toLowerCase();
-      const filtered = socios.filter(
+      const filtered = orderedSocios.filter(
         (s) =>
           s.nombre_completo.toLowerCase().includes(lowercaseSearch) ||
           s.dni.toLowerCase().includes(lowercaseSearch)
@@ -66,6 +74,24 @@ export default function DietasPage() {
       setFilteredSocios(filtered);
     }
   }, [searchTerm, socios]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const totalSocios = filteredSocios.length;
+  const totalPages = Math.max(1, Math.ceil(totalSocios / GESTOR_DIETAS_PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedSocios = filteredSocios.slice(
+    (safeCurrentPage - 1) * GESTOR_DIETAS_PAGE_SIZE,
+    safeCurrentPage * GESTOR_DIETAS_PAGE_SIZE
+  );
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   if (loading || !isInitialized) {
     return (
@@ -101,7 +127,14 @@ export default function DietasPage() {
                 </div>
               </CardHeader>
               <CardContent className='p-4'>
-                <SocioDietaGrid socios={filteredSocios} loading={loading} />
+                <SocioDietaGrid socios={paginatedSocios} loading={loading} />
+                <PaginationControls
+                  currentPage={safeCurrentPage}
+                  totalItems={totalSocios}
+                  pageSize={GESTOR_DIETAS_PAGE_SIZE}
+                  onPageChange={setCurrentPage}
+                  itemLabel="socios"
+                />
               </CardContent>
             </Card>
           </main>

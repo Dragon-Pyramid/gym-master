@@ -24,12 +24,16 @@ import { toast } from "sonner";
 import ExcelJS from "exceljs";
 import { useCatalogoParametrizable } from "@/hooks/useCatalogosParametrizables";
 import { downloadCommercialReportPdf } from "@/utils/commercialReportPdf";
+import { PaginationControls } from "@/components/ui/PaginationControls";
+
 import {
   calcularValorInventario,
   formatCurrencyARS,
   getProductoStockEstado,
   isProductoStockCritico,
 } from "@/lib/comercial/productos";
+
+const PRODUCTOS_PAGE_SIZE = 10;
 
 type StockFilter = "todos" | "activos" | "critico" | "sin_stock" | "inactivos";
 
@@ -53,6 +57,7 @@ export default function ProductoPage() {
   const [filteredProductos, setFilteredProductos] = useState<Producto[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [stockFilter, setStockFilter] = useState<StockFilter>("todos");
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [selectedProducto, setSelectedProducto] = useState<Producto | null>(
@@ -222,6 +227,24 @@ export default function ProductoPage() {
     setFilteredProductos(filtered);
   }, [searchTerm, stockFilter, productos, proveedorById]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, stockFilter]);
+
+  const totalProductos = filteredProductos.length;
+  const totalPages = Math.max(1, Math.ceil(totalProductos / PRODUCTOS_PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedProductos = filteredProductos.slice(
+    (safeCurrentPage - 1) * PRODUCTOS_PAGE_SIZE,
+    safeCurrentPage * PRODUCTOS_PAGE_SIZE
+  );
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   if (!isInitialized) {
     return <div>Cargando...</div>;
   }
@@ -346,7 +369,7 @@ export default function ProductoPage() {
                 </div>
                 <div className="overflow-x-auto">
                   <ProductoTable
-                    productos={filteredProductos}
+                    productos={paginatedProductos}
                     loading={loading}
                     onEdit={(producto) => {
                       setSelectedProducto(producto as Producto);
@@ -373,6 +396,13 @@ export default function ProductoPage() {
                     }}
                   />
                 </div>
+                <PaginationControls
+                  currentPage={safeCurrentPage}
+                  totalItems={totalProductos}
+                  pageSize={PRODUCTOS_PAGE_SIZE}
+                  onPageChange={setCurrentPage}
+                  itemLabel="productos"
+                />
               </CardContent>
             </Card>
           </main>
