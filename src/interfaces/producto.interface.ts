@@ -21,6 +21,26 @@ export interface Producto {
   imagen_url?: string | null;
 }
 
+export interface ProductoPrecioCostoHistorial {
+  id: string;
+  producto_id: string;
+  precio_anterior: number | null;
+  precio_nuevo: number;
+  costo_anterior: number | null;
+  costo_nuevo: number;
+  moneda: 'ARS' | 'USD';
+  cotizacion_usada?: number | null;
+  margen_anterior?: number | null;
+  margen_nuevo?: number | null;
+  margen_porcentaje_nuevo?: number | null;
+  motivo?: string | null;
+  fecha_vigencia?: string | null;
+  usuario_responsable?: string | null;
+  origen: 'manual' | 'sistema' | 'importado';
+  creado_en: string;
+}
+
+
 export interface CreateProductoDto {
   nombre: string;
   descripcion: string;
@@ -28,7 +48,14 @@ export interface CreateProductoDto {
   stock: number;
   proveedor_id: string;
   id_categoria_producto?: string | null;
+  costo?: number | null;
+  stock_minimo?: number | null;
+  motivo_cambio_precio?: string | null;
+  moneda_historial?: 'ARS' | 'USD';
+  cotizacion_usada?: number | null;
+  fecha_vigencia?: string | null;
 }
+
 
 export interface UpdateProductoDto {
   nombre?: string;
@@ -38,4 +65,11 @@ export interface UpdateProductoDto {
   proveedor_id?: string;
   id_categoria_producto?: string | null;
   activo?: boolean;
+  costo?: number | null;
+  stock_minimo?: number | null;
+  motivo_cambio_precio?: string | null;
+  moneda_historial?: 'ARS' | 'USD';
+  cotizacion_usada?: number | null;
+  fecha_vigencia?: string | null;
 }
+
