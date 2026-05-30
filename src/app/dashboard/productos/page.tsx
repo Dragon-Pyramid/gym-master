@@ -14,6 +14,7 @@ import { getAllProductos, deleteProducto } from "@/services/productoService";
 import { getAllProveedores } from "@/services/proveedorService";
 import ProductoModal from "@/components/modal/ProductoModal";
 import ProductoViewModal from "@/components/modal/ProductoViewModal";
+import ProductoStockMovimientoModal from "@/components/modal/ProductoStockMovimientoModal";
 import ProductoTable from "@/components/tables/ProductoTable";
 import { Producto } from "@/interfaces/producto.interface";
 import { Proveedor } from "@/interfaces/proveedor.interface";
@@ -65,6 +66,8 @@ export default function ProductoPage() {
   );
   const [openModalVer, setOpenModalVer] = useState(false);
   const [productoVer, setProductoVer] = useState<Producto | null>(null);
+  const [openStockModal, setOpenStockModal] = useState(false);
+  const [productoStock, setProductoStock] = useState<Producto | null>(null);
   const { items: categoriasProducto } = useCatalogoParametrizable(
     "categoria_producto",
     fallbackCategoriasProducto
@@ -385,6 +388,10 @@ export default function ProductoPage() {
                       setProductoVer(producto as Producto);
                       setOpenModalVer(true);
                     }}
+                    onStockMovement={(producto) => {
+                      setProductoStock(producto as Producto);
+                      setOpenStockModal(true);
+                    }}
                     getProveedorNombre={getProveedorNombre}
                     onDelete={async (producto) => {
                       const confirmar = window.confirm(
@@ -435,6 +442,16 @@ export default function ProductoPage() {
         producto={productoVer}
         getProveedorNombre={getProveedorNombre}
         getCategoriaNombre={getCategoriaNombre}
+      />
+
+      <ProductoStockMovimientoModal
+        open={openStockModal}
+        onClose={() => {
+          setOpenStockModal(false);
+          setProductoStock(null);
+        }}
+        producto={productoStock}
+        onSaved={loadProductos}
       />
     </SidebarProvider>
   );

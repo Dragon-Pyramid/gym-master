@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil } from "lucide-react";
+import { ClipboardList, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Producto } from "@/interfaces/producto.interface";
@@ -47,6 +47,7 @@ export default function ProductoTable({
   onEdit,
   onView,
   onDelete,
+  onStockMovement,
   getProveedorNombre,
 }: {
   productos: Producto[];
@@ -54,6 +55,7 @@ export default function ProductoTable({
   onEdit: (producto: Producto) => void;
   onView?: (producto: Producto) => void;
   onDelete?: (producto: Producto) => void;
+  onStockMovement?: (producto: Producto) => void;
   getProveedorNombre?: (proveedorId?: string | null) => string;
 }) {
   if (loading) {
@@ -124,6 +126,14 @@ export default function ProductoTable({
                 onClick={() => onView && onView(p)}
               >
                 Ver
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onStockMovement && onStockMovement(p)}
+                title="Movimiento de stock"
+              >
+                <ClipboardList className="w-4 h-4" />
               </Button>
               <Button
                 size="sm"
