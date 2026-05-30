@@ -9,12 +9,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Producto, ProductoPrecioCostoHistorial } from "@/interfaces/producto.interface";
+import { ProductoStockMovimiento } from "@/interfaces/producto_stock_movimiento.interface";
 import {
   formatCurrencyARS,
   getProductoStockEstadoLabel,
   getProductoStockMinimo,
 } from "@/lib/comercial/productos";
 import { getProductoHistorialPreciosCostos } from "@/services/productoService";
+import { getProductoStockMovimientos } from "@/services/productoStockMovimientoService";
 
 export default function ProductoViewModal({
   open,
@@ -30,6 +32,7 @@ export default function ProductoViewModal({
   getCategoriaNombre?: (categoriaId?: string | null) => string;
 }) {
   const [historial, setHistorial] = useState<ProductoPrecioCostoHistorial[]>([]);
+  const [movimientosStock, setMovimientosStock] = useState<ProductoStockMovimiento[]>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -37,14 +40,24 @@ export default function ProductoViewModal({
     async function loadHistorial() {
       if (!producto?.id || !open) {
         setHistorial([]);
+        setMovimientosStock([]);
         return;
       }
 
       try {
-        const data = await getProductoHistorialPreciosCostos(producto.id);
-        if (mounted) setHistorial(data);
+        const [historialData, movimientosData] = await Promise.all([
+          getProductoHistorialPreciosCostos(producto.id),
+          getProductoStockMovimientos(producto.id, 20).catch(() => []),
+        ]);
+        if (mounted) {
+          setHistorial(historialData);
+          setMovimientosStock(movimientosData);
+        }
       } catch {
-        if (mounted) setHistorial([]);
+        if (mounted) {
+          setHistorial([]);
+          setMovimientosStock([]);
+        }
       }
     }
 
@@ -183,6 +196,43 @@ export default function ProductoViewModal({
                       <td className="max-w-[220px] px-3 py-2">
                         {item.motivo || item.origen || "-"}
                       </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6 rounded-lg border bg-muted/20 p-4">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold">Movimientos de stock</h3>
+            <span className="text-xs text-muted-foreground">{movimientosStock.length} registros recientes</span>
+          </div>
+          {movimientosStock.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No hay movimientos de stock registrados todavía.</p>
+          ) : (
+            <div className="max-h-64 overflow-auto rounded-md border bg-background">
+              <table className="w-full text-xs">
+                <thead className="bg-muted text-muted-foreground">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Fecha</th>
+                    <th className="px-3 py-2 text-left">Tipo</th>
+                    <th className="px-3 py-2 text-right">Cantidad</th>
+                    <th className="px-3 py-2 text-right">Stock anterior</th>
+                    <th className="px-3 py-2 text-right">Stock nuevo</th>
+                    <th className="px-3 py-2 text-left">Motivo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {movimientosStock.map((item) => (
+                    <tr key={item.id} className="border-t">
+                      <td className="px-3 py-2">{item.creado_en?.slice(0, 10) || "-"}</td>
+                      <td className="px-3 py-2 capitalize">{item.tipo.replace(/_/g, " ")}</td>
+                      <td className="px-3 py-2 text-right font-medium">{item.cantidad}</td>
+                      <td className="px-3 py-2 text-right">{item.stock_anterior}</td>
+                      <td className="px-3 py-2 text-right font-medium">{item.stock_nuevo}</td>
+                      <td className="max-w-[260px] px-3 py-2">{item.motivo || "-"}</td>
                     </tr>
                   ))}
                 </tbody>

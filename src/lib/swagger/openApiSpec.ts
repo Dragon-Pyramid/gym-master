@@ -1266,6 +1266,32 @@ const endpointDefinitions: EndpointDefinition[] = [
     "source": "src/app/api/productos/historial-precios-costos/route.ts"
   },
   {
+    "path": "/api/productos/stock-movimientos",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "tag": "Comercial / Kiosco",
+    "summary": "Movimientos manuales y operativos de stock",
+    "description": "Lista y registra movimientos de stock de productos: ajustes manuales, recuento físico, devoluciones vendibles, mermas y reposiciones. Usa producto_stock_movimiento para trazabilidad y actualiza el stock del producto.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      201,
+      400,
+      401,
+      404,
+      500
+    ],
+    "queryParams": [
+      "producto_id",
+      "limit"
+    ],
+    "source": "src/app/api/productos/stock-movimientos/route.ts"
+  },
+  {
     "path": "/api/productos",
     "methods": [
       "GET",
