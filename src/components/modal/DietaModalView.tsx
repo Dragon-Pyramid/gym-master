@@ -1,5 +1,6 @@
 "use client";
 
+import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
 import {
   Dialog,
   DialogContent,
@@ -46,6 +47,7 @@ export default function DietaModalView({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <QaFileNameBadge file="src/components/modal/DietaModalView.tsx" />
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg font-bold">
             <Target className="w-5 h-5 text-primary" />

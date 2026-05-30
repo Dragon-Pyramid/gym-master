@@ -1,5 +1,6 @@
 'use client';
 
+import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
 import {
   Dialog,
   DialogContent,
@@ -49,6 +50,7 @@ export default function VentaViewModal({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className='!max-w-[92vw] !w-full bg-background text-foreground sm:!max-w-[900px]'>
+        <QaFileNameBadge file="src/components/modal/VentaViewModal.tsx" />
         <DialogHeader>
           <DialogTitle className='text-xl font-semibold text-foreground'>
             Detalle de Venta

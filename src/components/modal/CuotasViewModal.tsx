@@ -1,5 +1,6 @@
 "use client";
 
+import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,7 @@ export default function CuotasViewModal({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="!max-w-[90vw] sm:!max-w-[800px] !w-full bg-background text-foreground">
+        <QaFileNameBadge file="src/components/modal/CuotasViewModal.tsx" />
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-foreground">
             Detalle Cuota

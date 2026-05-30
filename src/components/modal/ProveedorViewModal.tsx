@@ -1,5 +1,6 @@
 "use client";
 
+import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
 import {
   Dialog,
   DialogContent,
@@ -41,6 +42,7 @@ export default function ProveedorViewModal({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="!max-w-[92vw] sm:!max-w-[960px] !w-full bg-background text-foreground max-h-[90vh] overflow-y-auto">
+        <QaFileNameBadge file="src/components/modal/ProveedorViewModal.tsx" />
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-foreground">
             Detalle Proveedor

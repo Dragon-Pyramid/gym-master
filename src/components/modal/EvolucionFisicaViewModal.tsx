@@ -1,5 +1,6 @@
 "use client";
 
+import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
 import type { ComponentType, ReactNode } from "react";
 import { CalendarDays, Dumbbell, Ruler, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -86,6 +87,7 @@ export default function EvolucionFisicaViewModal({
   return (
     <Dialog open={open} onOpenChange={(value) => !value && onClose()}>
       <DialogContent className="max-h-[90vh] overflow-y-auto bg-background text-foreground sm:max-w-[980px]">
+        <QaFileNameBadge file="src/components/modal/EvolucionFisicaViewModal.tsx" />
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">
             Detalle de evolución física

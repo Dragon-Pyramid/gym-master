@@ -1,5 +1,6 @@
 "use client";
 
+import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
 import { useState } from "react";
 import { createMantenimiento } from "@/services/mantenimientoService";
 import { CreateMantenimientoDTO } from "@/interfaces/mantenimiento.interface";
@@ -89,6 +90,7 @@ export default function MantenimientoForm({
       onSubmit={handleSubmit}
       className="grid grid-cols-1 gap-4 mt-8 md:grid-cols-2"
     >
+      <QaFileNameBadge file="src/components/forms/MantenimientoForm.tsx" />
       <div>
         <select
           className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"

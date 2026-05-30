@@ -1,5 +1,6 @@
 "use client";
 
+import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
 import { useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -297,6 +298,7 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <QaFileNameBadge file="src/components/forms/PagoForm.tsx" />
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="socio_id">Socio</Label>
         <Popover open={socioComboboxOpen} onOpenChange={setSocioComboboxOpen}>

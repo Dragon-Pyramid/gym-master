@@ -1,5 +1,6 @@
 "use client";
 
+import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
 import {
   Dialog,
   DialogContent,
@@ -82,6 +83,7 @@ export default function PagoViewModal({
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="!max-w-[90vw] sm:!max-w-[840px] !w-full bg-background text-foreground">
+        <QaFileNameBadge file="src/components/modal/PagoViewModal.tsx" />
         <DialogHeader>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>

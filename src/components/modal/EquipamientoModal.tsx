@@ -1,5 +1,6 @@
 "use client";
 
+import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
 import React, { useState } from "react";
 import {
   Dialog,
@@ -45,6 +46,7 @@ export default function EquipamientoModal({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="w-full h-auto max-w-5xl max-h-screen overflow-y-auto lg:h-auto sm:max-w-4xl">
+        <QaFileNameBadge file="src/components/modal/EquipamientoModal.tsx" />
         <DialogHeader>
           <div className="flex items-center justify-between w-full gap-4">
             <DialogTitle className="text-xl font-semibold">

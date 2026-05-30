@@ -1,5 +1,6 @@
 "use client";
 
+import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -78,6 +79,7 @@ export default function ActividadForm({
 
   return (
     <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4">
+      <QaFileNameBadge file="src/components/forms/ActividadForm.tsx" />
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="nombre_actividad">Nombre de Actividad</Label>
         <Input

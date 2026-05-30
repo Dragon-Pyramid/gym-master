@@ -1,5 +1,6 @@
 "use client";
 
+import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,7 @@ export default function ActividadViewModal({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="w-full max-w-lg p-6 sm:max-w-md bg-background text-foreground">
+        <QaFileNameBadge file="src/components/modal/ActividadViewModal.tsx" />
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-foreground">
             Detalles de Actividad
