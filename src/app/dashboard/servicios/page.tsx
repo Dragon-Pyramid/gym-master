@@ -17,6 +17,7 @@ import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 import ExcelJS from "exceljs";
+import { buildTimestampedDownloadFileName } from '@/utils/downloadFileName';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -114,7 +115,7 @@ export default function ServiciosPage() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "Listado_Servicios.xlsx";
+    a.download = buildTimestampedDownloadFileName("listado-servicios", "xlsx");
     a.click();
     window.URL.revokeObjectURL(url);
   };

@@ -202,8 +202,8 @@ export const MENU_PERMISSION_GROUPS: Array<{
         roles: ['admin'],
       },
       {
-        key: 'Otros gastos',
-        label: 'Otros gastos',
+        key: 'Gastos / Egresos',
+        label: 'Gastos / Egresos',
         path: '/dashboard/otros-gastos',
         group: 'Administración',
         roles: ['admin'],

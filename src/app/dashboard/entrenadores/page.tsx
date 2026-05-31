@@ -16,6 +16,7 @@ import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 import ExcelJS from "exceljs";
+import { buildTimestampedDownloadFileName } from '@/utils/downloadFileName';
 import { Entrenador } from "@/interfaces/entrenador.interface";
 import { getEntrenadores } from "@/services/apiClient";
 
@@ -90,7 +91,7 @@ export default function EntrenadoresPage() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "Listado_Entrenadores.xlsx";
+    a.download = buildTimestampedDownloadFileName("listado-entrenadores", "xlsx");
     a.click();
     window.URL.revokeObjectURL(url);
   };

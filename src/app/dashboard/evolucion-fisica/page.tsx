@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ExcelJS from "exceljs";
+import { buildTimestampedDownloadFileName } from '@/utils/downloadFileName';
 import { Download, FileSpreadsheet, Search } from "lucide-react";
 import { toast } from "sonner";
 import { AppFooter } from "@/components/footer/AppFooter";
@@ -396,7 +397,7 @@ export default function EvolucionFisicaPage() {
     const a = document.createElement("a");
 
     a.href = url;
-    a.download = "Evolucion_Fisica.xlsx";
+    a.download = buildTimestampedDownloadFileName("listado-evolucion-fisica", "xlsx");
     a.click();
 
     window.URL.revokeObjectURL(url);

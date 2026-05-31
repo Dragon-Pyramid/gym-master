@@ -1,4 +1,5 @@
 import jsPDF from "jspdf";
+import { buildTimestampedDownloadFileName } from "@/utils/downloadFileName";
 import { formatFrontendDate } from '@/utils/dateFormat';
 import { Dieta } from "@/interfaces/dieta.interface";
 
@@ -401,5 +402,5 @@ export const descargarDietaPdf = async ({
   );
 
   addFooter(doc);
-  doc.save(`${safeFileName(`${titulo}-${nombreSocio}`)}.pdf`);
+  doc.save(buildTimestampedDownloadFileName(`${titulo}-${nombreSocio}`, "pdf"));
 };

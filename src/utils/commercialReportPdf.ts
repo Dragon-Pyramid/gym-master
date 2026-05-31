@@ -1,6 +1,7 @@
 "use client";
 
 import jsPDF from "jspdf";
+import { buildTimestampedDownloadFileName } from "@/utils/downloadFileName";
 
 export interface CommercialReportMetric {
   label: string;
@@ -301,5 +302,5 @@ export async function downloadCommercialReportPdf<T>({
     addFooter(doc, pageWidth, pageHeight);
   }
 
-  doc.save(`${safeFileName(fileName)}.pdf`);
+  doc.save(buildTimestampedDownloadFileName(fileName, "pdf"));
 }

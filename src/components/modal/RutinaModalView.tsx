@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/accordion";
 import pdfMake from "pdfmake/build/pdfmake";
 import pdfFonts from "pdfmake/build/vfs_fonts";
+import { buildTimestampedDownloadFileName } from "@/utils/downloadFileName";
 import { formatFrontendDateTime, formatFrontendDate } from '@/utils/dateFormat';
 
 pdfMake.vfs = pdfFonts.vfs;
@@ -81,7 +82,7 @@ function EjerciciosModal({
         },
         defaultStyle: { font: "Roboto" },
       })
-      .download("ejercicios.pdf");
+      .download(buildTimestampedDownloadFileName("ejercicios-rutina", "pdf"));
     setExportando(false);
   };
 

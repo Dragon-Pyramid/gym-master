@@ -22,6 +22,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 import { formatFrontendTime } from '@/utils/dateFormat';
 import ExcelJS from "exceljs";
+import { buildTimestampedDownloadFileName } from '@/utils/downloadFileName';
 import { downloadCommercialReportPdf } from "@/utils/commercialReportPdf";
 import { JwtUser } from "@/interfaces/jwtUser.interface";
 
@@ -155,7 +156,7 @@ export default function AsistenciasPage() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "Listado_Asistencias.xlsx";
+    a.download = buildTimestampedDownloadFileName("listado-asistencias", "xlsx");
     a.click();
     window.URL.revokeObjectURL(url);
   };

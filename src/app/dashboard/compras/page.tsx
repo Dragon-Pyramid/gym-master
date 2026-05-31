@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import ExcelJS from 'exceljs';
+import { buildTimestampedDownloadFileName } from '@/utils/downloadFileName';
 import { toast } from 'sonner';
 import { FileSpreadsheet, FileText, Plus, Search, ShoppingBag, Store } from 'lucide-react';
 import { AppHeader } from '@/components/header/AppHeader';
@@ -150,7 +151,7 @@ export default function ComprasPage() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'Listado_Compras_Proveedores.xlsx';
+    a.download = buildTimestampedDownloadFileName('listado-compras-proveedores', 'xlsx');
     a.click();
     window.URL.revokeObjectURL(url);
   };

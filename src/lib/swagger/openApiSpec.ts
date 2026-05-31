@@ -1130,20 +1130,44 @@ const endpointDefinitions: EndpointDefinition[] = [
       "PUT",
       "DELETE"
     ],
-    "tag": "Catálogos y operación",
-    "summary": "Operaciones de otros gastos",
-    "description": "Consulta datos de otros gastos. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: createOtrosGastos, deleteOtrosGastos, getAllOtrosGastos, updateOtrosGastos.",
-    "auth": false,
+    "tag": "Gastos / egresos",
+    "summary": "Gastos / egresos con comprobantes",
+    "description": "Consulta, registra, actualiza y anula gastos operativos del gimnasio con clasificación por tipo de gasto, estado, medio de pago, vencimientos, período cubierto y comprobante PDF/imagen.",
+    "auth": true,
     "admin": false,
     "notImplemented": false,
     "statuses": [
       200,
       201,
       400,
+      401,
+      500
+    ],
+    "queryParams": [
+      "estado",
+      "id_tipo_gasto"
+    ],
+    "source": "src/app/api/otros_gastos/route.ts"
+  },
+  {
+    "path": "/api/otros_gastos/comprobante-upload",
+    "methods": [
+      "POST"
+    ],
+    "tag": "Gastos / egresos",
+    "summary": "Carga de comprobante de gasto",
+    "description": "Sube un comprobante PDF o imagen a Cloudinary y devuelve URL, nombre original, MIME type y tamaño para asociarlo al gasto/egreso.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401,
       500
     ],
     "queryParams": [],
-    "source": "src/app/api/otros_gastos/route.ts"
+    "source": "src/app/api/otros_gastos/comprobante-upload/route.ts"
   },
   {
     "path": "/api/pagar-cuota",

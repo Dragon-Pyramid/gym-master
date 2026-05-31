@@ -12,6 +12,7 @@ import { useState } from "react";
 import { FileSpreadsheet } from "lucide-react";
 import pdfMake from "pdfmake/build/pdfmake";
 import pdfFonts from "pdfmake/build/vfs_fonts";
+import { buildTimestampedDownloadFileName } from "@/utils/downloadFileName";
 import {
   Accordion,
   AccordionContent,
@@ -172,7 +173,7 @@ export default function DietasViewModal({
           defaultStyle: { fontSize: 10 },
           pageOrientation: "portrait",
         })
-        .download("Detalle_Dieta.pdf");
+        .download(buildTimestampedDownloadFileName("detalle-dieta", "pdf"));
       setPdfExporting(false);
     }, 100);
   };

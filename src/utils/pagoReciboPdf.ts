@@ -1,6 +1,7 @@
 "use client";
 
 import { jsPDF } from "jspdf";
+import { buildTimestampedDownloadFileName } from "@/utils/downloadFileName";
 import QRCode from "qrcode";
 import { ResponsePago } from "@/interfaces/pago.interface";
 import { buildPagoVerificationCode } from "@/utils/pagoReciboCodigo";
@@ -394,5 +395,5 @@ export async function descargarPagoReciboPdf(pago: ResponsePago) {
     align: "right",
   });
 
-  doc.save(`recibo-gym-master-${codigo}.pdf`);
+  doc.save(buildTimestampedDownloadFileName(`recibo-gym-master-${codigo}`, "pdf"));
 }

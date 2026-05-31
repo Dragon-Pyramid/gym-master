@@ -19,6 +19,7 @@ import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { toast } from 'sonner';
 import ExcelJS from 'exceljs';
+import { buildTimestampedDownloadFileName } from '@/utils/downloadFileName';
 import { formatCurrencyARS } from '@/lib/comercial/productos';
 import { PaginationControls } from '@/components/ui/PaginationControls';
 
@@ -152,7 +153,7 @@ export default function VentasPage() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'Listado_Ventas_Kiosco.xlsx';
+    a.download = buildTimestampedDownloadFileName('listado-ventas-kiosco', 'xlsx');
     a.click();
     window.URL.revokeObjectURL(url);
   };
