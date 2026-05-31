@@ -272,6 +272,12 @@ export default function ComercialKioscoPage() {
                 icon={ShoppingCart}
               />
               <ActionCard
+                title='Gastos / Egresos'
+                description='Registrá egresos operativos, vencimientos, medios de pago y comprobantes para alimentar el BI financiero.'
+                href='/dashboard/otros-gastos'
+                icon={ClipboardList}
+              />
+              <ActionCard
                 title='Servicios adicionales'
                 description='Servicios parametrizables como masajes, cama solar o sesiones especiales para socios y no socios.'
                 href='/dashboard/servicios'

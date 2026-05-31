@@ -28,6 +28,7 @@ import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { AppHeader } from "@/components/header/AppHeader";
 import { AppFooter } from "@/components/footer/AppFooter";
 import ExcelJS from "exceljs";
+import { buildTimestampedDownloadFileName } from '@/utils/downloadFileName';
 
 export default function EquipamientosPage() {
   const { user, isAuthenticated, initializeAuth, isInitialized } =
@@ -153,7 +154,7 @@ export default function EquipamientosPage() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "Listado_Equipamientos.xlsx";
+    a.download = buildTimestampedDownloadFileName("listado-equipamientos", "xlsx");
     a.click();
     window.URL.revokeObjectURL(url);
   };

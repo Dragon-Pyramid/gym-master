@@ -1,4 +1,5 @@
 import jsPDF from "jspdf";
+import { buildTimestampedDownloadFileName } from "@/utils/downloadFileName";
 import { formatFrontendDate, formatFrontendDateTime } from '@/utils/dateFormat';
 import { EvolucionSocio } from "@/interfaces/evolucionSocio.interface";
 
@@ -1405,8 +1406,5 @@ export const descargarEvolucionFisicaPdf = async ({
 
   addFooter(doc);
 
-  const datePart = new Date().toISOString().split("T")[0];
-  const fileName = `evolucion-fisica-${safeFileName(socioNombre || "socio")}-${datePart}.pdf`;
-
-  doc.save(fileName);
+  doc.save(buildTimestampedDownloadFileName(`evolucion-fisica-${socioNombre || "socio"}`, "pdf"));
 };

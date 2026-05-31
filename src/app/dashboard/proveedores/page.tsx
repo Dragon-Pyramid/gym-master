@@ -21,6 +21,7 @@ import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 import ExcelJS from "exceljs";
+import { buildTimestampedDownloadFileName } from '@/utils/downloadFileName';
 import { downloadCommercialReportPdf } from "@/utils/commercialReportPdf";
 import { PaginationControls } from "@/components/ui/PaginationControls";
 
@@ -181,7 +182,7 @@ export default function ProveedoresPage() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "Listado_Proveedores.xlsx";
+    a.download = buildTimestampedDownloadFileName("listado-proveedores", "xlsx");
     a.click();
     window.URL.revokeObjectURL(url);
   };

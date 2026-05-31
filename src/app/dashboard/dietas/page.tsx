@@ -13,6 +13,7 @@ import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import DietaHistorial from "@/components/tables/DietaHistorial";
 import DietaForm from "@/components/forms/DietaForm";
+import { buildTimestampedDownloadFileName } from "@/utils/downloadFileName";
 
 export default function DietasPage() {
   const { user, isAuthenticated, initializeAuth, isInitialized } =
@@ -65,7 +66,7 @@ export default function DietasPage() {
           },
           pageOrientation: "landscape",
         })
-        .download("Historial_Dietas.pdf");
+        .download(buildTimestampedDownloadFileName("historial-dietas", "pdf"));
     });
   };
 

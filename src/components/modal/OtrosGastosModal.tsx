@@ -27,7 +27,7 @@ export default function OtrosGastosModal({
         <QaFileNameBadge file="src/components/modal/OtrosGastosModal.tsx" />
         <DialogHeader>
           <div className="flex gap-4 justify-between items-center w-full">
-            <DialogTitle>{gasto ? "Editar Gasto" : "Nuevo Gasto"}</DialogTitle>
+            <DialogTitle>{gasto ? "Editar Gasto / Egreso" : "Nuevo Gasto / Egreso"}</DialogTitle>
             <FechaHora />
           </div>
         </DialogHeader>

@@ -21,6 +21,7 @@ import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 import ExcelJS from "exceljs";
+import { buildTimestampedDownloadFileName } from '@/utils/downloadFileName';
 import { descargarPagoReciboPdf } from "@/utils/pagoReciboPdf";
 import { PaginationControls } from "@/components/ui/PaginationControls";
 import { downloadCommercialReportPdf } from "@/utils/commercialReportPdf";
@@ -144,7 +145,7 @@ export default function PagosPage() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "Listado_Pagos.xlsx";
+    a.download = buildTimestampedDownloadFileName("listado-pagos", "xlsx");
     a.click();
     window.URL.revokeObjectURL(url);
   };

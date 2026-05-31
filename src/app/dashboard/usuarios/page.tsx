@@ -22,6 +22,7 @@ import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 import ExcelJS from "exceljs";
+import { buildTimestampedDownloadFileName } from '@/utils/downloadFileName';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -120,7 +121,7 @@ export default function UsuariosPage() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "Listado_Usuarios.xlsx";
+    a.download = buildTimestampedDownloadFileName("listado-usuarios", "xlsx");
     a.click();
     window.URL.revokeObjectURL(url);
   };

@@ -1,4 +1,5 @@
 import jsPDF from "jspdf";
+import { buildTimestampedDownloadFileName } from "@/utils/downloadFileName";
 import { formatFrontendDate } from '@/utils/dateFormat';
 import { Rutina } from "@/interfaces/rutina.interface";
 
@@ -232,7 +233,7 @@ export const descargarRutinaPdf = async ({
     doc.setTextColor(110, 110, 110);
     doc.text("Esta rutina no tiene ejercicios cargados o usa un formato no reconocido.", PAGE_MARGIN, y);
     addFooter(doc);
-    doc.save(`${safeFileName(titulo)}.pdf`);
+    doc.save(buildTimestampedDownloadFileName(titulo, "pdf"));
     return;
   }
 
@@ -301,5 +302,5 @@ export const descargarRutinaPdf = async ({
   }
 
   addFooter(doc);
-  doc.save(`${safeFileName(titulo)}-${safeFileName(socioNombre)}.pdf`);
+  doc.save(buildTimestampedDownloadFileName(`${titulo}-${socioNombre}`, "pdf"));
 };
