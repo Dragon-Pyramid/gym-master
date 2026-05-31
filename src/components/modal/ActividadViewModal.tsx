@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Actividad } from "@/interfaces/actividad.interface";
+import { formatFrontendDateTime, formatFrontendDate } from '@/utils/dateFormat';
 
 export default function ActividadViewModal({
   open,
@@ -29,7 +30,7 @@ export default function ActividadViewModal({
             Detalles de Actividad
           </DialogTitle>
           <div className="text-sm text-right text-muted-foreground">
-            {new Date().toLocaleString()}
+            {formatFrontendDateTime(new Date())}
           </div>
         </DialogHeader>
         <div className="mt-4 space-y-4">
@@ -48,13 +49,13 @@ export default function ActividadViewModal({
           <div className="space-y-2">
             <label className="text-sm font-medium">Creado en</label>
             <div className="p-2 border rounded-md bg-muted text-foreground">
-              {new Date(actividad.creado_en).toLocaleString() || "-"}
+              {formatFrontendDateTime(actividad.creado_en) || "-"}
             </div>
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">Actualizado en</label>
             <div className="p-2 border rounded-md bg-muted text-foreground">
-              {new Date(actividad.actualizado_en).toLocaleString() || "-"}
+              {formatFrontendDateTime(actividad.actualizado_en) || "-"}
             </div>
           </div>
         </div>

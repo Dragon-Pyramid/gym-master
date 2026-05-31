@@ -12,6 +12,7 @@ import { Equipamento } from "@/interfaces/equipamiento.interface";
 import { Mantenimiento } from "@/interfaces/mantenimiento.interface";
 import { getOneEquipamientoById } from "@/services/equipamientoService";
 import { getMantenimientoByIdEquipamiento } from "@/services/mantenimientoService";
+import { formatFrontendDateTime, formatFrontendDate } from '@/utils/dateFormat';
 
 export default function EquipamientoViewModal({
   open,
@@ -50,7 +51,7 @@ export default function EquipamientoViewModal({
             Detalles de Equipamiento
           </DialogTitle>
           <div className="text-sm text-right text-muted-foreground">
-            {new Date().toLocaleString()}
+            {formatFrontendDateTime(new Date())}
           </div>
         </DialogHeader>
         <div className="flex-1 min-h-0 pr-1 overflow-y-auto">

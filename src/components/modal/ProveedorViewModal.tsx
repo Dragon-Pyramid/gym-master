@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Proveedor, ProveedorEstado } from "@/interfaces/proveedor.interface";
+import { formatFrontendDateTime, formatFrontendDate } from '@/utils/dateFormat';
 
 const estadoLabel: Record<ProveedorEstado, string> = {
   activo: "Activo",
@@ -48,7 +49,7 @@ export default function ProveedorViewModal({
             Detalle Proveedor
           </DialogTitle>
           <div className="text-sm text-right text-muted-foreground">
-            {new Date().toLocaleString()}
+            {formatFrontendDateTime(new Date())}
           </div>
         </DialogHeader>
 

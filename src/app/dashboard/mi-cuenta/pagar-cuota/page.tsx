@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { getToken } from '@/services/storageService';
 import type { PagoDescuentoPreview } from '@/interfaces/pago.interface';
 import { useAuthStore } from '@/stores/authStore';
+import { formatFrontendDate } from '@/utils/dateFormat';
 
 type EstadoCuota = {
   id_socio: string;
@@ -29,7 +30,7 @@ type EstadoCuota = {
 
 function formatDate(value?: string | null) {
   if (!value) return '-';
-  return new Date(`${value}T00:00:00`).toLocaleDateString('es-AR');
+  return formatFrontendDate(value);
 }
 
 function formatMoney(value?: number | null) {

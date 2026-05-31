@@ -17,6 +17,7 @@ import {
 } from "@/lib/comercial/productos";
 import { getProductoHistorialPreciosCostos } from "@/services/productoService";
 import { getProductoStockMovimientos } from "@/services/productoStockMovimientoService";
+import { formatFrontendDateTime, formatFrontendDate } from '@/utils/dateFormat';
 
 export default function ProductoViewModal({
   open,
@@ -79,7 +80,7 @@ export default function ProductoViewModal({
             Detalle de producto
           </DialogTitle>
           <div className="text-sm text-right text-muted-foreground">
-            {new Date().toLocaleString()}
+            {formatFrontendDateTime(new Date())}
           </div>
         </DialogHeader>
         <div className="grid grid-cols-1 gap-6 mt-4 md:grid-cols-2">
@@ -173,7 +174,7 @@ export default function ProductoViewModal({
                   {historial.map((item) => (
                     <tr key={item.id} className="border-t">
                       <td className="px-3 py-2">
-                        {item.fecha_vigencia || item.creado_en?.slice(0, 10) || "-"}
+                        {formatFrontendDate(item.fecha_vigencia ?? item.creado_en)}
                       </td>
                       <td className="px-3 py-2 text-right">
                         {item.precio_anterior == null ? "-" : formatCurrencyARS(item.precio_anterior)}
@@ -227,7 +228,7 @@ export default function ProductoViewModal({
                 <tbody>
                   {movimientosStock.map((item) => (
                     <tr key={item.id} className="border-t">
-                      <td className="px-3 py-2">{item.creado_en?.slice(0, 10) || "-"}</td>
+                      <td className="px-3 py-2">{formatFrontendDate(item.creado_en)}</td>
                       <td className="px-3 py-2 capitalize">{item.tipo.replace(/_/g, " ")}</td>
                       <td className="px-3 py-2 text-right font-medium">{item.cantidad}</td>
                       <td className="px-3 py-2 text-right">{item.stock_anterior}</td>

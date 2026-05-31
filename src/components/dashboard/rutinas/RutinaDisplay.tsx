@@ -8,6 +8,7 @@ import Image from "next/image";
 import { ArrowLeft, Download, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { descargarRutinaPdf } from "@/utils/rutinaPdf";
+import { formatFrontendDate } from '@/utils/dateFormat';
 
 type EjerciciosPorDia = Record<string, any[]>;
 
@@ -377,14 +378,14 @@ export default function RutinaEjercicios({
                 <span>
                   CREADO{" "}
                   {rutina.creado_en
-                    ? new Date(rutina.creado_en).toLocaleDateString()
+                    ? formatFrontendDate(rutina.creado_en)
                     : "-"}
                 </span>
                 <span className="hidden sm:inline">•</span>
                 <span>
                   ACTUALIZADO{" "}
                   {rutina.actualizado_en
-                    ? new Date(rutina.actualizado_en).toLocaleDateString()
+                    ? formatFrontendDate(rutina.actualizado_en)
                     : "-"}
                 </span>
               </div>
@@ -593,14 +594,14 @@ export default function RutinaEjercicios({
                     <span>
                       CREADO{" "}
                       {rutina.creado_en
-                        ? new Date(rutina.creado_en).toLocaleDateString()
+                        ? formatFrontendDate(rutina.creado_en)
                         : "-"}
                     </span>
                     <span className="hidden sm:inline">•</span>
                     <span>
                       ACTUALIZADO{" "}
                       {rutina.actualizado_en
-                        ? new Date(rutina.actualizado_en).toLocaleDateString()
+                        ? formatFrontendDate(rutina.actualizado_en)
                         : "-"}
                     </span>
                   </div>

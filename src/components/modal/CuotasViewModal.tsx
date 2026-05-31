@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Cuota } from "@/interfaces/cuota.interface";
+import { formatFrontendDateTime, formatFrontendDate } from '@/utils/dateFormat';
 
 export default function CuotasViewModal({
   open,
@@ -29,7 +30,7 @@ export default function CuotasViewModal({
             Detalle Cuota
           </DialogTitle>
           <div className="text-sm text-right text-muted-foreground">
-            {new Date().toLocaleString()}
+            {formatFrontendDateTime(new Date())}
           </div>
         </DialogHeader>
         <div className="grid grid-cols-1 gap-6 mt-4 md:grid-cols-2">
@@ -57,13 +58,13 @@ export default function CuotasViewModal({
             <div className="space-y-2">
               <label className="text-sm font-medium">Fecha de Inicio</label>
               <div className="p-2 border rounded-md bg-muted text-foreground">
-                {cuota.fecha_inicio || "-"}
+                {formatFrontendDate(cuota.fecha_inicio)}
               </div>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Fecha de Fin</label>
               <div className="p-2 border rounded-md bg-muted text-foreground">
-                {cuota.fecha_fin || "-"}
+                {formatFrontendDate(cuota.fecha_fin)}
               </div>
             </div>
           </div>

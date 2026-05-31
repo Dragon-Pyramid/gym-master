@@ -98,6 +98,7 @@ export const sections: SidebarSectionType[] = [
       { title: 'Pagos', link: '/dashboard/pagos', level: 2 },
       { title: 'Comercial / Kiosco', link: '/dashboard/comercial', level: 2 },
       { title: 'Ventas', link: '/dashboard/ventas', level: 2 },
+      { title: 'Compras', link: '/dashboard/compras', level: 2 },
       { title: 'Cuotas', link: '/dashboard/cuotas', level: 2 },
       { title: 'Proveedores', link: '/dashboard/proveedores', level: 2 },
       { title: 'Usuarios', link: '/dashboard/usuarios', level: 2 },

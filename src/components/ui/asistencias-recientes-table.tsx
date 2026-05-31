@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock, User } from 'lucide-react';
 import { supabaseBrowser } from '@/lib/supabase-browser';
+import { formatFrontendDate } from '@/utils/dateFormat';
 
 const RECENT_ADMIN_SPLASH_WINDOW_MS = 15000;
 
@@ -169,11 +170,7 @@ export default function AsistenciasRecientesTable({
   const formatFecha = (fechaISO: string) => {
     const [y, m, d] = (fechaISO ?? '').split('-').map(Number);
     const date = new Date(y || 0, (m || 1) - 1, d || 1);
-    return date.toLocaleDateString('es-AR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
+    return formatFrontendDate(date);
   };
 
   // Hora exacta guardada en base como string local Argentina "HH:MM:SS".

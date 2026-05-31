@@ -10,6 +10,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Dieta } from "@/interfaces/dieta.interface";
 import { Calendar, Target, User, FileText } from "lucide-react";
+import { formatFrontendDate } from '@/utils/dateFormat';
 
 interface DietaModalViewProps {
   open: boolean;
@@ -25,11 +26,7 @@ export default function DietaModalView({
   if (!dieta) return null;
 
   const formatearFecha = (fecha: string) => {
-    return new Date(fecha).toLocaleDateString("es-ES", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
+    return formatFrontendDate(fecha);
   };
 
   const calcularDuracion = () => {

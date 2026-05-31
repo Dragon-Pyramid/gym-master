@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Entrenador } from "@/interfaces/entrenador.interface";
+import { formatFrontendDateTime, formatFrontendDate } from '@/utils/dateFormat';
 
 export default function EntrenadorViewModal({
   open,
@@ -29,7 +30,7 @@ export default function EntrenadorViewModal({
             Detalle Entrenador
           </DialogTitle>
           <div className="text-sm text-right text-muted-foreground">
-            {new Date().toLocaleString()}
+            {formatFrontendDateTime(new Date())}
           </div>
         </DialogHeader>
 

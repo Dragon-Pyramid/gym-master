@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { OtrosGastos } from "@/interfaces/otros_gastos.interface";
+import { formatFrontendDateTime, formatFrontendDate } from '@/utils/dateFormat';
 
 export default function OtrosGastosViewModal({
   open,
@@ -29,7 +30,7 @@ export default function OtrosGastosViewModal({
             Detalle Gasto
           </DialogTitle>
           <div className="text-sm text-right text-muted-foreground">
-            {new Date().toLocaleString()}
+            {formatFrontendDateTime(new Date())}
           </div>
         </DialogHeader>
         <div className="grid grid-cols-1 gap-6 mt-4 md:grid-cols-2">

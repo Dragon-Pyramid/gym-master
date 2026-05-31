@@ -4,6 +4,7 @@ import { jsPDF } from "jspdf";
 import QRCode from "qrcode";
 import { ResponsePago } from "@/interfaces/pago.interface";
 import { buildPagoVerificationCode } from "@/utils/pagoReciboCodigo";
+import { formatFrontendDateTime } from "@/utils/dateFormat";
 
 function formatDate(value?: string | null) {
   if (!value) return "-";
@@ -388,7 +389,7 @@ export async function descargarPagoReciboPdf(pago: ResponsePago) {
 
   doc.setFontSize(6.8);
   doc.setTextColor(148, 163, 184);
-  doc.text(`Emitido: ${new Date().toLocaleString("es-AR")}`, margin, pageHeight - 12);
+  doc.text(`Emitido: ${formatFrontendDateTime(new Date())}`, margin, pageHeight - 12);
   doc.text(`Pago ID: ${pago.id}`, pageWidth - margin, pageHeight - 12, {
     align: "right",
   });

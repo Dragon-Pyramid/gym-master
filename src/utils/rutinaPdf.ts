@@ -1,4 +1,5 @@
 import jsPDF from "jspdf";
+import { formatFrontendDate } from '@/utils/dateFormat';
 import { Rutina } from "@/interfaces/rutina.interface";
 
 type EjerciciosPorDia = Record<string, any[]>;
@@ -218,8 +219,8 @@ export const descargarRutinaPdf = async ({
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.setTextColor(80, 80, 80);
-  const creado = rutina.creado_en ? new Date(rutina.creado_en).toLocaleDateString() : "-";
-  const actualizado = rutina.actualizado_en ? new Date(rutina.actualizado_en).toLocaleDateString() : "-";
+  const creado = rutina.creado_en ? formatFrontendDate(rutina.creado_en) : "-";
+  const actualizado = rutina.actualizado_en ? formatFrontendDate(rutina.actualizado_en) : "-";
   doc.text(`Creado: ${creado}`, PAGE_MARGIN, y);
   doc.text(`Actualizado: ${actualizado}`, PAGE_MARGIN + 50, y);
   doc.text(`ID rutina: ${rutina.id_rutina}`, PAGE_MARGIN + 108, y);

@@ -160,6 +160,13 @@ export const MENU_PERMISSION_GROUPS: Array<{
         roles: ['admin', 'usuario'],
       },
       {
+        key: 'Compras',
+        label: 'Compras',
+        path: '/dashboard/compras',
+        group: 'Administración',
+        roles: ['admin'],
+      },
+      {
         key: 'Cuotas',
         label: 'Cuota - Precio',
         path: '/dashboard/cuotas',

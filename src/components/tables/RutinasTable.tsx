@@ -14,6 +14,7 @@ import {
   TableCaption,
 } from "@/components/ui/table";
 import { Rutina } from "@/interfaces/rutina.interface";
+import { formatFrontendDate } from "@/utils/dateFormat";
 
 export default function RutinasTable({
   rutinas,
@@ -66,8 +67,8 @@ export default function RutinasTable({
           >
             <TableCell>{r.rutina_desc?.objetivo ?? "—"}</TableCell>
             <TableCell>{r.rutina_desc?.nivel ?? "—"}</TableCell>
-            <TableCell>{r.rutina_desc?.creado_en ?? r.id_rutina}</TableCell>
-            <TableCell>{r.rutina_desc?.fecha ?? "—"}</TableCell>
+            <TableCell>{r.rutina_desc?.creado_en ? formatFrontendDate(r.rutina_desc.creado_en) : r.id_rutina}</TableCell>
+            <TableCell>{r.rutina_desc?.fecha ? formatFrontendDate(r.rutina_desc.fecha) : "—"}</TableCell>
             <TableCell>{r.rutina_desc?.dias ?? "—"}</TableCell>
             <TableCell className="flex gap-2">
               <Button

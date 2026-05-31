@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getCuotasPagosDashboardBi } from "@/services/browser/cuotasPagosBiApiClient";
 import { CuotasPagosDashboardBiResponse } from "@/interfaces/cuotasPagosBi.interface";
+import { formatFrontendDateTime, formatFrontendDate } from '@/utils/dateFormat';
 
 function money(value: number | null | undefined) {
   return new Intl.NumberFormat("es-AR", {
@@ -95,7 +96,7 @@ export default function CuotasPagosBI() {
               Resumen operativo de socios al día, vencimientos, ingresos por método y evolución del precio de cuota.
             </p>
           </div>
-          <p className="text-xs text-gray-400">Actualizado: {new Date(data.generated_at).toLocaleString("es-AR")}</p>
+          <p className="text-xs text-gray-400">Actualizado: {formatFrontendDateTime(data.generated_at)}</p>
         </div>
       </section>
 

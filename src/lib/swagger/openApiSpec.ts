@@ -16,6 +16,55 @@ type OpenApiOperation = Record<string, unknown>;
 type OpenApiPathItem = Record<string, OpenApiOperation>;
 
 const endpointDefinitions: EndpointDefinition[] = [
+
+  {
+    "path": "/api/compras",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "tag": "Comercial / compras",
+    "summary": "Operaciones de compras a proveedores",
+    "description": "Consulta y registra compras a proveedores con detalle de productos, actualización de stock, movimiento de stock e historial de costos.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      201,
+      400,
+      401,
+      500
+    ],
+    "queryParams": [
+      "proveedor_id",
+      "estado"
+    ],
+    "source": "src/app/api/compras/route.ts"
+  },
+  {
+    "path": "/api/compras/{id}",
+    "methods": [
+      "GET",
+      "PATCH",
+      "DELETE"
+    ],
+    "tag": "Comercial / compras",
+    "summary": "Operación sobre compra por identificador",
+    "description": "Consulta, actualiza estado o anula una compra. Al anular, revierte stock si la operación no deja stock negativo.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401,
+      404,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/compras/[id]/route.ts"
+  },
   {
     "path": "/api/actividades/{id}",
     "methods": [

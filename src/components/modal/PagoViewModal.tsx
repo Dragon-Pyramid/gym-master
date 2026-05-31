@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ResponsePago } from "@/interfaces/pago.interface";
 import { ReceiptText } from "lucide-react";
+import { formatFrontendDateTime, formatFrontendDate } from '@/utils/dateFormat';
 
 function money(value?: number | null) {
   if (value === null || value === undefined) return "-";
@@ -91,7 +92,7 @@ export default function PagoViewModal({
                 Detalle del pago
               </DialogTitle>
               <div className="text-sm text-muted-foreground">
-                {new Date().toLocaleString("es-AR")}
+                {formatFrontendDateTime(new Date())}
               </div>
             </div>
 

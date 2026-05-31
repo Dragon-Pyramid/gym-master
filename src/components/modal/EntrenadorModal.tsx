@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import EntrenadorForm from "@/components/forms/EntrenadorForm";
 import { Entrenador } from "@/interfaces/entrenador.interface";
+import { formatFrontendDateTime, formatFrontendDate } from '@/utils/dateFormat';
 
 export default function EntrenadorModal({
   open,
@@ -31,7 +32,7 @@ export default function EntrenadorModal({
               {entrenador ? "Editar Entrenador" : "Nuevo Entrenador"}
             </DialogTitle>
             <div className="text-sm text-muted-foreground">
-              {new Date().toLocaleString()}
+              {formatFrontendDateTime(new Date())}
             </div>
           </div>
         </DialogHeader>

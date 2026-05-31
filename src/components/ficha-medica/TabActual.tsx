@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React, { useEffect, useState } from 'react';
 import {
   getFichaMedicaActual,
@@ -6,6 +6,7 @@ import {
 } from '../../services/apiClient';
 import type { FichaMedica } from '../../interfaces/fichaMedica.interface';
 import { useAuthStore } from '../../stores/authStore';
+import { formatFrontendDate } from '@/utils/dateFormat';
 
 export default function TabActual({
   socioId,
@@ -68,10 +69,9 @@ export default function TabActual({
   }, [active, socioId, authUser?.id]);
 
   const formatDate = (v: unknown) => {
-    if (!v) return '—';
+    if (!v) return 'â€”';
     try {
-      const d = new Date(String(v));
-      return d.toLocaleDateString('es-AR');
+      return formatFrontendDate(String(v));
     } catch {
       return String(v);
     }
@@ -130,7 +130,7 @@ export default function TabActual({
     <div className='w-full p-4 rounded-lg page-bg'>
       <h3 className='text-lg font-semibold'>Ficha actual</h3>
       <p className='mt-2 text-sm'>
-        Aquí se muestran los datos médicos vigentes y valores recientes.
+        AquÃ­ se muestran los datos mÃ©dicos vigentes y valores recientes.
       </p>
       {loading ? (
         <div className='mt-4 text-sm'>Cargando...</div>
@@ -143,88 +143,88 @@ export default function TabActual({
           <div className='p-3 rounded-md panel'>
             <div className='text-xs'>Peso</div>
             <div className='mt-1 text-xl font-semibold'>
-              {ficha?.peso ? `${ficha.peso} kg` : '—'}
+              {ficha?.peso ? `${ficha.peso} kg` : 'â€”'}
             </div>
           </div>
           <div className='p-3 rounded-md panel'>
             <div className='text-xs'>Altura</div>
             <div className='mt-1 text-xl font-semibold'>
-              {ficha?.altura ? `${ficha.altura} cm` : '—'}
+              {ficha?.altura ? `${ficha.altura} cm` : 'â€”'}
             </div>
           </div>
           <div className='p-3 rounded-md panel'>
             <div className='text-xs'>IMC</div>
             <div className='mt-1 text-xl font-semibold'>
-              {ficha?.imc ?? '—'}
+              {ficha?.imc ?? 'â€”'}
             </div>
           </div>
           <div className='p-3 rounded-md panel'>
-            <div className='text-xs'>Grupo sanguíneo</div>
+            <div className='text-xs'>Grupo sanguÃ­neo</div>
             <div className='mt-1 text-lg font-medium'>
-              {ficha?.grupo_sanguineo ?? '—'}
+              {ficha?.grupo_sanguineo ?? 'â€”'}
             </div>
           </div>
           <div className='p-3 rounded-md panel'>
-            <div className='text-xs'>Presión</div>
+            <div className='text-xs'>PresiÃ³n</div>
             <div className='mt-1 text-lg font-medium'>
-              {ficha?.presion_arterial ?? '—'}
+              {ficha?.presion_arterial ?? 'â€”'}
             </div>
           </div>
           <div className='p-3 rounded-md panel'>
-            <div className='text-xs'>Frecuencia cardíaca</div>
+            <div className='text-xs'>Frecuencia cardÃ­aca</div>
             <div className='mt-1 text-lg font-medium'>
               {ficha?.frecuencia_cardiaca
                 ? `${ficha.frecuencia_cardiaca} bpm`
-                : '—'}
+                : 'â€”'}
             </div>
           </div>
           <div className='p-3 rounded-md panel'>
             <div className='text-xs'>Alergias</div>
-            <div className='mt-1 text-sm'>{ficha?.alergias ?? '—'}</div>
+            <div className='mt-1 text-sm'>{ficha?.alergias ?? 'â€”'}</div>
           </div>
           <div className='p-3 rounded-md panel'>
-            <div className='text-xs'>Medicación</div>
-            <div className='mt-1 text-sm'>{ficha?.medicacion ?? '—'}</div>
+            <div className='text-xs'>MedicaciÃ³n</div>
+            <div className='mt-1 text-sm'>{ficha?.medicacion ?? 'â€”'}</div>
           </div>
           <div className='col-span-1 p-3 rounded-md sm:col-span-2 panel'>
             <div className='text-xs'>Observaciones</div>
             <div className='mt-1 text-sm'>
               {ficha?.observaciones_medico ??
                 ficha?.observaciones_entrenador ??
-                '—'}
+                'â€”'}
             </div>
           </div>
           <div className='p-3 rounded-md panel'>
-            <div className='text-xs'>Último control</div>
+            <div className='text-xs'>Ãšltimo control</div>
             <div className='mt-1 text-sm'>
               {formatDate(ficha?.fecha_ultimo_control)}
             </div>
-            <div className='mt-2 text-xs'>Próxima revisión</div>
+            <div className='mt-2 text-xs'>PrÃ³xima revisiÃ³n</div>
             <div className='mt-1 text-sm'>
               {formatDate(ficha?.proxima_revision)}
             </div>
           </div>
           <div className='col-span-1 p-3 rounded-md sm:col-span-3 panel'>
-            <div className='text-xs'>Historial médico completo</div>
+            <div className='text-xs'>Historial mÃ©dico completo</div>
             <div className='mt-1 text-sm'>
               <div>
-                <strong>Lesiones:</strong> {ficha?.lesiones_previas ?? '—'}
+                <strong>Lesiones:</strong> {ficha?.lesiones_previas ?? 'â€”'}
               </div>
               <div className='mt-1'>
-                <strong>Enfermedades crónicas:</strong>{' '}
-                {ficha?.enfermedades_cronicas ?? '—'}
+                <strong>Enfermedades crÃ³nicas:</strong>{' '}
+                {ficha?.enfermedades_cronicas ?? 'â€”'}
               </div>
               <div className='mt-1'>
-                <strong>Cirugías previas:</strong>{' '}
-                {ficha?.cirugias_previas ?? '—'}
+                <strong>CirugÃ­as previas:</strong>{' '}
+                {ficha?.cirugias_previas ?? 'â€”'}
               </div>
             </div>
           </div>
           {ficha?.archivo_aprobacion ? (
             <div className='col-span-1 p-3 rounded-md sm:col-span-3 panel'>
-              <div className='text-xs'>Aprobación médica</div>
+              <div className='text-xs'>AprobaciÃ³n mÃ©dica</div>
               <div className='mt-1 text-sm'>
-                {ficha.aprobacion_medica ? 'Sí' : 'No'}
+                {ficha.aprobacion_medica ? 'SÃ­' : 'No'}
               </div>
               <div className='mt-2'>
                 {renderFileLinks(ficha.archivo_aprobacion)}
@@ -251,3 +251,4 @@ export default function TabActual({
     </div>
   );
 }
+

@@ -1,4 +1,5 @@
 import jsPDF from "jspdf";
+import { formatFrontendDate, formatFrontendDateTime } from '@/utils/dateFormat';
 import { EvolucionSocio } from "@/interfaces/evolucionSocio.interface";
 
 interface DashboardChartLegendItem {
@@ -31,7 +32,7 @@ const formatDate = (value?: string | Date | null) => {
   if (!value) return "-";
 
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "-" : date.toLocaleDateString("es-AR");
+  return Number.isNaN(date.getTime()) ? "-" : formatFrontendDate(value);
 };
 
 const toNumber = (value: unknown): number | null => {
@@ -1225,7 +1226,7 @@ export const descargarEvolucionFisicaPdf = async ({
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.setTextColor(90, 90, 90);
-  doc.text(`Generado: ${new Date().toLocaleString("es-AR")}`, PAGE_MARGIN, y + 7);
+  doc.text(`Generado: ${formatFrontendDateTime(new Date())}`, PAGE_MARGIN, y + 7);
   doc.text(`Registros incluidos: ${orderedRows.length}`, PAGE_MARGIN + 70, y + 7);
 
   y += 15;

@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import ExcelJS from "exceljs";
 import { PaginationControls } from "@/components/ui/PaginationControls";
 import { downloadCommercialReportPdf } from "@/utils/commercialReportPdf";
+import { formatFrontendDateTime, formatFrontendDate } from '@/utils/dateFormat';
 
 const ACTIVIDADES_PAGE_SIZE = 10;
 
@@ -73,8 +74,8 @@ export default function ActividadesPage() {
         filtersLabel: searchTerm.trim() ? `Búsqueda: ${searchTerm.trim()}` : "Sin filtros aplicados",
         columns: [
           { header: "Actividad", width: 70, getValue: (a) => a.nombre_actividad },
-          { header: "Creado en", width: 45, getValue: (a) => new Date(a.creado_en).toLocaleString("es-AR") },
-          { header: "Actualizado en", width: 45, getValue: (a) => new Date(a.actualizado_en).toLocaleString("es-AR") },
+          { header: "Creado en", width: 45, getValue: (a) => formatFrontendDateTime(a.creado_en) },
+          { header: "Actualizado en", width: 45, getValue: (a) => formatFrontendDateTime(a.actualizado_en) },
         ],
       });
     } catch {
@@ -97,8 +98,8 @@ export default function ActividadesPage() {
       worksheet.addRow({
         id: a.id,
         nombre_actividad: a.nombre_actividad,
-        creado_en: new Date(a.creado_en).toLocaleString(),
-        actualizado_en: new Date(a.actualizado_en).toLocaleString(),
+        creado_en: formatFrontendDateTime(a.creado_en),
+        actualizado_en: formatFrontendDateTime(a.actualizado_en),
       });
     });
 

@@ -13,6 +13,7 @@ import {
   Utensils,
 } from "lucide-react";
 import { descargarDietaPdf } from "@/utils/dietaPdf";
+import { formatFrontendDate } from '@/utils/dateFormat';
 
 type PlanBlock = {
   title: string;
@@ -86,11 +87,7 @@ interface DietaDisplayProps {
 function formatDate(date?: string) {
   if (!date) return "No disponible";
 
-  return new Date(date).toLocaleDateString("es-AR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+  return formatFrontendDate(date);
 }
 
 function calculateDays(start?: string, end?: string) {

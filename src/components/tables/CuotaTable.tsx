@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Cuota } from "@/interfaces/cuota.interface";
 import { useAuthStore } from "@/stores/authStore";
+import { formatFrontendDate } from "@/utils/dateFormat";
 
 export default function CuotaTable({
   cuotas,
@@ -75,8 +76,8 @@ export default function CuotaTable({
             <TableCell className="font-medium">{c.descripcion}</TableCell>
             <TableCell>${c.monto}</TableCell>
             <TableCell>{c.periodo}</TableCell>
-            <TableCell>{c.fecha_inicio}</TableCell>
-            <TableCell>{c.fecha_fin}</TableCell>
+            <TableCell>{formatFrontendDate(c.fecha_inicio)}</TableCell>
+            <TableCell>{formatFrontendDate(c.fecha_fin)}</TableCell>
             <TableCell>{c.activo ? "✅" : "❌"}</TableCell>
             <TableCell className="flex gap-2">
               <Button

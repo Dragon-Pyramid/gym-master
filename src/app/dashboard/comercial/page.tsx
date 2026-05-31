@@ -210,6 +210,9 @@ export default function ComercialKioscoPage() {
                     <Link href='/dashboard/ventas'>Registrar venta</Link>
                   </Button>
                   <Button asChild variant='outline'>
+                    <Link href='/dashboard/compras'>Registrar compra</Link>
+                  </Button>
+                  <Button asChild variant='outline'>
                     <Link href='/dashboard/productos'>Ver productos</Link>
                   </Button>
                 </div>
@@ -261,6 +264,12 @@ export default function ComercialKioscoPage() {
                 description='Base de proveedores para compras, reposición de stock y trazabilidad comercial.'
                 href='/dashboard/proveedores'
                 icon={Truck}
+              />
+              <ActionCard
+                title='Compras y reposición'
+                description='Registrá compras a proveedores, actualizá stock y mantené trazabilidad de costos.'
+                href='/dashboard/compras'
+                icon={ShoppingCart}
               />
               <ActionCard
                 title='Servicios adicionales'

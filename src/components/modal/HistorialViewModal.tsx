@@ -1,6 +1,7 @@
 'use client';
 import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
 import React from 'react';
+import { formatFrontendDateTime, formatFrontendDate } from '@/utils/dateFormat';
 
 type HistItem = {
   fecha_ultimo_control?: string;
@@ -42,7 +43,7 @@ export default function HistorialViewModal({
     try {
       const d = new Date(String(v));
       return (
-        d.toLocaleDateString('es-AR') + ' ' + d.toLocaleTimeString('es-AR')
+        formatFrontendDateTime(d)
       );
     } catch {
       return String(v);

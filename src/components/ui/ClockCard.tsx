@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { formatFrontendDate } from '@/utils/dateFormat';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 function pad(n: number) {
@@ -9,12 +10,7 @@ function pad(n: number) {
 }
 
 function formatFecha(d: Date) {
-  return d.toLocaleDateString("es-AR", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "2-digit",
-  });
+  return formatFrontendDate(d, "es-AR");
 }
 
 export default function ClockCard() {

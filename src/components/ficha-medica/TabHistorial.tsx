@@ -6,6 +6,7 @@ import {
 } from '../../services/apiClient';
 import { useAuthStore } from '../../stores/authStore';
 import HistorialViewModal from '../modal/HistorialViewModal';
+import { formatFrontendDate } from '@/utils/dateFormat';
 
 type HistItem = {
   fecha_ultimo_control?: string;
@@ -94,8 +95,7 @@ export default function TabHistorial({
   const formatDate = (v: unknown) => {
     if (!v) return '—';
     try {
-      const d = new Date(String(v));
-      return d.toLocaleDateString('es-AR');
+      return formatFrontendDate(String(v));
     } catch {
       return String(v);
     }
