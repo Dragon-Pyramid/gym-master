@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PaginationControls } from "@/components/ui/PaginationControls";
 import { downloadCommercialReportPdf } from "@/utils/commercialReportPdf";
+import { formatFrontendDate } from "@/utils/dateFormat";
 
 const CUOTAS_PAGE_SIZE = 10;
 
@@ -81,8 +82,8 @@ export default function CuotasPage() {
           { header: "Descripción", width: 55, getValue: (c) => c.descripcion },
           { header: "Monto", width: 26, getValue: (c) => `$${Number(c.monto || 0).toLocaleString("es-AR")}`, align: "right" },
           { header: "Período", width: 30, getValue: (c) => c.periodo || "-" },
-          { header: "Fecha inicio", width: 30, getValue: (c) => c.fecha_inicio || "-" },
-          { header: "Fecha fin", width: 30, getValue: (c) => c.fecha_fin || "-" },
+          { header: "Fecha inicio", width: 30, getValue: (c) => formatFrontendDate(c.fecha_inicio) },
+          { header: "Fecha fin", width: 30, getValue: (c) => formatFrontendDate(c.fecha_fin) },
           { header: "Estado", width: 24, getValue: (c) => (c.activo ? "Activa" : "Inactiva") },
         ],
       });
@@ -108,8 +109,8 @@ export default function CuotasPage() {
         descripcion: c.descripcion,
         monto: c.monto,
         periodo: c.periodo,
-        fecha_inicio: c.fecha_inicio,
-        fecha_fin: c.fecha_fin,
+        fecha_inicio: formatFrontendDate(c.fecha_inicio),
+        fecha_fin: formatFrontendDate(c.fecha_fin),
       });
     });
 

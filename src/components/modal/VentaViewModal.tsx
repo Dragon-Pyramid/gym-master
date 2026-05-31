@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Venta } from '@/interfaces/venta.interface';
+import { formatFrontendDateTime } from '@/utils/dateFormat';
 import { VentaDetalle } from '@/interfaces/venta_detalle.interface';
 import { formatCurrencyARS } from '@/lib/comercial/productos';
 
@@ -56,7 +57,7 @@ export default function VentaViewModal({
             Detalle de Venta
           </DialogTitle>
           <div className='text-right text-sm text-muted-foreground'>
-            {new Date().toLocaleString('es-AR')}
+            {formatFrontendDateTime(new Date())}
           </div>
         </DialogHeader>
 

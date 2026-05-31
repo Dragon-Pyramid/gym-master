@@ -15,6 +15,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import DietaModalView from "@/components/modal/DietaModalView";
+import { formatFrontendDate } from '@/utils/dateFormat';
 
 interface SocioDietaCardProps {
   socio: Socio;
@@ -31,11 +32,7 @@ export default function SocioDietaCard({
 
   const formatearFecha = (fecha?: string) => {
     if (!fecha) return "No disponible";
-    return new Date(fecha).toLocaleDateString("es-ES", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
+    return formatFrontendDate(fecha);
   };
 
   const obtenerNombreDieta = (dieta?: Dieta | null) => {

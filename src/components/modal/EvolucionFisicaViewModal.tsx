@@ -13,12 +13,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { EvolucionSocio } from "@/interfaces/evolucionSocio.interface";
+import { formatFrontendDate } from '@/utils/dateFormat';
 
 const formatDate = (value?: string | Date | null) => {
   if (!value) return "-";
 
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "-" : date.toLocaleDateString("es-AR");
+  return Number.isNaN(date.getTime()) ? "-" : formatFrontendDate(value);
 };
 
 const formatNumber = (value?: number | null, suffix = "") => {

@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { Card } from '@/components/ui/card';
 import { Clock, Dumbbell, Star } from 'lucide-react';
 import ProfileImage from '@/components/perfil/ProfileImage';
+import { formatFrontendTime } from '@/utils/dateFormat';
 
 const DashboardInitialContent = () => {
   const { user } = useAuthStore();
@@ -144,10 +145,7 @@ const DashboardInitialContent = () => {
                 </div>
                 <div className='flex items-center gap-2 px-3 py-1 text-sm rounded-full text-muted-foreground bg-muted/50'>
                   <Clock className='w-4 h-4' />
-                  {currentTime.toLocaleTimeString('es-ES', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
+                  {formatFrontendTime(currentTime)}
                 </div>
               </div>
 

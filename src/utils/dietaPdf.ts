@@ -1,4 +1,5 @@
 import jsPDF from "jspdf";
+import { formatFrontendDate } from '@/utils/dateFormat';
 import { Dieta } from "@/interfaces/dieta.interface";
 
 type PlanBlock = {
@@ -94,11 +95,7 @@ const formatDate = (date?: string): string => {
   if (!date) return "No disponible";
 
   try {
-    return new Date(date).toLocaleDateString("es-AR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
+    return formatFrontendDate(date);
   } catch {
     return date;
   }

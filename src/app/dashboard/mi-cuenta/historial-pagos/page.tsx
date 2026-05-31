@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { formatFrontendDate } from '@/utils/dateFormat';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Clock, CreditCard, Loader2, ReceiptText } from 'lucide-react';
@@ -62,7 +63,7 @@ function formatMoney(value?: number | null) {
 
 function formatDate(value?: string | null) {
   if (!value) return '-';
-  return new Date(`${value}T00:00:00`).toLocaleDateString('es-AR');
+  return formatFrontendDate(value);
 }
 
 function label(value?: string | null) {

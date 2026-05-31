@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Eye, User, Calendar, Dumbbell } from "lucide-react";
 import RutinaModal from "@/components/modal/RutinaModal";
+import { formatFrontendDate } from '@/utils/dateFormat';
 
 interface SocioRutinaCardProps {
   socio: Socio;
@@ -40,11 +41,7 @@ export default function SocioRutinaCard({
 
   const formatearFecha = (fecha?: string) => {
     if (!fecha) return "No disponible";
-    return new Date(fecha).toLocaleDateString("es-ES", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
+    return formatFrontendDate(fecha);
   };
 
   const obtenerNombreRutina = (rutina?: Rutina | null) => {

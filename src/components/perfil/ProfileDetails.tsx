@@ -1,6 +1,7 @@
 'use client';
 
 import type { Usuario } from '@/interfaces/usuario.interface';
+import { formatFrontendDate } from '@/utils/dateFormat';
 
 export default function ProfileDetails({
   user,
@@ -11,11 +12,7 @@ export default function ProfileDetails({
     if (!d) return '-';
     const date = typeof d === 'string' ? new Date(d) : d;
     if (!date || isNaN(date.getTime())) return '-';
-    return date.toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
+    return formatFrontendDate(date);
   };
 
   return (

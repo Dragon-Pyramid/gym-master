@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { getDietasPorSocio, getSocioByUsuarioId } from "@/services/apiClient";
 import type { Dieta } from "@/interfaces/dieta.interface";
+import { formatFrontendDate } from "@/utils/dateFormat";
 import {
   Dialog,
   DialogContent,
@@ -160,8 +161,8 @@ export default function DietaHistorial({
                   Ver
                 </Button>
               </TableCell>
-              <TableCell>{d.fecha_inicio}</TableCell>
-              <TableCell>{d.fecha_fin}</TableCell>
+              <TableCell>{formatFrontendDate(d.fecha_inicio)}</TableCell>
+              <TableCell>{formatFrontendDate(d.fecha_fin)}</TableCell>
             </TableRow>
           ))}
         </TableBody>

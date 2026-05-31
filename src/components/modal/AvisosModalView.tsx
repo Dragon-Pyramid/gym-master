@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Aviso } from "@/interfaces/aviso.interface";
+import { formatFrontendDateTime, formatFrontendDate } from '@/utils/dateFormat';
 
 export default function AvisosModalView({
   open,
@@ -29,7 +30,7 @@ export default function AvisosModalView({
             Detalle Aviso
           </DialogTitle>
           <div className="text-sm text-right text-muted-foreground">
-            {new Date().toLocaleString()}
+            {formatFrontendDateTime(new Date())}
           </div>
         </DialogHeader>
         <div className="grid grid-cols-1 gap-6 mt-4 md:grid-cols-2">

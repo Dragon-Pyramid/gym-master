@@ -22,6 +22,7 @@ import {
   type AsistenciaReciente,
   type RegistroAsistenciaAlertType,
 } from '@/services/qrService';
+import { formatFrontendDate, formatFrontendTime } from '@/utils/dateFormat';
 
 type TerminalVariant = 'idle' | 'success' | 'debt' | 'inactive' | 'error';
 
@@ -98,20 +99,11 @@ const variantStyles: Record<
 };
 
 function formatTime(date: Date) {
-  return date.toLocaleTimeString('es-AR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
+  return formatFrontendTime(date);
 }
 
 function formatDate(date: Date) {
-  return date.toLocaleDateString('es-AR', {
-    weekday: 'long',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
+  return formatFrontendDate(date);
 }
 
 function getVariantFromAccess(alertType?: string, accessStatus?: string): TerminalVariant {

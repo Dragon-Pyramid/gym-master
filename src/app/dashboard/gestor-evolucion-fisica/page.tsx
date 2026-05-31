@@ -21,6 +21,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { EvolucionFisicaAdminResumen } from "@/interfaces/evolucionSocio.interface";
 import { getEvolucionFisicaAdminResumen } from "@/services/evolucionSocioClient";
 import { useAuthStore } from "@/stores/authStore";
+import { formatFrontendDate } from '@/utils/dateFormat';
 
 const GESTOR_EVOLUCION_PAGE_SIZE = 12;
 
@@ -33,7 +34,7 @@ const formatDate = (value?: string | null) => {
   if (!value) return "Sin registros";
 
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "Sin registros" : date.toLocaleDateString("es-AR");
+  return Number.isNaN(date.getTime()) ? "Sin registros" : formatFrontendDate(value, 'es-AR', "Sin registros");
 };
 
 const formatNumber = (value?: number | null, suffix = "") => {

@@ -59,6 +59,7 @@ import {
   updateParametrizacionCatalogoItem,
 } from "@/services/parametrizacionService";
 import { useAuthStore } from "@/stores/authStore";
+import { formatFrontendDateTime, formatFrontendDate } from '@/utils/dateFormat';
 
 type CatalogUiDefinition = {
   icon: React.ElementType;
@@ -143,7 +144,7 @@ const priorityStyles: Record<string, string> = {
 function formatDateTime(value?: string) {
   if (!value) return "-";
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "-" : date.toLocaleString("es-AR");
+  return Number.isNaN(date.getTime()) ? "-" : formatFrontendDateTime(value);
 }
 
 function emptyFormState(): CatalogFormState {

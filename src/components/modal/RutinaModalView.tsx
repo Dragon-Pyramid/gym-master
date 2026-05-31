@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/accordion";
 import pdfMake from "pdfmake/build/pdfmake";
 import pdfFonts from "pdfmake/build/vfs_fonts";
+import { formatFrontendDateTime, formatFrontendDate } from '@/utils/dateFormat';
 
 pdfMake.vfs = pdfFonts.vfs;
 
@@ -212,7 +213,7 @@ export default function RutinaModalView({
               Detalle Rutina
             </DialogTitle>
             <div className="text-sm text-right text-muted-foreground">
-              {new Date().toLocaleString()}
+              {formatFrontendDateTime(new Date())}
             </div>
           </DialogHeader>
           <div className="grid grid-cols-1 gap-6 mt-4 md:grid-cols-2">
@@ -231,7 +232,7 @@ export default function RutinaModalView({
                 </label>
                 <div className="p-2 border rounded-md bg-muted text-foreground border-border">
                   {rutina.creado_en
-                    ? new Date(rutina.creado_en).toLocaleDateString()
+                    ? formatFrontendDate(rutina.creado_en)
                     : "-"}
                 </div>
               </div>

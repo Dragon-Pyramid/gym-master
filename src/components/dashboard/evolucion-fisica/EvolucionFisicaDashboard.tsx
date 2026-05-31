@@ -24,6 +24,7 @@ import {
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { EvolucionSocio } from "@/interfaces/evolucionSocio.interface";
 import EvolucionFisicaHumanSilhouette from "./EvolucionFisicaHumanSilhouette";
+import { formatFrontendDate, formatFrontendShortDate } from '@/utils/dateFormat';
 
 
 interface EvolucionFisicaDashboardProps {
@@ -59,7 +60,7 @@ const formatDate = (value?: string | Date | null) => {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? "-"
-    : date.toLocaleDateString("es-AR");
+    : formatFrontendDate(value);
 };
 
 const formatShortDate = (value?: string | Date | null) => {
@@ -68,7 +69,7 @@ const formatShortDate = (value?: string | Date | null) => {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? "-"
-    : date.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" });
+    : formatFrontendShortDate(value);
 };
 
 const formatNumber = (

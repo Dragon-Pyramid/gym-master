@@ -22,6 +22,7 @@ import {
   SocioBasico,
 } from "@/services/evolucionSocioClient";
 import { descargarEvolucionFisicaPdf } from "@/utils/evolucionFisicaPdf";
+import { formatFrontendDate } from '@/utils/dateFormat';
 
 const formatSocioName = (socio: SocioBasico) => {
   const nombreCompleto = socio.nombre_completo;
@@ -53,7 +54,7 @@ const formatDate = (value?: string | Date | null) => {
   if (!value) return "";
 
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString();
+  return Number.isNaN(date.getTime()) ? "" : formatFrontendDate(value, 'es-AR', "");
 };
 
 

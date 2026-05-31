@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Socio } from "@/interfaces/socio.interface";
+import { formatFrontendDateTime, formatFrontendDate } from '@/utils/dateFormat';
 
 const sexoLabel = (value?: string | null) => {
   if (value === "M") return "Masculino";
@@ -46,7 +47,7 @@ export default function SocioViewModal({
             Detalle Socio
           </DialogTitle>
           <div className="text-sm text-right text-muted-foreground">
-            {new Date().toLocaleString()}
+            {formatFrontendDateTime(new Date())}
           </div>
         </DialogHeader>
 

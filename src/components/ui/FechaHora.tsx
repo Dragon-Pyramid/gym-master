@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { formatFrontendDateTime } from '@/utils/dateFormat';
 
 export default function FechaHora() {
   const [fechaHora, setFechaHora] = useState("");
@@ -10,18 +11,12 @@ export default function FechaHora() {
     setIsClient(true);
     const interval = setInterval(() => {
       setFechaHora(
-        new Date().toLocaleString("es-PE", {
-          dateStyle: "short",
-          timeStyle: "medium",
-        })
+        formatFrontendDateTime(new Date())
       );
     }, 1000);
 
     setFechaHora(
-      new Date().toLocaleString("es-PE", {
-        dateStyle: "short",
-        timeStyle: "medium",
-      })
+      formatFrontendDateTime(new Date())
     );
 
     return () => clearInterval(interval);

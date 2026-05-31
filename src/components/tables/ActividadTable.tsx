@@ -14,6 +14,7 @@ import {
   TableCaption,
 } from "@/components/ui/table";
 import { Actividad } from "@/interfaces/actividad.interface";
+import { formatFrontendDate } from '@/utils/dateFormat';
 
 export default function ActividadTable({
   actividades,
@@ -64,9 +65,9 @@ export default function ActividadTable({
             className="odd:bg-muted/40 hover:bg-[#a8d9f9] transition-colors"
           >
             <TableCell className="font-medium">{a.nombre_actividad}</TableCell>
-            <TableCell>{new Date(a.creado_en).toLocaleDateString()}</TableCell>
+            <TableCell>{formatFrontendDate(a.creado_en)}</TableCell>
             <TableCell>
-              {new Date(a.actualizado_en).toLocaleDateString()}
+              {formatFrontendDate(a.actualizado_en)}
             </TableCell>
             <TableCell className="flex gap-2">
               <Button

@@ -20,6 +20,7 @@ import { Asistencia } from "@/interfaces/asistencia.interface";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
+import { formatFrontendTime } from '@/utils/dateFormat';
 import ExcelJS from "exceljs";
 import { downloadCommercialReportPdf } from "@/utils/commercialReportPdf";
 import { JwtUser } from "@/interfaces/jwtUser.interface";
@@ -354,7 +355,7 @@ export default function AsistenciasPage() {
                   </span>
                   {lastUpdatedAt && (
                     <span>
-                      Última actualización: {lastUpdatedAt.toLocaleTimeString("es-AR")}
+                      Última actualización: {formatFrontendTime(lastUpdatedAt)}
                     </span>
                   )}
                 </div>
