@@ -239,7 +239,7 @@ export default function FinanzasIngresosEgresosBiPage() {
           {
             title: 'Evolución mensual: ingresos vs egresos',
             kind: 'bars',
-            data: data.serie_mensual,
+            data: data.serie_mensual.map((item) => ({ ...item })) as Record<string, string | number | null | undefined>[],
             labelKey: 'periodo_label',
             series: [
               { key: 'ingresos_total', label: 'Ingresos', color: [22, 163, 74] },
@@ -249,7 +249,7 @@ export default function FinanzasIngresosEgresosBiPage() {
           {
             title: 'Resultado neto mensual',
             kind: 'line',
-            data: data.serie_mensual,
+            data: data.serie_mensual.map((item) => ({ ...item })) as Record<string, string | number | null | undefined>[],
             labelKey: 'periodo_label',
             series: [
               { key: 'resultado_neto', label: 'Resultado', color: [2, 132, 199] },
