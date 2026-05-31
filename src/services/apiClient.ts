@@ -795,3 +795,61 @@ export async function syncEjercicioMediaEquivalences(payload?: {
   const data = await res.json();
   return { ok: res.ok, ...data };
 }
+
+export async function crearEmpleado(body: any) {
+  const token = getToken();
+  const res = await fetch('/api/empleados', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  return { ok: res.ok, data, ...(!res.ok ? data : {}) };
+}
+
+export async function getEmpleado(id: number | string) {
+  const token = getToken();
+  const res = await fetch(`/api/empleados/${id}`, {
+    method: 'GET',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, data, ...(!res.ok ? data : {}) };
+}
+
+export async function getEmpleados() {
+  const token = getToken();
+  const res = await fetch('/api/empleados', {
+    method: 'GET',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, data, ...(!res.ok ? data : {}) };
+}
+
+export async function actualizarEmpleado(id: number | string, body: any) {
+  const token = getToken();
+  const res = await fetch(`/api/empleados/${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  return { ok: res.ok, data, ...(!res.ok ? data : {}) };
+}
+
+export async function desactivarEmpleado(id: number | string) {
+  const token = getToken();
+  const res = await fetch(`/api/empleados/${id}`, {
+    method: 'DELETE',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, data, ...(!res.ok ? data : {}) };
+}
