@@ -18,6 +18,30 @@ type OpenApiPathItem = Record<string, OpenApiOperation>;
 const endpointDefinitions: EndpointDefinition[] = [
 
   {
+    "path": "/api/finanzas/dashboard-bi",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Finanzas / BI",
+    "summary": "Dashboard financiero de ingresos y egresos",
+    "description": "Consolida ingresos por cuotas y ventas, egresos por compras y gastos, resultado neto, compromisos pendientes y serie mensual para el dashboard financiero.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401,
+      500
+    ],
+    "queryParams": [
+      "desde",
+      "hasta"
+    ],
+    "source": "src/app/api/finanzas/dashboard-bi/route.ts"
+  },
+
+  {
     "path": "/api/compras",
     "methods": [
       "GET",

@@ -209,6 +209,13 @@ export const MENU_PERMISSION_GROUPS: Array<{
         roles: ['admin'],
       },
       {
+        key: 'Finanzas / BI',
+        label: 'Finanzas / BI',
+        path: '/dashboard/finanzas',
+        group: 'Administración',
+        roles: ['admin'],
+      },
+      {
         key: 'Avisos',
         label: 'Avisos',
         path: '/dashboard/avisos',

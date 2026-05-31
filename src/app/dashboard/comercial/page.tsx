@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   BarChart3,
   Boxes,
+  DollarSign,
   ClipboardList,
   Package,
   ReceiptText,
@@ -202,7 +203,7 @@ export default function ComercialKioscoPage() {
                   </p>
                   <h1 className='text-2xl font-bold'>Kiosco y ventas del gimnasio</h1>
                   <p className='max-w-3xl text-sm leading-relaxed text-muted-foreground'>
-                    Controlá productos, stock, ventas, proveedores y servicios adicionales. Esta primera base usa los datos actuales del sistema y deja preparado el camino para devoluciones, ajustes por recuento, compras y BI financiero.
+                    Controlá productos, stock, ventas, proveedores, servicios adicionales y finanzas operativas. Esta base comercial alimenta el tablero de ingresos, egresos y rentabilidad estimada.
                   </p>
                 </div>
                 <div className='flex flex-wrap gap-2'>
@@ -214,6 +215,9 @@ export default function ComercialKioscoPage() {
                   </Button>
                   <Button asChild variant='outline'>
                     <Link href='/dashboard/productos'>Ver productos</Link>
+                  </Button>
+                  <Button asChild variant='outline'>
+                    <Link href='/dashboard/finanzas'>Finanzas / BI</Link>
                   </Button>
                 </div>
               </div>
@@ -276,6 +280,12 @@ export default function ComercialKioscoPage() {
                 description='Registrá egresos operativos, vencimientos, medios de pago y comprobantes para alimentar el BI financiero.'
                 href='/dashboard/otros-gastos'
                 icon={ClipboardList}
+              />
+              <ActionCard
+                title='Finanzas / BI'
+                description='Consolidá ingresos, egresos, resultado neto, compromisos pendientes y evolución mensual.'
+                href='/dashboard/finanzas'
+                icon={DollarSign}
               />
               <ActionCard
                 title='Servicios adicionales'
