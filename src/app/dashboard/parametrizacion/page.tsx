@@ -89,7 +89,7 @@ type CuotaDescuentoFormState = {
 const catalogUiDefinitions: Record<CatalogoParametrizableKey, CatalogUiDefinition> = {
   tipo_empleado: {
     icon: UserCog,
-    href: "/dashboard/entrenadores",
+    href: "/dashboard/empleados",
     tags: ["administrativo", "entrenador", "mantenimiento", "limpieza", "mayordomía/bar-snack"],
   },
   medio_pago: {

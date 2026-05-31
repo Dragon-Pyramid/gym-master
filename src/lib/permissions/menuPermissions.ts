@@ -89,9 +89,9 @@ export const MENU_PERMISSION_GROUPS: Array<{
         roles: ['admin'],
       },
       {
-        key: 'Entrenadores',
-        label: 'Entrenadores',
-        path: '/dashboard/entrenadores',
+        key: 'Empleados',
+        label: 'Empleados',
+        path: '/dashboard/empleados',
         group: 'Gestión de gimnasio',
         roles: ['admin'],
       },

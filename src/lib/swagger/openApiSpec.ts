@@ -18,6 +18,52 @@ type OpenApiPathItem = Record<string, OpenApiOperation>;
 const endpointDefinitions: EndpointDefinition[] = [
 
   {
+    "path": "/api/empleados",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "tag": "Empleados",
+    "summary": "Operaciones de empleados",
+    "description": "Consulta y registra empleados del gimnasio. Reemplaza progresivamente el módulo legacy de entrenadores y prepara integración futura con sueldos, usuarios internos y RBAC.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      201,
+      400,
+      401,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/empleados/route.ts"
+  },
+  {
+    "path": "/api/empleados/{id}",
+    "methods": [
+      "GET",
+      "PATCH",
+      "DELETE"
+    ],
+    "tag": "Empleados",
+    "summary": "Operación sobre empleado por identificador",
+    "description": "Consulta, actualiza o desactiva lógicamente un empleado por ID. La baja no borra físicamente el registro para conservar trazabilidad.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401,
+      404,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/empleados/[id]/route.ts"
+  },
+
+  {
     "path": "/api/finanzas/dashboard-bi",
     "methods": [
       "GET"
@@ -2052,8 +2098,8 @@ const tags = [
     "description": "Productos, proveedores, servicios, ventas y detalles de venta."
   },
   {
-    "name": "Empleados y entrenadores",
-    "description": "Gestión actual de entrenadores y futura evolución a empleados."
+    "name": "Empleados",
+    "description": "Gestión formal de empleados, responsabilidades, base para sueldos, usuarios internos y RBAC."
   },
   {
     "name": "Evolución física",
