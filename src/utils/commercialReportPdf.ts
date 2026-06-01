@@ -39,6 +39,11 @@ export interface DownloadCommercialReportPdfParams<T> {
   filtersLabel?: string;
   charts?: CommercialReportChart[];
   logoUrl?: string;
+  pageOrientation?: "landscape" | "portrait";
+  pageFormat?: "a4" | "a5";
+  brandName?: string;
+  brandSubtitle?: string;
+  footerText?: string;
 }
 
 const PAGE_MARGIN = 12;
@@ -116,36 +121,62 @@ const addHeader = (
   pageWidth: number,
   logoDataUrl: string | null,
   title: string,
-  subtitle?: string
+  subtitle: string | undefined,
+  brandName: string,
+  brandSubtitle: string
 ) => {
+  const isCompact = pageWidth < 170;
+  const logoSize = isCompact ? 15 : 18;
+  const logoY = isCompact ? 6 : 6;
+  const brandX = PAGE_MARGIN + logoSize + 5;
+  const titleX = pageWidth - PAGE_MARGIN;
+  const headerAvailableWidth = pageWidth - PAGE_MARGIN * 2;
+  const safeGap = isCompact ? 7 : 12;
+  const leftMaxWidth = isCompact
+    ? Math.max(42, (headerAvailableWidth - logoSize - safeGap) * 0.48)
+    : Math.max(72, headerAvailableWidth * 0.44);
+  const rightMaxWidth = isCompact
+    ? Math.max(42, headerAvailableWidth - logoSize - safeGap - leftMaxWidth)
+    : Math.max(72, headerAvailableWidth * 0.42);
+
   doc.setFillColor(255, 255, 255);
   doc.rect(0, 0, pageWidth, HEADER_HEIGHT + 7, "F");
 
   if (logoDataUrl) {
-    doc.addImage(logoDataUrl, "PNG", PAGE_MARGIN, 6, 18, 18);
+    doc.addImage(logoDataUrl, "PNG", PAGE_MARGIN, logoY, logoSize, logoSize);
   }
 
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(13);
+  doc.setFontSize(isCompact ? 11.5 : 13);
   doc.setTextColor(...DARK);
-  doc.text("Gym Master", PAGE_MARGIN + 23, 12);
+  doc.text(brandName, brandX, isCompact ? 11.5 : 12, { maxWidth: leftMaxWidth });
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
+  doc.setFontSize(isCompact ? 7.2 : 8.5);
   doc.setTextColor(...MUTED);
-  doc.text("Dragon Pyramid · Gestión integral de gimnasios", PAGE_MARGIN + 23, 17);
-  doc.text(`Generado: ${formatDateTime()}`, PAGE_MARGIN + 23, 22);
+  const brandSubtitleLines = doc.splitTextToSize(brandSubtitle, leftMaxWidth).slice(0, 2);
+  doc.text(brandSubtitleLines, brandX, isCompact ? 16 : 17);
+  const generatedY = isCompact ? 16 + brandSubtitleLines.length * 3.7 + 1 : 22;
+  doc.text(`Generado: ${formatDateTime()}`, brandX, Math.min(generatedY, HEADER_HEIGHT + 1), {
+    maxWidth: leftMaxWidth,
+  });
 
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(15);
+  doc.setFontSize(isCompact ? 12.2 : 15);
   doc.setTextColor(...DARK);
-  doc.text(title, pageWidth - PAGE_MARGIN, 12, { align: "right" });
+  doc.text(title, titleX, isCompact ? 11.5 : 12, {
+    align: "right",
+    maxWidth: rightMaxWidth,
+  });
 
   if (subtitle) {
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(8.5);
+    doc.setFontSize(isCompact ? 7.2 : 8.5);
     doc.setTextColor(...MUTED);
-    doc.text(subtitle, pageWidth - PAGE_MARGIN, 18, { align: "right" });
+    const subtitleLines = doc.splitTextToSize(subtitle, rightMaxWidth).slice(0, 2);
+    doc.text(subtitleLines, titleX, isCompact ? 16.5 : 18, {
+      align: "right",
+    });
   }
 
   doc.setDrawColor(...PRIMARY);
@@ -153,12 +184,12 @@ const addHeader = (
   doc.line(PAGE_MARGIN, HEADER_HEIGHT + 3, pageWidth - PAGE_MARGIN, HEADER_HEIGHT + 3);
 };
 
-const addFooter = (doc: jsPDF, pageWidth: number, pageHeight: number) => {
+const addFooter = (doc: jsPDF, pageWidth: number, pageHeight: number, footerText: string) => {
   const pageNumber = doc.getNumberOfPages();
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.setTextColor(...MUTED);
-  doc.text("Gym Master · Reporte generado por el sistema", PAGE_MARGIN, pageHeight - 5);
+  doc.text(footerText, PAGE_MARGIN, pageHeight - 5);
   doc.text(`Página ${pageNumber}`, pageWidth - PAGE_MARGIN, pageHeight - 5, {
     align: "right",
   });
@@ -174,29 +205,35 @@ const drawMetrics = (
 
   const gap = 4;
   const availableWidth = pageWidth - PAGE_MARGIN * 2;
-  const cardWidth = Math.max(38, (availableWidth - gap * (metrics.length - 1)) / metrics.length);
+  const preferredWidth = (availableWidth - gap * (metrics.length - 1)) / metrics.length;
+  const columnsPerRow = preferredWidth < 34 ? Math.min(2, metrics.length) : metrics.length;
+  const cardWidth = (availableWidth - gap * (columnsPerRow - 1)) / columnsPerRow;
   const cardHeight = 17;
 
   metrics.forEach((metric, index) => {
-    const x = PAGE_MARGIN + index * (cardWidth + gap);
+    const row = Math.floor(index / columnsPerRow);
+    const col = index % columnsPerRow;
+    const x = PAGE_MARGIN + col * (cardWidth + gap);
+    const cardY = y + row * (cardHeight + gap);
+
     doc.setDrawColor(...BORDER);
     doc.setFillColor(248, 250, 252);
-    doc.roundedRect(x, y, cardWidth, cardHeight, 2, 2, "FD");
+    doc.roundedRect(x, cardY, cardWidth, cardHeight, 2, 2, "FD");
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7.5);
     doc.setTextColor(...MUTED);
-    doc.text(metric.label, x + 3, y + 6);
+    doc.text(metric.label, x + 3, cardY + 6);
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
+    doc.setFontSize(10.5);
     doc.setTextColor(...DARK);
-    doc.text(normalizeText(metric.value, "0"), x + 3, y + 13);
+    doc.text(normalizeText(metric.value, "0"), x + 3, cardY + 13);
   });
 
-  return y + cardHeight + 7;
+  const rowCount = Math.ceil(metrics.length / columnsPerRow);
+  return y + rowCount * cardHeight + Math.max(0, rowCount - 1) * gap + 7;
 };
-
 
 const toNumber = (value: unknown): number => {
   const parsed = Number(value ?? 0);
@@ -394,8 +431,13 @@ export async function downloadCommercialReportPdf<T>({
   filtersLabel,
   charts,
   logoUrl = "/gm_logo.svg",
+  pageOrientation = "landscape",
+  pageFormat = "a4",
+  brandName = "Gym Master",
+  brandSubtitle = "Dragon Pyramid · Gestión integral de gimnasios",
+  footerText = "Gym Master · Reporte generado por el sistema",
 }: DownloadCommercialReportPdfParams<T>): Promise<void> {
-  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  const doc = new jsPDF({ orientation: pageOrientation, unit: "mm", format: pageFormat });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const logoDataUrl = await loadImageAsPngDataUrl(logoUrl, 256, 256);
@@ -406,7 +448,7 @@ export async function downloadCommercialReportPdf<T>({
   const normalizedColumns = columns.map((col) => ({ ...col, width: col.width * scale }));
 
   let y = HEADER_HEIGHT + 10;
-  addHeader(doc, pageWidth, logoDataUrl, title, subtitle);
+  addHeader(doc, pageWidth, logoDataUrl, title, subtitle, brandName, brandSubtitle);
 
   y = drawMetrics(doc, metrics, pageWidth, y);
 
@@ -419,9 +461,9 @@ export async function downloadCommercialReportPdf<T>({
   }
 
   y = drawCharts(doc, charts, pageWidth, pageHeight, y, () => {
-    addFooter(doc, pageWidth, pageHeight);
+    addFooter(doc, pageWidth, pageHeight, footerText);
     doc.addPage();
-    addHeader(doc, pageWidth, logoDataUrl, title, subtitle);
+    addHeader(doc, pageWidth, logoDataUrl, title, subtitle, brandName, brandSubtitle);
     return HEADER_HEIGHT + 10;
   });
 
@@ -453,9 +495,9 @@ export async function downloadCommercialReportPdf<T>({
     );
 
     if (y + rowHeight > pageHeight - FOOTER_HEIGHT - 6) {
-      addFooter(doc, pageWidth, pageHeight);
+      addFooter(doc, pageWidth, pageHeight, footerText);
       doc.addPage();
-      addHeader(doc, pageWidth, logoDataUrl, title, subtitle);
+      addHeader(doc, pageWidth, logoDataUrl, title, subtitle, brandName, brandSubtitle);
       y = HEADER_HEIGHT + 10;
       drawTableHeader(doc, normalizedColumns, tableX, y);
       y += 8;
@@ -488,8 +530,8 @@ export async function downloadCommercialReportPdf<T>({
   const pages = doc.getNumberOfPages();
   for (let page = 1; page <= pages; page += 1) {
     doc.setPage(page);
-    addFooter(doc, pageWidth, pageHeight);
+    addFooter(doc, pageWidth, pageHeight, footerText);
   }
 
-  doc.save(buildTimestampedDownloadFileName(fileName, "pdf"));
+  doc.save(fileName.toLowerCase().endsWith(".pdf") ? fileName : buildTimestampedDownloadFileName(fileName, "pdf"));
 }

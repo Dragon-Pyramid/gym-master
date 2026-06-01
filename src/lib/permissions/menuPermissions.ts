@@ -216,6 +216,13 @@ export const MENU_PERMISSION_GROUPS: Array<{
         roles: ['admin'],
       },
       {
+        key: 'Sueldos',
+        label: 'Sueldos',
+        path: '/dashboard/empleados-sueldos',
+        group: 'Administración',
+        roles: ['admin'],
+      },
+      {
         key: 'Avisos',
         label: 'Avisos',
         path: '/dashboard/avisos',

@@ -63,6 +63,53 @@ const endpointDefinitions: EndpointDefinition[] = [
     "source": "src/app/api/empleados/[id]/route.ts"
   },
 
+
+  {
+    "path": "/api/empleados-sueldos",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "tag": "Empleados / Sueldos",
+    "summary": "Operaciones de sueldos de empleados",
+    "description": "Consulta y registra liquidaciones opcionales de sueldos, pagos y recibos internos de empleados. Base futura para integración con egresos, finanzas y RBAC.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      201,
+      400,
+      401,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/empleados-sueldos/route.ts"
+  },
+  {
+    "path": "/api/empleados-sueldos/{id}",
+    "methods": [
+      "GET",
+      "PATCH",
+      "DELETE"
+    ],
+    "tag": "Empleados / Sueldos",
+    "summary": "Operación sobre sueldo de empleado por identificador",
+    "description": "Consulta, actualiza o anula lógicamente una liquidación de sueldo. La anulación conserva trazabilidad para auditoría.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401,
+      404,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/empleados-sueldos/[id]/route.ts"
+  },
+
   {
     "path": "/api/finanzas/dashboard-bi",
     "methods": [
