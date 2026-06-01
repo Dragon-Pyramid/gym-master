@@ -16,6 +16,7 @@ type StoreUser = Partial<Usuario> & {
   email?: string;
   rol?: string;
   permisos_menu?: string[] | null;
+  must_change_password?: boolean;
 };
 
 interface AuthState {
@@ -29,10 +30,11 @@ interface AuthState {
     email: string;
     password: string;
     rol: string;
-  }) => Promise<boolean>;
+  }) => Promise<{ success: boolean; mustChangePassword?: boolean }>;
   logout: () => void;
   initializeAuth: () => void;
   updateUser: (patch: Partial<StoreUser>) => void;
+  refreshSession: (token: string) => void;
   clearError: () => void;
 }
 
@@ -60,20 +62,20 @@ export const useAuthStore = create<AuthState>()(
               error: null,
               isInitialized: true,
             });
-            return true;
+            return { success: true, mustChangePassword: Boolean(decoded.must_change_password) };
           } else {
             set({
               error: result.message || 'Error de autenticación',
               isLoading: false,
             });
-            return false;
+            return { success: false };
           }
         } catch {
           set({
             error: 'Error de conexión',
             isLoading: false,
           });
-          return false;
+          return { success: false };
         }
       },
       logout: () => {
@@ -110,6 +112,18 @@ export const useAuthStore = create<AuthState>()(
         const currentUser = get().user;
         set({
           user: currentUser ? { ...currentUser, ...patch } : currentUser,
+        });
+      },
+      refreshSession: (token) => {
+        const decoded = jwtDecode<StoreUser>(token);
+        loginSession(token);
+        set({
+          user: decoded,
+          token,
+          isAuthenticated: true,
+          isLoading: false,
+          error: null,
+          isInitialized: true,
         });
       },
       clearError: () => {
