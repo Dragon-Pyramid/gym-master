@@ -4,6 +4,7 @@ import { JwtUser } from '@/interfaces/jwtUser.interface';
 import { conexionBD } from '@/middlewares/conexionBd.middleware';
 import { updateFotoSocioById } from './socioService';
 import { sanitizeMenuPermissionsForRole } from '@/lib/permissions/menuPermissions';
+import { buildInitialPasswordFromDni } from '@/utils/passwordPolicy';
 
 export const fetchUsuarios = async (_user?: JwtUser): Promise<ResponseUsuario[]> => {
   const supabase = conexionBD();
@@ -24,7 +25,12 @@ const responseUsuario = (data : Usuario[]) : ResponseUsuario[]=>{
     rol: usuario.rol,
     activo: usuario.activo,
     foto: usuario.foto,
+    dni: usuario.dni ?? null,
     permisos_menu: usuario.permisos_menu ?? null,
+    must_change_password: Boolean(usuario.must_change_password),
+    password_actualizado_en: usuario.password_actualizado_en ?? null,
+    primer_login_en: usuario.primer_login_en ?? null,
+    ultimo_login_en: usuario.ultimo_login_en ?? null,
   }))
 }
 
@@ -33,11 +39,20 @@ export const createUsuarios = async (_user: JwtUser | undefined, payload: Create
 
   const rol = payload.rol || 'socio';
 
-  if (rol === 'socio' && !payload.dni?.trim()) {
-    throw new Error('El DNI es obligatorio para crear un usuario socio.');
+  const dni = payload.dni?.trim() ?? '';
+  const useInitialPassword = payload.use_initial_password ?? true;
+
+  if ((rol === 'socio' || useInitialPassword) && !dni) {
+    throw new Error('El DNI es obligatorio para generar la contraseña inicial.');
   }
 
-  const password_hash = await bcrypt.hash(payload.password, 10);
+  const plainPassword = useInitialPassword ? buildInitialPasswordFromDni(dni) : payload.password?.trim();
+
+  if (!plainPassword) {
+    throw new Error('La contraseña es obligatoria para crear un usuario.');
+  }
+
+  const password_hash = await bcrypt.hash(plainPassword, 10);
 
   const { data: usuarioCreado, error: usuarioError } = await supabase
     .from('usuario')
@@ -48,7 +63,10 @@ export const createUsuarios = async (_user: JwtUser | undefined, payload: Create
       rol,
       activo: true,
       foto: payload.foto ?? null,
+      dni: dni || null,
       permisos_menu: sanitizeMenuPermissionsForRole(rol, payload.permisos_menu),
+      must_change_password: useInitialPassword,
+      password_actualizado_en: null,
     }])
     .select()
     .single();
@@ -61,7 +79,7 @@ export const createUsuarios = async (_user: JwtUser | undefined, payload: Create
       .insert([{
         usuario_id: usuarioCreado.id,
         nombre_completo: payload.nombre,
-        dni: payload.dni?.trim(),
+        dni,
         email: payload.email,
         activo: true,
         foto: payload.foto ?? null,

@@ -7,6 +7,7 @@ export interface JwtUser {
   nombre?: string;
   foto?: string | null;
   permisos_menu?: string[] | null;
+  must_change_password?: boolean;
   exp?: number;
   iat?: number;
 }

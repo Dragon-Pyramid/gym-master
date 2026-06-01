@@ -17,14 +17,14 @@ import {
 
 export default function LoginEntryPage() {
   const router = useRouter();
-  const { isAuthenticated, initializeAuth, isInitialized } = useAuthStore();
+  const { isAuthenticated, initializeAuth, isInitialized, user } = useAuthStore();
 
   useEffect(() => {
     initializeAuth();
     if (isInitialized && isAuthenticated) {
-      router.push('/dashboard');
+      router.push(user?.must_change_password ? '/auth/change-password' : '/dashboard');
     }
-  }, [initializeAuth, isAuthenticated, isInitialized, router]);
+  }, [initializeAuth, isAuthenticated, isInitialized, router, user?.must_change_password]);
 
   return (
     <div className='flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-4'>

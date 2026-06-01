@@ -80,12 +80,22 @@ export default function DashboardRouteGuard({
     }
   }, [isAuthenticated, isInitialized, router]);
 
+  useEffect(() => {
+    if (isInitialized && isAuthenticated && user?.must_change_password) {
+      router.replace('/auth/change-password');
+    }
+  }, [isAuthenticated, isInitialized, router, user?.must_change_password]);
+
   if (!isInitialized) {
     return <DashboardRouteLoading />;
   }
 
   if (!isAuthenticated || !user) {
     return null;
+  }
+
+  if (user.must_change_password) {
+    return <DashboardRouteLoading />;
   }
 
   const canAccess = canAccessDashboardPath(

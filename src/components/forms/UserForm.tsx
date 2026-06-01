@@ -19,6 +19,7 @@ import {
   getAvailableMenuPermissionsForRole,
   sanitizeMenuPermissionsForRole,
 } from '@/lib/permissions/menuPermissions';
+import { buildInitialPasswordFromDni, getPasswordPolicyChecks } from '@/utils/passwordPolicy';
 
 export interface UserFormProps {
   usuario?: Usuario | null;
@@ -33,6 +34,7 @@ const emptyForm = {
   confirmPassword: '',
   rol: 'socio',
   dni: '',
+  use_initial_password: true,
   permisos_menu: DEFAULT_MENU_PERMISSIONS_BY_ROLE.socio,
 };
 
@@ -59,7 +61,8 @@ export default function UserForm({
         rol: usuario.rol ?? 'socio',
         password: '',
         confirmPassword: '',
-        dni: '',
+        dni: usuario.dni ?? '',
+        use_initial_password: false,
         permisos_menu: getInitialPermissions(usuario.rol, usuario.permisos_menu),
       });
     } else {
@@ -136,19 +139,28 @@ export default function UserForm({
         toast.success('Usuario actualizado exitosamente.');
       } else {
         const rol = form.rol || 'socio';
+        const useInitialPassword = form.use_initial_password;
+        const initialPassword = buildInitialPasswordFromDni(form.dni);
         const createData: CreateUsuarioDto = {
           nombre: form.nombre,
           email: form.email,
-          password: form.password,
+          password: useInitialPassword ? initialPassword : form.password,
           rol,
+          dni: form.dni,
+          use_initial_password: useInitialPassword,
           permisos_menu:
             rol === 'admin'
               ? null
               : sanitizeMenuPermissionsForRole(rol, form.permisos_menu),
-          ...(rol === 'socio' && { dni: form.dni }),
         };
 
-        if (!createData.password) {
+        if (useInitialPassword && !form.dni.trim()) {
+          toast.error('El DNI es obligatorio para generar la contraseña inicial.');
+          setLoading(false);
+          return;
+        }
+
+        if (!useInitialPassword && !createData.password) {
           toast.error(
             'La contraseña es obligatoria para crear un nuevo usuario.'
           );
@@ -163,7 +175,11 @@ export default function UserForm({
         }
 
         await createUsuarioApi(createData);
-        toast.success('Usuario creado exitosamente.');
+        toast.success(
+          useInitialPassword
+            ? `Usuario creado. Contraseña inicial: ${initialPassword}`
+            : 'Usuario creado exitosamente.'
+        );
       }
       setForm(emptyForm);
       onCreated();
@@ -183,14 +199,13 @@ export default function UserForm({
   const isAdmin = form.rol === 'admin';
   const isInternalUser = form.rol === 'usuario';
   const availablePermissions = getAvailableMenuPermissionsForRole(form.rol);
-  const passwordChecks = {
-    minLength: form.password.length >= 8,
-    uppercase: /[A-Z]/.test(form.password),
-    lowercase: /[a-z]/.test(form.password),
-    number: /\d/.test(form.password),
-    symbol: /[^A-Za-z0-9]/.test(form.password),
-  };
-  const isPasswordRequired = !usuario || form.password.length > 0 || form.confirmPassword.length > 0;
+  const isInitialPasswordMode = !usuario && form.use_initial_password;
+  const normalizedDni = form.dni.replace(/\D/g, '');
+  const initialPasswordPreview = normalizedDni
+    ? buildInitialPasswordFromDni(normalizedDni)
+    : 'GymMaster + DNI';
+  const passwordChecks = getPasswordPolicyChecks(form.password);
+  const isPasswordRequired = !isInitialPasswordMode && (!usuario || form.password.length > 0 || form.confirmPassword.length > 0);
   const isPasswordValid = Object.values(passwordChecks).every(Boolean);
   const passwordsMatch = form.password === form.confirmPassword && form.confirmPassword.length > 0;
   const showPasswordRules = isPasswordRequired || form.password.length > 0 || form.confirmPassword.length > 0;
@@ -241,20 +256,49 @@ export default function UserForm({
         </select>
       </div>
 
-      {isSocio && !usuario && (
+      {!usuario && (
         <div className='flex flex-col gap-1.5'>
           <Label htmlFor='dni'>DNI</Label>
           <Input
             id='dni'
             name='dni'
-            placeholder='Ingrese DNI del socio'
+            placeholder='Ingrese DNI para contraseña inicial'
             value={form.dni}
             onChange={handleChange}
-            required={isSocio && !usuario}
+            required={isSocio || isInitialPasswordMode}
           />
         </div>
       )}
 
+      {!usuario && (
+        <div className='col-span-full rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900 dark:border-sky-900/70 dark:bg-sky-950/40 dark:text-sky-100'>
+          <label className='flex cursor-pointer items-start gap-2'>
+            <Checkbox
+              checked={form.use_initial_password}
+              onCheckedChange={(checked) =>
+                setForm((prev) => ({
+                  ...prev,
+                  use_initial_password: Boolean(checked),
+                  password: Boolean(checked) ? '' : prev.password,
+                  confirmPassword: Boolean(checked) ? '' : prev.confirmPassword,
+                }))
+              }
+            />
+            <span>
+              <span className='font-medium'>
+                Usar contraseña inicial automática
+              </span>
+              <span className='block text-xs'>
+                Patrón: <strong>{initialPasswordPreview}</strong>. En el primer
+                ingreso el usuario deberá cambiarla obligatoriamente.
+              </span>
+            </span>
+          </label>
+        </div>
+      )}
+
+      {!isInitialPasswordMode && (
+        <>
       <div className='flex flex-col gap-1.5'>
         <Label htmlFor='password'>Contraseña</Label>
         <div className='relative'>
@@ -306,6 +350,9 @@ export default function UserForm({
           </button>
         </div>
       </div>
+
+        </>
+      )}
 
       {showPasswordRules && (
         <div className='col-span-full rounded-md border bg-muted/20 p-3 text-sm'>

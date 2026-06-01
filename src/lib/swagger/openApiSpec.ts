@@ -18,6 +18,27 @@ type OpenApiPathItem = Record<string, OpenApiOperation>;
 const endpointDefinitions: EndpointDefinition[] = [
 
   {
+    "path": "/api/auth/change-password",
+    "methods": [
+      "POST"
+    ],
+    "tag": "Auth",
+    "summary": "Cambio obligatorio de contraseña inicial",
+    "description": "Permite que un usuario autenticado cambie su contraseña temporal inicial y reciba un token actualizado sin la marca must_change_password.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/auth/change-password/route.ts"
+  },
+
+  {
     "path": "/api/empleados",
     "methods": [
       "GET",

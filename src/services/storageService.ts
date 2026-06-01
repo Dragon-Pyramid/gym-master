@@ -8,6 +8,7 @@ interface JwtPayload {
   rol: string;
   nombre?: string;
   permisos_menu?: string[] | null;
+  must_change_password?: boolean;
   exp?: number;
 }
 

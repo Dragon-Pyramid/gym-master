@@ -143,7 +143,8 @@ export default function GymMasterLoginForm({
   useEffect(() => {
     initializeAuth();
     if (isInitialized && isAuthenticated) {
-      router.push('/dashboard');
+      const currentUser = useAuthStore.getState().user;
+      router.push(currentUser?.must_change_password ? '/auth/change-password' : '/dashboard');
     }
   }, [initializeAuth, isAuthenticated, isInitialized, router]);
 
@@ -181,13 +182,19 @@ export default function GymMasterLoginForm({
       return;
     }
 
-    const success = await authLogin({
+    const result = await authLogin({
       email: email.trim(),
       password: password.trim(),
       rol: selectedRole,
     });
 
-    if (success) {
+    if (result.success) {
+      if (result.mustChangePassword) {
+        toast.info('Por seguridad, debés cambiar tu contraseña inicial.');
+        router.push('/auth/change-password');
+        return;
+      }
+
       toast.success('Inicio de sesión exitoso');
       router.push('/dashboard');
     }

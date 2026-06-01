@@ -26,7 +26,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const { user } = await authMiddleware(req);
-    const { nombre, email, password, rol, dni, foto, permisos_menu } = await req.json();
+    const { nombre, email, password, rol, dni, foto, permisos_menu, use_initial_password } = await req.json();
 
     const creado = await createUsuarioServer(user, {
       nombre,
@@ -36,6 +36,7 @@ export async function POST(req: Request) {
       dni,
       foto,
       permisos_menu,
+      use_initial_password,
     });
 
     return NextResponse.json(

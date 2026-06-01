@@ -42,7 +42,7 @@ export const signIn = async (login: SignInDto) => {
   //BUSCO EN ESA BD, EL USUARIO
   const { data, error } = await supabase
     .from('usuario')
-    .select('id,nombre,email,password_hash,rol,activo,foto,permisos_menu')
+    .select('id,nombre,email,password_hash,rol,activo,foto,permisos_menu,must_change_password')
     .eq('email', email)
     .single();
 
@@ -105,6 +105,7 @@ export const signIn = async (login: SignInDto) => {
     nombre: data.nombre,
     foto: data.foto ? data.foto : null,
     permisos_menu: sanitizeMenuPermissionsForRole(data.rol, data.permisos_menu),
+    must_change_password: Boolean(data.must_change_password),
   };
 
   if (rol === 'socio') {
@@ -170,6 +171,11 @@ export const signIn = async (login: SignInDto) => {
 
     basePayload.id_socio = socio.id_socio;
   }
+
+  await supabase
+    .from('usuario')
+    .update({ ultimo_login_en: new Date().toISOString() })
+    .eq('id', data.id);
 
   const payload = basePayload;
   if (!process.env.JWT_SECRET) {
