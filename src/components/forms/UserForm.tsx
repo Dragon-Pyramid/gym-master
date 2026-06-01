@@ -181,6 +181,7 @@ export default function UserForm({
 
   const isSocio = form.rol === 'socio';
   const isAdmin = form.rol === 'admin';
+  const isInternalUser = form.rol === 'usuario';
   const availablePermissions = getAvailableMenuPermissionsForRole(form.rol);
   const passwordChecks = {
     minLength: form.password.length >= 8,
@@ -333,8 +334,17 @@ export default function UserForm({
             El rol administrador tiene control total del panel.
           </div>
         ) : (
-          <div className='grid gap-4 md:grid-cols-2'>
-            {availablePermissions.map((group) => (
+          <>
+            {isInternalUser && (
+              <div className='mb-4 rounded-md border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900 dark:border-sky-900/70 dark:bg-sky-950/40 dark:text-sky-100'>
+                Este usuario interno puede representar a un empleado administrativo.
+                Marcá solo los módulos que podrá ver y utilizar. El menú lateral
+                mostrará únicamente las opciones habilitadas y las rutas no
+                permitidas quedarán bloqueadas por seguridad.
+              </div>
+            )}
+            <div className='grid gap-4 md:grid-cols-2'>
+              {availablePermissions.map((group) => (
               <div key={group.group} className='rounded-md border bg-background p-3'>
                 <p className='mb-2 text-sm font-semibold'>{group.group}</p>
                 <div className='space-y-2'>
@@ -361,8 +371,9 @@ export default function UserForm({
                   })}
                 </div>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 

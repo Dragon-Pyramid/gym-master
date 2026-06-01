@@ -86,18 +86,17 @@ export const MENU_PERMISSION_GROUPS: Array<{
         label: 'Actividades',
         path: '/dashboard/actividades',
         group: 'Gestión de gimnasio',
-        roles: ['admin'],
+        roles: ['admin', 'usuario'],
       },
       {
         key: 'Empleados',
         label: 'Empleados',
         path: '/dashboard/empleados',
         group: 'Gestión de gimnasio',
-        roles: ['admin'],
+        roles: ['admin', 'usuario'],
       },
       // Opciones legacy deshabilitadas del selector de permisos: Rutinas y Dietas.
       // La operación actual se concentra en Gestión de Rutinas y Gestión de Dietas.
-
     ],
   },
   {
@@ -115,28 +114,28 @@ export const MENU_PERMISSION_GROUPS: Array<{
         label: 'Gestión de Rutinas',
         path: '/dashboard/gestor-rutinas',
         group: 'Administración',
-        roles: ['admin'],
+        roles: ['admin', 'usuario'],
       },
       {
         key: 'Gestión de Dietas',
         label: 'Gestión de Dietas',
         path: '/dashboard/gestor-dietas',
         group: 'Administración',
-        roles: ['admin'],
+        roles: ['admin', 'usuario'],
       },
       {
         key: 'Gestión Evolución Física',
         label: 'Gestión Evolución Física',
         path: '/dashboard/gestor-evolucion-fisica',
         group: 'Administración',
-        roles: ['admin'],
+        roles: ['admin', 'usuario'],
       },
       {
         key: 'Media de Ejercicios',
         label: 'Media de Ejercicios',
         path: '/dashboard/rutinas/media',
         group: 'Administración',
-        roles: ['admin'],
+        roles: ['admin', 'usuario'],
       },
       {
         key: 'Pagos',
@@ -164,21 +163,21 @@ export const MENU_PERMISSION_GROUPS: Array<{
         label: 'Compras',
         path: '/dashboard/compras',
         group: 'Administración',
-        roles: ['admin'],
+        roles: ['admin', 'usuario'],
       },
       {
         key: 'Cuotas',
         label: 'Cuota - Precio',
         path: '/dashboard/cuotas',
         group: 'Administración',
-        roles: ['admin'],
+        roles: ['admin', 'usuario'],
       },
       {
         key: 'Proveedores',
         label: 'Proveedores',
         path: '/dashboard/proveedores',
         group: 'Administración',
-        roles: ['admin'],
+        roles: ['admin', 'usuario'],
       },
       {
         key: 'Usuarios',
@@ -192,49 +191,49 @@ export const MENU_PERMISSION_GROUPS: Array<{
         label: 'Productos',
         path: '/dashboard/productos',
         group: 'Administración',
-        roles: ['admin'],
+        roles: ['admin', 'usuario'],
       },
       {
         key: 'Servicios',
         label: 'Servicios',
         path: '/dashboard/servicios',
         group: 'Administración',
-        roles: ['admin'],
+        roles: ['admin', 'usuario'],
       },
       {
         key: 'Gastos / Egresos',
         label: 'Gastos / Egresos',
         path: '/dashboard/otros-gastos',
         group: 'Administración',
-        roles: ['admin'],
+        roles: ['admin', 'usuario'],
       },
       {
         key: 'Finanzas / BI',
         label: 'Finanzas / BI',
         path: '/dashboard/finanzas',
         group: 'Administración',
-        roles: ['admin'],
+        roles: ['admin', 'usuario'],
       },
       {
         key: 'Sueldos',
         label: 'Sueldos',
         path: '/dashboard/empleados-sueldos',
         group: 'Administración',
-        roles: ['admin'],
+        roles: ['admin', 'usuario'],
       },
       {
         key: 'Avisos',
         label: 'Avisos',
         path: '/dashboard/avisos',
         group: 'Administración',
-        roles: ['admin'],
+        roles: ['admin', 'usuario'],
       },
       {
         key: 'Equipamientos',
         label: 'Equipamientos',
         path: '/dashboard/equipamientos',
         group: 'Administración',
-        roles: ['admin'],
+        roles: ['admin', 'usuario'],
       },
       {
         key: 'Parametrización',
@@ -268,16 +267,17 @@ export const MENU_PERMISSION_GROUPS: Array<{
 
 export const DEFAULT_MENU_PERMISSIONS_BY_ROLE: Record<AppRole, string[]> = {
   admin: MENU_PERMISSION_GROUPS.flatMap((group) =>
-    group.items.filter((item) => item.roles.includes('admin')).map((item) => item.key)
+    group.items
+      .filter((item) => item.roles.includes('admin'))
+      .map((item) => item.key)
   ),
   usuario: [
     'Inicio',
-    'Asistencias',
     'Socios',
+    'Asistencias',
     'Pagos',
+    'Comercial / Kiosco',
     'Ventas',
-    'Rutinas',
-    'Dietas',
     'Perfil',
     'Preferencias',
   ],
@@ -288,14 +288,11 @@ export const DEFAULT_MENU_PERMISSIONS_BY_ROLE: Record<AppRole, string[]> = {
     'Asistente de Rutinas',
     'Pagar cuota',
     'Historial de pagos',
-    'Rutinas',
-    'Dietas',
     'Evolución Física',
     'Perfil',
     'Preferencias',
   ],
 };
-
 
 export type DashboardRoutePermission = {
   path: string;
@@ -310,7 +307,7 @@ const MENU_DASHBOARD_ROUTE_PERMISSIONS: DashboardRoutePermission[] =
       path: item.path,
       permissionKey: item.key,
       roles: item.roles,
-      exact: true,
+      exact: item.path === '/dashboard',
     }))
   );
 
@@ -325,14 +322,14 @@ export const DASHBOARD_ROUTE_PERMISSIONS: DashboardRoutePermission[] = [
   {
     path: '/dashboard/bi-cuotas-pagos',
     permissionKey: 'Pagos',
-    roles: ['admin'],
+    roles: ['admin', 'usuario'],
     exact: true,
   },
   {
     path: '/dashboard/gestion-dietas',
     permissionKey: 'Gestión de Dietas',
-    roles: ['admin'],
-    exact: true,
+    roles: ['admin', 'usuario'],
+    exact: false,
   },
   {
     path: '/dashboard/asistencias/terminal',
@@ -363,11 +360,23 @@ function normalizeAppRole(role?: string | null): AppRole | null {
   return null;
 }
 
+function getAllowedPermissionKeysForRole(role: AppRole) {
+  return new Set(
+    MENU_PERMISSION_GROUPS.flatMap((group) =>
+      group.items
+        .filter((item) => item.roles.includes(role))
+        .map((item) => item.key)
+    )
+  );
+}
+
 export function getDashboardRoutePermission(pathname?: string | null) {
   const normalizedPath = normalizeDashboardPath(pathname);
 
   const exactMatch = DASHBOARD_ROUTE_PERMISSIONS.find(
-    (route) => normalizeDashboardPath(route.path) === normalizedPath
+    (route) =>
+      normalizeDashboardPath(route.path) === normalizedPath &&
+      route.exact !== false
   );
 
   if (exactMatch) return exactMatch;
@@ -377,7 +386,10 @@ export function getDashboardRoutePermission(pathname?: string | null) {
     .sort((a, b) => b.path.length - a.path.length)
     .find((route) => {
       const normalizedRoutePath = normalizeDashboardPath(route.path);
-      return normalizedPath.startsWith(`${normalizedRoutePath}/`);
+      return (
+        normalizedPath === normalizedRoutePath ||
+        normalizedPath.startsWith(`${normalizedRoutePath}/`)
+      );
     });
 }
 
@@ -428,10 +440,16 @@ export function sanitizeMenuPermissionsForRole(
     return null;
   }
 
-  const allowed = new Set(DEFAULT_MENU_PERMISSIONS_BY_ROLE[normalizedRole] ?? []);
+  if (!['usuario', 'socio'].includes(normalizedRole)) {
+    return [];
+  }
+
+  const allowed = getAllowedPermissionKeysForRole(normalizedRole);
 
   if (!Array.isArray(permissions)) {
-    return [...allowed];
+    return [...(DEFAULT_MENU_PERMISSIONS_BY_ROLE[normalizedRole] ?? [])].filter(
+      (item) => allowed.has(item)
+    );
   }
 
   const clean = permissions
@@ -451,9 +469,15 @@ export function getEffectiveMenuPermissions(
     return DEFAULT_MENU_PERMISSIONS_BY_ROLE.admin;
   }
 
-  if (Array.isArray(permissions)) {
-    return permissions;
+  if (normalizedRole === 'usuario' || normalizedRole === 'socio') {
+    const allowed = getAllowedPermissionKeysForRole(normalizedRole);
+
+    if (Array.isArray(permissions)) {
+      return permissions.filter((item) => allowed.has(item));
+    }
+
+    return DEFAULT_MENU_PERMISSIONS_BY_ROLE[normalizedRole] ?? [];
   }
 
-  return DEFAULT_MENU_PERMISSIONS_BY_ROLE[normalizedRole] ?? [];
+  return [];
 }
