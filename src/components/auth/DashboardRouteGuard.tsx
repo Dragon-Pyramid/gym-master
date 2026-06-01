@@ -25,16 +25,16 @@ function DashboardRouteUnauthorized({
 }) {
   return (
     <main className='flex min-h-screen items-center justify-center bg-background px-4 py-8'>
-      <section className='w-full max-w-lg rounded-2xl border border-red-200 bg-card p-6 text-center shadow-sm dark:border-red-900/60'>
+      <section className='w-full max-w-xl rounded-2xl border border-red-300 bg-red-50/95 p-6 text-center shadow-lg shadow-red-900/10 dark:border-red-900/70 dark:bg-red-950/80'>
         <div className='mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300'>
           <ShieldAlert className='h-7 w-7' aria-hidden='true' />
         </div>
 
-        <h1 className='text-2xl font-semibold tracking-tight text-foreground'>
-          Acceso no autorizado
+        <h1 className='text-2xl font-bold tracking-tight text-red-700 dark:text-red-200'>
+          USTED NO TIENE ACCESO A ESTE MENÚ
         </h1>
 
-        <p className='mt-3 text-sm leading-6 text-muted-foreground'>
+        <p className='mt-3 text-sm leading-6 text-red-900/80 dark:text-red-100/80'>
           Tu usuario no tiene permisos para ingresar a esta sección del panel.
           {permissionLabel
             ? ` Se requiere el módulo “${permissionLabel}”.`
