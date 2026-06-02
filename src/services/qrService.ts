@@ -52,6 +52,23 @@ export interface RegistroAsistenciaQRResponse {
   } | null;
 }
 
+
+export interface TerminalNotificacion {
+  id: string;
+  titulo: string;
+  asunto: string;
+  cuerpo: string;
+  tipo: string;
+  canal: string;
+  estado: string;
+  fecha_programada?: string | null;
+  fecha_vigencia_hasta?: string | null;
+  terminal_imagen_url?: string | null;
+  terminal_color_neon?: string | null;
+  terminal_duracion_segundos: number;
+  terminal_frecuencia_segundos: number;
+}
+
 export interface QrDiarioResponse {
   qrCode: string;
   url: string;
@@ -140,3 +157,25 @@ export const fetchAsistenciasRecientes = async (): Promise<
     throw new Error('Error de red. Intente nuevamente.');
   }
 };
+
+
+export const fetchTerminalNotificaciones = async (): Promise<TerminalNotificacion[]> => {
+  try {
+    const response = await axios.get('/api/notificaciones/terminal', {
+      headers: {
+        ...authHeader(),
+      },
+    });
+    return response.data as TerminalNotificacion[];
+  } catch (error: unknown) {
+    const axiosError = error as { response?: { data?: { error?: string } } };
+    if (axiosError.response && axiosError.response.data) {
+      throw new Error(
+        axiosError.response.data.error ||
+          'Error al obtener avisos de Terminal.'
+      );
+    }
+    throw new Error('Error de red al obtener avisos de Terminal.');
+  }
+};
+

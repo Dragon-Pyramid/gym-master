@@ -903,3 +903,84 @@ export async function anularEmpleadoSueldo(id: number | string) {
   return { ok: res.ok, data, ...(!res.ok ? data : {}) };
 }
 
+export async function getNotificaciones() {
+  const token = getToken();
+  const res = await fetch('/api/notificaciones', {
+    method: 'GET',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    cache: 'no-store',
+  });
+  const data = await res.json();
+  return { ok: res.ok, data, ...(!res.ok ? data : {}) };
+}
+
+export async function getNotificacion(id: string) {
+  const token = getToken();
+  const res = await fetch(`/api/notificaciones/${id}`, {
+    method: 'GET',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    cache: 'no-store',
+  });
+  const data = await res.json();
+  return { ok: res.ok, data, ...(!res.ok ? data : {}) };
+}
+
+export async function getNotificacionPlantillas() {
+  const token = getToken();
+  const res = await fetch('/api/notificaciones/plantillas', {
+    method: 'GET',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    cache: 'no-store',
+  });
+  const data = await res.json();
+  return { ok: res.ok, data, ...(!res.ok ? data : {}) };
+}
+
+export async function crearNotificacion(body: any) {
+  const token = getToken();
+  const res = await fetch('/api/notificaciones', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  return { ok: res.ok, data, ...(!res.ok ? data : {}) };
+}
+
+export async function actualizarNotificacion(id: string, body: any) {
+  const token = getToken();
+  const res = await fetch(`/api/notificaciones/${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  return { ok: res.ok, data, ...(!res.ok ? data : {}) };
+}
+
+export async function cancelarNotificacion(id: string) {
+  const token = getToken();
+  const res = await fetch(`/api/notificaciones/${id}`, {
+    method: 'DELETE',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, data, ...(!res.ok ? data : {}) };
+}
+
+export async function enviarNotificacion(id: string) {
+  const token = getToken();
+  const res = await fetch(`/api/notificaciones/${id}/enviar`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  const data = await res.json();
+  return { ok: res.ok, data, ...(!res.ok ? data : {}) };
+}
+

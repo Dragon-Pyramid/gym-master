@@ -222,6 +222,13 @@ export const MENU_PERMISSION_GROUPS: Array<{
         roles: ['admin', 'usuario'],
       },
       {
+        key: 'Notificaciones',
+        label: 'Notificaciones',
+        path: '/dashboard/notificaciones',
+        group: 'Administración',
+        roles: ['admin', 'usuario'],
+      },
+      {
         key: 'Avisos',
         label: 'Avisos',
         path: '/dashboard/avisos',
@@ -278,6 +285,7 @@ export const DEFAULT_MENU_PERMISSIONS_BY_ROLE: Record<AppRole, string[]> = {
     'Pagos',
     'Comercial / Kiosco',
     'Ventas',
+    'Notificaciones',
     'Perfil',
     'Preferencias',
   ],

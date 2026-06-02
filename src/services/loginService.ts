@@ -181,7 +181,8 @@ export const signIn = async (login: SignInDto) => {
   if (!process.env.JWT_SECRET) {
     throw new Error('JWT_SECRET no está definido en las variables de entorno');
   }
-  const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '3h' });
+  const jwtExpiresIn = (process.env.JWT_EXPIRES_IN || '12h') as jwt.SignOptions['expiresIn'];
+  const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: jwtExpiresIn });
   return token;
 };
 
