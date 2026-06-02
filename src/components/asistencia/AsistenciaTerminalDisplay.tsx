@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Clock,
   Maximize2,
+  Megaphone,
   Monitor,
   QrCode,
   ShieldAlert,
@@ -19,7 +20,9 @@ import { supabaseBrowser } from '@/lib/supabase-browser';
 import {
   fetchAsistenciasRecientes,
   fetchQrDiario,
+  fetchTerminalNotificaciones,
   type AsistenciaReciente,
+  type TerminalNotificacion,
   type RegistroAsistenciaAlertType,
 } from '@/services/qrService';
 import { formatFrontendDate, formatFrontendTime } from '@/utils/dateFormat';
@@ -97,6 +100,19 @@ const variantStyles: Record<
     glow: 'shadow-slate-300/50 dark:shadow-slate-900/60',
   },
 };
+
+
+const terminalNeonClasses: Record<string, string> = {
+  rosa: 'text-pink-200 drop-shadow-[0_0_14px_rgba(244,114,182,0.95)]',
+  verde_fluo: 'text-lime-200 drop-shadow-[0_0_14px_rgba(163,230,53,0.95)]',
+  naranja_fluo: 'text-orange-200 drop-shadow-[0_0_14px_rgba(251,146,60,0.95)]',
+  amarillo_fluo: 'text-yellow-200 drop-shadow-[0_0_14px_rgba(250,204,21,0.95)]',
+  rojo_fluo: 'text-red-200 drop-shadow-[0_0_14px_rgba(248,113,113,0.95)]',
+};
+
+function getTerminalNeonClass(color?: string | null) {
+  return terminalNeonClasses[color || 'verde_fluo'] || terminalNeonClasses.verde_fluo;
+}
 
 function formatTime(date: Date) {
   return formatFrontendTime(date);
@@ -211,12 +227,29 @@ export default function AsistenciaTerminalDisplay() {
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [checkInUrl, setCheckInUrl] = useState<string>('');
   const [qrLoading, setQrLoading] = useState<boolean>(true);
+  const [terminalAds, setTerminalAds] = useState<TerminalNotificacion[]>([]);
+  const [showTerminalAd, setShowTerminalAd] = useState(false);
+  const [terminalAdIndex, setTerminalAdIndex] = useState(0);
   const lastEventIdRef = useRef<string>('idle');
   const lastAsistenciaIdRef = useRef<string | null>(null);
   const initialRecentLoadedRef = useRef(false);
   const resultTimeoutRef = useRef<number | null>(null);
+  const adShowTimeoutRef = useRef<number | null>(null);
+  const adHideTimeoutRef = useRef<number | null>(null);
 
   const styles = variantStyles[event.variant];
+
+  const clearAdTimers = () => {
+    if (adShowTimeoutRef.current) {
+      window.clearTimeout(adShowTimeoutRef.current);
+      adShowTimeoutRef.current = null;
+    }
+
+    if (adHideTimeoutRef.current) {
+      window.clearTimeout(adHideTimeoutRef.current);
+      adHideTimeoutRef.current = null;
+    }
+  };
 
   const scheduleIdleReset = () => {
     if (resultTimeoutRef.current) {
@@ -232,6 +265,8 @@ export default function AsistenciaTerminalDisplay() {
   const applyEvent = (nextEvent: TerminalEvent) => {
     if (lastEventIdRef.current === nextEvent.id) return;
     lastEventIdRef.current = nextEvent.id;
+    setShowTerminalAd(false);
+    clearAdTimers();
     setEvent(nextEvent);
 
     if (nextEvent.variant !== 'idle') {
@@ -298,6 +333,54 @@ export default function AsistenciaTerminalDisplay() {
     };
   }, []);
 
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadTerminalAds = async () => {
+      try {
+        const rows = await fetchTerminalNotificaciones();
+        if (cancelled) return;
+        setTerminalAds(Array.isArray(rows) ? rows : []);
+      } catch (err) {
+        if (!cancelled) {
+          console.warn('No se pudieron cargar avisos de Terminal:', err);
+          setTerminalAds([]);
+        }
+      }
+    };
+
+    loadTerminalAds();
+    const adsRefreshInterval = window.setInterval(loadTerminalAds, 60 * 1000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(adsRefreshInterval);
+    };
+  }, []);
+
+  useEffect(() => {
+    clearAdTimers();
+    setShowTerminalAd(false);
+
+    if (event.variant !== 'idle' || terminalAds.length === 0) return;
+
+    const currentAd = terminalAds[terminalAdIndex % terminalAds.length];
+    const frequencyMs = Math.max(5, Number(currentAd.terminal_frecuencia_segundos || 15)) * 1000;
+    const durationMs = Math.max(3, Number(currentAd.terminal_duracion_segundos || 8)) * 1000;
+
+    adShowTimeoutRef.current = window.setTimeout(() => {
+      setShowTerminalAd(true);
+      adHideTimeoutRef.current = window.setTimeout(() => {
+        setShowTerminalAd(false);
+        setTerminalAdIndex((prev) => (prev + 1) % Math.max(terminalAds.length, 1));
+      }, durationMs);
+    }, frequencyMs);
+
+    return clearAdTimers;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [event.variant, terminalAds, terminalAdIndex]);
+
   useEffect(() => {
     loadRecent();
 
@@ -335,6 +418,7 @@ export default function AsistenciaTerminalDisplay() {
       if (resultTimeoutRef.current) {
         window.clearTimeout(resultTimeoutRef.current);
       }
+      clearAdTimers();
       supabaseBrowser.removeChannel(realtimeChannel);
       supabaseBrowser.removeChannel(broadcastChannel);
     };
@@ -348,6 +432,7 @@ export default function AsistenciaTerminalDisplay() {
         nombre: row.socio?.nombre_completo ?? 'Socio',
         status: getVariantFromAccess(row.alert_type, row.access_status),
         hora: row.hora_ingreso?.slice(0, 5) || '--:--',
+        foto: row.socio?.foto ?? null,
       })),
     [recent]
   );
@@ -358,27 +443,29 @@ export default function AsistenciaTerminalDisplay() {
   };
 
   const isIdle = event.variant === 'idle';
+  const activeTerminalAd = terminalAds[terminalAdIndex % Math.max(terminalAds.length, 1)] ?? null;
+  const shouldShowTerminalAd = isIdle && showTerminalAd && Boolean(activeTerminalAd);
 
   return (
-    <main className='min-h-screen overflow-hidden bg-slate-950 text-white'>
-      <section className='relative flex min-h-screen flex-col p-4 md:p-8'>
+    <main className='h-screen max-h-screen overflow-hidden bg-slate-950 text-white'>
+      <section className='relative flex h-screen max-h-screen min-h-0 flex-col overflow-hidden p-3 md:p-4 2xl:p-5'>
         <div className='pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(2,168,225,0.20),_transparent_35%),radial-gradient(circle_at_bottom_right,_rgba(34,197,94,0.14),_transparent_32%)]' />
 
-        <header className='relative z-10 flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4'>
-          <div className='flex items-center gap-4'>
-            <div className='flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-white p-2 shadow-lg md:h-20 md:w-20'>
-              <Image src='/gm_logo.svg' alt='Gym Master' width={72} height={72} priority />
+        <header className='relative z-10 flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3'>
+          <div className='flex items-center gap-3 2xl:gap-4'>
+            <div className='flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-white p-2 shadow-lg md:h-16 md:w-16'>
+              <Image src='/gm_logo.svg' alt='Gym Master' width={60} height={60} priority />
             </div>
             <div>
-              <p className='text-sm font-semibold uppercase tracking-[0.35em] text-cyan-300'>Gym Master</p>
-              <h1 className='text-2xl font-black tracking-tight md:text-4xl'>Terminal de asistencia</h1>
+              <p className='text-xs font-semibold uppercase tracking-[0.35em] text-cyan-300 md:text-sm'>Gym Master</p>
+              <h1 className='text-2xl font-black tracking-tight md:text-3xl 2xl:text-4xl'>Terminal de asistencia</h1>
             </div>
           </div>
 
           <div className='flex items-center gap-3 text-right'>
             <div>
               <p className='text-sm capitalize text-slate-300'>{formatDate(now)}</p>
-              <p className='font-mono text-2xl font-bold text-white md:text-4xl'>{formatTime(now)}</p>
+              <p className='font-mono text-2xl font-bold text-white md:text-3xl 2xl:text-4xl'>{formatTime(now)}</p>
             </div>
             <Button
               type='button'
@@ -392,16 +479,16 @@ export default function AsistenciaTerminalDisplay() {
           </div>
         </header>
 
-        <div className='relative z-10 grid flex-1 grid-cols-1 gap-5 py-5 xl:grid-cols-[1fr_360px]'>
+        <div className='relative z-10 grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-hidden py-3 xl:grid-cols-2 2xl:gap-5'>
           <section
-            className={`flex min-h-[560px] flex-col justify-center rounded-[2rem] border p-6 shadow-2xl transition-all duration-300 md:p-10 ${styles.container} ${styles.glow}`}
+            className={`flex min-h-0 flex-col justify-center overflow-hidden rounded-[1.5rem] border p-4 shadow-2xl transition-all duration-300 md:p-5 2xl:p-6 ${styles.container} ${styles.glow}`}
           >
             {isIdle ? (
-              <div className='grid items-center gap-8 lg:grid-cols-[minmax(320px,440px)_1fr]'>
-                <div className='mx-auto w-full max-w-[440px] rounded-[2rem] border border-cyan-200 bg-white p-5 shadow-2xl dark:border-cyan-600/40'>
-                  <div className='flex aspect-square items-center justify-center rounded-[1.5rem] bg-white'>
+              <div className='grid h-full min-h-0 items-center gap-5 lg:grid-cols-[minmax(260px,380px)_1fr] 2xl:grid-cols-[minmax(300px,420px)_1fr]'>
+                <div className='mx-auto w-full max-w-[360px] rounded-[1.5rem] border border-cyan-200 bg-white p-4 shadow-2xl dark:border-cyan-600/40 2xl:max-w-[410px]'>
+                  <div className='flex aspect-square items-center justify-center rounded-[1.25rem] bg-white'>
                     {qrDataUrl ? (
-                      <Image src={qrDataUrl} alt='QR diario para registrar asistencia' width={460} height={460} priority />
+                      <Image src={qrDataUrl} alt='QR diario para registrar asistencia' width={410} height={410} priority />
                     ) : (
                       <div className='flex flex-col items-center gap-3 text-slate-900'>
                         <QrCode className='h-40 w-40' />
@@ -411,36 +498,36 @@ export default function AsistenciaTerminalDisplay() {
                       </div>
                     )}
                   </div>
-                  <div className='mt-4 rounded-2xl bg-slate-950 p-4 text-center text-white'>
+                  <div className='mt-3 rounded-2xl bg-slate-950 p-3 text-center text-white'>
                     <p className='text-xs font-bold uppercase tracking-[0.24em] text-cyan-300'>Ingreso con celular</p>
-                    <p className='mt-1 text-lg font-black'>Escaneá este QR</p>
+                    <p className='mt-1 text-base font-black 2xl:text-lg'>Escaneá este QR</p>
                   </div>
                 </div>
 
                 <div className='w-full min-w-0 text-center lg:text-left'>
-                  <span className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-black uppercase tracking-[0.2em] ${styles.badge}`}>
+                  <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-black uppercase tracking-[0.2em] 2xl:px-4 2xl:py-2 2xl:text-sm ${styles.badge}`}>
                     <Smartphone className='h-4 w-4' />
                     Terminal listo
                   </span>
 
-                  <h2 className={`mt-6 text-5xl font-black leading-tight tracking-tight md:text-7xl ${styles.title}`}>
+                  <h2 className={`mt-4 text-4xl font-black leading-tight tracking-tight md:text-5xl 2xl:text-6xl ${styles.title}`}>
                     {event.title}
                   </h2>
 
-                  <p className='mt-6 max-w-4xl text-2xl font-semibold leading-relaxed md:text-3xl'>
+                  <p className='mt-4 max-w-4xl text-xl font-semibold leading-relaxed md:text-2xl 2xl:text-3xl'>
                     {event.message}
                   </p>
 
-                  <div className='mt-8 space-y-3 rounded-3xl border border-cyan-200 bg-white/70 p-5 text-left text-slate-800 dark:border-cyan-700/60 dark:bg-slate-900/70 dark:text-slate-100'>
-                    <p className='flex items-start gap-3 text-lg font-bold'>
+                  <div className='mt-5 space-y-2 rounded-3xl border border-cyan-200 bg-white/70 p-4 text-left text-slate-800 dark:border-cyan-700/60 dark:bg-slate-900/70 dark:text-slate-100 2xl:mt-6 2xl:space-y-3'>
+                    <p className='flex items-start gap-3 text-base font-bold 2xl:text-lg'>
                       <span className='mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan-500 text-sm text-white'>1</span>
                       El socio escanea el QR con su celular.
                     </p>
-                    <p className='flex items-start gap-3 text-lg font-bold'>
+                    <p className='flex items-start gap-3 text-base font-bold 2xl:text-lg'>
                       <span className='mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan-500 text-sm text-white'>2</span>
                       Gym Master valida su cuota y registra la asistencia.
                     </p>
-                    <p className='flex items-start gap-3 text-lg font-bold'>
+                    <p className='flex items-start gap-3 text-base font-bold 2xl:text-lg'>
                       <span className='mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan-500 text-sm text-white'>3</span>
                       Esta pantalla muestra bienvenida, deuda o bloqueo.
                     </p>
@@ -469,7 +556,7 @@ export default function AsistenciaTerminalDisplay() {
                 </div>
 
                 <div className='w-full min-w-0 flex-1'>
-                  <span className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-black uppercase tracking-[0.2em] ${styles.badge}`}>
+                  <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-black uppercase tracking-[0.2em] 2xl:px-4 2xl:py-2 2xl:text-sm ${styles.badge}`}>
                     {event.variant === 'success'
                       ? 'Ingreso autorizado'
                       : event.variant === 'debt'
@@ -479,7 +566,7 @@ export default function AsistenciaTerminalDisplay() {
                       : 'Atención'}
                   </span>
 
-                  <h2 className={`mt-6 text-5xl font-black leading-tight tracking-tight md:text-7xl ${styles.title}`}>
+                  <h2 className={`mt-4 text-4xl font-black leading-tight tracking-tight md:text-5xl 2xl:text-6xl ${styles.title}`}>
                     {event.variant === 'success' ? `¡Bienvenido, ${event.nombre}!` : event.title}
                   </h2>
 
@@ -487,7 +574,7 @@ export default function AsistenciaTerminalDisplay() {
                     <p className='mt-4 text-3xl font-black md:text-5xl'>{event.nombre}</p>
                   )}
 
-                  <p className='mt-6 max-w-4xl text-2xl font-semibold leading-relaxed md:text-3xl'>
+                  <p className='mt-4 max-w-4xl text-xl font-semibold leading-relaxed md:text-2xl 2xl:text-3xl'>
                     {event.message}
                   </p>
 
@@ -508,13 +595,13 @@ export default function AsistenciaTerminalDisplay() {
             )}
           </section>
 
-          <aside className='flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-white/10 p-5 shadow-2xl backdrop-blur'>
-            <div className='flex items-center justify-between gap-3 border-b border-white/10 pb-4'>
+          <aside className='flex min-h-0 flex-col gap-3 overflow-hidden rounded-[1.5rem] border border-white/10 bg-white/10 p-4 shadow-2xl backdrop-blur md:p-5 2xl:p-6'>
+            <div className='flex shrink-0 items-center justify-between gap-3 border-b border-white/10 pb-3'>
               <div>
-                <p className='text-xs font-bold uppercase tracking-[0.25em] text-cyan-300'>Monitor externo</p>
-                <h3 className='text-xl font-black'>Actividad reciente</h3>
+                <p className='text-sm font-bold uppercase tracking-[0.25em] text-cyan-300'>Monitor externo</p>
+                <h3 className='text-2xl font-black leading-tight 2xl:text-3xl'>Actividad reciente</h3>
               </div>
-              <Wifi className='h-6 w-6 text-emerald-300' />
+              <Wifi className='h-8 w-8 text-emerald-300' />
             </div>
 
             {error && (
@@ -523,43 +610,86 @@ export default function AsistenciaTerminalDisplay() {
               </div>
             )}
 
-            <div className='space-y-3'>
-              {recentItems.length === 0 ? (
+            <div className='min-h-0 flex-1 space-y-3 overflow-hidden'>
+              {shouldShowTerminalAd && activeTerminalAd ? (
+                <div className='overflow-hidden rounded-[1.75rem] border border-white/15 bg-black/35 shadow-2xl'>
+                  <div
+                    className='relative flex h-[23vh] min-h-[140px] max-h-[225px] items-end rounded-t-[1.5rem] bg-slate-900 bg-center p-3 2xl:h-[25vh] 2xl:max-h-[260px]'
+                    style={{
+                      backgroundImage: `linear-gradient(to top, rgba(2,6,23,0.92), rgba(2,6,23,0.18)), url("${activeTerminalAd.terminal_imagen_url || '/gm_logo.svg'}")`,
+                      backgroundSize: 'cover, contain',
+                      backgroundRepeat: 'no-repeat, no-repeat',
+                      backgroundPosition: 'center, center',
+                    }}
+                  >
+                    <span className='inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/50 px-3 py-1.5 text-xs font-black uppercase tracking-[0.2em] text-cyan-100 backdrop-blur 2xl:px-4 2xl:py-2 2xl:text-sm'>
+                      <Megaphone className='h-4 w-4' /> Aviso
+                    </span>
+                  </div>
+                  <div className='space-y-3 p-5 pt-4 text-center 2xl:space-y-4 2xl:p-6 2xl:pt-5'>
+                    <h3 className={`text-3xl font-black leading-tight 2xl:text-4xl ${getTerminalNeonClass(activeTerminalAd.terminal_color_neon)}`}>
+                      {activeTerminalAd.asunto || activeTerminalAd.titulo}
+                    </h3>
+                    <p className='line-clamp-4 whitespace-pre-line text-xl font-semibold leading-relaxed text-slate-100 2xl:text-2xl'>
+                      {activeTerminalAd.cuerpo}
+                    </p>
+                    <p className='text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 2xl:text-sm'>
+                      El QR permanece activo para asistencia
+                    </p>
+                  </div>
+                </div>
+              ) : recentItems.length === 0 ? (
                 <p className='rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-slate-300'>
                   Todavía no hay ingresos recientes para mostrar.
                 </p>
               ) : (
                 recentItems.map((item) => (
-                  <div key={item.id} className='rounded-2xl border border-white/10 bg-black/20 p-4'>
-                    <div className='flex items-center justify-between gap-3'>
-                      <p className='truncate text-lg font-bold'>{item.nombre}</p>
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-black uppercase ${
-                          item.status === 'success'
-                            ? 'bg-emerald-400/20 text-emerald-200'
-                            : item.status === 'debt'
-                            ? 'bg-red-400/20 text-red-200'
-                            : item.status === 'inactive'
-                            ? 'bg-amber-400/20 text-amber-200'
-                            : 'bg-slate-400/20 text-slate-200'
-                        }`}
-                      >
-                        {item.status === 'success'
-                          ? 'OK'
-                          : item.status === 'debt'
-                          ? 'Deuda'
-                          : item.status === 'inactive'
-                          ? 'Bloqueado'
-                          : 'Info'}
-                      </span>
+                  <div key={item.id} className='rounded-2xl border border-white/10 bg-black/25 p-3 shadow-lg 2xl:p-4'>
+                    <div className='flex items-center gap-3 2xl:gap-4'>
+                      <div className='flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white p-1 shadow-lg 2xl:h-18 2xl:w-18'>
+                        {item.foto ? (
+                          <img
+                            src={item.foto}
+                            alt={item.nombre}
+                            className='h-full w-full rounded-full object-cover'
+                          />
+                        ) : (
+                          <Image src='/gm_logo.svg' alt='Gym Master' width={72} height={72} className='h-full w-full rounded-full object-contain' />
+                        )}
+                      </div>
+
+                      <div className='min-w-0 flex-1'>
+                        <div className='flex items-center justify-between gap-3'>
+                          <p className='truncate text-xl font-black leading-tight 2xl:text-2xl'>{item.nombre}</p>
+                          <span
+                            className={`shrink-0 rounded-full px-3 py-1 text-xs font-black uppercase ${
+                              item.status === 'success'
+                                ? 'bg-emerald-400/20 text-emerald-200'
+                                : item.status === 'debt'
+                                ? 'bg-red-400/20 text-red-200'
+                                : item.status === 'inactive'
+                                ? 'bg-amber-400/20 text-amber-200'
+                                : 'bg-slate-400/20 text-slate-200'
+                            }`}
+                          >
+                            {item.status === 'success'
+                              ? 'OK'
+                              : item.status === 'debt'
+                              ? 'Deuda'
+                              : item.status === 'inactive'
+                              ? 'Bloqueado'
+                              : 'Info'}
+                          </span>
+                        </div>
+                        <p className='mt-1 font-mono text-base font-bold text-slate-200 2xl:text-lg'>Ingreso: {item.hora}</p>
+                      </div>
                     </div>
-                    <p className='mt-2 font-mono text-sm text-slate-300'>{item.hora}</p>
                   </div>
                 ))
               )}
             </div>
 
-            <div className='mt-auto rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-4 text-sm leading-6 text-cyan-50'>
+            <div className='mt-auto shrink-0 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-3 text-sm font-semibold leading-6 text-cyan-50 2xl:p-4 2xl:text-base'>
               Esta pantalla está pensada para el monitor externo. Muestra el QR de ingreso y luego el resultado de la asistencia sin exponer menú, pagos, usuarios ni datos administrativos.
             </div>
           </aside>

@@ -18,6 +18,91 @@ type OpenApiPathItem = Record<string, OpenApiOperation>;
 const endpointDefinitions: EndpointDefinition[] = [
 
   {
+    "path": "/api/notificaciones",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "tag": "Notificaciones",
+    "summary": "Operaciones de notificaciones",
+    "description": "Consulta y registra notificaciones, avisos programados, plantillas operativas y base para envío por email o visualización futura en Terminal.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      201,
+      400,
+      401,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/notificaciones/route.ts"
+  },
+  {
+    "path": "/api/notificaciones/{id}",
+    "methods": [
+      "GET",
+      "PATCH",
+      "DELETE"
+    ],
+    "tag": "Notificaciones",
+    "summary": "Operación sobre notificación por identificador",
+    "description": "Consulta detalle con historial de envíos, actualiza o cancela una notificación por ID.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401,
+      404,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/notificaciones/[id]/route.ts"
+  },
+  {
+    "path": "/api/notificaciones/{id}/enviar",
+    "methods": [
+      "POST"
+    ],
+    "tag": "Notificaciones",
+    "summary": "Preparar/envíar notificación",
+    "description": "Resuelve destinatarios del segmento seleccionado, registra historial de envíos y marca la notificación como enviada. Base futura para integración con proveedor real de email.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/notificaciones/[id]/enviar/route.ts"
+  },
+  {
+    "path": "/api/notificaciones/plantillas",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Notificaciones",
+    "summary": "Plantillas de notificación",
+    "description": "Consulta plantillas activas para feriados, promociones, stock, cumpleaños y otros avisos operativos.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      401,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/notificaciones/plantillas/route.ts"
+  },
+
+  {
     "path": "/api/auth/change-password",
     "methods": [
       "POST"
@@ -2117,6 +2202,10 @@ const endpointDefinitions: EndpointDefinition[] = [
 ];
 
 const tags = [
+  {
+    "name": "Notificaciones",
+    "description": "Notificaciones, plantillas, email, avisos programados y futuras salidas en Terminal."
+  },
   {
     "name": "Administración y BI",
     "description": "Dashboards, reportes y métricas administrativas."
