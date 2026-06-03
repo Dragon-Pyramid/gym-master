@@ -24,6 +24,16 @@ export interface CreateUsuarioDto {
   use_initial_password?: boolean;
   foto?: string;
   permisos_menu?: string[] | null;
+  telefono?: string;
+  direccion?: string;
+  sexo?: 'M' | 'F' | null;
+  fecnac?: string | null;
+  ciudad?: string | null;
+  provincia?: string | null;
+  pais?: string | null;
+  contacto_emergencia_nombre?: string | null;
+  contacto_emergencia_telefono?: string | null;
+  fecha_alta?: string | null;
 }
 
 export interface UpdateUsuarioDto {
@@ -37,6 +47,16 @@ export interface UpdateUsuarioDto {
   dni?: string | null;
   permisos_menu?: string[] | null;
   must_change_password?: boolean;
+  telefono?: string;
+  direccion?: string;
+  sexo?: 'M' | 'F' | null;
+  fecnac?: string | null;
+  ciudad?: string | null;
+  provincia?: string | null;
+  pais?: string | null;
+  contacto_emergencia_nombre?: string | null;
+  contacto_emergencia_telefono?: string | null;
+  fecha_alta?: string | null;
 }
 
 export interface ResponseUsuario {

@@ -95,9 +95,18 @@ next-env.d.ts
 /supabase/migrations/
 
 # Secret-like generated files
-*secret*
-*token*
-*password*
+# Nota: no usar patrones globales como *password* o *token* porque bloquean
+# archivos fuente válidos, por ejemplo auth/forgot-password y servicios de reset.
+# Los secretos reales quedan cubiertos por .env*, *.sql, dumps y extensiones comunes.
+*secret*.env
+*secret*.json
+*secret*.txt
+*token*.env
+*token*.json
+*token*.txt
+*password*.env
+*password*.json
+*password*.txt
 *service-role*
 *service_role*
 *anon-key*

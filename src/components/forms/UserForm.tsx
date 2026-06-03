@@ -34,6 +34,16 @@ const emptyForm = {
   confirmPassword: '',
   rol: 'socio',
   dni: '',
+  telefono: '',
+  direccion: '',
+  sexo: '',
+  fecnac: '',
+  ciudad: '',
+  provincia: '',
+  pais: 'Argentina',
+  contacto_emergencia_nombre: '',
+  contacto_emergencia_telefono: '',
+  fecha_alta: '',
   use_initial_password: true,
   permisos_menu: DEFAULT_MENU_PERMISSIONS_BY_ROLE.socio,
 };
@@ -62,6 +72,16 @@ export default function UserForm({
         password: '',
         confirmPassword: '',
         dni: usuario.dni ?? '',
+        telefono: '',
+        direccion: '',
+        sexo: '',
+        fecnac: '',
+        ciudad: '',
+        provincia: '',
+        pais: 'Argentina',
+        contacto_emergencia_nombre: '',
+        contacto_emergencia_telefono: '',
+        fecha_alta: '',
         use_initial_password: false,
         permisos_menu: getInitialPermissions(usuario.rol, usuario.permisos_menu),
       });
@@ -152,6 +172,18 @@ export default function UserForm({
             rol === 'admin'
               ? null
               : sanitizeMenuPermissionsForRole(rol, form.permisos_menu),
+          ...(rol === 'socio' && {
+            telefono: form.telefono,
+            direccion: form.direccion,
+            sexo: form.sexo ? (form.sexo as 'M' | 'F') : null,
+            fecnac: form.fecnac || null,
+            ciudad: form.ciudad,
+            provincia: form.provincia,
+            pais: form.pais,
+            contacto_emergencia_nombre: form.contacto_emergencia_nombre,
+            contacto_emergencia_telefono: form.contacto_emergencia_telefono,
+            fecha_alta: form.fecha_alta || null,
+          }),
         };
 
         if (useInitialPassword && !form.dni.trim()) {
@@ -267,6 +299,132 @@ export default function UserForm({
             onChange={handleChange}
             required={isSocio || isInitialPasswordMode}
           />
+        </div>
+      )}
+
+      {!usuario && isSocio && (
+        <div className='col-span-full rounded-lg border bg-muted/20 p-4'>
+          <div className='mb-3'>
+            <h3 className='text-base font-semibold'>Datos operativos del socio</h3>
+            <p className='text-sm text-muted-foreground'>
+              Estos datos crean el perfil de socio vinculado al usuario. Después se pueden revisar o modificar desde el menú Socios.
+            </p>
+          </div>
+          <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+            <div className='flex flex-col gap-1.5'>
+              <Label htmlFor='telefono'>Teléfono</Label>
+              <Input
+                id='telefono'
+                name='telefono'
+                placeholder='Ingrese teléfono'
+                value={form.telefono}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className='flex flex-col gap-1.5'>
+              <Label htmlFor='sexo'>Sexo</Label>
+              <select
+                id='sexo'
+                name='sexo'
+                value={form.sexo}
+                onChange={handleChange}
+                className='flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+              >
+                <option value=''>Seleccionar</option>
+                <option value='M'>Masculino</option>
+                <option value='F'>Femenino</option>
+              </select>
+            </div>
+
+            <div className='flex flex-col gap-1.5'>
+              <Label htmlFor='fecnac'>Fecha de nacimiento</Label>
+              <Input
+                id='fecnac'
+                name='fecnac'
+                type='date'
+                value={form.fecnac}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className='flex flex-col gap-1.5'>
+              <Label htmlFor='fecha_alta'>Fecha de alta</Label>
+              <Input
+                id='fecha_alta'
+                name='fecha_alta'
+                type='date'
+                value={form.fecha_alta}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className='flex flex-col gap-1.5 md:col-span-2'>
+              <Label htmlFor='direccion'>Dirección</Label>
+              <Input
+                id='direccion'
+                name='direccion'
+                placeholder='Ingrese dirección'
+                value={form.direccion}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className='flex flex-col gap-1.5'>
+              <Label htmlFor='ciudad'>Ciudad</Label>
+              <Input
+                id='ciudad'
+                name='ciudad'
+                placeholder='Ingrese ciudad'
+                value={form.ciudad}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className='flex flex-col gap-1.5'>
+              <Label htmlFor='provincia'>Provincia</Label>
+              <Input
+                id='provincia'
+                name='provincia'
+                placeholder='Ingrese provincia'
+                value={form.provincia}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className='flex flex-col gap-1.5'>
+              <Label htmlFor='pais'>País</Label>
+              <Input
+                id='pais'
+                name='pais'
+                placeholder='Ingrese país'
+                value={form.pais}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className='flex flex-col gap-1.5'>
+              <Label htmlFor='contacto_emergencia_nombre'>Contacto de emergencia</Label>
+              <Input
+                id='contacto_emergencia_nombre'
+                name='contacto_emergencia_nombre'
+                placeholder='Nombre del contacto'
+                value={form.contacto_emergencia_nombre}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className='flex flex-col gap-1.5'>
+              <Label htmlFor='contacto_emergencia_telefono'>Teléfono de emergencia</Label>
+              <Input
+                id='contacto_emergencia_telefono'
+                name='contacto_emergencia_telefono'
+                placeholder='Teléfono para urgencias'
+                value={form.contacto_emergencia_telefono}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
         </div>
       )}
 

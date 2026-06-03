@@ -50,6 +50,14 @@ function normalizeString(value: unknown): string | null {
   return trimmed.length ? trimmed : null;
 }
 
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function normalizeUuidString(value: unknown): string | null {
+  const normalized = normalizeString(value);
+  if (!normalized) return null;
+  return uuidRegex.test(normalized) ? normalized : null;
+}
+
 function normalizePago(row: any): ResponsePago {
   return {
     id: row.id,
@@ -257,7 +265,7 @@ export async function createPagoManualServer(
       normalizeString(payload.descuento_motivo) ?? previewDescuento.mensaje ?? null,
     registrado_por: user.id,
     metodo_pago: payload.metodo_pago ?? 'efectivo',
-    id_medio_pago: normalizeString(payload.id_medio_pago),
+    id_medio_pago: normalizeUuidString(payload.id_medio_pago),
     estado: 'pagado',
     observaciones: normalizeString(payload.observaciones),
     enviar_email: payload.enviar_email ?? true,

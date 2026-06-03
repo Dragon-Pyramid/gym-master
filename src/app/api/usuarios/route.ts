@@ -26,7 +26,27 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const { user } = await authMiddleware(req);
-    const { nombre, email, password, rol, dni, foto, permisos_menu, use_initial_password } = await req.json();
+    const body = await req.json();
+    const {
+      nombre,
+      email,
+      password,
+      rol,
+      dni,
+      foto,
+      permisos_menu,
+      use_initial_password,
+      telefono,
+      direccion,
+      sexo,
+      fecnac,
+      ciudad,
+      provincia,
+      pais,
+      contacto_emergencia_nombre,
+      contacto_emergencia_telefono,
+      fecha_alta,
+    } = body;
 
     const creado = await createUsuarioServer(user, {
       nombre,
@@ -37,6 +57,16 @@ export async function POST(req: Request) {
       foto,
       permisos_menu,
       use_initial_password,
+      telefono,
+      direccion,
+      sexo,
+      fecnac,
+      ciudad,
+      provincia,
+      pais,
+      contacto_emergencia_nombre,
+      contacto_emergencia_telefono,
+      fecha_alta,
     });
 
     return NextResponse.json(

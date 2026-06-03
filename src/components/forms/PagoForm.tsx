@@ -82,6 +82,15 @@ const fallbackMediosPago: CatalogoParametrizableItem[] = [
   },
 ];
 
+function isFallbackMedioPagoId(value?: string | null) {
+  return typeof value === "string" && value.startsWith("fallback-");
+}
+
+function normalizeMedioPagoIdForPayload(value?: string | null) {
+  if (!value || isFallbackMedioPagoId(value)) return null;
+  return value;
+}
+
 const emptyForm = {
   socio_id: "",
   cuota_id: "",
@@ -122,9 +131,10 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
         const data = await fetchPagoFormOptionsApi();
         if (!mounted) return;
         setOptions(data);
+        const defaultCuotaId = data.cuotas?.[0]?.id || "";
         setForm((prev) => ({
           ...prev,
-          cuota_id: prev.cuota_id || data.cuotas?.[0]?.id || "",
+          cuota_id: prev.cuota_id || defaultCuotaId,
         }));
       } catch (error: any) {
         toast.error(error.message || "Error al cargar opciones de pago");
@@ -165,9 +175,12 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
       });
     } else {
       setForm((prev) => ({
-        ...emptyForm,
+        ...prev,
         id_medio_pago:
-          mediosPago.find((item) => item.codigo === emptyForm.metodo_pago)?.id ?? "",
+          prev.id_medio_pago ||
+          mediosPago.find((item) => item.codigo === prev.metodo_pago)?.id ||
+          mediosPago.find((item) => item.codigo === emptyForm.metodo_pago)?.id ||
+          "",
       }));
     }
   }, [pago, mediosPago]);
@@ -178,7 +191,10 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
   );
 
   const selectedCuota = useMemo(
-    () => options.cuotas.find((cuota) => cuota.id === form.cuota_id),
+    () =>
+      options.cuotas.find((cuota) => cuota.id === form.cuota_id) ??
+      options.cuotas[0] ??
+      null,
     [form.cuota_id, options.cuotas]
   );
 
@@ -231,6 +247,10 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
             : value,
       };
 
+      if (name === "cuota_id") {
+        next.cuota_id = value;
+      }
+
       if (name === "fecha_pago") {
         next.periodo_desde = value;
         next.periodo_hasta = addMonthsIso(value, Number(next.meses_cubiertos || 1));
@@ -263,7 +283,7 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
     const selected = mediosPago.find((item) => item.id === value);
     setForm((prev) => ({
       ...prev,
-      id_medio_pago: selected?.id ?? "",
+      id_medio_pago: selected?.id ?? value,
       metodo_pago: selected?.codigo ?? value,
     }));
   };
@@ -279,11 +299,16 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
     setLoading(true);
 
     try {
+      const payload = {
+        ...form,
+        id_medio_pago: normalizeMedioPagoIdForPayload(form.id_medio_pago),
+      };
+
       if (pago?.id) {
-        await updatePagoApi(pago.id, form);
+        await updatePagoApi(pago.id, payload);
         toast.success("Pago actualizado");
       } else {
-        await createPagoManualApi(form);
+        await createPagoManualApi(payload);
         toast.success("Pago manual registrado");
       }
 
