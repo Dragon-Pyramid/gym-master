@@ -44,6 +44,7 @@ import AsistenciasRecientesTable from '@/components/ui/asistencias-recientes-tab
 import ClockCard from '@/components/ui/ClockCard';
 import BienvenidaSocio from '@/components/ui/BienvenidaSocio';
 import { supabaseBrowser } from '@/lib/supabase-browser';
+import { getToken } from '@/services/storageService';
 
 // ⬇️ IMPORTA EL TIPO QUE EMITE LA TABLA
 import type { AsistenciaReciente as AsistenciaRecienteApi } from '@/services/qrService';
@@ -140,6 +141,9 @@ export default function DashboardPage() {
   const [mantenimientos, setMantenimientos] = useState<Mantenimiento[]>([]);
   const [loadingDatos, setLoadingDatos] = useState(true);
   const [showQr, setShowQr] = useState(false);
+  const [mensajesPendientes, setMensajesPendientes] = useState(0);
+  const [mensajesSinResponder, setMensajesSinResponder] = useState(0);
+  const [loadingMensajesPendientes, setLoadingMensajesPendientes] = useState(false);
 
   // Overlay de bienvenida
   const [showWelcome, setShowWelcome] = useState(false);
@@ -232,6 +236,61 @@ export default function DashboardPage() {
       setLoadingDatos(false);
     }
     fetchData();
+  }, [user?.rol]);
+
+  useEffect(() => {
+    if (user?.rol !== 'admin') {
+      setMensajesPendientes(0);
+      setMensajesSinResponder(0);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function fetchMensajesPendientes() {
+      try {
+        setLoadingMensajesPendientes(true);
+
+        const token = getToken();
+        const response = await fetch('/api/admin/socios-mensajes/resumen', {
+          cache: 'no-store',
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+
+        if (!response.ok) {
+          if (!cancelled) {
+            setMensajesPendientes(0);
+            setMensajesSinResponder(0);
+          }
+          return;
+        }
+
+        const payload = await response.json();
+        const resumen = payload?.data ?? {};
+
+        if (!cancelled) {
+          setMensajesPendientes(Number(resumen.nuevos ?? 0));
+          setMensajesSinResponder(Number(resumen.sin_responder ?? 0));
+        }
+      } catch (error) {
+        console.error('Error cargando resumen de mensajes:', error);
+        if (!cancelled) {
+          setMensajesPendientes(0);
+          setMensajesSinResponder(0);
+        }
+      } finally {
+        if (!cancelled) setLoadingMensajesPendientes(false);
+      }
+    }
+
+    fetchMensajesPendientes();
+
+    const interval = window.setInterval(fetchMensajesPendientes, 60000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
   }, [user?.rol]);
 
   const equiposTotales = equipos.length;
@@ -456,6 +515,49 @@ export default function DashboardPage() {
 
                 <div className='grid grid-cols-1 gap-4 mt-6 md:grid-cols-2 xl:grid-cols-3'>
                   <CuotasEstadoDashboard />
+
+                  <Card
+                    className='transition-shadow cursor-pointer hover:shadow-md'
+                    onClick={() => router.push('/dashboard/mensajes-admin')}
+                  >
+                    <CardHeader>
+                      <CardTitle>Bandeja de entrada</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className='grid grid-cols-2 gap-4'>
+                        <div>
+                          <div className='text-3xl font-bold'>
+                            {loadingMensajesPendientes ? '...' : mensajesPendientes}
+                          </div>
+                          <p className='text-sm text-muted-foreground'>
+                            Nuevos / en espera
+                          </p>
+                        </div>
+                        <div>
+                          <div className='text-3xl font-bold'>
+                            {loadingMensajesPendientes ? '...' : mensajesSinResponder}
+                          </div>
+                          <p className='text-sm text-muted-foreground'>
+                            Sin responder
+                          </p>
+                        </div>
+                      </div>
+                      <p className='mt-3 text-xs text-muted-foreground'>
+                        Sin responder incluye mensajes pendientes y leídos que todavía no tienen respuesta.
+                      </p>
+                      <Button
+                        type='button'
+                        variant='outline'
+                        className='mt-4'
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          router.push('/dashboard/mensajes-admin');
+                        }}
+                      >
+                        Abrir bandeja
+                      </Button>
+                    </CardContent>
+                  </Card>
 
                   <Card>
                     <CardHeader>

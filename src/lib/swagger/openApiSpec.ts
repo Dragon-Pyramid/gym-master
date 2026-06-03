@@ -17,6 +17,75 @@ type OpenApiPathItem = Record<string, OpenApiOperation>;
 
 const endpointDefinitions: EndpointDefinition[] = [
 
+
+  {
+    "path": "/api/socios/mensajes",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "tag": "Mensajería",
+    "summary": "Mensajes del socio a administración",
+    "description": "Permite al socio autenticado consultar su historial y enviar consultas, reclamos, críticas, preguntas o sugerencias a administración.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      201,
+      400,
+      401,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/socios/mensajes/route.ts"
+  },
+  {
+    "path": "/api/admin/socios-mensajes",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Mensajería",
+    "summary": "Bandeja administrativa de mensajes de socios",
+    "description": "Permite a administración consultar la bandeja de mensajes enviados por socios, con filtros por estado y búsqueda.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      401,
+      403,
+      500
+    ],
+    "queryParams": [
+      "estado",
+      "q"
+    ],
+    "source": "src/app/api/admin/socios-mensajes/route.ts"
+  },
+  {
+    "path": "/api/admin/socios-mensajes/{id}",
+    "methods": [
+      "GET",
+      "PATCH"
+    ],
+    "tag": "Mensajería",
+    "summary": "Detalle y respuesta administrativa de mensaje de socio",
+    "description": "Permite a administración leer, responder, marcar como leído o cerrar un mensaje enviado por un socio. Al responder, se intenta enviar email al socio mediante Brevo.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401,
+      403,
+      404,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/admin/socios-mensajes/[id]/route.ts"
+  },
   {
     "path": "/api/notificaciones",
     "methods": [
