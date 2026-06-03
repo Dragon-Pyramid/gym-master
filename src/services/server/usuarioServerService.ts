@@ -47,6 +47,159 @@ function sanitizeRole(rol?: string) {
   return normalized;
 }
 
+function uniqueSocioMatches(matches: any[]) {
+  const seen = new Set<string>();
+  return matches.filter((match) => {
+    if (!match?.id_socio || seen.has(match.id_socio)) return false;
+    seen.add(match.id_socio);
+    return true;
+  });
+}
+
+async function findSociosByDniOrEmail(
+  supabase: ReturnType<typeof getSupabaseServerClient>,
+  dni: string,
+  email: string
+) {
+  const matches: any[] = [];
+
+  if (dni) {
+    const { data, error } = await supabase
+      .from('socio')
+      .select('id_socio,usuario_id,dni,email')
+      .eq('dni', dni);
+
+    if (error) throw new Error(error.message);
+    matches.push(...(data ?? []));
+  }
+
+  if (email) {
+    const { data, error } = await supabase
+      .from('socio')
+      .select('id_socio,usuario_id,dni,email')
+      .eq('email', email);
+
+    if (error) throw new Error(error.message);
+    matches.push(...(data ?? []));
+  }
+
+  return uniqueSocioMatches(matches);
+}
+
+type SocioProfileInput = {
+  id: string;
+  nombre: string;
+  email: string;
+  dni?: string | null;
+  foto?: string | null;
+  telefono?: string | null;
+  direccion?: string | null;
+  sexo?: 'M' | 'F' | null;
+  fecnac?: string | null;
+  ciudad?: string | null;
+  provincia?: string | null;
+  pais?: string | null;
+  contacto_emergencia_nombre?: string | null;
+  contacto_emergencia_telefono?: string | null;
+  fecha_alta?: string | null;
+};
+
+function cleanNullableText(value?: string | null) {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function cleanOptionalDate(value?: string | null) {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function buildSocioPayloadForUsuario(usuario: SocioProfileInput) {
+  const dni = usuario.dni?.trim() ?? '';
+  const email = usuario.email.trim().toLowerCase();
+
+  const payload: Record<string, unknown> = {
+    usuario_id: usuario.id,
+    nombre_completo: usuario.nombre,
+    dni,
+    email,
+    activo: true,
+    fecha_baja: null,
+    telefono: cleanNullableText(usuario.telefono),
+    direccion: cleanNullableText(usuario.direccion),
+    sexo: usuario.sexo === 'M' || usuario.sexo === 'F' ? usuario.sexo : null,
+    fecnac: cleanOptionalDate(usuario.fecnac),
+    ciudad: cleanNullableText(usuario.ciudad),
+    provincia: cleanNullableText(usuario.provincia),
+    pais: cleanNullableText(usuario.pais) ?? 'Argentina',
+    contacto_emergencia_nombre: cleanNullableText(usuario.contacto_emergencia_nombre),
+    contacto_emergencia_telefono: cleanNullableText(usuario.contacto_emergencia_telefono),
+    fecha_alta: cleanOptionalDate(usuario.fecha_alta) ?? new Date().toISOString().slice(0, 10),
+  };
+
+  if (usuario.foto) {
+    payload.foto = usuario.foto;
+  }
+
+  return payload;
+}
+
+async function ensureSocioProfileForUsuario(
+  supabase: ReturnType<typeof getSupabaseServerClient>,
+  usuario: SocioProfileInput
+) {
+  const dni = usuario.dni?.trim() ?? '';
+  const email = usuario.email.trim().toLowerCase();
+
+  if (!dni) {
+    throw new Error('El DNI es obligatorio para crear o vincular el perfil de socio.');
+  }
+
+  const matches = await findSociosByDniOrEmail(supabase, dni, email);
+  const linkedToAnotherUser = matches.find(
+    (socio) => socio.usuario_id && socio.usuario_id !== usuario.id
+  );
+
+  if (linkedToAnotherUser) {
+    throw new Error(
+      'Ya existe un socio con el mismo DNI o email vinculado a otro usuario. Revisá Socios antes de continuar.'
+    );
+  }
+
+  const alreadyLinked = matches.find((socio) => socio.usuario_id === usuario.id);
+  const unlinked = matches.filter((socio) => !socio.usuario_id);
+
+  if (unlinked.length > 1) {
+    throw new Error(
+      'Hay más de un socio sin usuario asociado que coincide con el DNI/email. Unificá esos registros antes de continuar.'
+    );
+  }
+
+  const socioPayload = buildSocioPayloadForUsuario(usuario);
+
+  if (alreadyLinked || unlinked.length === 1) {
+    const socioId = (alreadyLinked ?? unlinked[0]).id_socio;
+    const { error } = await supabase
+      .from('socio')
+      .update(socioPayload)
+      .eq('id_socio', socioId);
+
+    if (error) {
+      throw new Error(`No se pudo vincular el perfil de socio: ${error.message}`);
+    }
+
+    return;
+  }
+
+  const { error } = await supabase.from('socio').insert([socioPayload]);
+
+  if (error) {
+    throw new Error(`No se pudo crear el perfil de socio: ${error.message}`);
+  }
+}
+
 export const fetchUsuariosServer = async (
   user: JwtUser
 ): Promise<ResponseUsuario[]> => {
@@ -115,21 +268,28 @@ export const createUsuarioServer = async (
   if (usuarioError) throw new Error(usuarioError.message);
 
   if (rol === 'socio') {
-    const { error: socioError } = await supabase.from('socio').insert([
-      {
-        usuario_id: usuarioCreado.id,
-        nombre_completo: nombre,
-        dni,
+    try {
+      await ensureSocioProfileForUsuario(supabase, {
+        id: usuarioCreado.id,
+        nombre,
         email,
-        activo: true,
+        dni,
         foto: payload.foto ?? null,
-      },
-    ]);
-
-    if (socioError) {
+        telefono: payload.telefono ?? null,
+        direccion: payload.direccion ?? null,
+        sexo: payload.sexo ?? null,
+        fecnac: payload.fecnac ?? null,
+        ciudad: payload.ciudad ?? null,
+        provincia: payload.provincia ?? null,
+        pais: payload.pais ?? null,
+        contacto_emergencia_nombre: payload.contacto_emergencia_nombre ?? null,
+        contacto_emergencia_telefono: payload.contacto_emergencia_telefono ?? null,
+        fecha_alta: payload.fecha_alta ?? null,
+      });
+    } catch (error: any) {
       await supabase.from('usuario').delete().eq('id', usuarioCreado.id);
       throw new Error(
-        `Usuario creado, pero no se pudo crear el perfil de socio: ${socioError.message}`
+        `Usuario creado, pero no se pudo crear o vincular el perfil de socio: ${error.message}`
       );
     }
   }
@@ -149,6 +309,16 @@ export const updateUsuarioServer = async (
 
   const payload: Record<string, unknown> = { ...updateData };
   delete payload.password_hash;
+  delete payload.telefono;
+  delete payload.direccion;
+  delete payload.sexo;
+  delete payload.fecnac;
+  delete payload.ciudad;
+  delete payload.provincia;
+  delete payload.pais;
+  delete payload.contacto_emergencia_nombre;
+  delete payload.contacto_emergencia_telefono;
+  delete payload.fecha_alta;
 
   if (typeof updateData.email === 'string') {
     payload.email = updateData.email.trim().toLowerCase();
@@ -192,7 +362,36 @@ export const updateUsuarioServer = async (
   if (error) throw new Error(error.message);
   if (!data) throw new Error('No se encontró el usuario con ese ID');
 
-  return toResponseUsuario(data as Usuario);
+  const usuarioActualizado = data as Usuario;
+
+  if (usuarioActualizado.rol === 'socio') {
+    await ensureSocioProfileForUsuario(supabase, {
+      id: usuarioActualizado.id,
+      nombre: usuarioActualizado.nombre,
+      email: usuarioActualizado.email,
+      dni: usuarioActualizado.dni ?? null,
+      foto: usuarioActualizado.foto ?? null,
+      telefono: updateData.telefono ?? null,
+      direccion: updateData.direccion ?? null,
+      sexo: updateData.sexo ?? null,
+      fecnac: updateData.fecnac ?? null,
+      ciudad: updateData.ciudad ?? null,
+      provincia: updateData.provincia ?? null,
+      pais: updateData.pais ?? null,
+      contacto_emergencia_nombre: updateData.contacto_emergencia_nombre ?? null,
+      contacto_emergencia_telefono: updateData.contacto_emergencia_telefono ?? null,
+      fecha_alta: updateData.fecha_alta ?? null,
+    });
+
+    if (typeof updateData.activo === 'boolean') {
+      await supabase
+        .from('socio')
+        .update({ activo: updateData.activo, fecha_baja: updateData.activo ? null : new Date().toISOString().slice(0, 10) })
+        .eq('usuario_id', usuarioActualizado.id);
+    }
+  }
+
+  return toResponseUsuario(usuarioActualizado);
 };
 
 export const deactivateUsuarioServer = async (
@@ -212,7 +411,16 @@ export const deactivateUsuarioServer = async (
   if (error) throw new Error(error.message);
   if (!data) throw new Error('No se encontró el usuario con ese ID');
 
-  return toResponseUsuario(data as Usuario);
+  const usuarioDesactivado = data as Usuario;
+
+  if (usuarioDesactivado.rol === 'socio') {
+    await supabase
+      .from('socio')
+      .update({ activo: false, fecha_baja: new Date().toISOString().slice(0, 10) })
+      .eq('usuario_id', usuarioDesactivado.id);
+  }
+
+  return toResponseUsuario(usuarioDesactivado);
 };
 
 export const getUsuarioByIdServer = async (

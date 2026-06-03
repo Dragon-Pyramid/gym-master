@@ -82,7 +82,22 @@ export const updateSocioServer = async (
   if (error) throw new Error(error.message);
   if (!data) throw new Error('No se encontró el socio con ese ID');
 
-  return data as Socio;
+  const socioActualizado = data as Socio;
+
+  if (typeof updateData.activo === 'boolean' && socioActualizado.usuario_id) {
+    const { error: usuarioError } = await supabase
+      .from('usuario')
+      .update({ activo: updateData.activo })
+      .eq('id', socioActualizado.usuario_id);
+
+    if (usuarioError) {
+      throw new Error(
+        `El socio fue actualizado, pero no se pudo sincronizar el usuario asociado: ${usuarioError.message}`
+      );
+    }
+  }
+
+  return socioActualizado;
 };
 
 export const setSocioActivoServer = async (
@@ -95,7 +110,10 @@ export const setSocioActivoServer = async (
 
   const { data, error } = await supabase
     .from('socio')
-    .update({ activo })
+    .update({
+      activo,
+      fecha_baja: activo ? null : new Date().toISOString().slice(0, 10),
+    })
     .eq('id_socio', id_socio)
     .select()
     .single();
@@ -103,7 +121,22 @@ export const setSocioActivoServer = async (
   if (error) throw new Error(error.message);
   if (!data) throw new Error('No se encontró el socio con ese ID');
 
-  return data as Socio;
+  const socioActualizado = data as Socio;
+
+  if (socioActualizado.usuario_id) {
+    const { error: usuarioError } = await supabase
+      .from('usuario')
+      .update({ activo })
+      .eq('id', socioActualizado.usuario_id);
+
+    if (usuarioError) {
+      throw new Error(
+        `El socio fue actualizado, pero no se pudo sincronizar el usuario asociado: ${usuarioError.message}`
+      );
+    }
+  }
+
+  return socioActualizado;
 };
 
 export const deactivateSocioServer = async (

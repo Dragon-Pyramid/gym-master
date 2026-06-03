@@ -124,6 +124,48 @@ const endpointDefinitions: EndpointDefinition[] = [
   },
 
   {
+    "path": "/api/auth/forgot-password",
+    "methods": [
+      "POST"
+    ],
+    "tag": "Auth",
+    "summary": "Solicitar recuperación de contraseña por email",
+    "description": "Recibe email y tipo de acceso, genera token seguro de un solo uso, registra auditoría y envía enlace de recuperación por email sin revelar si la cuenta existe.",
+    "auth": false,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/auth/forgot-password/route.ts"
+  },
+  {
+    "path": "/api/auth/reset-password",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "tag": "Auth",
+    "summary": "Validar token y restablecer contraseña",
+    "description": "GET valida un token de recuperación. POST actualiza la contraseña con política fuerte, marca el token como usado, limpia must_change_password y registra auditoría.",
+    "auth": false,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      500
+    ],
+    "queryParams": [
+      "token"
+    ],
+    "source": "src/app/api/auth/reset-password/route.ts"
+  },
+
+  {
     "path": "/api/empleados",
     "methods": [
       "GET",
@@ -2458,6 +2500,47 @@ function getRequestBody(endpoint: EndpointDefinition, method: string) {
     };
   }
 
+
+  if (endpoint.path === "/api/auth/forgot-password") {
+    return {
+      required: true,
+      content: {
+        "application/json": {
+          schema: { $ref: "#/components/schemas/ForgotPasswordRequest" },
+          examples: {
+            socio: {
+              summary: "Solicitud para socio",
+              value: {
+                email: "socio@gymmaster.local",
+                rol: "socio",
+              },
+            },
+          },
+        },
+      },
+    };
+  }
+
+  if (endpoint.path === "/api/auth/reset-password" && lowerMethod === "post") {
+    return {
+      required: true,
+      content: {
+        "application/json": {
+          schema: { $ref: "#/components/schemas/ResetPasswordRequest" },
+          examples: {
+            reset: {
+              summary: "Restablecer contraseña",
+              value: {
+                token: "reset-token-recibido-por-email",
+                new_password: "NuevaClave2026!",
+              },
+            },
+          },
+        },
+      },
+    };
+  }
+
   if (endpoint.path === "/api/asistencias/registro-qr" && lowerMethod === "post") {
     return {
       required: true,
@@ -2911,6 +2994,38 @@ export const openApiSpec = {
             type: "string",
             enum: ["admin", "usuario", "socio"],
             example: "admin",
+          },
+        },
+      },
+      ForgotPasswordRequest: {
+        type: "object",
+        required: ["email"],
+        properties: {
+          email: {
+            type: "string",
+            format: "email",
+            example: "socio@gymmaster.local",
+          },
+          rol: {
+            type: "string",
+            enum: ["admin", "usuario", "socio"],
+            nullable: true,
+            example: "socio",
+          },
+        },
+      },
+      ResetPasswordRequest: {
+        type: "object",
+        required: ["token", "new_password"],
+        properties: {
+          token: {
+            type: "string",
+            example: "reset-token-recibido-por-email",
+          },
+          new_password: {
+            type: "string",
+            format: "password",
+            example: "NuevaClave2026!",
           },
         },
       },

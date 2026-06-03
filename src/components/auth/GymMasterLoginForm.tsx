@@ -139,6 +139,10 @@ export default function GymMasterLoginForm({
     allowedRoles.includes(type.value)
   );
   const shouldShowRoleSelector = !lockedRole && userTypes.length > 1;
+  const recoveryRole = lockedRole ?? userType ?? defaultRole ?? '';
+  const forgotPasswordHref = recoveryRole
+    ? `/auth/forgot-password?rol=${encodeURIComponent(recoveryRole)}`
+    : '/auth/forgot-password';
 
   useEffect(() => {
     initializeAuth();
@@ -309,6 +313,15 @@ export default function GymMasterLoginForm({
                     )}
                   </Button>
                 </div>
+              </div>
+
+              <div className='-mt-2 flex justify-end'>
+                <Link
+                  href={forgotPasswordHref}
+                  className='text-sm font-medium text-primary underline-offset-4 hover:underline'
+                >
+                  ¿Olvidaste tu contraseña?
+                </Link>
               </div>
 
               {lockedRole ? (

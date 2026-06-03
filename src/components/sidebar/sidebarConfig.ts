@@ -40,6 +40,11 @@ export const sections: SidebarSectionType[] = [
         link: '/dashboard/rutinas/asistente',
         level: 2,
       },
+      {
+        title: 'Asistente de Dietas',
+        link: '/dashboard/dietas',
+        level: 2,
+      },
     ],
   },
   {
