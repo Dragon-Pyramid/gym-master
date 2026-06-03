@@ -52,7 +52,6 @@ export interface RegistroAsistenciaQRResponse {
   } | null;
 }
 
-
 export interface TerminalNotificacion {
   id: string;
   titulo: string;
@@ -75,13 +74,81 @@ export interface QrDiarioResponse {
   token: string;
 }
 
+export interface TerminalSessionRefreshResponse {
+  token: string;
+  expires_at?: string | null;
+}
+
+export class TerminalSessionError extends Error {
+  status?: number;
+  code?: string;
+
+  constructor(message: string, options?: { status?: number; code?: string }) {
+    super(message);
+    this.name = 'TerminalSessionError';
+    this.status = options?.status;
+    this.code = options?.code;
+  }
+}
+
+function buildApiError(error: unknown, fallback: string): Error {
+  const axiosError = error as {
+    response?: {
+      status?: number;
+      data?: {
+        error?: string;
+        message?: string;
+        error_code?: string;
+      };
+    };
+  };
+
+  const status = axiosError.response?.status;
+  const data = axiosError.response?.data;
+  const message = data?.error || data?.message || fallback;
+  const code = data?.error_code;
+
+  if (status === 401 || status === 403 || code?.includes('TERMINAL_SESSION')) {
+    return new TerminalSessionError(message, { status, code });
+  }
+
+  return new Error(message);
+}
+
+export function isTerminalSessionError(error: unknown): error is TerminalSessionError {
+  return error instanceof TerminalSessionError;
+}
+
+export const refreshTerminalSession = async (): Promise<TerminalSessionRefreshResponse> => {
+  try {
+    const response = await axios.post(
+      '/api/auth/terminal-session/refresh',
+      {},
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeader(),
+        },
+      }
+    );
+
+    return response.data as TerminalSessionRefreshResponse;
+  } catch (error: unknown) {
+    throw buildApiError(error, 'No se pudo renovar la sesión de Terminal.');
+  }
+};
+
 export const fetchQrDiario = async (): Promise<QrDiarioResponse> => {
-  const response = await axios.get('/api/asistencias/qr-dia', {
-    headers: {
-      ...authHeader(),
-    },
-  });
-  return response.data as QrDiarioResponse;
+  try {
+    const response = await axios.get('/api/asistencias/qr-dia', {
+      headers: {
+        ...authHeader(),
+      },
+    });
+    return response.data as QrDiarioResponse;
+  } catch (error: unknown) {
+    throw buildApiError(error, 'No se pudo cargar el QR diario de asistencia.');
+  }
 };
 
 export const fetchQrCode = async (): Promise<string> => {
@@ -147,17 +214,9 @@ export const fetchAsistenciasRecientes = async (): Promise<
     });
     return response.data as AsistenciaReciente[];
   } catch (error: unknown) {
-    const axiosError = error as { response?: { data?: { error?: string } } };
-    if (axiosError.response && axiosError.response.data) {
-      throw new Error(
-        axiosError.response.data.error ||
-          'Error al obtener asistencias recientes.'
-      );
-    }
-    throw new Error('Error de red. Intente nuevamente.');
+    throw buildApiError(error, 'Error al obtener asistencias recientes.');
   }
 };
-
 
 export const fetchTerminalNotificaciones = async (): Promise<TerminalNotificacion[]> => {
   try {
@@ -168,14 +227,6 @@ export const fetchTerminalNotificaciones = async (): Promise<TerminalNotificacio
     });
     return response.data as TerminalNotificacion[];
   } catch (error: unknown) {
-    const axiosError = error as { response?: { data?: { error?: string } } };
-    if (axiosError.response && axiosError.response.data) {
-      throw new Error(
-        axiosError.response.data.error ||
-          'Error al obtener avisos de Terminal.'
-      );
-    }
-    throw new Error('Error de red al obtener avisos de Terminal.');
+    throw buildApiError(error, 'Error de red al obtener avisos de Terminal.');
   }
 };
-

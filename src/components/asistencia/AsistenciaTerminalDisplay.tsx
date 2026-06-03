@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -21,11 +21,16 @@ import {
   fetchAsistenciasRecientes,
   fetchQrDiario,
   fetchTerminalNotificaciones,
+  isTerminalSessionError,
+  refreshTerminalSession,
   type AsistenciaReciente,
   type TerminalNotificacion,
   type RegistroAsistenciaAlertType,
 } from '@/services/qrService';
 import { formatFrontendDate, formatFrontendTime } from '@/utils/dateFormat';
+import { useAuthStore } from '@/stores/authStore';
+import { getToken, logoutSession } from '@/services/storageService';
+import { jwtDecode } from 'jwt-decode';
 
 type TerminalVariant = 'idle' | 'success' | 'debt' | 'inactive' | 'error';
 
@@ -53,6 +58,14 @@ type TerminalEvent = {
 };
 
 const RESULT_VISIBLE_MS = 5000;
+const TERMINAL_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
+const TERMINAL_REFRESH_THRESHOLD_MS = 30 * 60 * 1000;
+
+type TerminalSessionState = {
+  status: 'checking' | 'ok' | 'warning' | 'expired';
+  message: string;
+  expiresAt?: Date | null;
+};
 
 const variantStyles: Record<
   TerminalVariant,
@@ -112,6 +125,22 @@ const terminalNeonClasses: Record<string, string> = {
 
 function getTerminalNeonClass(color?: string | null) {
   return terminalNeonClasses[color || 'verde_fluo'] || terminalNeonClasses.verde_fluo;
+}
+
+function decodeTokenExpiration(token?: string | null): Date | null {
+  if (!token) return null;
+
+  try {
+    const decoded = jwtDecode<{ exp?: number }>(token);
+    return decoded.exp ? new Date(decoded.exp * 1000) : null;
+  } catch {
+    return null;
+  }
+}
+
+function isTokenCloseToExpiring(expiresAt: Date | null) {
+  if (!expiresAt) return true;
+  return expiresAt.getTime() - Date.now() <= TERMINAL_REFRESH_THRESHOLD_MS;
 }
 
 function formatTime(date: Date) {
@@ -236,8 +265,87 @@ export default function AsistenciaTerminalDisplay() {
   const resultTimeoutRef = useRef<number | null>(null);
   const adShowTimeoutRef = useRef<number | null>(null);
   const adHideTimeoutRef = useRef<number | null>(null);
+  const terminalRefreshInFlightRef = useRef(false);
+  const refreshSession = useAuthStore((state) => state.refreshSession);
+  const logout = useAuthStore((state) => state.logout);
+  const [sessionState, setSessionState] = useState<TerminalSessionState>(() => ({
+    status: 'checking',
+    message: 'Preparando sesión extendida de Terminal...',
+    expiresAt: null,
+  }));
 
   const styles = variantStyles[event.variant];
+
+  const markTerminalSessionExpired = useCallback((message?: string) => {
+    setSessionState({
+      status: 'expired',
+      message:
+        message ||
+        'La sesión de Terminal expiró. Iniciá sesión nuevamente para reactivar la pantalla.',
+      expiresAt: null,
+    });
+    setError('Sesión de Terminal expirada.');
+  }, []);
+
+  const ensureTerminalSession = useCallback(async (force = false) => {
+    const currentToken = getToken();
+    const currentExpiresAt = decodeTokenExpiration(currentToken);
+
+    if (!currentToken) {
+      markTerminalSessionExpired('No hay sesión activa para la Terminal. Iniciá sesión nuevamente.');
+      return false;
+    }
+
+    if (!force && currentExpiresAt && !isTokenCloseToExpiring(currentExpiresAt)) {
+      setSessionState({
+        status: 'ok',
+        message: 'Sesión de Terminal activa.',
+        expiresAt: currentExpiresAt,
+      });
+      return true;
+    }
+
+    if (terminalRefreshInFlightRef.current) return true;
+
+    try {
+      terminalRefreshInFlightRef.current = true;
+      setSessionState((prev) => ({
+        ...prev,
+        status: 'checking',
+        message: 'Renovando sesión segura de Terminal...',
+      }));
+
+      const refreshed = await refreshTerminalSession();
+      refreshSession(refreshed.token);
+
+      const expiresAt = refreshed.expires_at
+        ? new Date(refreshed.expires_at)
+        : decodeTokenExpiration(refreshed.token);
+
+      setSessionState({
+        status: 'ok',
+        message: 'Sesión de Terminal renovada correctamente.',
+        expiresAt,
+      });
+      setError(null);
+      return true;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : undefined;
+      markTerminalSessionExpired(message);
+      return false;
+    } finally {
+      terminalRefreshInFlightRef.current = false;
+    }
+  }, [markTerminalSessionExpired, refreshSession]);
+
+  const handleTerminalError = useCallback((err: unknown, fallback: string) => {
+    if (isTerminalSessionError(err)) {
+      markTerminalSessionExpired(err.message);
+      return;
+    }
+
+    setError(err instanceof Error ? err.message : fallback);
+  }, [markTerminalSessionExpired]);
 
   const clearAdTimers = () => {
     if (adShowTimeoutRef.current) {
@@ -293,7 +401,7 @@ export default function AsistenciaTerminalDisplay() {
         applyEvent(buildTerminalEventFromAsistencia(latest));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudieron cargar las asistencias recientes.');
+      handleTerminalError(err, 'No se pudieron cargar las asistencias recientes.');
     }
   };
 
@@ -312,11 +420,7 @@ export default function AsistenciaTerminalDisplay() {
       } catch (err) {
         if (cancelled) return;
 
-        setError(
-          err instanceof Error
-            ? err.message
-            : 'No se pudo cargar el QR diario de asistencia.'
-        );
+        handleTerminalError(err, 'No se pudo cargar el QR diario de asistencia.');
       } finally {
         if (!cancelled) {
           setQrLoading(false);
@@ -324,15 +428,29 @@ export default function AsistenciaTerminalDisplay() {
       }
     };
 
-    loadDailyQr();
-    const qrRefreshInterval = window.setInterval(loadDailyQr, 5 * 60 * 1000);
+    ensureTerminalSession(true).then((ready) => {
+      if (!cancelled && ready) loadDailyQr();
+    });
+    const qrRefreshInterval = window.setInterval(() => {
+      ensureTerminalSession().then((ready) => {
+        if (ready) loadDailyQr();
+      });
+    }, 5 * 60 * 1000);
 
     return () => {
       cancelled = true;
       window.clearInterval(qrRefreshInterval);
     };
-  }, []);
+  }, [ensureTerminalSession, handleTerminalError]);
 
+  useEffect(() => {
+    ensureTerminalSession(true);
+    const terminalSessionInterval = window.setInterval(() => {
+      ensureTerminalSession();
+    }, TERMINAL_REFRESH_INTERVAL_MS);
+
+    return () => window.clearInterval(terminalSessionInterval);
+  }, [ensureTerminalSession]);
 
   useEffect(() => {
     let cancelled = false;
@@ -344,8 +462,12 @@ export default function AsistenciaTerminalDisplay() {
         setTerminalAds(Array.isArray(rows) ? rows : []);
       } catch (err) {
         if (!cancelled) {
-          console.warn('No se pudieron cargar avisos de Terminal:', err);
-          setTerminalAds([]);
+          if (isTerminalSessionError(err)) {
+            markTerminalSessionExpired(err.message);
+          } else {
+            console.warn('No se pudieron cargar avisos de Terminal:', err);
+            setTerminalAds([]);
+          }
         }
       }
     };
@@ -357,7 +479,7 @@ export default function AsistenciaTerminalDisplay() {
       cancelled = true;
       window.clearInterval(adsRefreshInterval);
     };
-  }, []);
+  }, [markTerminalSessionExpired]);
 
   useEffect(() => {
     clearAdTimers();
@@ -382,22 +504,30 @@ export default function AsistenciaTerminalDisplay() {
   }, [event.variant, terminalAds, terminalAdIndex]);
 
   useEffect(() => {
-    loadRecent();
+    ensureTerminalSession().then((ready) => {
+      if (ready) loadRecent();
+    });
 
     const clockInterval = window.setInterval(() => setNow(new Date()), 1000);
-    const pollInterval = window.setInterval(() => loadRecent(), 3000);
+    const pollInterval = window.setInterval(() => {
+      if (sessionState.status !== 'expired') loadRecent();
+    }, 3000);
 
     const realtimeChannel = supabaseBrowser
       .channel('asistencias-terminal-realtime')
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'asistencia' },
-        () => loadRecent()
+        () => {
+          if (sessionState.status !== 'expired') loadRecent();
+        }
       )
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'asistencia' },
-        () => loadRecent()
+        () => {
+          if (sessionState.status !== 'expired') loadRecent();
+        }
       )
       .subscribe();
 
@@ -478,6 +608,43 @@ export default function AsistenciaTerminalDisplay() {
             </Button>
           </div>
         </header>
+
+        {sessionState.status !== 'ok' && (
+          <div
+            className={`relative z-20 mt-3 rounded-2xl border px-4 py-3 text-sm font-semibold ${
+              sessionState.status === 'expired'
+                ? 'border-red-400/40 bg-red-500/15 text-red-100'
+                : 'border-amber-300/40 bg-amber-400/10 text-amber-100'
+            }`}
+          >
+            <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
+              <span>{sessionState.message}</span>
+              {sessionState.status === 'expired' && (
+                <div className='flex gap-2'>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    onClick={() => ensureTerminalSession(true)}
+                    className='border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white'
+                  >
+                    Reintentar renovación
+                  </Button>
+                  <Button
+                    type='button'
+                    onClick={() => {
+                      logoutSession();
+                      logout();
+                      window.location.href = '/auth/login/admin';
+                    }}
+                    className='bg-white text-slate-950 hover:bg-slate-100'
+                  >
+                    Iniciar sesión
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className='relative z-10 grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-hidden py-3 xl:grid-cols-2 2xl:gap-5'>
           <section
