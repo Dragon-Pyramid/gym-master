@@ -12,6 +12,17 @@ type EstadoCuotaAcceso = {
   ultimo_vencimiento?: string | null;
 };
 
+
+function isAuthSessionError(error: unknown) {
+  const message = error instanceof Error ? error.message.toLowerCase() : '';
+  return (
+    message.includes('token') ||
+    message.includes('jwt') ||
+    message.includes('authorization') ||
+    message.includes('unauthorized')
+  );
+}
+
 function toNumber(value: unknown): number {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -126,6 +137,16 @@ export async function GET(req: Request) {
 
     return NextResponse.json(enriched, { status: 200 });
   } catch (error: unknown) {
+    if (isAuthSessionError(error)) {
+      return NextResponse.json(
+        {
+          error: 'La sesión de Terminal expiró. Iniciá sesión nuevamente o renová la sesión.',
+          error_code: 'TERMINAL_SESSION_EXPIRED',
+        },
+        { status: 401 }
+      );
+    }
+
     const errorMessage =
       error instanceof Error ? error.message : 'Error desconocido';
     return NextResponse.json({ error: errorMessage }, { status: 500 });

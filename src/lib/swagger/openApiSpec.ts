@@ -143,6 +143,27 @@ const endpointDefinitions: EndpointDefinition[] = [
     "source": "src/app/api/auth/forgot-password/route.ts"
   },
   {
+    "path": "/api/auth/terminal-session/refresh",
+    "methods": [
+      "POST"
+    ],
+    "tag": "Auth",
+    "summary": "Renovar sesión extendida de Terminal",
+    "description": "Renueva de forma segura el JWT de una pantalla Terminal de asistencia antes de que expire, validando que el usuario autenticado tenga permisos sobre la Terminal.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      401,
+      403,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/auth/terminal-session/refresh/route.ts"
+  },
+
+  {
     "path": "/api/auth/reset-password",
     "methods": [
       "GET",
