@@ -45,6 +45,11 @@ export const sections: SidebarSectionType[] = [
         link: '/dashboard/dietas',
         level: 2,
       },
+      {
+        title: 'Mensajes',
+        link: '/dashboard/mensajes',
+        level: 2,
+      },
     ],
   },
   {
@@ -113,6 +118,7 @@ export const sections: SidebarSectionType[] = [
       { title: 'Finanzas / BI', link: '/dashboard/finanzas', level: 2 },
       { title: 'Sueldos', link: '/dashboard/empleados-sueldos', level: 2 },
       { title: 'Notificaciones', link: '/dashboard/notificaciones', level: 2 },
+      { title: 'Mensajes Socios', link: '/dashboard/mensajes-admin', level: 2 },
       { title: 'Avisos', link: '/dashboard/avisos', level: 2 },
       { title: 'Equipamientos', link: '/dashboard/equipamientos', level: 2 },
     ],

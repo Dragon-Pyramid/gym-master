@@ -56,6 +56,13 @@ export const MENU_PERMISSION_GROUPS: Array<{
         roles: ['socio', 'admin'],
       },
       {
+        key: 'Mensajes',
+        label: 'Mensajes',
+        path: '/dashboard/mensajes',
+        group: 'Menú personal / socio',
+        roles: ['socio'],
+      },
+      {
         key: 'Pagar cuota',
         label: 'Pagar cuota',
         path: '/dashboard/mi-cuenta/pagar-cuota',
@@ -236,6 +243,13 @@ export const MENU_PERMISSION_GROUPS: Array<{
         roles: ['admin', 'usuario'],
       },
       {
+        key: 'Mensajes Socios',
+        label: 'Mensajes Socios',
+        path: '/dashboard/mensajes-admin',
+        group: 'Administración',
+        roles: ['admin', 'usuario'],
+      },
+      {
         key: 'Avisos',
         label: 'Avisos',
         path: '/dashboard/avisos',
@@ -293,6 +307,7 @@ export const DEFAULT_MENU_PERMISSIONS_BY_ROLE: Record<AppRole, string[]> = {
     'Comercial / Kiosco',
     'Ventas',
     'Notificaciones',
+    'Mensajes Socios',
     'Perfil',
     'Preferencias',
   ],
@@ -302,6 +317,7 @@ export const DEFAULT_MENU_PERMISSIONS_BY_ROLE: Record<AppRole, string[]> = {
     'Ficha Médica',
     'Asistente de Rutinas',
     'Asistente de Dietas',
+    'Mensajes',
     'Pagar cuota',
     'Historial de pagos',
     'Evolución Física',

@@ -1,4 +1,10 @@
 import { getToken, loginSession, logoutSession } from './storageService';
+import type {
+  CreateSocioMensajeDto,
+  SocioMensaje,
+  SocioMensajeEstado,
+  UpdateSocioMensajeAdminDto,
+} from '@/interfaces/socioMensaje.interface';
 
 export async function login({
   email,
@@ -984,3 +990,65 @@ export async function enviarNotificacion(id: string) {
   return { ok: res.ok, data, ...(!res.ok ? data : {}) };
 }
 
+
+
+export async function getMisMensajesSocio() {
+  const token = getToken();
+  const res = await fetch('/api/socios/mensajes', {
+    method: 'GET',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    cache: 'no-store',
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data } as { ok: boolean; data?: SocioMensaje[]; error?: string };
+}
+
+export async function crearMensajeSocio(payload: CreateSocioMensajeDto) {
+  const token = getToken();
+  const res = await fetch('/api/socios/mensajes', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data } as { ok: boolean; data?: SocioMensaje; error?: string };
+}
+
+export async function getMensajesSociosAdmin(filters?: {
+  estado?: SocioMensajeEstado | 'todos';
+  q?: string;
+}) {
+  const token = getToken();
+  const params = new URLSearchParams();
+  if (filters?.estado && filters.estado !== 'todos') params.set('estado', filters.estado);
+  if (filters?.q) params.set('q', filters.q);
+  const query = params.toString() ? `?${params.toString()}` : '';
+
+  const res = await fetch(`/api/admin/socios-mensajes${query}`, {
+    method: 'GET',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    cache: 'no-store',
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data } as { ok: boolean; data?: SocioMensaje[]; error?: string };
+}
+
+export async function actualizarMensajeSocioAdmin(
+  id: string,
+  payload: UpdateSocioMensajeAdminDto
+) {
+  const token = getToken();
+  const res = await fetch(`/api/admin/socios-mensajes/${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data } as { ok: boolean; data?: SocioMensaje; error?: string };
+}
