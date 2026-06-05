@@ -92,6 +92,31 @@ const catalogUiDefinitions: Record<CatalogoParametrizableKey, CatalogUiDefinitio
     href: "/dashboard/empleados",
     tags: ["administrativo", "entrenador", "mantenimiento", "limpieza", "mayordomía/bar-snack"],
   },
+  empleado_tipo_contratacion: {
+    icon: ShieldCheck,
+    href: "/dashboard/empleados",
+    tags: ["mensual", "por hora", "jornal", "eventual", "externo"],
+  },
+  empleado_puesto_responsabilidad: {
+    icon: UserCog,
+    href: "/dashboard/empleados",
+    tags: ["recepción", "caja", "entrenador", "mantenimiento", "limpieza"],
+  },
+  empleado_area: {
+    icon: Database,
+    href: "/dashboard/empleados",
+    tags: ["recepción", "administración", "entrenamiento", "ventas", "bar/snack"],
+  },
+  empleado_turno: {
+    icon: RefreshCcw,
+    href: "/dashboard/empleados",
+    tags: ["mañana", "tarde", "noche", "rotativo", "fin de semana"],
+  },
+  empleado_horario_disponibilidad: {
+    icon: CheckCircle2,
+    href: "/dashboard/empleados",
+    tags: ["full time", "part time", "bloques", "rotativo", "a convenir"],
+  },
   medio_pago: {
     icon: CreditCard,
     href: "/dashboard/pagos",

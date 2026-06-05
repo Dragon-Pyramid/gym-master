@@ -1,5 +1,10 @@
 export type CatalogoParametrizableKey =
   | "tipo_empleado"
+  | "empleado_tipo_contratacion"
+  | "empleado_puesto_responsabilidad"
+  | "empleado_area"
+  | "empleado_turno"
+  | "empleado_horario_disponibilidad"
   | "medio_pago"
   | "tipo_gasto"
   | "tipo_ingreso"

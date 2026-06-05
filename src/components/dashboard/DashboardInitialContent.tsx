@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import Image from 'next/image';
 import { Card } from '@/components/ui/card';
-import { Clock, Dumbbell, Star } from 'lucide-react';
+import { Clock, Dumbbell, Star, ClipboardCheck } from 'lucide-react';
 import ProfileImage from '@/components/perfil/ProfileImage';
 import { formatFrontendTime } from '@/utils/dateFormat';
 
@@ -14,20 +14,32 @@ const DashboardInitialContent = () => {
   const { user } = useAuthStore();
   const userName = user?.nombre || 'Invitado';
   const userType = user?.rol || '';
-  const userImage = user?.foto || '/default-user.png';
+  const userImage = user?.foto || '/gm_logo.svg';
+
+  const isSocio = userType === 'socio';
+  const isInternalUser = userType === 'usuario';
 
   const motivationalMessages = useMemo(
-    () => [
-      'La clave no es querer, sino hacer. ¡Empieza hoy!',
-      'Tu cuerpo puede lograrlo. Solo tu mente tiene que creerlo.',
-      'Cada esfuerzo te acerca a tu mejor versión. ¡No te rindas!',
-      'No esperes el momento perfecto, haz perfecto el momento.',
-      'La disciplina es el puente entre tus metas y tus logros.',
-      'El dolor que sientes hoy será la fuerza que sientes mañana.',
-      'No se trata de ser perfecto, se trata de ser mejor que ayer.',
-      'Tu única competencia eres tú mismo de ayer.',
-    ],
-    []
+    () =>
+      isInternalUser
+        ? [
+            'Cada tarea bien registrada mejora la operación del gimnasio.',
+            'La atención ordenada también forma parte de la experiencia del socio.',
+            'Tu gestión diaria mantiene el gimnasio funcionando.',
+            'Un buen control evita problemas antes de que aparezcan.',
+            'La organización del equipo se nota en cada detalle.',
+          ]
+        : [
+            'La clave no es querer, sino hacer. ¡Empieza hoy!',
+            'Tu cuerpo puede lograrlo. Solo tu mente tiene que creerlo.',
+            'Cada esfuerzo te acerca a tu mejor versión. ¡No te rindas!',
+            'No esperes el momento perfecto, haz perfecto el momento.',
+            'La disciplina es el puente entre tus metas y tus logros.',
+            'El dolor que sientes hoy será la fuerza que sientes mañana.',
+            'No se trata de ser perfecto, se trata de ser mejor que ayer.',
+            'Tu única competencia eres tú mismo de ayer.',
+          ],
+    [isInternalUser]
   );
 
   const [motivationIndex, setMotivationIndex] = useState(() =>
@@ -61,6 +73,21 @@ const DashboardInitialContent = () => {
   }, [motivationalMessages.length]);
 
   const randomMotivation = motivationalMessages[motivationIndex];
+  const heroActionText = isInternalUser
+    ? '¡Listo para gestionar la operación del gimnasio!'
+    : '¡Llegó la hora de entrenar!';
+  const HeroIcon = isInternalUser ? ClipboardCheck : Dumbbell;
+  const actionCards = isInternalUser
+    ? [
+        { icon: '✅', label: 'Operación', className: 'border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 dark:border-blue-800', textClassName: 'text-blue-700 dark:text-blue-300' },
+        { icon: '🤝', label: 'Atención', className: 'border-green-200 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 dark:border-green-800', textClassName: 'text-green-700 dark:text-green-300' },
+        { icon: '📊', label: 'Control', className: 'border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 dark:border-orange-800', textClassName: 'text-orange-700 dark:text-orange-300' },
+      ]
+    : [
+        { icon: '💪', label: 'Fuerza', className: 'border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 dark:border-blue-800', textClassName: 'text-blue-700 dark:text-blue-300' },
+        { icon: '🎯', label: 'Enfoque', className: 'border-green-200 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 dark:border-green-800', textClassName: 'text-green-700 dark:text-green-300' },
+        { icon: '🔥', label: 'Energía', className: 'border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 dark:border-orange-800', textClassName: 'text-orange-700 dark:text-orange-300' },
+      ];
 
   const hour = currentTime.getHours();
   let timeOfDay = '';
@@ -91,7 +118,6 @@ const DashboardInitialContent = () => {
     }
   };
 
-  const isSocio = userType === 'socio';
   const [cuotaPagada, setCuotaPagada] = useState(false);
   const [cuotaMonto, setCuotaMonto] = useState(0);
   const [cuotaFechaLimite, setCuotaFechaLimite] = useState('');
@@ -167,9 +193,9 @@ const DashboardInitialContent = () => {
                   </h2>
                 </div>
                 <div className='flex items-center gap-3 pt-2'>
-                  <Dumbbell className='w-8 h-8 text-primary' />
+                  <HeroIcon className='w-8 h-8 text-primary' />
                   <p className='text-xl font-bold sm:text-2xl md:text-3xl text-foreground'>
-                    ¡Llegó la hora de entrenar!
+                    {heroActionText}
                   </p>
                 </div>
               </div>
@@ -241,30 +267,14 @@ const DashboardInitialContent = () => {
             </Card>
 
             <div className='grid grid-cols-3 gap-4 pt-4'>
-              <Card className='p-4 text-center border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 dark:border-blue-800'>
-                <div className='text-2xl font-bold text-blue-600 dark:text-blue-400'>
-                  💪
-                </div>
-                <p className='mt-1 text-sm font-medium text-blue-700 dark:text-blue-300'>
-                  Fuerza
-                </p>
-              </Card>
-              <Card className='p-4 text-center border-green-200 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 dark:border-green-800'>
-                <div className='text-2xl font-bold text-green-600 dark:text-green-400'>
-                  🎯
-                </div>
-                <p className='mt-1 text-sm font-medium text-green-700 dark:text-green-300'>
-                  Enfoque
-                </p>
-              </Card>
-              <Card className='p-4 text-center border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 dark:border-orange-800'>
-                <div className='text-2xl font-bold text-orange-600 dark:text-orange-400'>
-                  🔥
-                </div>
-                <p className='mt-1 text-sm font-medium text-orange-700 dark:text-orange-300'>
-                  Energía
-                </p>
-              </Card>
+              {actionCards.map((item) => (
+                <Card key={item.label} className={`p-4 text-center ${item.className}`}>
+                  <div className='text-2xl font-bold'>{item.icon}</div>
+                  <p className={`mt-1 text-sm font-medium ${item.textClassName}`}>
+                    {item.label}
+                  </p>
+                </Card>
+              ))}
             </div>
           </div>
 

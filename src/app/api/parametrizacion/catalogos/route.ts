@@ -31,6 +31,56 @@ const catalogDefinitions: CatalogDefinition[] = [
     editable: true,
   },
   {
+    key: "empleado_tipo_contratacion",
+    table: "empleado_tipo_contratacion",
+    title: "Tipos de contratación",
+    description:
+      "Modalidades contractuales para empleados de gimnasio: mensual, por hora, jornal, eventual, pasantía u otras.",
+    status: "Disponible",
+    priority: "Alta",
+    editable: true,
+  },
+  {
+    key: "empleado_puesto_responsabilidad",
+    table: "empleado_puesto_responsabilidad",
+    title: "Puestos / responsabilidades",
+    description:
+      "Responsabilidades laborales usadas al crear usuarios internos y perfiles de empleados.",
+    status: "Disponible",
+    priority: "Alta",
+    editable: true,
+  },
+  {
+    key: "empleado_area",
+    table: "empleado_area",
+    title: "Áreas de trabajo",
+    description:
+      "Áreas operativas del gimnasio: recepción, entrenamiento, mantenimiento, limpieza, bar/snack y administración.",
+    status: "Disponible",
+    priority: "Alta",
+    editable: true,
+  },
+  {
+    key: "empleado_turno",
+    table: "empleado_turno",
+    title: "Turnos",
+    description:
+      "Turnos laborales disponibles para usuarios internos y empleados.",
+    status: "Disponible",
+    priority: "Alta",
+    editable: true,
+  },
+  {
+    key: "empleado_horario_disponibilidad",
+    table: "empleado_horario_disponibilidad",
+    title: "Horarios / disponibilidad",
+    description:
+      "Bloques de disponibilidad horaria frecuentes para empleados de gimnasio.",
+    status: "Disponible",
+    priority: "Alta",
+    editable: true,
+  },
+  {
     key: "medio_pago",
     table: "medio_pago",
     title: "Medios de pago",

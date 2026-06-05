@@ -46,6 +46,15 @@ export async function POST(req: Request) {
       contacto_emergencia_nombre,
       contacto_emergencia_telefono,
       fecha_alta,
+      puesto,
+      area,
+      tipo_contratacion,
+      turno,
+      sueldo_base,
+      fecha_inicio,
+      fecha_fin,
+      horarios_texto,
+      observaciones,
     } = body;
 
     const creado = await createUsuarioServer(user, {
@@ -67,6 +76,15 @@ export async function POST(req: Request) {
       contacto_emergencia_nombre,
       contacto_emergencia_telefono,
       fecha_alta,
+      puesto,
+      area,
+      tipo_contratacion,
+      turno,
+      sueldo_base,
+      fecha_inicio,
+      fecha_fin,
+      horarios_texto,
+      observaciones,
     });
 
     return NextResponse.json(
