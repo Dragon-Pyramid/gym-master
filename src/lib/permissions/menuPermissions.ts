@@ -383,6 +383,15 @@ export const DASHBOARD_ROUTE_PERMISSIONS: DashboardRoutePermission[] = [
     roles: ['admin', 'usuario'],
     exact: true,
   },
+  {
+    // Ruta personal del socio para visualizar/generar rutinas.
+    // Se mantiene separada de /dashboard/rutinas/media, que continúa
+    // protegida por el permiso administrativo "Media de Ejercicios".
+    path: '/dashboard/rutinas',
+    permissionKey: 'Asistente de Rutinas',
+    roles: ['socio', 'admin'],
+    exact: false,
+  },
 ];
 
 function normalizeDashboardPath(pathname?: string | null) {

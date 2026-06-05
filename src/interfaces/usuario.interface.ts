@@ -34,6 +34,15 @@ export interface CreateUsuarioDto {
   contacto_emergencia_nombre?: string | null;
   contacto_emergencia_telefono?: string | null;
   fecha_alta?: string | null;
+  puesto?: string | null;
+  area?: string | null;
+  tipo_contratacion?: string | null;
+  turno?: string | null;
+  sueldo_base?: number | string | null;
+  fecha_inicio?: string | null;
+  fecha_fin?: string | null;
+  horarios_texto?: string | null;
+  observaciones?: string | null;
 }
 
 export interface UpdateUsuarioDto {
@@ -57,6 +66,15 @@ export interface UpdateUsuarioDto {
   contacto_emergencia_nombre?: string | null;
   contacto_emergencia_telefono?: string | null;
   fecha_alta?: string | null;
+  puesto?: string | null;
+  area?: string | null;
+  tipo_contratacion?: string | null;
+  turno?: string | null;
+  sueldo_base?: number | string | null;
+  fecha_inicio?: string | null;
+  fecha_fin?: string | null;
+  horarios_texto?: string | null;
+  observaciones?: string | null;
 }
 
 export interface ResponseUsuario {

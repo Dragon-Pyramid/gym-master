@@ -6,6 +6,7 @@ import { uploadFile } from '@/services/apiClient';
 
 const MAX_FILE_SIZE_MB = 5;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+const DEFAULT_PROFILE_IMAGE = '/gm_logo.svg';
 
 export default function ProfileImage({
   foto,
@@ -28,6 +29,7 @@ export default function ProfileImage({
     foto ?? src ?? null
   );
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
+  const [imageLoadError, setImageLoadError] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{
@@ -40,6 +42,7 @@ export default function ProfileImage({
 
   useEffect(() => {
     setCurrentSrc(foto ?? src ?? null);
+    setImageLoadError(false);
   }, [foto, src]);
 
   useEffect(() => {
@@ -146,14 +149,8 @@ export default function ProfileImage({
     }
   };
 
-  const imageSrc = previewSrc || currentSrc;
+  const imageSrc = imageLoadError ? DEFAULT_PROFILE_IMAGE : previewSrc || currentSrc || DEFAULT_PROFILE_IMAGE;
 
-  const getInitial = () => {
-    const name = alt || '';
-    const trimmed = name.trim();
-    if (!trimmed) return '';
-    return trimmed.charAt(0).toUpperCase();
-  };
 
   return (
     <div className='flex flex-col items-center gap-3' onClick={onClick}>
@@ -161,20 +158,15 @@ export default function ProfileImage({
         className='relative flex items-center justify-center flex-shrink-0 overflow-hidden rounded-full ring-1 ring-border/60 dark:ring-border/40 bg-muted'
         style={{ width: size, height: size }}
       >
-        {imageSrc ? (
-          // Se usa img para soportar previews locales tipo blob: en móviles.
-          <img
-            src={imageSrc}
-            alt={alt ?? 'Avatar'}
-            width={size}
-            height={size}
-            className='object-cover w-full h-full rounded-full'
-          />
-        ) : (
-          <div className='flex items-center justify-center w-full h-full text-xl font-semibold text-white bg-indigo-600 rounded-full'>
-            {getInitial()}
-          </div>
-        )}
+        {/* Se usa img para soportar previews locales tipo blob: en móviles. */}
+        <img
+          src={imageSrc}
+          alt={alt ?? 'Avatar'}
+          width={size}
+          height={size}
+          className='object-cover w-full h-full rounded-full bg-white p-1 dark:bg-white'
+          onError={() => setImageLoadError(true)}
+        />
 
         {previewSrc && (
           <div className='absolute inset-x-0 bottom-0 px-2 py-1 text-[10px] font-semibold text-center text-white bg-black/65'>

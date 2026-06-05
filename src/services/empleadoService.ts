@@ -1,6 +1,6 @@
 import { CreateEmpleadoDto, Empleado, UpdateEmpleadoDto } from "@/interfaces/empleado.interface";
 import { JwtUser } from "@/interfaces/jwtUser.interface";
-import { conexionBD } from "@/middlewares/conexionBd.middleware";
+import { getSupabaseServerClient } from "@/services/supabaseServerClient";
 
 type EmpleadoPayload = Record<string, string | number | boolean | null>;
 
@@ -47,7 +47,59 @@ const normalizePayload = (payload: CreateEmpleadoDto | UpdateEmpleadoDto): Emple
   return normalized;
 };
 
+
 const empleadoSelect = "*";
+
+const syncUsuarioActivoForEmpleado = async (
+  usuarioId: string | null | undefined,
+  activo: boolean
+) => {
+  if (!usuarioId) return;
+
+  const supabase = getSupabaseServerClient();
+  const { error } = await supabase
+    .from("usuario")
+    .update({ activo })
+    .eq("id", usuarioId);
+
+  if (error) {
+    throw new Error(`El empleado fue actualizado, pero no se pudo sincronizar el usuario asociado: ${error.message}`);
+  }
+};
+
+const assertUsuarioLinkDisponible = async (
+  usuarioId: string | null | undefined,
+  empleadoIdActual?: string
+) => {
+  if (!usuarioId) return;
+
+  const supabase = getSupabaseServerClient();
+  const { data: usuario, error: usuarioError } = await supabase
+    .from("usuario")
+    .select("id,rol,email,dni,activo")
+    .eq("id", usuarioId)
+    .single();
+
+  if (usuarioError || !usuario) {
+    throw new Error("usuario_id no existe en la base de datos");
+  }
+
+  if (!['usuario', 'admin'].includes(String(usuario.rol))) {
+    throw new Error("El empleado solo puede vincularse a un usuario interno o administrador");
+  }
+
+  const { data: empleadoVinculado, error: empleadoError } = await supabase
+    .from("empleados")
+    .select("id")
+    .eq("usuario_id", usuarioId)
+    .maybeSingle();
+
+  if (empleadoError) throw new Error(empleadoError.message);
+
+  if (empleadoVinculado?.id && empleadoVinculado.id !== empleadoIdActual) {
+    throw new Error("Ese usuario ya está vinculado a otro empleado");
+  }
+};
 
 type TipoEmpleadoRow = {
   id: string;
@@ -68,7 +120,7 @@ const hydrateEmpleadoTipos = async (empleados: Empleado[]): Promise<Empleado[]> 
     return empleados;
   }
 
-  const supabase = conexionBD();
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("tipo_empleado")
     .select("id,codigo,nombre")
@@ -93,7 +145,7 @@ const hydrateEmpleadoTipos = async (empleados: Empleado[]): Promise<Empleado[]> 
 };
 
 export const getEmpleados = async (_user: JwtUser): Promise<Empleado[]> => {
-  const supabase = conexionBD();
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("empleados")
     .select(empleadoSelect)
@@ -105,7 +157,7 @@ export const getEmpleados = async (_user: JwtUser): Promise<Empleado[]> => {
 };
 
 export const getEmpleadoById = async (id: string, _user: JwtUser): Promise<Empleado> => {
-  const supabase = conexionBD();
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("empleados")
     .select(empleadoSelect)
@@ -118,7 +170,7 @@ export const getEmpleadoById = async (id: string, _user: JwtUser): Promise<Emple
 };
 
 export const createEmpleado = async (payload: CreateEmpleadoDto, _user: JwtUser): Promise<Empleado> => {
-  const supabase = conexionBD();
+  const supabase = getSupabaseServerClient();
   const normalized = normalizePayload(payload);
 
   if (!normalized.nombre_completo || !normalized.dni) {
@@ -129,6 +181,8 @@ export const createEmpleado = async (payload: CreateEmpleadoDto, _user: JwtUser)
     normalized.fecha_alta = new Date().toISOString().slice(0, 10);
   }
 
+  await assertUsuarioLinkDisponible(normalized.usuario_id as string | null | undefined);
+
   const { data, error } = await supabase
     .from("empleados")
     .insert(normalized)
@@ -136,12 +190,14 @@ export const createEmpleado = async (payload: CreateEmpleadoDto, _user: JwtUser)
     .single();
 
   if (error) throw new Error(error.message);
-  const [empleado] = await hydrateEmpleadoTipos([data as Empleado]);
+  const empleadoCreado = data as Empleado;
+  await syncUsuarioActivoForEmpleado(empleadoCreado.usuario_id, empleadoCreado.activo !== false);
+  const [empleado] = await hydrateEmpleadoTipos([empleadoCreado]);
   return empleado;
 };
 
 export const updateEmpleado = async (id: string, payload: UpdateEmpleadoDto, _user: JwtUser): Promise<Empleado> => {
-  const supabase = conexionBD();
+  const supabase = getSupabaseServerClient();
   const normalized = normalizePayload(payload);
 
   if (Object.prototype.hasOwnProperty.call(normalized, "nombre_completo") && !normalized.nombre_completo) {
@@ -152,6 +208,10 @@ export const updateEmpleado = async (id: string, payload: UpdateEmpleadoDto, _us
     throw new Error("El DNI es obligatorio");
   }
 
+  if (Object.prototype.hasOwnProperty.call(normalized, "usuario_id")) {
+    await assertUsuarioLinkDisponible(normalized.usuario_id as string | null | undefined, id);
+  }
+
   const { data, error } = await supabase
     .from("empleados")
     .update({ ...normalized, actualizado_en: new Date().toISOString() })
@@ -160,7 +220,9 @@ export const updateEmpleado = async (id: string, payload: UpdateEmpleadoDto, _us
     .single();
 
   if (error) throw new Error(error.message);
-  const [empleado] = await hydrateEmpleadoTipos([data as Empleado]);
+  const empleadoActualizado = data as Empleado;
+  await syncUsuarioActivoForEmpleado(empleadoActualizado.usuario_id, empleadoActualizado.activo !== false);
+  const [empleado] = await hydrateEmpleadoTipos([empleadoActualizado]);
   return empleado;
 };
 

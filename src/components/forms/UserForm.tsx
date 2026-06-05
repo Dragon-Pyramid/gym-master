@@ -1,12 +1,12 @@
 'use client';
 
 import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
-import { useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Eye, EyeOff } from 'lucide-react';
+import { CalendarDays, Eye, EyeOff } from 'lucide-react';
 import {
   Usuario,
   CreateUsuarioDto,
@@ -20,6 +20,8 @@ import {
   sanitizeMenuPermissionsForRole,
 } from '@/lib/permissions/menuPermissions';
 import { buildInitialPasswordFromDni, getPasswordPolicyChecks } from '@/utils/passwordPolicy';
+import { useCatalogosParametrizables } from '@/hooks/useCatalogosParametrizables';
+import type { CatalogoParametrizableItem, CatalogoParametrizableKey } from '@/interfaces/parametrizacion.interface';
 
 export interface UserFormProps {
   usuario?: Usuario | null;
@@ -44,9 +46,148 @@ const emptyForm = {
   contacto_emergencia_nombre: '',
   contacto_emergencia_telefono: '',
   fecha_alta: '',
+  puesto: '',
+  area: '',
+  tipo_contratacion: 'mensual',
+  turno: '',
+  sueldo_base: '0',
+  fecha_inicio: '',
+  fecha_fin: '',
+  horarios_texto: '',
+  observaciones: '',
   use_initial_password: true,
   permisos_menu: DEFAULT_MENU_PERMISSIONS_BY_ROLE.socio,
 };
+
+function makeFallbackCatalogItem(
+  codigo: string,
+  nombre: string,
+  descripcion: string | null = null,
+  orden = 0
+): CatalogoParametrizableItem {
+  return {
+    id: codigo,
+    codigo,
+    nombre,
+    descripcion,
+    activo: true,
+    orden,
+  };
+}
+
+const fallbackTiposContratacion = [
+  makeFallbackCatalogItem('mensual', 'Mensual', 'Pago mensual fijo.', 10),
+  makeFallbackCatalogItem('por_hora', 'Por hora', 'Pago por hora trabajada o clase.', 20),
+  makeFallbackCatalogItem('jornal', 'Jornal', 'Pago por jornada.', 30),
+  makeFallbackCatalogItem('eventual', 'Eventual', 'Contratación temporal o suplencia.', 40),
+  makeFallbackCatalogItem('pasantia', 'Pasantía', 'Práctica o pasantía formativa.', 50),
+  makeFallbackCatalogItem('otro', 'Otro', 'Modalidad no catalogada.', 90),
+];
+
+const fallbackPuestos = [
+  makeFallbackCatalogItem('recepcion_caja', 'Recepción y caja', 'Atención al socio y cobros.', 10),
+  makeFallbackCatalogItem('administracion', 'Administración', 'Gestión administrativa general.', 20),
+  makeFallbackCatalogItem('entrenador_sala', 'Entrenador de sala', 'Rutinas y supervisión de entrenamiento.', 30),
+  makeFallbackCatalogItem('personal_trainer', 'Personal trainer', 'Entrenamiento personalizado.', 40),
+  makeFallbackCatalogItem('mantenimiento', 'Mantenimiento', 'Mantenimiento preventivo/correctivo.', 50),
+  makeFallbackCatalogItem('limpieza', 'Limpieza', 'Higiene general del gimnasio.', 60),
+  makeFallbackCatalogItem('bar_snack', 'Bar / snack', 'Atención de bebidas, café y suplementos.', 70),
+];
+
+const fallbackAreas = [
+  makeFallbackCatalogItem('recepcion', 'Recepción', null, 10),
+  makeFallbackCatalogItem('administracion', 'Administración', null, 20),
+  makeFallbackCatalogItem('entrenamiento', 'Entrenamiento', null, 30),
+  makeFallbackCatalogItem('mantenimiento', 'Mantenimiento', null, 40),
+  makeFallbackCatalogItem('limpieza', 'Limpieza', null, 50),
+  makeFallbackCatalogItem('bar_snack', 'Bar / snack', null, 60),
+];
+
+const fallbackTurnos = [
+  makeFallbackCatalogItem('manana', 'Mañana', 'Turno mañana.', 10),
+  makeFallbackCatalogItem('tarde', 'Tarde', 'Turno tarde.', 20),
+  makeFallbackCatalogItem('noche', 'Noche', 'Turno noche.', 30),
+  makeFallbackCatalogItem('rotativo', 'Rotativo', 'Turno variable.', 40),
+  makeFallbackCatalogItem('fin_de_semana', 'Fin de semana', 'Sábados, domingos o feriados.', 50),
+];
+
+const fallbackHorarios = [
+  makeFallbackCatalogItem('lunes_viernes_8_16', 'Lunes a viernes 08:00-16:00', null, 10),
+  makeFallbackCatalogItem('lunes_viernes_14_22', 'Lunes a viernes 14:00-22:00', null, 20),
+  makeFallbackCatalogItem('lunes_sabado_7_13', 'Lunes a sábado 07:00-13:00', null, 30),
+  makeFallbackCatalogItem('lunes_sabado_16_22', 'Lunes a sábado 16:00-22:00', null, 40),
+  makeFallbackCatalogItem('rotativo_a_coordinar', 'Rotativo / a coordinar', null, 50),
+];
+
+function getCatalogItems(
+  catalogos: ReturnType<typeof useCatalogosParametrizables>['catalogos'],
+  key: CatalogoParametrizableKey,
+  fallback: CatalogoParametrizableItem[]
+) {
+  const items =
+    catalogos
+      .find((catalogo) => catalogo.key === key)
+      ?.items.filter((item) => item.activo) ?? [];
+
+  return items.length > 0 ? items : fallback;
+}
+
+function catalogValue(item: CatalogoParametrizableItem) {
+  return item.nombre || item.codigo;
+}
+
+
+function CalendarDateInput({
+  id,
+  name,
+  value,
+  onChange,
+  required = false,
+}: {
+  id: string;
+  name: string;
+  value: string;
+  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  required?: boolean;
+}) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const openNativePicker = () => {
+    const input = inputRef.current;
+
+    if (!input) return;
+
+    input.focus();
+
+    if (typeof input.showPicker === 'function') {
+      input.showPicker();
+    }
+  };
+
+  return (
+    <div className='relative'>
+      <Input
+        ref={inputRef}
+        id={id}
+        name={name}
+        type='date'
+        value={value}
+        onChange={onChange}
+        required={required}
+        className='pr-11'
+      />
+      <button
+        type='button'
+        onClick={openNativePicker}
+        className='absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-r-md text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+        aria-label='Abrir calendario'
+        title='Abrir calendario'
+      >
+        <CalendarDays className='h-4 w-4' />
+      </button>
+    </div>
+  );
+}
 
 function getInitialPermissions(role: string, permisos?: string[] | null) {
   const sanitized = sanitizeMenuPermissionsForRole(role, permisos);
@@ -62,6 +203,28 @@ export default function UserForm({
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const { catalogos } = useCatalogosParametrizables();
+
+  const tiposContratacion = useMemo(
+    () => getCatalogItems(catalogos, 'empleado_tipo_contratacion', fallbackTiposContratacion),
+    [catalogos]
+  );
+  const puestos = useMemo(
+    () => getCatalogItems(catalogos, 'empleado_puesto_responsabilidad', fallbackPuestos),
+    [catalogos]
+  );
+  const areas = useMemo(
+    () => getCatalogItems(catalogos, 'empleado_area', fallbackAreas),
+    [catalogos]
+  );
+  const turnos = useMemo(
+    () => getCatalogItems(catalogos, 'empleado_turno', fallbackTurnos),
+    [catalogos]
+  );
+  const horariosDisponibilidad = useMemo(
+    () => getCatalogItems(catalogos, 'empleado_horario_disponibilidad', fallbackHorarios),
+    [catalogos]
+  );
 
   useEffect(() => {
     if (usuario) {
@@ -82,6 +245,15 @@ export default function UserForm({
         contacto_emergencia_nombre: '',
         contacto_emergencia_telefono: '',
         fecha_alta: '',
+        puesto: '',
+        area: '',
+        tipo_contratacion: 'mensual',
+        turno: '',
+        sueldo_base: '0',
+        fecha_inicio: '',
+        fecha_fin: '',
+        horarios_texto: '',
+        observaciones: '',
         use_initial_password: false,
         permisos_menu: getInitialPermissions(usuario.rol, usuario.permisos_menu),
       });
@@ -184,6 +356,21 @@ export default function UserForm({
             contacto_emergencia_telefono: form.contacto_emergencia_telefono,
             fecha_alta: form.fecha_alta || null,
           }),
+          ...(rol === 'usuario' && {
+            telefono: form.telefono,
+            direccion: form.direccion,
+            fecnac: form.fecnac || null,
+            fecha_alta: form.fecha_alta || null,
+            puesto: form.puesto,
+            area: form.area,
+            tipo_contratacion: form.tipo_contratacion,
+            turno: form.turno,
+            sueldo_base: form.sueldo_base,
+            fecha_inicio: form.fecha_inicio || null,
+            fecha_fin: form.fecha_fin || null,
+            horarios_texto: form.horarios_texto,
+            observaciones: form.observaciones,
+          }),
         };
 
         if (useInitialPassword && !form.dni.trim()) {
@@ -202,6 +389,12 @@ export default function UserForm({
 
         if (rol === 'socio' && !form.dni.trim()) {
           toast.error('El DNI es obligatorio para crear un usuario socio.');
+          setLoading(false);
+          return;
+        }
+
+        if (rol === 'usuario' && !form.dni.trim()) {
+          toast.error('El DNI es obligatorio para crear un usuario interno/empleado.');
           setLoading(false);
           return;
         }
@@ -297,7 +490,7 @@ export default function UserForm({
             placeholder='Ingrese DNI para contraseña inicial'
             value={form.dni}
             onChange={handleChange}
-            required={isSocio || isInitialPasswordMode}
+            required={isSocio || isInternalUser || isInitialPasswordMode}
           />
         </div>
       )}
@@ -339,10 +532,9 @@ export default function UserForm({
 
             <div className='flex flex-col gap-1.5'>
               <Label htmlFor='fecnac'>Fecha de nacimiento</Label>
-              <Input
+              <CalendarDateInput
                 id='fecnac'
                 name='fecnac'
-                type='date'
                 value={form.fecnac}
                 onChange={handleChange}
               />
@@ -350,10 +542,9 @@ export default function UserForm({
 
             <div className='flex flex-col gap-1.5'>
               <Label htmlFor='fecha_alta'>Fecha de alta</Label>
-              <Input
+              <CalendarDateInput
                 id='fecha_alta'
                 name='fecha_alta'
-                type='date'
                 value={form.fecha_alta}
                 onChange={handleChange}
               />
@@ -423,6 +614,136 @@ export default function UserForm({
                 value={form.contacto_emergencia_telefono}
                 onChange={handleChange}
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!usuario && isInternalUser && (
+        <div className='col-span-full rounded-lg border bg-muted/20 p-4'>
+          <div className='mb-3'>
+            <h3 className='text-base font-semibold'>Datos laborales del empleado</h3>
+            <p className='text-sm text-muted-foreground'>
+              Estos datos crean el perfil laboral vinculado al usuario interno. Después se pueden revisar o modificar desde el menú Empleados.
+            </p>
+          </div>
+          <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+            <div className='flex flex-col gap-1.5'>
+              <Label htmlFor='telefono'>Teléfono</Label>
+              <Input id='telefono' name='telefono' placeholder='Ingrese teléfono' value={form.telefono} onChange={handleChange} />
+            </div>
+            <div className='flex flex-col gap-1.5'>
+              <Label htmlFor='fecnac'>Fecha de nacimiento</Label>
+              <CalendarDateInput id='fecnac' name='fecnac' value={form.fecnac} onChange={handleChange} />
+            </div>
+            <div className='flex flex-col gap-1.5'>
+              <Label htmlFor='fecha_alta'>Fecha de alta laboral</Label>
+              <CalendarDateInput id='fecha_alta' name='fecha_alta' value={form.fecha_alta} onChange={handleChange} />
+            </div>
+            <div className='flex flex-col gap-1.5'>
+              <Label htmlFor='fecha_inicio'>Fecha de inicio</Label>
+              <CalendarDateInput id='fecha_inicio' name='fecha_inicio' value={form.fecha_inicio} onChange={handleChange} />
+            </div>
+            <div className='flex flex-col gap-1.5 md:col-span-2'>
+              <Label htmlFor='direccion'>Dirección</Label>
+              <Input id='direccion' name='direccion' placeholder='Ingrese dirección' value={form.direccion} onChange={handleChange} />
+            </div>
+            <div className='flex flex-col gap-1.5'>
+              <Label htmlFor='puesto'>Puesto / responsabilidad</Label>
+              <select
+                id='puesto'
+                name='puesto'
+                value={form.puesto}
+                onChange={handleChange}
+                className='flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+              >
+                <option value=''>Seleccionar puesto</option>
+                {puestos.map((item) => (
+                  <option key={item.id} value={catalogValue(item)}>
+                    {item.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className='flex flex-col gap-1.5'>
+              <Label htmlFor='area'>Área</Label>
+              <select
+                id='area'
+                name='area'
+                value={form.area}
+                onChange={handleChange}
+                className='flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+              >
+                <option value=''>Seleccionar área</option>
+                {areas.map((item) => (
+                  <option key={item.id} value={catalogValue(item)}>
+                    {item.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className='flex flex-col gap-1.5'>
+              <Label htmlFor='tipo_contratacion'>Tipo de contratación</Label>
+              <select
+                id='tipo_contratacion'
+                name='tipo_contratacion'
+                value={form.tipo_contratacion}
+                onChange={handleChange}
+                className='flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+              >
+                <option value=''>Seleccionar tipo</option>
+                {tiposContratacion.map((item) => (
+                  <option key={item.id} value={item.codigo}>
+                    {item.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className='flex flex-col gap-1.5'>
+              <Label htmlFor='turno'>Turno</Label>
+              <select
+                id='turno'
+                name='turno'
+                value={form.turno}
+                onChange={handleChange}
+                className='flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+              >
+                <option value=''>Seleccionar turno</option>
+                {turnos.map((item) => (
+                  <option key={item.id} value={catalogValue(item)}>
+                    {item.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className='flex flex-col gap-1.5'>
+              <Label htmlFor='sueldo_base'>Sueldo base</Label>
+              <Input id='sueldo_base' name='sueldo_base' type='number' min='0' step='0.01' value={form.sueldo_base} onChange={handleChange} />
+            </div>
+            <div className='flex flex-col gap-1.5'>
+              <Label htmlFor='fecha_fin'>Fecha de fin</Label>
+              <CalendarDateInput id='fecha_fin' name='fecha_fin' value={form.fecha_fin} onChange={handleChange} />
+            </div>
+            <div className='flex flex-col gap-1.5 md:col-span-2'>
+              <Label htmlFor='horarios_texto'>Horario / disponibilidad</Label>
+              <select
+                id='horarios_texto'
+                name='horarios_texto'
+                value={form.horarios_texto}
+                onChange={handleChange}
+                className='flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+              >
+                <option value=''>Seleccionar horario o disponibilidad</option>
+                {horariosDisponibilidad.map((item) => (
+                  <option key={item.id} value={catalogValue(item)}>
+                    {item.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className='flex flex-col gap-1.5 md:col-span-2'>
+              <Label htmlFor='observaciones'>Observaciones laborales</Label>
+              <Input id='observaciones' name='observaciones' placeholder='Notas internas del empleado' value={form.observaciones} onChange={handleChange} />
             </div>
           </div>
         </div>
