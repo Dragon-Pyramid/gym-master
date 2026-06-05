@@ -19,6 +19,56 @@ const endpointDefinitions: EndpointDefinition[] = [
 
 
   {
+    "path": "/api/soporte/tickets",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "tag": "Soporte Dragon Pyramid",
+    "summary": "Tickets de soporte hacia Dragon Pyramid",
+    "description": "Permite a administradores y usuarios internos consultar y crear tickets de soporte dirigidos a Dragon Pyramid / Gym Master, con categoría, prioridad, estado y notificación por email.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      201,
+      400,
+      401,
+      403,
+      500
+    ],
+    "queryParams": [
+      "estado",
+      "q"
+    ],
+    "source": "src/app/api/soporte/tickets/route.ts"
+  },
+  {
+    "path": "/api/soporte/tickets/{id}",
+    "methods": [
+      "GET",
+      "PATCH"
+    ],
+    "tag": "Soporte Dragon Pyramid",
+    "summary": "Detalle, estado e historial de ticket de soporte",
+    "description": "Permite consultar detalle de un ticket, cambiar estado, registrar comentario, marcar respuesta o cerrar el ticket de soporte.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401,
+      403,
+      404,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/soporte/tickets/[id]/route.ts"
+  },
+
+  {
     "path": "/api/socios/mensajes",
     "methods": [
       "GET",

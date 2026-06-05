@@ -43,6 +43,7 @@ const PAGE_FILES: Record<string, string> = {
   "/dashboard/rutinas": "src/app/dashboard/rutinas/page.tsx",
   "/dashboard/servicios": "src/app/dashboard/servicios/page.tsx",
   "/dashboard/socios": "src/app/dashboard/socios/page.tsx",
+  "/dashboard/soporte-dragon-pyramid": "src/app/dashboard/soporte-dragon-pyramid/page.tsx",
   "/dashboard/usuarios": "src/app/dashboard/usuarios/page.tsx",
   "/dashboard/ventas": "src/app/dashboard/ventas/page.tsx",
   "/dashboard/ventas-detalle": "src/app/dashboard/ventas-detalle/page.tsx",

@@ -5,6 +5,12 @@ import type {
   SocioMensajeEstado,
   UpdateSocioMensajeAdminDto,
 } from '@/interfaces/socioMensaje.interface';
+import type {
+  CreateSoporteTicketDto,
+  SoporteTicket,
+  SoporteTicketEstado,
+  UpdateSoporteTicketDto,
+} from '@/interfaces/soporteTicket.interface';
 
 export async function login({
   email,
@@ -1051,4 +1057,65 @@ export async function actualizarMensajeSocioAdmin(
   });
   const data = await res.json();
   return { ok: res.ok, ...data } as { ok: boolean; data?: SocioMensaje; error?: string };
+}
+
+export async function getSoporteTickets(filters?: {
+  estado?: SoporteTicketEstado | 'todos';
+  q?: string;
+}) {
+  const token = getToken();
+  const params = new URLSearchParams();
+  if (filters?.estado && filters.estado !== 'todos') params.set('estado', filters.estado);
+  if (filters?.q) params.set('q', filters.q);
+  const query = params.toString() ? `?${params.toString()}` : '';
+
+  const res = await fetch(`/api/soporte/tickets${query}`, {
+    method: 'GET',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    cache: 'no-store',
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data } as { ok: boolean; data?: SoporteTicket[]; error?: string };
+}
+
+export async function crearSoporteTicket(payload: CreateSoporteTicketDto) {
+  const token = getToken();
+  const res = await fetch('/api/soporte/tickets', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data } as { ok: boolean; data?: SoporteTicket; error?: string };
+}
+
+export async function getSoporteTicket(id: string) {
+  const token = getToken();
+  const res = await fetch(`/api/soporte/tickets/${id}`, {
+    method: 'GET',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    cache: 'no-store',
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data } as { ok: boolean; data?: SoporteTicket; error?: string };
+}
+
+export async function actualizarSoporteTicket(
+  id: string,
+  payload: UpdateSoporteTicketDto
+) {
+  const token = getToken();
+  const res = await fetch(`/api/soporte/tickets/${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data } as { ok: boolean; data?: SoporteTicket; error?: string };
 }
