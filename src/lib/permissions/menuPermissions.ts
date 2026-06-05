@@ -236,6 +236,13 @@ export const MENU_PERMISSION_GROUPS: Array<{
         roles: ['admin', 'usuario'],
       },
       {
+        key: 'Soporte Dragon Pyramid',
+        label: 'Soporte Dragon Pyramid',
+        path: '/dashboard/soporte-dragon-pyramid',
+        group: 'Administración',
+        roles: ['admin', 'usuario'],
+      },
+      {
         key: 'Notificaciones',
         label: 'Notificaciones',
         path: '/dashboard/notificaciones',
@@ -308,6 +315,7 @@ export const DEFAULT_MENU_PERMISSIONS_BY_ROLE: Record<AppRole, string[]> = {
     'Ventas',
     'Notificaciones',
     'Mensajes Socios',
+    'Soporte Dragon Pyramid',
     'Perfil',
     'Preferencias',
   ],
