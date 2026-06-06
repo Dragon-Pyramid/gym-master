@@ -450,7 +450,7 @@ async function fetchRows(module: ExportModuleDefinition) {
     throw new Error(`No se pudo exportar ${module.label}: ${error.message}`);
   }
 
-  return (data ?? []) as Array<Record<string, unknown>>;
+  return (data ?? []) as unknown as Array<Record<string, unknown>>;
 }
 
 async function createAudit(user: JwtUser, formato: RespaldoFormato, modules: ExportModuleDefinition[], fileName: string) {
