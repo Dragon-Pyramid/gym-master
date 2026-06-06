@@ -1,7 +1,7 @@
 'use client';
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { Building2, CheckCircle2, Loader2, Palette, ReceiptText, Save, ShieldCheck, UploadCloud } from 'lucide-react';
+import { Building2, CheckCircle2, CreditCard, Loader2, Palette, ReceiptText, Save, ShieldCheck, UploadCloud } from 'lucide-react';
 import { AppFooter } from '@/components/footer/AppFooter';
 import { AppHeader } from '@/components/header/AppHeader';
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
@@ -46,6 +46,12 @@ const emptyForm: GimnasioParametrizacionPayload = {
   texto_legal_recibos: '',
   texto_legal_reportes: '',
   pie_pagina_documentos: 'Documento generado por Gym Master.',
+  stripe_habilitado: false,
+  stripe_estado: 'no_configurado',
+  stripe_modo: 'test',
+  stripe_public_key: '',
+  stripe_account_reference: '',
+  stripe_observaciones: '',
   activo: true,
 };
 
@@ -72,6 +78,12 @@ function formFromData(data: GimnasioParametrizacion): GimnasioParametrizacionPay
     texto_legal_recibos: data.texto_legal_recibos ?? '',
     texto_legal_reportes: data.texto_legal_reportes ?? '',
     pie_pagina_documentos: data.pie_pagina_documentos ?? 'Documento generado por Gym Master.',
+    stripe_habilitado: data.stripe_habilitado === true,
+    stripe_estado: data.stripe_estado ?? 'no_configurado',
+    stripe_modo: data.stripe_modo ?? 'test',
+    stripe_public_key: data.stripe_public_key ?? '',
+    stripe_account_reference: data.stripe_account_reference ?? '',
+    stripe_observaciones: data.stripe_observaciones ?? '',
     activo: data.activo,
   };
 }
@@ -146,6 +158,26 @@ export default function GimnasioParametrizacionPage() {
     setSuccessMessage(null);
     setLogoBroken(false);
     setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const updateStripeEnabled = (enabled: boolean) => {
+    setSuccessMessage(null);
+    setLogoBroken(false);
+    setForm((prev) => ({
+      ...prev,
+      stripe_habilitado: enabled,
+      stripe_estado: enabled ? 'activo' : 'inactivo',
+    }));
+  };
+
+  const updateStripeEstado = (estado: string) => {
+    setSuccessMessage(null);
+    setLogoBroken(false);
+    setForm((prev) => ({
+      ...prev,
+      stripe_estado: estado,
+      stripe_habilitado: estado === 'activo',
+    }));
   };
 
   const handleLogoFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -383,6 +415,90 @@ export default function GimnasioParametrizacionPage() {
                   <Card>
                     <CardHeader>
                       <div className='flex items-center gap-2 text-lg font-semibold'>
+                        <CreditCard className='h-5 w-5 text-sky-600' />
+                        Pagos online Stripe
+                      </div>
+                    </CardHeader>
+                    <CardContent className='grid gap-4 md:grid-cols-2'>
+                      <div className='space-y-2 md:col-span-2'>
+                        <label className='flex items-start gap-3 rounded-xl border border-sky-100 bg-sky-50 p-4 text-sm dark:border-sky-900/60 dark:bg-sky-950/30'>
+                          <input
+                            type='checkbox'
+                            checked={form.stripe_habilitado === true}
+                            onChange={(e) => updateStripeEnabled(e.target.checked)}
+                            className='mt-1 h-4 w-4 rounded border-slate-300'
+                          />
+                          <span>
+                            <span className='block font-semibold text-slate-900 dark:text-white'>Habilitar pagos online con Stripe</span>
+                            <span className='mt-1 block text-xs leading-5 text-slate-600 dark:text-slate-300'>
+                              Si está desactivado, los socios no verán disponible el checkout online y deberán abonar por medios manuales registrados por administración.
+                            </span>
+                          </span>
+                        </label>
+                      </div>
+                      <div className='space-y-2'>
+                        <Label htmlFor='stripe_estado'>Estado de integración</Label>
+                        <select
+                          id='stripe_estado'
+                          value={textValue(form.stripe_estado) || 'no_configurado'}
+                          onChange={(e) => updateStripeEstado(e.target.value)}
+                          className='h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+                        >
+                          <option value='no_configurado'>No configurado</option>
+                          <option value='configurado'>Configurado</option>
+                          <option value='activo'>Activo</option>
+                          <option value='inactivo'>Inactivo</option>
+                        </select>
+                      </div>
+                      <div className='space-y-2'>
+                        <Label htmlFor='stripe_modo'>Modo</Label>
+                        <select
+                          id='stripe_modo'
+                          value={textValue(form.stripe_modo) || 'test'}
+                          onChange={(e) => updateField('stripe_modo', e.target.value)}
+                          className='h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+                        >
+                          <option value='test'>Test / sandbox</option>
+                          <option value='live'>Producción</option>
+                        </select>
+                      </div>
+                      <div className='space-y-2 md:col-span-2'>
+                        <Label htmlFor='stripe_public_key'>Publishable key / referencia pública</Label>
+                        <Input
+                          id='stripe_public_key'
+                          placeholder='Opcional. No guardar claves secretas acá.'
+                          value={textValue(form.stripe_public_key)}
+                          onChange={(e) => updateField('stripe_public_key', e.target.value)}
+                        />
+                        <p className='text-xs text-muted-foreground'>
+                          Las claves secretas y webhooks se manejan por variables de entorno seguras. Este campo es solo referencia operativa.
+                        </p>
+                      </div>
+                      <div className='space-y-2 md:col-span-2'>
+                        <Label htmlFor='stripe_account_reference'>Referencia de cuenta Stripe</Label>
+                        <Input
+                          id='stripe_account_reference'
+                          placeholder='Ej: cuenta conectada, cliente, alias o identificador interno'
+                          value={textValue(form.stripe_account_reference)}
+                          onChange={(e) => updateField('stripe_account_reference', e.target.value)}
+                        />
+                      </div>
+                      <div className='space-y-2 md:col-span-2'>
+                        <Label htmlFor='stripe_observaciones'>Observaciones Stripe</Label>
+                        <textarea
+                          id='stripe_observaciones'
+                          value={textValue(form.stripe_observaciones)}
+                          onChange={(e) => updateField('stripe_observaciones', e.target.value)}
+                          className='min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm'
+                          placeholder='Notas internas sobre configuración, estado comercial o validaciones pendientes.'
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <div className='flex items-center gap-2 text-lg font-semibold'>
                         <ReceiptText className='h-5 w-5 text-sky-600' />
                         Textos legales para documentos
                       </div>
@@ -429,6 +545,17 @@ export default function GimnasioParametrizacionPage() {
 
                       <div className='rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-800'>
                         La parametrización se usa como fuente única para recibos, reportes PDF comerciales y exportaciones. Los nuevos documentos deben consumir estos datos del gimnasio.
+                      </div>
+
+                      <div className={`rounded-xl border px-4 py-3 text-xs leading-5 ${
+                        form.stripe_habilitado && form.stripe_estado === 'activo'
+                          ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                          : 'border-slate-200 bg-slate-50 text-slate-700'
+                      }`}>
+                        <strong>Stripe:</strong>{' '}
+                        {form.stripe_habilitado && form.stripe_estado === 'activo'
+                          ? 'pagos online habilitados para socios.'
+                          : 'pagos online deshabilitados o pendientes de activación.'}
                       </div>
 
                       <Button type='submit' disabled={saving} className='w-full'>

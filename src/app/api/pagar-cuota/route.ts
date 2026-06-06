@@ -29,9 +29,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ data: preview }, { status: 200 });
   } catch (error: any) {
     console.error('Error al obtener vista previa de pago:', error);
+    const message = error.message || 'Error al obtener vista previa de pago';
+    const status = message.includes('pagos online') || message.includes('no están habilitados') ? 403 : 500;
     return NextResponse.json(
-      { error: error.message || 'Error al obtener vista previa de pago' },
-      { status: 500 }
+      { error: message },
+      { status }
     );
   }
 }
@@ -66,9 +68,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url: session.url }, { status: 200 });
   } catch (error: any) {
     console.error('Error al crear la sesión de pago:', error);
+    const message = error.message || 'Error al crear la sesión de pago';
+    const status = message.includes('pagos online') || message.includes('no están habilitados') ? 403 : 500;
     return NextResponse.json(
-      { error: error.message || 'Error al crear la sesión de pago' },
-      { status: 500 }
+      { error: message },
+      { status }
     );
   }
 }

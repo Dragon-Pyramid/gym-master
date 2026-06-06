@@ -26,7 +26,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     ],
     "tag": "Parametrización",
     "summary": "Branding y datos legales del gimnasio",
-    "description": "Consulta y actualiza la parametrización comercial, legal y visual del gimnasio cliente para recibos, PDFs, reportes, exportaciones y futuras pantallas con branding propio.",
+    "description": "Consulta y actualiza la parametrización comercial, legal y visual del gimnasio cliente, incluyendo configuración operativa de pagos online Stripe.",
     "auth": true,
     "admin": true,
     "notImplemented": false,
@@ -61,6 +61,27 @@ const endpointDefinitions: EndpointDefinition[] = [
     ],
     "queryParams": [],
     "source": "src/app/api/gimnasio-parametrizacion/logo-upload/route.ts"
+  },
+
+  {
+    "path": "/api/gimnasio-parametrizacion/stripe-status",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Parametrización",
+    "summary": "Estado de pagos online Stripe del gimnasio",
+    "description": "Devuelve si el gimnasio tiene habilitados los pagos online con Stripe para condicionar la experiencia del socio y los endpoints de checkout.",
+    "auth": true,
+    "admin": false,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      401,
+      403,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/gimnasio-parametrizacion/stripe-status/route.ts"
   },
 
 
@@ -1671,7 +1692,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     ],
     "tag": "Cuotas y pagos",
     "summary": "Vista previa y sesión de pago de cuota",
-    "description": "GET devuelve vista previa de pago con subtotal, descuento por pago adelantado y total. POST crea una sesión Stripe con la misma parametrización de descuento vigente.",
+    "description": "GET devuelve vista previa de pago con subtotal, descuento por pago adelantado y total solo si el gimnasio tiene Stripe activo. POST crea una sesión Stripe con la misma parametrización de descuento vigente y bloquea el checkout si los pagos online están deshabilitados.",
     "auth": true,
     "admin": false,
     "notImplemented": false,

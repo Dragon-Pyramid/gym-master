@@ -3,6 +3,7 @@ import type {
   GimnasioParametrizacionPayload,
   GimnasioParametrizacionResponse,
   GimnasioLogoUploadResponse,
+  GimnasioStripeStatusResponse,
 } from '@/interfaces/gimnasioParametrizacion.interface';
 import { authHeader } from '@/services/storageService';
 
@@ -52,5 +53,17 @@ export async function uploadGimnasioLogo(file: File): Promise<GimnasioLogoUpload
   });
 
   const payload = await parseJsonResponse<GimnasioLogoUploadResponse>(response);
+  return payload.data;
+}
+
+
+export async function getGimnasioStripeStatus() {
+  const response = await fetch('/api/gimnasio-parametrizacion/stripe-status', {
+    method: 'GET',
+    headers: authHeader(),
+    cache: 'no-store',
+  });
+
+  const payload = await parseJsonResponse<GimnasioStripeStatusResponse>(response);
   return payload.data;
 }
