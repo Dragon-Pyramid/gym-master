@@ -6,6 +6,10 @@ import QRCode from "qrcode";
 import { ResponsePago } from "@/interfaces/pago.interface";
 import { buildPagoVerificationCode } from "@/utils/pagoReciboCodigo";
 import { formatFrontendDateTime } from "@/utils/dateFormat";
+import {
+  assertGimnasioBrandingReadyForCommercialDocs,
+  getResolvedGimnasioBranding,
+} from "@/utils/gimnasioBrandingClient";
 
 function formatDate(value?: string | null) {
   if (!value) return "-";
@@ -192,11 +196,11 @@ export async function descargarPagoReciboPdf(pago: ResponsePago) {
   const margin = 16;
   const codigo = buildPagoVerificationCode(pago.id);
   const verificationUrl = getVerificationUrl(pago);
+  const branding = await getResolvedGimnasioBranding();
+  assertGimnasioBrandingReadyForCommercialDocs(branding);
 
   const [logoDataUrl, qrDataUrl] = await Promise.all([
-    loadImageAsPngDataUrl("/gm_logo.svg", 256, 256, { tintColor: "#ffffff" }).catch(
-      () => null
-    ),
+    loadImageAsPngDataUrl(branding.logoUrl, 256, 256).catch(() => null),
     QRCode.toDataURL(verificationUrl, {
       errorCorrectionLevel: "M",
       margin: 1,
@@ -215,8 +219,10 @@ export async function descargarPagoReciboPdf(pago: ResponsePago) {
   doc.rect(0, 38, pageWidth, 2, "F");
 
   if (logoDataUrl) {
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(margin, 4, 30, 30, 3, 3, "F");
     // Mantener proporción cuadrada para evitar logo ovalado/deformado.
-    doc.addImage(logoDataUrl, "PNG", margin, 4, 30, 30);
+    doc.addImage(logoDataUrl, "PNG", margin + 2, 6, 26, 26);
   } else {
     doc.setFillColor(2, 168, 225);
     doc.circle(margin + 15, 19, 15, "F");
@@ -229,12 +235,12 @@ export async function descargarPagoReciboPdf(pago: ResponsePago) {
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(17);
-  doc.text("GYM MASTER", margin + 37, 17);
+  doc.text(branding.nombre.toUpperCase(), margin + 37, 17, { maxWidth: pageWidth - margin * 2 - 95 });
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
   doc.setTextColor(203, 213, 225);
-  doc.text("Recibo oficial de pago de cuota", margin + 37, 24);
+  doc.text(branding.subtitulo || "Recibo oficial de pago de cuota", margin + 37, 24, { maxWidth: pageWidth - margin * 2 - 95 });
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(15);
@@ -332,7 +338,7 @@ export async function descargarPagoReciboPdf(pago: ResponsePago) {
   const resumenPago =
     descuentoMonto > 0
       ? `Subtotal ${formatMoney(subtotalPago)} · Descuento ${formatMoney(descuentoMonto)} (${pago.descuento_porcentaje ?? 0}%). Código: ${codigo}`
-      : `Comprobante emitido por Gym Master. Código: ${codigo}`;
+      : `Comprobante emitido por ${branding.nombre}. Código: ${codigo}`;
 
   doc.text(
     doc.splitTextToSize(resumenPago, amountBoxW - 12),
@@ -381,16 +387,19 @@ export async function descargarPagoReciboPdf(pago: ResponsePago) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.2);
   doc.setTextColor(100, 116, 139);
+  const legalText =
+    branding.textoLegalRecibos ||
+    `Este recibo acredita el registro administrativo del pago en ${branding.nombre}. La validez operativa puede verificarse mediante el QR o código informado.`;
+
   doc.text(
-    "Este recibo acredita el registro administrativo del pago en Gym Master. La validez operativa puede verificarse mediante el QR o código informado.",
+    doc.splitTextToSize(legalText, pageWidth - margin * 2),
     margin,
-    y + 9,
-    { maxWidth: pageWidth - margin * 2 }
+    y + 9
   );
 
   doc.setFontSize(6.8);
   doc.setTextColor(148, 163, 184);
-  doc.text(`Emitido: ${formatFrontendDateTime(new Date())}`, margin, pageHeight - 12);
+  doc.text(`${branding.piePagina} · Emitido: ${formatFrontendDateTime(new Date())}`, margin, pageHeight - 12, { maxWidth: pageWidth - margin * 2 - 45 });
   doc.text(`Pago ID: ${pago.id}`, pageWidth - margin, pageHeight - 12, {
     align: "right",
   });

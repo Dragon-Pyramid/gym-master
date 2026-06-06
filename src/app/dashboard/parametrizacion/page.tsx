@@ -87,6 +87,11 @@ type CuotaDescuentoFormState = {
 };
 
 const catalogUiDefinitions: Record<CatalogoParametrizableKey, CatalogUiDefinition> = {
+  gimnasio_condicion_fiscal: {
+    icon: ReceiptText,
+    href: "/dashboard/gimnasio-parametrizacion",
+    tags: ["responsable inscripto", "monotributo", "consumidor final", "exento"],
+  },
   tipo_empleado: {
     icon: UserCog,
     href: "/dashboard/empleados",

@@ -5,6 +5,7 @@ import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 export type RespaldoFormato = 'xlsx' | 'json';
 
 export type RespaldoModuloKey =
+  | 'gimnasio_parametrizacion'
   | 'socios'
   | 'usuarios'
   | 'empleados'
@@ -71,6 +72,37 @@ export type RespaldoExportResult = {
 const MAX_ROWS_PER_MODULE = 50000;
 
 export const RESPLADO_NEGOCIO_MODULES: ExportModuleDefinition[] = [
+  {
+    key: 'gimnasio_parametrizacion',
+    label: 'Datos del gimnasio',
+    description: 'Parametrización comercial, legal y visual del gimnasio cliente.',
+    table: 'gimnasio_parametrizacion',
+    safeForClientExport: true,
+    columns: [
+      { key: 'nombre_comercial', label: 'Nombre comercial', width: 32 },
+      { key: 'razon_social', label: 'Razón social', width: 34 },
+      { key: 'identificacion_fiscal', label: 'CUIT / DNI fiscal', width: 22 },
+      { key: 'condicion_fiscal', label: 'Condición fiscal', width: 24 },
+      { key: 'domicilio_legal', label: 'Domicilio legal', width: 40 },
+      { key: 'ciudad', label: 'Ciudad', width: 22 },
+      { key: 'provincia', label: 'Provincia', width: 22 },
+      { key: 'pais', label: 'País', width: 18 },
+      { key: 'telefono', label: 'Teléfono', width: 20 },
+      { key: 'email', label: 'Email', width: 34 },
+      { key: 'sitio_web', label: 'Sitio web', width: 34 },
+      { key: 'instagram_url', label: 'Instagram', width: 34 },
+      { key: 'facebook_url', label: 'Facebook', width: 34 },
+      { key: 'logo_url', label: 'Logo principal', width: 44 },
+      { key: 'logo_alternativo_url', label: 'Logo alternativo', width: 44 },
+      { key: 'color_primario', label: 'Color primario', width: 16 },
+      { key: 'color_secundario', label: 'Color secundario', width: 16 },
+      { key: 'color_acento', label: 'Color acento', width: 16 },
+      { key: 'texto_legal_recibos', label: 'Texto legal recibos', width: 46 },
+      { key: 'texto_legal_reportes', label: 'Texto legal reportes', width: 46 },
+      { key: 'pie_pagina_documentos', label: 'Pie documentos', width: 46 },
+      { key: 'actualizado_en', label: 'Actualizado en', width: 24 },
+    ],
+  },
   {
     key: 'socios',
     label: 'Socios',

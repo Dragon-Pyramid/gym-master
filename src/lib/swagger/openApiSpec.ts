@@ -19,6 +19,52 @@ const endpointDefinitions: EndpointDefinition[] = [
 
 
   {
+    "path": "/api/gimnasio-parametrizacion",
+    "methods": [
+      "GET",
+      "PATCH"
+    ],
+    "tag": "Parametrización",
+    "summary": "Branding y datos legales del gimnasio",
+    "description": "Consulta y actualiza la parametrización comercial, legal y visual del gimnasio cliente para recibos, PDFs, reportes, exportaciones y futuras pantallas con branding propio.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401,
+      403,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/gimnasio-parametrizacion/route.ts"
+  },
+
+  {
+    "path": "/api/gimnasio-parametrizacion/logo-upload",
+    "methods": [
+      "POST"
+    ],
+    "tag": "Parametrización",
+    "summary": "Subida de logo del gimnasio a Cloudinary",
+    "description": "Sube el logo principal del gimnasio a Cloudinary y devuelve la URL segura para guardarla en la parametrización legal/comercial.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401,
+      403,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/gimnasio-parametrizacion/logo-upload/route.ts"
+  },
+
+
+  {
     "path": "/api/admin/respaldo-negocio",
     "methods": [
       "GET"

@@ -2,6 +2,10 @@
 
 import jsPDF from "jspdf";
 import { buildTimestampedDownloadFileName } from "@/utils/downloadFileName";
+import {
+  assertGimnasioBrandingReadyForCommercialDocs,
+  getResolvedGimnasioBranding,
+} from "@/utils/gimnasioBrandingClient";
 
 export interface CommercialReportMetric {
   label: string;
@@ -430,17 +434,25 @@ export async function downloadCommercialReportPdf<T>({
   metrics,
   filtersLabel,
   charts,
-  logoUrl = "/gm_logo.svg",
+  logoUrl,
   pageOrientation = "landscape",
   pageFormat = "a4",
-  brandName = "Gym Master",
-  brandSubtitle = "Dragon Pyramid · Gestión integral de gimnasios",
-  footerText = "Gym Master · Reporte generado por el sistema",
+  brandName,
+  brandSubtitle,
+  footerText,
 }: DownloadCommercialReportPdfParams<T>): Promise<void> {
+  const resolvedBranding = await getResolvedGimnasioBranding();
+  assertGimnasioBrandingReadyForCommercialDocs(resolvedBranding);
+
+  const resolvedLogoUrl = logoUrl ?? resolvedBranding.logoUrl;
+  const resolvedBrandName = brandName ?? resolvedBranding.nombre;
+  const resolvedBrandSubtitle = brandSubtitle ?? resolvedBranding.subtitulo;
+  const resolvedFooterText = footerText ?? resolvedBranding.piePagina;
+
   const doc = new jsPDF({ orientation: pageOrientation, unit: "mm", format: pageFormat });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const logoDataUrl = await loadImageAsPngDataUrl(logoUrl, 256, 256);
+  const logoDataUrl = await loadImageAsPngDataUrl(resolvedLogoUrl, 256, 256);
   const tableX = PAGE_MARGIN;
   const tableWidth = pageWidth - PAGE_MARGIN * 2;
   const totalColumnWidth = columns.reduce((sum, col) => sum + col.width, 0);
@@ -448,7 +460,7 @@ export async function downloadCommercialReportPdf<T>({
   const normalizedColumns = columns.map((col) => ({ ...col, width: col.width * scale }));
 
   let y = HEADER_HEIGHT + 10;
-  addHeader(doc, pageWidth, logoDataUrl, title, subtitle, brandName, brandSubtitle);
+  addHeader(doc, pageWidth, logoDataUrl, title, subtitle, resolvedBrandName, resolvedBrandSubtitle);
 
   y = drawMetrics(doc, metrics, pageWidth, y);
 
@@ -461,9 +473,9 @@ export async function downloadCommercialReportPdf<T>({
   }
 
   y = drawCharts(doc, charts, pageWidth, pageHeight, y, () => {
-    addFooter(doc, pageWidth, pageHeight, footerText);
+    addFooter(doc, pageWidth, pageHeight, resolvedFooterText);
     doc.addPage();
-    addHeader(doc, pageWidth, logoDataUrl, title, subtitle, brandName, brandSubtitle);
+    addHeader(doc, pageWidth, logoDataUrl, title, subtitle, resolvedBrandName, resolvedBrandSubtitle);
     return HEADER_HEIGHT + 10;
   });
 
@@ -495,9 +507,9 @@ export async function downloadCommercialReportPdf<T>({
     );
 
     if (y + rowHeight > pageHeight - FOOTER_HEIGHT - 6) {
-      addFooter(doc, pageWidth, pageHeight, footerText);
+      addFooter(doc, pageWidth, pageHeight, resolvedFooterText);
       doc.addPage();
-      addHeader(doc, pageWidth, logoDataUrl, title, subtitle, brandName, brandSubtitle);
+      addHeader(doc, pageWidth, logoDataUrl, title, subtitle, resolvedBrandName, resolvedBrandSubtitle);
       y = HEADER_HEIGHT + 10;
       drawTableHeader(doc, normalizedColumns, tableX, y);
       y += 8;
@@ -530,7 +542,7 @@ export async function downloadCommercialReportPdf<T>({
   const pages = doc.getNumberOfPages();
   for (let page = 1; page <= pages; page += 1) {
     doc.setPage(page);
-    addFooter(doc, pageWidth, pageHeight, footerText);
+    addFooter(doc, pageWidth, pageHeight, resolvedFooterText);
   }
 
   doc.save(fileName.toLowerCase().endsWith(".pdf") ? fileName : buildTimestampedDownloadFileName(fileName, "pdf"));

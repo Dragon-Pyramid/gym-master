@@ -26,6 +26,7 @@ import CuotasEstadoDashboard from '@/components/dashboard/cuotas/CuotasEstadoDas
 import { useEffect, useRef, useState } from 'react';
 import QrDisplayModal from '@/components/ui/qr-display';
 import { Button } from '@/components/ui/button';
+import { AlertTriangle } from 'lucide-react';
 import { getAllEquipamientos } from '@/services/equipamientoService';
 import { getAllMantenimientos } from '@/services/mantenimientoService';
 import {
@@ -45,6 +46,7 @@ import ClockCard from '@/components/ui/ClockCard';
 import BienvenidaSocio from '@/components/ui/BienvenidaSocio';
 import { supabaseBrowser } from '@/lib/supabase-browser';
 import { getToken } from '@/services/storageService';
+import { getResolvedGimnasioBranding } from '@/utils/gimnasioBrandingClient';
 
 // ⬇️ IMPORTA EL TIPO QUE EMITE LA TABLA
 import type { AsistenciaReciente as AsistenciaRecienteApi } from '@/services/qrService';
@@ -144,6 +146,10 @@ export default function DashboardPage() {
   const [mensajesPendientes, setMensajesPendientes] = useState(0);
   const [mensajesSinResponder, setMensajesSinResponder] = useState(0);
   const [loadingMensajesPendientes, setLoadingMensajesPendientes] = useState(false);
+  const [gimnasioParametrizacionStatus, setGimnasioParametrizacionStatus] = useState<{
+    completa: boolean;
+    faltantes: string[];
+  } | null>(null);
 
   // Overlay de bienvenida
   const [showWelcome, setShowWelcome] = useState(false);
@@ -290,6 +296,41 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
       window.clearInterval(interval);
+    };
+  }, [user?.rol]);
+
+
+  useEffect(() => {
+    if (user?.rol !== 'admin') {
+      setGimnasioParametrizacionStatus(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function fetchGimnasioParametrizacionStatus() {
+      try {
+        const branding = await getResolvedGimnasioBranding();
+        if (!cancelled) {
+          setGimnasioParametrizacionStatus({
+            completa: branding.parametrizacionCompleta,
+            faltantes: branding.camposFaltantes,
+          });
+        }
+      } catch {
+        if (!cancelled) {
+          setGimnasioParametrizacionStatus({
+            completa: false,
+            faltantes: ['Datos legales y comerciales del gimnasio'],
+          });
+        }
+      }
+    }
+
+    fetchGimnasioParametrizacionStatus();
+
+    return () => {
+      cancelled = true;
     };
   }, [user?.rol]);
 
@@ -491,6 +532,36 @@ export default function DashboardPage() {
 
             {userType === 'admin' && (
               <>
+                {gimnasioParametrizacionStatus && !gimnasioParametrizacionStatus.completa && (
+                  <Card className='border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-50'>
+                    <CardContent className='flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between'>
+                      <div className='flex gap-3'>
+                        <AlertTriangle className='mt-1 h-5 w-5 shrink-0 text-amber-600' />
+                        <div>
+                          <h2 className='text-base font-semibold'>Datos del gimnasio pendientes</h2>
+                          <p className='mt-1 text-sm leading-6'>
+                            Antes de emitir recibos, reportes PDF o comprobantes comerciales, cargá los datos legales y
+                            comerciales del gimnasio. Gym Master es la plataforma tecnológica; el emisor debe ser el
+                            gimnasio cliente.
+                          </p>
+                          <p className='mt-2 text-xs'>
+                            Campos faltantes: {gimnasioParametrizacionStatus.faltantes.slice(0, 6).join(', ')}
+                            {gimnasioParametrizacionStatus.faltantes.length > 6 ? '...' : ''}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        type='button'
+                        variant='outline'
+                        className='border-amber-300 bg-white text-amber-900 hover:bg-amber-100'
+                        onClick={() => router.push('/dashboard/gimnasio-parametrizacion')}
+                      >
+                        Completar datos
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+
                 <div className='p-5'>
                   <h1 className='mb-4 text-3xl font-bold'>
                     Bienvenido al Panel de Control
