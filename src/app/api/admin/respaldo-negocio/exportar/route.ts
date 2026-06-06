@@ -9,8 +9,11 @@ export async function POST(req: Request) {
     const { user } = await authMiddleware(req);
     const body = await req.json().catch(() => ({}));
     const result = await exportRespaldoNegocio(user, body);
+    const responseBody = new Blob([new Uint8Array(result.buffer)], {
+      type: result.contentType,
+    });
 
-    return new NextResponse(result.buffer, {
+    return new NextResponse(responseBody, {
       status: 200,
       headers: {
         'Content-Type': result.contentType,
