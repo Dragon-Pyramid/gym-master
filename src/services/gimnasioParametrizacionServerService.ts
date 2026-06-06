@@ -33,6 +33,12 @@ const DEFAULT_BRANDING: Omit<
   texto_legal_recibos: null,
   texto_legal_reportes: null,
   pie_pagina_documentos: 'Documento generado por Gym Master.',
+  stripe_habilitado: false,
+  stripe_estado: 'no_configurado',
+  stripe_modo: 'test',
+  stripe_public_key: null,
+  stripe_account_reference: null,
+  stripe_observaciones: null,
   activo: true,
 };
 
@@ -60,6 +66,12 @@ const EMPTY_BRANDING: GimnasioParametrizacion = {
   texto_legal_recibos: null,
   texto_legal_reportes: null,
   pie_pagina_documentos: null,
+  stripe_habilitado: false,
+  stripe_estado: 'no_configurado',
+  stripe_modo: 'test',
+  stripe_public_key: null,
+  stripe_account_reference: null,
+  stripe_observaciones: null,
   activo: true,
   creado_en: null,
   actualizado_en: null,
@@ -124,6 +136,9 @@ function normalizePayload(input: GimnasioParametrizacionPayload, user: JwtUser) 
     'texto_legal_recibos',
     'texto_legal_reportes',
     'pie_pagina_documentos',
+    'stripe_public_key',
+    'stripe_account_reference',
+    'stripe_observaciones',
   ];
 
   for (const field of stringFields) {
@@ -131,6 +146,51 @@ function normalizePayload(input: GimnasioParametrizacionPayload, user: JwtUser) 
       const value = trimString(input[field]);
       payload[field] = field === 'nombre_comercial' ? value || DEFAULT_BRANDING.nombre_comercial : value;
     }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(input, 'stripe_habilitado')) {
+    payload.stripe_habilitado = input.stripe_habilitado === true;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(input, 'stripe_estado')) {
+    const estado = trimString(input.stripe_estado) || 'no_configurado';
+    payload.stripe_estado = ['no_configurado', 'configurado', 'activo', 'inactivo'].includes(estado)
+      ? estado
+      : 'no_configurado';
+  }
+
+  if (Object.prototype.hasOwnProperty.call(input, 'stripe_modo')) {
+    const modo = trimString(input.stripe_modo) || 'test';
+    payload.stripe_modo = ['test', 'live'].includes(modo) ? modo : 'test';
+  }
+
+  const tieneStripeHabilitado = Object.prototype.hasOwnProperty.call(input, 'stripe_habilitado');
+  const tieneStripeEstado = Object.prototype.hasOwnProperty.call(input, 'stripe_estado');
+
+  if (tieneStripeEstado && payload.stripe_estado === 'activo') {
+    payload.stripe_habilitado = true;
+  }
+
+  if (tieneStripeEstado && ['no_configurado', 'inactivo'].includes(String(payload.stripe_estado))) {
+    payload.stripe_habilitado = false;
+  }
+
+  if (tieneStripeHabilitado && payload.stripe_habilitado === true) {
+    const estadoActual = String(payload.stripe_estado || '');
+    if (!estadoActual || ['no_configurado', 'inactivo'].includes(estadoActual)) {
+      payload.stripe_estado = 'activo';
+    }
+  }
+
+  if (tieneStripeHabilitado && payload.stripe_habilitado === false) {
+    const estadoActual = String(payload.stripe_estado || '');
+    if (!estadoActual || estadoActual === 'activo') {
+      payload.stripe_estado = 'inactivo';
+    }
+  }
+
+  if (payload.stripe_estado === 'configurado') {
+    payload.stripe_habilitado = false;
   }
 
   if (Object.prototype.hasOwnProperty.call(input, 'sitio_web')) {
@@ -197,6 +257,12 @@ function normalizeRow(row: Record<string, unknown>): GimnasioParametrizacion {
     texto_legal_recibos: row.texto_legal_recibos ? String(row.texto_legal_recibos) : null,
     texto_legal_reportes: row.texto_legal_reportes ? String(row.texto_legal_reportes) : null,
     pie_pagina_documentos: row.pie_pagina_documentos ? String(row.pie_pagina_documentos) : null,
+    stripe_habilitado: row.stripe_habilitado === true,
+    stripe_estado: row.stripe_estado ? String(row.stripe_estado) : 'no_configurado',
+    stripe_modo: row.stripe_modo ? String(row.stripe_modo) : 'test',
+    stripe_public_key: row.stripe_public_key ? String(row.stripe_public_key) : null,
+    stripe_account_reference: row.stripe_account_reference ? String(row.stripe_account_reference) : null,
+    stripe_observaciones: row.stripe_observaciones ? String(row.stripe_observaciones) : null,
     activo: row.activo !== false,
     creado_en: row.creado_en ? String(row.creado_en) : null,
     actualizado_en: row.actualizado_en ? String(row.actualizado_en) : null,
@@ -222,6 +288,38 @@ export async function getGimnasioParametrizacion(): Promise<GimnasioParametrizac
   // el sistema debe poder detectar parametrización incompleta y bloquear
   // documentos comerciales hasta que el administrador cargue el gimnasio real.
   return EMPTY_BRANDING;
+}
+
+
+export function buildGimnasioStripeStatus(parametrizacion: GimnasioParametrizacion) {
+  const stripeHabilitado = parametrizacion.stripe_habilitado === true;
+  const stripeActivo = parametrizacion.stripe_estado === 'activo';
+  const pagosOnlineDisponibles = stripeHabilitado && stripeActivo && parametrizacion.activo !== false;
+
+  return {
+    stripe_habilitado: stripeHabilitado,
+    stripe_estado: parametrizacion.stripe_estado || 'no_configurado',
+    stripe_modo: parametrizacion.stripe_modo || 'test',
+    pagos_online_disponibles: pagosOnlineDisponibles,
+    mensaje: pagosOnlineDisponibles
+      ? null
+      : 'El gimnasio no tiene pagos online habilitados. Consulte en administración para abonar por medios manuales.',
+  };
+}
+
+export async function getGimnasioStripeStatus() {
+  const parametrizacion = await getGimnasioParametrizacion();
+  return buildGimnasioStripeStatus(parametrizacion);
+}
+
+export async function assertGimnasioStripeDisponible() {
+  const status = await getGimnasioStripeStatus();
+
+  if (!status.pagos_online_disponibles) {
+    throw new Error(status.mensaje || 'Los pagos online no están habilitados para este gimnasio.');
+  }
+
+  return status;
 }
 
 export async function updateGimnasioParametrizacion(

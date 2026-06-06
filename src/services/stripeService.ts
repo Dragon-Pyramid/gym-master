@@ -6,6 +6,7 @@ import { getSocioByIdUsuario } from "./socioService";
 import { calcularDescuentoPago } from "@/lib/cuotas/descuentoPago";
 import { fetchCuotaDescuentoConfig } from "@/services/cuotaDescuentoService";
 import type { PagoDescuentoPreview } from "@/interfaces/pago.interface";
+import { assertGimnasioStripeDisponible } from "@/services/gimnasioParametrizacionServerService";
 
 type CreateSessionPagoOptions = {
   meses_cubiertos?: number;
@@ -126,6 +127,7 @@ export const previewSessionPago = async (
   user: JwtUser,
   options: CreateSessionPagoOptions = {}
 ): Promise<PagoDescuentoPreview> => {
+  await assertGimnasioStripeDisponible();
   const context = await buildPagoCuotaContext(user, options);
   return context.preview;
 };
@@ -134,6 +136,7 @@ export const createSessionPago = async (
   user: JwtUser,
   options: CreateSessionPagoOptions = {}
 ): Promise<{ url: string }> => {
+  await assertGimnasioStripeDisponible();
   const context = await buildPagoCuotaContext(user, options);
 
   const unitAmount = Math.round(context.preview.total * 100);

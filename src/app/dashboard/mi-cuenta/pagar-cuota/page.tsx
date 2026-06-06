@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { CreditCard, Loader2, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, CreditCard, Loader2, ShieldCheck } from 'lucide-react';
 import { AppHeader } from '@/components/header/AppHeader';
 import { AppFooter } from '@/components/footer/AppFooter';
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
@@ -14,6 +14,7 @@ import { getToken } from '@/services/storageService';
 import type { PagoDescuentoPreview } from '@/interfaces/pago.interface';
 import { useAuthStore } from '@/stores/authStore';
 import { formatFrontendDate } from '@/utils/dateFormat';
+import { getGimnasioStripeStatus } from '@/services/gimnasioParametrizacionService';
 
 type EstadoCuota = {
   id_socio: string;
@@ -64,6 +65,8 @@ export default function PagarCuotaSocioPage() {
   const [meses, setMeses] = useState(1);
   const [preview, setPreview] = useState<PagoDescuentoPreview | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [stripeDisponible, setStripeDisponible] = useState<boolean | null>(null);
+  const [stripeMensaje, setStripeMensaje] = useState<string | null>(null);
 
   useEffect(() => {
     initializeAuth();
@@ -76,6 +79,17 @@ export default function PagarCuotaSocioPage() {
   }, [isAuthenticated, isInitialized, router]);
 
   const puedePagar = user?.rol === 'socio';
+
+  const loadStripeStatus = async () => {
+    try {
+      const status = await getGimnasioStripeStatus();
+      setStripeDisponible(status.pagos_online_disponibles);
+      setStripeMensaje(status.mensaje);
+    } catch (error: any) {
+      setStripeDisponible(false);
+      setStripeMensaje(error.message || 'No se pudo verificar si el gimnasio tiene pagos online habilitados.');
+    }
+  };
 
   const loadEstado = async () => {
     try {
@@ -108,6 +122,8 @@ export default function PagarCuotaSocioPage() {
       setPreview(json.data ?? null);
     } catch (error: any) {
       setPreview(null);
+      setStripeDisponible(false);
+      setStripeMensaje(error.message || 'El gimnasio no tiene pagos online habilitados.');
       toast.error(error.message || 'Error al calcular el pago');
     } finally {
       setLoadingPreview(false);
@@ -117,14 +133,18 @@ export default function PagarCuotaSocioPage() {
   useEffect(() => {
     if (isInitialized && isAuthenticated) {
       loadEstado();
+      loadStripeStatus();
     }
   }, [isInitialized, isAuthenticated]);
 
   useEffect(() => {
-    if (isInitialized && isAuthenticated && user?.rol === 'socio') {
+    if (isInitialized && isAuthenticated && user?.rol === 'socio' && stripeDisponible === true) {
       loadPreview(meses);
     }
-  }, [isInitialized, isAuthenticated, user?.rol, meses]);
+    if (stripeDisponible === false) {
+      setPreview(null);
+    }
+  }, [isInitialized, isAuthenticated, user?.rol, meses, stripeDisponible]);
 
   const detallePago = useMemo(() => {
     const suffix = meses === 1 ? 'mes' : 'meses';
@@ -132,6 +152,11 @@ export default function PagarCuotaSocioPage() {
   }, [meses]);
 
   const handlePagar = async () => {
+    if (stripeDisponible !== true) {
+      toast.error(stripeMensaje || 'El gimnasio no tiene pagos online habilitados.');
+      return;
+    }
+
     try {
       setPaying(true);
       const token = getToken();
@@ -172,12 +197,12 @@ export default function PagarCuotaSocioPage() {
                   <div>
                     <h2 className='text-2xl font-bold'>Mi cuenta</h2>
                     <p className='text-sm text-muted-foreground'>
-                      Pagá tu cuota online con Stripe. Los pagos en efectivo los registra el administrador.
+                      Consultá el estado de tu cuota y aboná online si el gimnasio tiene Stripe habilitado.
                     </p>
                   </div>
                   <div className='flex items-center gap-2 text-sm text-muted-foreground'>
                     <ShieldCheck className='w-4 h-4' />
-                    Pago seguro vía Stripe
+                    {stripeDisponible ? 'Pago seguro vía Stripe' : 'Pagos online no disponibles'}
                   </div>
                 </div>
               </CardHeader>
@@ -211,6 +236,16 @@ export default function PagarCuotaSocioPage() {
                       {estado?.estado_cuota === 'vencido' && (
                         <p className='mt-1 text-xs text-red-600'>{estado.dias_vencido} día(s) vencido</p>
                       )}
+                    </div>
+                  </div>
+                )}
+
+                {stripeDisponible === false && (
+                  <div className='flex items-start gap-3 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800'>
+                    <AlertTriangle className='mt-0.5 h-4 w-4 flex-none' />
+                    <div>
+                      <p className='font-semibold'>Pagos online no habilitados</p>
+                      <p className='mt-1'>{stripeMensaje || 'Este gimnasio no tiene Stripe activo. Comunicate con administración para abonar por medios manuales.'}</p>
                     </div>
                   </div>
                 )}
@@ -269,7 +304,7 @@ export default function PagarCuotaSocioPage() {
                       </div>
                     ) : null}
                     <p className='mt-3 text-xs text-muted-foreground'>
-                      Al finalizar el checkout, Stripe notificará el pago al webhook y se actualizará tu estado de cuota.
+                      Si Stripe está activo, al finalizar el checkout se notificará el pago al webhook y se actualizará tu estado de cuota.
                     </p>
                   </div>
                 </div>
@@ -279,7 +314,7 @@ export default function PagarCuotaSocioPage() {
                     Ver historial de pagos
                   </Button>
                   <Button
-                    disabled={!puedePagar || paying || loadingPreview}
+                    disabled={!puedePagar || paying || loadingPreview || stripeDisponible !== true}
                     onClick={handlePagar}
                     className='bg-[#02a8e1] hover:bg-[#0288b1] text-white'
                   >
