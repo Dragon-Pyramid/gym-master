@@ -1,4 +1,5 @@
 export type CatalogoParametrizableKey =
+  | "gimnasio_condicion_fiscal"
   | "tipo_empleado"
   | "empleado_tipo_contratacion"
   | "empleado_puesto_responsabilidad"

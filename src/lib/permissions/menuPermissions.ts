@@ -278,6 +278,13 @@ export const MENU_PERMISSION_GROUPS: Array<{
         roles: ['admin', 'usuario'],
       },
       {
+        key: 'Datos del Gimnasio',
+        label: 'Datos del Gimnasio',
+        path: '/dashboard/gimnasio-parametrizacion',
+        group: 'Administración',
+        roles: ['admin'],
+      },
+      {
         key: 'Parametrización',
         label: 'Parametrización',
         path: '/dashboard/parametrizacion',

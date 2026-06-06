@@ -136,6 +136,11 @@ export const sections: SidebarSectionType[] = [
         level: 2,
       },
       {
+        title: 'Datos del Gimnasio',
+        link: '/dashboard/gimnasio-parametrizacion',
+        level: 2,
+      },
+      {
         title: 'Parametrización',
         link: '/dashboard/parametrizacion',
         level: 2,

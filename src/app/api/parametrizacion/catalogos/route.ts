@@ -21,6 +21,16 @@ type CatalogDefinition = {
 
 const catalogDefinitions: CatalogDefinition[] = [
   {
+    key: "gimnasio_condicion_fiscal",
+    table: "gimnasio_condicion_fiscal",
+    title: "Condiciones fiscales",
+    description:
+      "Catálogo fiscal para datos legales del gimnasio: responsable inscripto, monotributo, consumidor final, exento u otras condiciones.",
+    status: "Disponible",
+    priority: "Alta",
+    editable: true,
+  },
+  {
     key: "tipo_empleado",
     table: "tipo_empleado",
     title: "Tipos de empleado",
