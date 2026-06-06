@@ -134,7 +134,7 @@ export default function GimnasioParametrizacionPage() {
   }, [form.logo_url, logoBroken]);
 
   const condicionesFiscales = useMemo(() => {
-    const catalogo = catalogos.find((item) => item.key === 'gimnasio_condicion_fiscal');
+    const catalogo = catalogos.find((item) => String(item.key) === 'gimnasio_condicion_fiscal');
     const items = catalogo?.items.filter((item) => item.activo) ?? [];
 
     return items.length > 0
