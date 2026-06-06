@@ -243,6 +243,13 @@ export const MENU_PERMISSION_GROUPS: Array<{
         roles: ['admin', 'usuario'],
       },
       {
+        key: 'Respaldo / Exportación',
+        label: 'Respaldo / Exportación',
+        path: '/dashboard/respaldo-negocio',
+        group: 'Administración',
+        roles: ['admin'],
+      },
+      {
         key: 'Notificaciones',
         label: 'Notificaciones',
         path: '/dashboard/notificaciones',
