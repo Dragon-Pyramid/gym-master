@@ -19,6 +19,49 @@ const endpointDefinitions: EndpointDefinition[] = [
 
 
   {
+    "path": "/api/admin/respaldo-negocio",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Respaldo / Exportación",
+    "summary": "Módulos e historial de respaldo de negocio",
+    "description": "Devuelve módulos exportables del negocio e historial auditado de exportaciones realizadas por administradores.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      401,
+      403,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/admin/respaldo-negocio/route.ts"
+  },
+  {
+    "path": "/api/admin/respaldo-negocio/exportar",
+    "methods": [
+      "POST"
+    ],
+    "tag": "Respaldo / Exportación",
+    "summary": "Generar respaldo exportable del negocio",
+    "description": "Genera archivo XLSX o JSON con módulos operativos seleccionados. Excluye contraseñas, secretos, tokens, migraciones privadas, datasets propietarios y know-how interno Dragon Pyramid. Registra auditoría de exportación.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401,
+      403,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/admin/respaldo-negocio/exportar/route.ts"
+  },
+
+
+  {
     "path": "/api/soporte/tickets",
     "methods": [
       "GET",
