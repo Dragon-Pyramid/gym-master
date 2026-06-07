@@ -404,23 +404,39 @@ const drawCharts = (
   return y;
 };
 
+const getCellTextX = (
+  currentX: number,
+  width: number,
+  align: "left" | "right" | "center" = "left",
+  padding = 2
+): number => {
+  if (align === "right") return currentX + width - padding;
+  if (align === "center") return currentX + width / 2;
+  return currentX + padding;
+};
+
 const drawTableHeader = <T,>(
   doc: jsPDF,
   columns: CommercialReportColumn<T>[],
   x: number,
   y: number
 ) => {
-  const tableWidth = columns.reduce((sum, col) => sum + col.width, 0);
-  doc.setFillColor(15, 23, 42);
-  doc.setDrawColor(15, 23, 42);
-  doc.rect(x, y, tableWidth, 8, "F");
-
   let currentX = x;
+
   columns.forEach((col) => {
+    const align = col.align ?? "left";
+    const textX = getCellTextX(currentX, col.width, align, 2);
+    const headerLines = doc.splitTextToSize(col.header, Math.max(10, col.width - 4)).slice(0, 2);
+
+    doc.setFillColor(15, 23, 42);
+    doc.setDrawColor(30, 41, 59);
+    doc.rect(currentX, y, col.width, 8, "FD");
+
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(7.5);
+    doc.setFontSize(7.1);
     doc.setTextColor(255, 255, 255);
-    doc.text(col.header, currentX + 2, y + 5.5);
+    doc.text(headerLines, textX, y + 5.2, { align });
+
     currentX += col.width;
   });
 };
@@ -515,23 +531,26 @@ export async function downloadCommercialReportPdf<T>({
       y += 8;
     }
 
-    doc.setFillColor(rowIndex % 2 === 0 ? 255 : 248, rowIndex % 2 === 0 ? 255 : 250, rowIndex % 2 === 0 ? 255 : 252);
-    doc.setDrawColor(...BORDER);
-    doc.rect(tableX, y, tableWidth, rowHeight, "FD");
+    const stripeColor = rowIndex % 2 === 0 ? [255, 255, 255] : [248, 250, 252];
 
     let currentX = tableX;
     normalizedColumns.forEach((col, colIndex) => {
+      const align = col.align ?? "left";
+
+      doc.setFillColor(stripeColor[0], stripeColor[1], stripeColor[2]);
+      doc.setDrawColor(...BORDER);
+      doc.rect(currentX, y, col.width, rowHeight, "FD");
+
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(7.2);
+      doc.setFontSize(6.9);
       doc.setTextColor(...DARK);
 
       const lines = cellLines[colIndex];
-      const textX = col.align === "right" ? currentX + col.width - 2 : currentX + 2;
-      if (col.align === "right") {
-        doc.text(lines, textX, y + 5, { align: "right" });
-      } else {
-        doc.text(lines, textX, y + 5);
-      }
+      const textX = getCellTextX(currentX, col.width, align, 2);
+      doc.text(lines, textX, y + 5, {
+        align,
+        maxWidth: Math.max(10, col.width - 4),
+      });
 
       currentX += col.width;
     });
