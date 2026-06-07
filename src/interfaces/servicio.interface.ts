@@ -1,9 +1,30 @@
+export type ServicioCategoria =
+  | "personal_trainer"
+  | "evaluacion"
+  | "nutricion"
+  | "clase_especial"
+  | "pase"
+  | "alquiler"
+  | "premium"
+  | "otro";
+
+export type ServicioModalidad = "presencial" | "online" | "mixto";
+
 export interface Servicio {
   id: string;
   nombre: string;
   descripcion: string;
   precio: number;
   activo: boolean;
+  categoria?: ServicioCategoria | string | null;
+  duracion_minutos?: number | null;
+  requiere_reserva?: boolean | null;
+  cupo_maximo?: number | null;
+  modalidad?: ServicioModalidad | string | null;
+  disponible_online?: boolean | null;
+  observaciones?: string | null;
+  creado_en?: string;
+  actualizado_en?: string;
 }
 
 export interface CreateServicioDto {
@@ -11,6 +32,13 @@ export interface CreateServicioDto {
   descripcion: string;
   precio: number;
   activo?: boolean;
+  categoria?: ServicioCategoria | string | null;
+  duracion_minutos?: number | null;
+  requiere_reserva?: boolean | null;
+  cupo_maximo?: number | null;
+  modalidad?: ServicioModalidad | string | null;
+  disponible_online?: boolean | null;
+  observaciones?: string | null;
 }
 
 export interface UpdateServicioDto {
@@ -18,4 +46,11 @@ export interface UpdateServicioDto {
   descripcion?: string;
   precio?: number;
   activo?: boolean;
+  categoria?: ServicioCategoria | string | null;
+  duracion_minutos?: number | null;
+  requiere_reserva?: boolean | null;
+  cupo_maximo?: number | null;
+  modalidad?: ServicioModalidad | string | null;
+  disponible_online?: boolean | null;
+  observaciones?: string | null;
 }

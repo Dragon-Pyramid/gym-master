@@ -15,8 +15,8 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    if (!body.nombre || !body.descripcion || !body.precio) {
-      return NextResponse.json({ error: "Todos los campos son obligatorios" }, { status: 400 });
+    if (!body.nombre || !body.descripcion || body.precio === undefined || body.precio === null || Number(body.precio) < 0) {
+      return NextResponse.json({ error: "Nombre, descripción y precio válido son obligatorios" }, { status: 400 });
     }
     const servicio = await createServicio(body);
     return NextResponse.json({ message: "Servicio creado con éxito", data: servicio }, { status: 201 });

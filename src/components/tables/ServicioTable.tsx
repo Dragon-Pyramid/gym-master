@@ -13,14 +13,18 @@ import {
   TableRow,
   TableCaption,
 } from "@/components/ui/table";
+import { Servicio } from "@/interfaces/servicio.interface";
 
-export interface Servicio {
-  id: string;
-  nombre: string;
-  descripcion: string;
-  precio: number;
-  activo: boolean;
-}
+const CATEGORIA_LABELS: Record<string, string> = {
+  personal_trainer: "Personal trainer",
+  evaluacion: "Evaluación",
+  nutricion: "Nutrición",
+  clase_especial: "Clase especial",
+  pase: "Pase",
+  alquiler: "Alquiler",
+  premium: "Premium",
+  otro: "Otro",
+};
 
 export default function ServicioTable({
   servicios,
@@ -58,22 +62,31 @@ export default function ServicioTable({
       <TableHeader>
         <TableRow className="bg-muted/50 text-muted-foreground">
           <TableHead>Nombre</TableHead>
-          <TableHead>Descripción</TableHead>
+          <TableHead>Categoría</TableHead>
           <TableHead>Precio</TableHead>
-          <TableHead>Activo</TableHead>
+          <TableHead>Duración</TableHead>
+          <TableHead>Reserva</TableHead>
+          <TableHead>Estado</TableHead>
           <TableHead>Acciones</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {servicios.map((s, i) => (
+        {servicios.map((s) => (
           <TableRow
-            key={i}
+            key={s.id}
             className="odd:bg-muted/40 hover:bg-[#a8d9f9] transition-colors"
           >
-            <TableCell className="font-medium">{s.nombre}</TableCell>
-            <TableCell>{s.descripcion}</TableCell>
-            <TableCell>${s.precio}</TableCell>
-            <TableCell>{s.activo ? "✅" : "❌"}</TableCell>
+            <TableCell className="font-medium">
+              <div>{s.nombre}</div>
+              <div className="max-w-sm truncate text-xs text-muted-foreground">
+                {s.descripcion}
+              </div>
+            </TableCell>
+            <TableCell>{CATEGORIA_LABELS[String(s.categoria ?? "otro")] ?? "Otro"}</TableCell>
+            <TableCell>${Number(s.precio || 0).toLocaleString("es-AR")}</TableCell>
+            <TableCell>{s.duracion_minutos ? `${s.duracion_minutos} min` : "-"}</TableCell>
+            <TableCell>{s.requiere_reserva ? "Sí" : "No"}</TableCell>
+            <TableCell>{s.activo ? "✅ Activo" : "❌ Inactivo"}</TableCell>
             <TableCell className="flex gap-2">
               <Button
                 size="sm"
@@ -108,7 +121,7 @@ export default function ServicioTable({
       </TableBody>
       <TableFooter>
         <TableRow>
-          <TableCell colSpan={4}>Total de servicios</TableCell>
+          <TableCell colSpan={6}>Total de servicios</TableCell>
           <TableCell className="text-right">{servicios.length}</TableCell>
         </TableRow>
       </TableFooter>
