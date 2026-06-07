@@ -12,7 +12,8 @@ import { Search, FileText, FileSpreadsheet } from "lucide-react";
 import { getAllServicios, deleteServicio } from "@/services/servicioService";
 import ServicioModal from "@/components/modal/ServicioModal";
 import ServicioViewModal from "@/components/modal/ServicioViewModal";
-import ServicioTable, { Servicio } from "@/components/tables/ServicioTable";
+import ServicioTable from "@/components/tables/ServicioTable";
+import { Servicio } from "@/interfaces/servicio.interface";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
@@ -28,6 +29,17 @@ import { PaginationControls } from "@/components/ui/PaginationControls";
 import { downloadCommercialReportPdf } from "@/utils/commercialReportPdf";
 
 const SERVICIOS_PAGE_SIZE = 10;
+
+const CATEGORIA_LABELS: Record<string, string> = {
+  personal_trainer: "Personal trainer",
+  evaluacion: "Evaluación",
+  nutricion: "Nutrición",
+  clase_especial: "Clase especial",
+  pase: "Pase",
+  alquiler: "Alquiler",
+  premium: "Premium",
+  otro: "Otro",
+};
 
 export default function ServiciosPage() {
   const { user, isAuthenticated, initializeAuth, isInitialized } =
@@ -45,6 +57,7 @@ export default function ServiciosPage() {
   const [openModalVer, setOpenModalVer] = useState(false);
   const [servicioVer, setServicioVer] = useState<Servicio | null>(null);
   const [filtroActivo, setFiltroActivo] = useState("todos");
+  const [filtroCategoria, setFiltroCategoria] = useState("todas");
 
   useEffect(() => {
     initializeAuth();
@@ -74,13 +87,17 @@ export default function ServiciosPage() {
         metrics: [
           { label: "Servicios filtrados", value: filteredServicios.length },
           { label: "Activos", value: filteredServicios.filter((s) => s.activo).length },
+          { label: "Requieren reserva", value: filteredServicios.filter((s) => s.requiere_reserva).length },
         ],
-        filtersLabel: `Estado: ${filtroLabel}${searchTerm.trim() ? ` · Búsqueda: ${searchTerm.trim()}` : ""}`,
+        filtersLabel: `Estado: ${filtroLabel} · Categoría: ${categoriaLabel}${searchTerm.trim() ? ` · Búsqueda: ${searchTerm.trim()}` : ""}`,
         columns: [
-          { header: "Servicio", width: 46, getValue: (s) => s.nombre },
-          { header: "Descripción", width: 70, getValue: (s) => s.descripcion || "-" },
-          { header: "Precio", width: 24, getValue: (s) => `$${Number(s.precio || 0).toLocaleString("es-AR")}`, align: "right" },
-          { header: "Estado", width: 24, getValue: (s) => (s.activo ? "Activo" : "Inactivo") },
+          { header: "Servicio", width: 42, getValue: (s) => s.nombre },
+          { header: "Categoría", width: 26, getValue: (s) => CATEGORIA_LABELS[String(s.categoria ?? "otro")] ?? "Otro" },
+          { header: "Descripción", width: 60, getValue: (s) => s.descripcion || "-" },
+          { header: "Precio", width: 20, getValue: (s) => `$${Number(s.precio || 0).toLocaleString("es-AR")}`, align: "right" },
+          { header: "Duración", width: 18, getValue: (s) => s.duracion_minutos ? `${s.duracion_minutos} min` : "-" },
+          { header: "Reserva", width: 18, getValue: (s) => (s.requiere_reserva ? "Sí" : "No") },
+          { header: "Estado", width: 20, getValue: (s) => (s.activo ? "Activo" : "Inactivo") },
         ],
       });
     } catch {
@@ -94,16 +111,30 @@ export default function ServiciosPage() {
 
     worksheet.columns = [
       { header: "Nombre", key: "nombre", width: 30 },
+      { header: "Categoría", key: "categoria", width: 24 },
       { header: "Descripción", key: "descripcion", width: 40 },
       { header: "Precio", key: "precio", width: 15 },
+      { header: "Duración minutos", key: "duracion_minutos", width: 18 },
+      { header: "Requiere reserva", key: "requiere_reserva", width: 18 },
+      { header: "Cupo máximo", key: "cupo_maximo", width: 14 },
+      { header: "Modalidad", key: "modalidad", width: 16 },
+      { header: "Disponible online", key: "disponible_online", width: 18 },
+      { header: "Observaciones", key: "observaciones", width: 40 },
       { header: "Activo", key: "activo", width: 10 },
     ];
 
     filteredServicios.forEach((s) => {
       worksheet.addRow({
         nombre: s.nombre,
+        categoria: CATEGORIA_LABELS[String(s.categoria ?? "otro")] ?? "Otro",
         descripcion: s.descripcion,
         precio: s.precio,
+        duracion_minutos: s.duracion_minutos ?? "",
+        requiere_reserva: s.requiere_reserva ? "Sí" : "No",
+        cupo_maximo: s.cupo_maximo ?? "",
+        modalidad: s.modalidad ?? "presencial",
+        disponible_online: s.disponible_online ? "Sí" : "No",
+        observaciones: s.observaciones ?? "",
         activo: s.activo ? "Sí" : "No",
       });
     });
@@ -133,20 +164,24 @@ export default function ServiciosPage() {
     } else if (filtroActivo === "inactivos") {
       serviciosFiltrados = serviciosFiltrados.filter((s) => !s.activo);
     }
+    if (filtroCategoria !== "todas") {
+      serviciosFiltrados = serviciosFiltrados.filter((s) => String(s.categoria ?? "otro") === filtroCategoria);
+    }
     if (searchTerm.trim() !== "") {
       const lowercaseSearch = searchTerm.toLowerCase();
       serviciosFiltrados = serviciosFiltrados.filter(
         (s) =>
           s.nombre.toLowerCase().includes(lowercaseSearch) ||
-          s.descripcion.toLowerCase().includes(lowercaseSearch)
+          s.descripcion.toLowerCase().includes(lowercaseSearch) ||
+          String(s.categoria ?? "").toLowerCase().includes(lowercaseSearch)
       );
     }
     setFilteredServicios(serviciosFiltrados);
-  }, [searchTerm, servicios, filtroActivo]);
+  }, [searchTerm, servicios, filtroActivo, filtroCategoria]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filtroActivo]);
+  }, [searchTerm, filtroActivo, filtroCategoria]);
 
   const totalServicios = filteredServicios.length;
   const totalPages = Math.max(1, Math.ceil(totalServicios / SERVICIOS_PAGE_SIZE));
@@ -168,6 +203,10 @@ export default function ServiciosPage() {
       : filtroActivo === "activos"
       ? "Activos"
       : "Inactivos";
+
+  const categoriaLabel = filtroCategoria === "todas"
+    ? "Todas"
+    : CATEGORIA_LABELS[filtroCategoria] ?? "Otro";
 
   if (!isInitialized) {
     return <div>Cargando...</div>;
@@ -220,6 +259,30 @@ export default function ServiciosPage() {
                         >
                           Inactivos
                         </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="min-w-[150px]">
+                          {categoriaLabel}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuItem
+                          onSelect={() => setFiltroCategoria("todas")}
+                          className={filtroCategoria === "todas" ? "font-bold" : ""}
+                        >
+                          Todas
+                        </DropdownMenuItem>
+                        {Object.entries(CATEGORIA_LABELS).map(([value, label]) => (
+                          <DropdownMenuItem
+                            key={value}
+                            onSelect={() => setFiltroCategoria(value)}
+                            className={filtroCategoria === value ? "font-bold" : ""}
+                          >
+                            {label}
+                          </DropdownMenuItem>
+                        ))}
                       </DropdownMenuContent>
                     </DropdownMenu>
                     <div className="relative flex-grow md:flex-grow-0">
