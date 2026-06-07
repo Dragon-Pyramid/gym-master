@@ -1,0 +1,2 @@
+id_ejercicio,nombre_ejercicio,youtube_url_es,youtube_url_en,youtube_source,youtube_review_status,youtube_review_notes
+1,Ejemplo ejercicio,https://www.youtube.com/watch?v=VIDEO_ES,https://www.youtube.com/watch?v=VIDEO_EN,csv_import,sugerido,Revisar técnica antes de marcar validado

@@ -1119,3 +1119,50 @@ export async function actualizarSoporteTicket(
   const data = await res.json();
   return { ok: res.ok, ...data } as { ok: boolean; data?: SoporteTicket; error?: string };
 }
+
+export async function importEjerciciosYoutubeVideos(payload: {
+  apply?: boolean;
+  items: Array<{
+    id_ejercicio?: number | string | null;
+    nombre_ejercicio?: string | null;
+    youtube_url_es?: string | null;
+    youtube_url_en?: string | null;
+    youtube_source?: string | null;
+    youtube_review_status?: string | null;
+    youtube_review_notes?: string | null;
+  }>;
+}) {
+  const token = getToken();
+  const res = await fetch('/api/rutinas/ejercicios-media/youtube-import', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data };
+}
+
+
+export async function autoDiscoverEjerciciosYoutubeVideos(payload: {
+  apply?: boolean;
+  limit?: number;
+  idiomas?: Array<'es' | 'en'>;
+  onlyMissing?: boolean;
+  regionEs?: string;
+  regionEn?: string;
+}) {
+  const token = getToken();
+  const res = await fetch('/api/rutinas/ejercicios-media/youtube-auto-discovery', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data };
+}
