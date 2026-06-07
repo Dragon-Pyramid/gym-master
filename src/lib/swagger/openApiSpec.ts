@@ -2449,6 +2449,50 @@ const endpointDefinitions: EndpointDefinition[] = [
     "queryParams": [],
     "source": "src/app/api/rutinas/ejercicios-media/equivalence-sync/route.ts"
   },
+
+  {
+    "path": "/api/rutinas/ejercicios-media/youtube-auto-discovery",
+    "methods": [
+      "POST"
+    ],
+    "tag": "Rutinas",
+    "summary": "Descubrimiento automático de videos YouTube por ejercicio",
+    "description": "Busca candidatos en YouTube Data API por nombre de ejercicio ES/EN, ordenando por vistas y sin pisar URLs existentes. Soporta preview y apply por corridas. Guarda candidatos como sugeridos para revisión administrativa.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401,
+      403,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/rutinas/ejercicios-media/youtube-auto-discovery/route.ts"
+  },
+  {
+    "path": "/api/rutinas/ejercicios-media/youtube-import",
+    "methods": [
+      "POST"
+    ],
+    "tag": "Rutinas",
+    "summary": "Importación masiva de videos YouTube por ejercicio",
+    "description": "Previsualiza o aplica una importación masiva revisable de URLs YouTube ES/EN para ejercicios del catálogo, con estado de revisión y fuente de curación.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401,
+      403,
+      500
+    ],
+    "queryParams": [],
+    "source": "src/app/api/rutinas/ejercicios-media/youtube-import/route.ts"
+  },
+
   {
     "path": "/api/rutinas/ejercicios-media/import",
     "methods": [

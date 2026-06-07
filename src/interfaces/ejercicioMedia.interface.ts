@@ -10,6 +10,14 @@ export interface EjercicioMediaItem {
   cloudinary_public_id?: string | null;
   youtube_url?: string | null;
   youtube_video_id?: string | null;
+  youtube_url_es?: string | null;
+  youtube_video_id_es?: string | null;
+  youtube_url_en?: string | null;
+  youtube_video_id_en?: string | null;
+  youtube_source?: string | null;
+  youtube_verified_at?: string | null;
+  youtube_review_status?: string | null;
+  youtube_review_notes?: string | null;
   titulo?: string | null;
   descripcion?: string | null;
   es_principal: boolean;
@@ -34,6 +42,14 @@ export interface EjercicioMediaCatalogItem {
   cloudinary_public_id?: string | null;
   video_youtube_url?: string | null;
   youtube_video_id?: string | null;
+  youtube_url_es?: string | null;
+  youtube_video_id_es?: string | null;
+  youtube_url_en?: string | null;
+  youtube_video_id_en?: string | null;
+  youtube_source?: string | null;
+  youtube_verified_at?: string | null;
+  youtube_review_status?: string | null;
+  youtube_review_notes?: string | null;
   media_actualizada_en?: string | null;
   activo: boolean;
   media: EjercicioMediaItem[];
@@ -54,6 +70,12 @@ export interface EjercicioMediaCatalogResponse {
     conFallback: number;
     pendientesCloudinary: number;
     pendientesYoutube: number;
+    conYoutubeEs?: number;
+    conYoutubeEn?: number;
+    pendientesYoutubeEs?: number;
+    pendientesYoutubeEn?: number;
+    youtubeValidados?: number;
+    youtubePendientesRevision?: number;
   };
 }
 
@@ -64,6 +86,14 @@ export interface EjercicioMediaUpdatePayload {
   cloudinary_public_id?: string | null;
   video_youtube_url?: string | null;
   youtube_video_id?: string | null;
+  youtube_url_es?: string | null;
+  youtube_video_id_es?: string | null;
+  youtube_url_en?: string | null;
+  youtube_video_id_en?: string | null;
+  youtube_source?: string | null;
+  youtube_verified_at?: string | null;
+  youtube_review_status?: string | null;
+  youtube_review_notes?: string | null;
   titulo?: string | null;
   descripcion_media?: string | null;
 }
@@ -94,4 +124,80 @@ export interface EjercicioMediaEquivalenceSyncResponse {
   skipped: number;
   source_pool: number;
   candidates: EjercicioMediaEquivalenceCandidate[];
+}
+
+
+export type EjercicioYoutubeReviewStatus = 'pendiente' | 'sugerido' | 'validado' | 'rechazado' | 'requiere_revision';
+
+export interface EjercicioYoutubeImportItem {
+  id_ejercicio?: number | string | null;
+  nombre_ejercicio?: string | null;
+  youtube_url_es?: string | null;
+  youtube_url_en?: string | null;
+  youtube_source?: string | null;
+  youtube_review_status?: EjercicioYoutubeReviewStatus | string | null;
+  youtube_review_notes?: string | null;
+}
+
+export interface EjercicioYoutubeImportPreviewItem {
+  row: number;
+  id_ejercicio?: number | null;
+  nombre_ejercicio?: string | null;
+  youtube_url_es?: string | null;
+  youtube_video_id_es?: string | null;
+  youtube_url_en?: string | null;
+  youtube_video_id_en?: string | null;
+  action: 'update' | 'skip' | 'error';
+  message: string;
+}
+
+export interface EjercicioYoutubeBulkImportResponse {
+  dryRun: boolean;
+  total: number;
+  matched: number;
+  applied: number;
+  skipped: number;
+  errors: number;
+  preview: EjercicioYoutubeImportPreviewItem[];
+}
+
+
+export type EjercicioYoutubeAutoDiscoveryIdioma = 'es' | 'en';
+
+export interface EjercicioYoutubeAutoDiscoveryRequest {
+  apply?: boolean;
+  limit?: number;
+  idiomas?: EjercicioYoutubeAutoDiscoveryIdioma[];
+  onlyMissing?: boolean;
+  regionEs?: string;
+  regionEn?: string;
+}
+
+export interface EjercicioYoutubeAutoDiscoveryCandidate {
+  id_ejercicio: number;
+  nombre_ejercicio: string;
+  nombre_en?: string | null;
+  idioma: EjercicioYoutubeAutoDiscoveryIdioma;
+  query: string;
+  youtube_url?: string | null;
+  youtube_video_id?: string | null;
+  title?: string | null;
+  channelTitle?: string | null;
+  viewCount?: number | null;
+  duration?: string | null;
+  action: 'update' | 'skip' | 'error';
+  message: string;
+}
+
+export interface EjercicioYoutubeAutoDiscoveryResponse {
+  dryRun: boolean;
+  total_ejercicios_revisados: number;
+  total_pendientes_revisados?: number;
+  total_consultas_youtube: number;
+  applied: number;
+  skipped: number;
+  errors: number;
+  quota_exceeded?: boolean;
+  quota_exceeded_message?: string | null;
+  candidates: EjercicioYoutubeAutoDiscoveryCandidate[];
 }
