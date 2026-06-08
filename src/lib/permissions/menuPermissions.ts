@@ -81,7 +81,7 @@ export const MENU_PERMISSION_GROUPS: Array<{
         label: 'Evolución Física',
         path: '/dashboard/evolucion-fisica',
         group: 'Menú personal / socio',
-        roles: ['socio', 'admin'],
+        roles: ['socio'],
       },
     ],
   },
