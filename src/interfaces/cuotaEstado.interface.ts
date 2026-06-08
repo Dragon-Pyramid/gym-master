@@ -11,6 +11,10 @@ export interface EstadoCuotaSocio {
   dias_vencido: number;
   metodo_pago: string | null;
   meses_cubiertos: number | null;
+  vencimiento_cuota: string | null;
+  fecha_limite_pago: string | null;
+  dias_gracia: number;
+  monto_adeudado: number;
 }
 
 export interface ResumenEstadoCuotas {

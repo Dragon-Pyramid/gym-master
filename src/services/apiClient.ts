@@ -544,29 +544,7 @@ export async function uploadFile(
 
 export async function getFichaMedicaActual(socioId: number | string) {
   const token = getToken();
-  let resolved: number | string | null = null;
-  if (typeof socioId === 'string') {
-    const posible = await getSocioByUsuarioId(socioId);
-    if (posible && posible.id_socio) {
-      resolved = posible.id_socio;
-    } else {
-      const checkRes = await fetch(`/api/socios/${socioId}`, {
-        method: 'GET',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (checkRes.ok) {
-        resolved = socioId;
-      } else {
-        return {
-          ok: false,
-          data: { error: 'Socio no encontrado', code: 'socio_not_found' },
-        };
-      }
-    }
-  } else {
-    resolved = socioId;
-  }
-  const res = await fetch(`/api/socios/${resolved}/ficha-medica/actual`, {
+  const res = await fetch(`/api/socios/${socioId}/ficha-medica/actual`, {
     method: 'GET',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
@@ -602,26 +580,8 @@ export async function crearFichaMedica(
       }
     }
   }
-  let resolvedSocioId = socioId;
-  if (typeof socioId === 'string') {
-    const posible = await getSocioByUsuarioId(socioId);
-    if (posible && posible.id_socio) {
-      resolvedSocioId = posible.id_socio;
-    } else {
-      const checkRes = await fetch(`/api/socios/${socioId}`, {
-        method: 'GET',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!checkRes.ok) {
-        return {
-          ok: false,
-          data: { error: 'Socio no encontrado', code: 'socio_not_found' },
-        };
-      }
-    }
-  }
 
-  const res = await fetch(`/api/socios/${resolvedSocioId}/ficha-medica`, {
+  const res = await fetch(`/api/socios/${socioId}/ficha-medica`, {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     body: form,
@@ -640,29 +600,7 @@ export async function getFichaMedicaHistorial(
   page = 1
 ) {
   const token = getToken();
-  let resolved: number | string | null = null;
-  if (typeof socioId === 'string') {
-    const posible = await getSocioByUsuarioId(socioId);
-    if (posible && posible.id_socio) {
-      resolved = posible.id_socio;
-    } else {
-      const checkRes = await fetch(`/api/socios/${socioId}`, {
-        method: 'GET',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (checkRes.ok) {
-        resolved = socioId;
-      } else {
-        return {
-          ok: false,
-          data: { error: 'Socio no encontrado', code: 'socio_not_found' },
-        };
-      }
-    }
-  } else {
-    resolved = socioId;
-  }
-  const url = `/api/socios/${resolved}/ficha-medica/historial?page=${encodeURIComponent(
+  const url = `/api/socios/${socioId}/ficha-medica/historial?page=${encodeURIComponent(
     String(page)
   )}`;
   const res = await fetch(url, {

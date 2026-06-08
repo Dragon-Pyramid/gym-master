@@ -1,10 +1,49 @@
 import { NextResponse } from 'next/server';
 import { authMiddleware } from '@/middlewares/auth.middleware';
-import { createFichaMedicaSocio } from '@/services/fichaMedicaService';
+import { createFichaMedicaSocio, resolveFichaMedicaSocioId } from '@/services/fichaMedicaService';
 import { FileUploadDTO } from '@/interfaces/fileUpload.interface';
 
 
+function getFichaMedicaErrorStatus(message?: string) {
+  if (message?.includes('No autorizado')) return 403;
+  if (message?.includes('No se encontró')) return 404;
+  if (message?.includes('no proporcionado')) return 400;
+  return 500;
+}
+
 export const dynamic = 'force-dynamic';
+
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const VALID_MEDICAL_FILE_TYPES = new Set([
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+]);
+
+async function toFileDto(file: File, fieldName: string): Promise<FileUploadDTO> {
+  if (file.size > MAX_FILE_SIZE_BYTES) {
+    throw new Error(`El archivo ${file.name} supera el límite de 5MB.`);
+  }
+
+  if (!VALID_MEDICAL_FILE_TYPES.has(file.type)) {
+    throw new Error(`Formato no válido para ${file.name}. Usá PDF, JPG o PNG.`);
+  }
+
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
+  return {
+    fieldName,
+    originalName: file.name,
+    mimeType: file.type,
+    size: file.size,
+    buffer,
+  };
+}
+
+function getFiles(formdata: FormData, key: string) {
+  return formdata.getAll(key).filter((value): value is File => value instanceof File && value.size > 0);
+}
 
 export async function POST(
   req: Request,
@@ -19,9 +58,6 @@ export async function POST(
       );
     }
 
-    console.log('Request URL:', req.url);
-    console.log('Params recibidos:', params);
-
     const paramsResolved = await params;
     const id = paramsResolved?.id;
 
@@ -30,7 +66,6 @@ export async function POST(
         {
           error: 'ID de socio no proporcionado',
           code: 'missing_socio_id',
-          params,
         },
         { status: 400 }
       );
@@ -38,7 +73,6 @@ export async function POST(
 
     const formdata = await req.formData();
     const fichaRaw = formdata.get('ficha');
-    const file = formdata.get('file');
 
     if (!fichaRaw) {
       return NextResponse.json(
@@ -46,34 +80,6 @@ export async function POST(
         { status: 400 }
       );
     }
-
-    if (!file) {
-      return NextResponse.json(
-        { error: 'Campo "file" ausente en form-data', code: 'missing_file' },
-        { status: 400 }
-      );
-    }
-
-    if (!(file instanceof File)) {
-      return NextResponse.json(
-        {
-          error: 'El campo "file" no es un archivo válido',
-          code: 'invalid_file_type',
-        },
-        { status: 400 }
-      );
-    }
-
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    const fileDto: FileUploadDTO = {
-      fieldName: file.name,
-      originalName: file.name,
-      mimeType: file.type,
-      size: file.size,
-      buffer: buffer,
-    };
 
     let ficha;
     try {
@@ -86,7 +92,6 @@ export async function POST(
         ficha = JSON.parse(String(fichaRaw));
       }
     } catch (err: any) {
-      console.log('Error parseando ficha:', err);
       return NextResponse.json(
         {
           error: 'Ficha inválida: JSON malformado',
@@ -97,17 +102,47 @@ export async function POST(
       );
     }
 
-    const fichaMedica = await createFichaMedicaSocio(user, id, ficha, fileDto);
+    const approvalFiles = getFiles(formdata, 'archivo_aprobacion');
+    const attachedFiles = [
+      ...getFiles(formdata, 'archivos_adjuntos'),
+      ...getFiles(formdata, 'file'),
+    ];
+
+    const archivoAprobacion = approvalFiles[0]
+      ? await toFileDto(approvalFiles[0], 'archivo_aprobacion')
+      : null;
+
+    if (ficha?.aprobacion_medica === true && !archivoAprobacion) {
+      return NextResponse.json(
+        {
+          error: 'El archivo de aprobación médica es obligatorio cuando se marca apto médico.',
+          code: 'missing_medical_approval_file',
+        },
+        { status: 400 }
+      );
+    }
+
+    const archivosAdjuntos = await Promise.all(
+      attachedFiles.map((file) => toFileDto(file, 'archivos_adjuntos'))
+    );
+
+    const resolvedSocioId = await resolveFichaMedicaSocioId(user, id);
+
+    const fichaMedica = await createFichaMedicaSocio(user, resolvedSocioId, ficha, {
+      archivo_aprobacion: archivoAprobacion,
+      archivos_adjuntos: archivosAdjuntos,
+    });
 
     return NextResponse.json(
-      { message: 'ficha cargada con exito', data: fichaMedica },
+      { message: 'Ficha médica cargada con éxito', data: fichaMedica },
       { status: 201 }
     );
   } catch (error: any) {
-    console.log(error);
+    console.error('Error al crear ficha médica:', error);
+    const status = getFichaMedicaErrorStatus(error?.message);
     return NextResponse.json(
       { error: error.message || 'Error interno', code: 'server_error' },
-      { status: 500 }
+      { status }
     );
   }
 }

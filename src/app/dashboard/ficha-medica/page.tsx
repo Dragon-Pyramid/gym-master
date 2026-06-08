@@ -28,7 +28,7 @@ export default function FichaMedicaPage() {
     return null;
   }
 
-  const socioId = user?.id ?? user?.usuario_id ?? user?.usuario ?? undefined;
+  const socioId = user?.id_socio ?? user?.id ?? user?.usuario_id ?? user?.usuario ?? undefined;
 
   return (
     <SidebarProvider>

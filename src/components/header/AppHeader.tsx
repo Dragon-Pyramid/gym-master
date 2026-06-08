@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useSidebar } from '../ui/sidebar';
-import { Search, Bell, Settings, Sun, Moon } from 'lucide-react';
+import { Bell, Lock, Moon, Search, Settings, SlidersHorizontal, Sun, User } from 'lucide-react';
 import ProfileImage from '@/components/perfil/ProfileImage';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,9 +24,6 @@ import FechaHora from '../ui/FechaHora';
 import Image from 'next/image';
 import { useAuthStore } from '@/stores/authStore';
 
-/* ----------------------------------------------------------------
-   Hook: Dark Mode (toggle y persistencia en localStorage)
-   ---------------------------------------------------------------- */
 function useDarkMode() {
   const [dark, setDark] = React.useState(false);
 
@@ -60,26 +57,17 @@ export const AppHeader = ({ title }: AppHeaderProps) => {
   const { isMobile } = useSidebar();
   const { dark, toggle } = useDarkMode();
 
-  /* --------------------------------------------------------------
-	   Util: genera iniciales para el avatar cuando no hay imagen
-	   -------------------------------------------------------------- */
-  const getInitials = (email = '') => {
-    const parts = email.split('@')[0].split('.');
-    return parts.map((p) => p[0]?.toUpperCase() || '').join('') || 'U';
-  };
-
   const handleLogout = () => {
     logout();
     router.push('/auth/login');
   };
 
   const userEmail = user?.email ?? '';
-  const initials = getInitials(userEmail);
+  const isAdmin = user?.rol === 'admin';
 
   return (
-    <header className='w-full flex flex-col md:flex-row justify-between items-center py-3 px-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60'>
-      {/* ---------- Logo y Título ---------- */}
-      <div className='flex items-center gap-3 mb-4 md:w-auto md:mb-0'>
+    <header className='flex w-full flex-col items-center justify-between border-b border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:flex-row'>
+      <div className='mb-4 flex items-center gap-3 md:mb-0 md:w-auto'>
         <Image
           src='/gm_logo.svg'
           alt='Gym Master Logo'
@@ -90,9 +78,7 @@ export const AppHeader = ({ title }: AppHeaderProps) => {
         <h1 className='text-xl font-semibold tracking-tight'>{title}</h1>
       </div>
 
-      {/* ---------- Iconos/acciones ---------- */}
       <div className='flex items-center gap-4'>
-        {/* Dark Mode */}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -103,23 +89,15 @@ export const AppHeader = ({ title }: AppHeaderProps) => {
                 onClick={toggle}
                 aria-label='Cambiar modo claro/oscuro'
               >
-                {dark ? (
-                  <Moon className='w-5 h-5' />
-                ) : (
-                  <Sun className='w-5 h-5' />
-                )}
+                {dark ? <Moon className='h-5 w-5' /> : <Sun className='h-5 w-5' />}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>
-              {dark ? 'Modo claro' : 'Modo oscuro'}
-            </TooltipContent>
+            <TooltipContent>{dark ? 'Modo claro' : 'Modo oscuro'}</TooltipContent>
           </Tooltip>
         </TooltipProvider>
 
-        {/* Fecha y hora en tiempo real */}
         <FechaHora />
 
-        {/* Búsqueda */}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -127,15 +105,15 @@ export const AppHeader = ({ title }: AppHeaderProps) => {
                 variant='ghost'
                 size='icon'
                 className='text-muted-foreground hover:text-foreground'
+                onClick={() => router.push('/dashboard')}
               >
-                <Search className='w-5 h-5' />
+                <Search className='h-5 w-5' />
               </Button>
             </TooltipTrigger>
             <TooltipContent>Buscar</TooltipContent>
           </Tooltip>
         </TooltipProvider>
 
-        {/* Notificaciones */}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -143,32 +121,62 @@ export const AppHeader = ({ title }: AppHeaderProps) => {
                 variant='ghost'
                 size='icon'
                 className='text-muted-foreground hover:text-foreground'
+                onClick={() => router.push(isAdmin ? '/dashboard/notificaciones' : '/dashboard/mensajes')}
               >
-                <Bell className='w-5 h-5' />
+                <Bell className='h-5 w-5' />
               </Button>
             </TooltipTrigger>
             <TooltipContent>Notificaciones</TooltipContent>
           </Tooltip>
         </TooltipProvider>
 
-        {/* Configuración */}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant='ghost'
-                size='icon'
-                className='text-muted-foreground hover:text-foreground'
-                onClick={() => router.push('/dashboard/settings')}
-              >
-                <Settings className='w-5 h-5' />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Configuración</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <DropdownMenu>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    className='text-muted-foreground hover:text-foreground'
+                    aria-label='Abrir configuración'
+                  >
+                    <Settings className='h-5 w-5' />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>Configuración</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <DropdownMenuContent align='end' className='w-56'>
+            <DropdownMenuLabel>Configuración</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => router.push('/dashboard/perfil')}>
+              <User className='h-4 w-4' />
+              Mi perfil
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push('/dashboard/settings/preferences')}>
+              <SlidersHorizontal className='h-4 w-4' />
+              Preferencias
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push('/auth/change-password')}>
+              <Lock className='h-4 w-4' />
+              Cambiar contraseña
+            </DropdownMenuItem>
+            {isAdmin ? (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => router.push('/dashboard/gimnasio-parametrizacion')}>
+                  Datos del gimnasio
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push('/dashboard/parametrizacion')}>
+                  Parametrización
+                </DropdownMenuItem>
+              </>
+            ) : null}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-        {/* Avatar usuario */}
         <DropdownMenu>
           <DropdownMenuTrigger>
             <div className='cursor-pointer'>
@@ -186,9 +194,10 @@ export const AppHeader = ({ title }: AppHeaderProps) => {
             <DropdownMenuItem onClick={() => router.push('/dashboard/perfil')}>
               Editar perfil
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleLogout}>
-              Cerrar sesión
+            <DropdownMenuItem onClick={() => router.push('/dashboard/settings/preferences')}>
+              Preferencias
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout}>Cerrar sesión</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
