@@ -35,6 +35,7 @@ export const sections: SidebarSectionType[] = [
         level: 2,
       },
       { title: 'Ficha Médica', link: '/dashboard/ficha-medica', level: 2 },
+      { title: 'Evolución Física', link: '/dashboard/evolucion-fisica', level: 2 },
       {
         title: 'Asistente de Rutinas',
         link: '/dashboard/rutinas/asistente',
