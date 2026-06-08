@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { pagarCuotaConStripe } from '@/services/apiClient';
+import { getCuotaEstado, getFichaMedicaActual, pagarCuotaConStripe } from '@/services/apiClient';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import Image from 'next/image';
 import { Card } from '@/components/ui/card';
-import { Clock, Dumbbell, Star, ClipboardCheck } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, Dumbbell, FileWarning, Star, ClipboardCheck } from 'lucide-react';
 import ProfileImage from '@/components/perfil/ProfileImage';
-import { formatFrontendTime } from '@/utils/dateFormat';
+import { formatFrontendDate, formatFrontendTime } from '@/utils/dateFormat';
 
 const DashboardInitialContent = () => {
   const { user } = useAuthStore();
@@ -118,24 +118,114 @@ const DashboardInitialContent = () => {
     }
   };
 
-  const [cuotaPagada, setCuotaPagada] = useState(false);
-  const [cuotaMonto, setCuotaMonto] = useState(0);
-  const [cuotaFechaLimite, setCuotaFechaLimite] = useState('');
-  const cuotaEstado = cuotaPagada ? 'Pagada' : 'Pendiente';
+  type EstadoCuotaSocioCard = {
+    estado_cuota?: 'al_dia' | 'vencido' | 'sin_pagos' | string;
+    vencimiento_cuota?: string | null;
+    fecha_limite_pago?: string | null;
+    monto_adeudado?: number | null;
+    dias_vencido?: number | null;
+    dias_gracia?: number | null;
+  };
+
+  const [estadoCuotaSocio, setEstadoCuotaSocio] =
+    useState<EstadoCuotaSocioCard | null>(null);
+  const [loadingEstadoCuota, setLoadingEstadoCuota] = useState(false);
+  const [tieneFichaMedica, setTieneFichaMedica] = useState<boolean | null>(null);
+
+  const formatMoney = (value: unknown) => {
+    const amount = Number(value ?? 0);
+    if (!Number.isFinite(amount) || amount <= 0) return '$ 0';
+    return new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const formatDate = (value?: string | null) => {
+    if (!value) return '-';
+    try {
+      return formatFrontendDate(value);
+    } catch {
+      return value;
+    }
+  };
+
+  const estadoCuotaValor = estadoCuotaSocio?.estado_cuota ?? 'sin_pagos';
+  const cuotaAlDia = estadoCuotaValor === 'al_dia';
+  const cuotaEstadoLabel = cuotaAlDia
+    ? 'Al día'
+    : estadoCuotaValor === 'vencido'
+      ? 'Vencida'
+      : 'Pendiente';
+  const cuotaMontoAdeudado = Number(estadoCuotaSocio?.monto_adeudado ?? 0);
+  const cuotaFechaLabel = cuotaAlDia
+    ? formatDate(estadoCuotaSocio?.vencimiento_cuota)
+    : formatDate(estadoCuotaSocio?.fecha_limite_pago);
+  const cuotaFechaTitulo = cuotaAlDia
+    ? 'Vencimiento de cuota'
+    : 'Fecha límite de pago';
+  const cuotaCardClass = cuotaAlDia
+    ? 'border-green-200 bg-gradient-to-r from-green-50 to-emerald-100 dark:from-green-950/20 dark:to-emerald-900/20 dark:border-green-800'
+    : estadoCuotaValor === 'vencido'
+      ? 'border-red-200 bg-gradient-to-r from-red-50 to-rose-100 dark:from-red-950/20 dark:to-rose-900/20 dark:border-red-800'
+      : 'border-orange-200 bg-gradient-to-r from-orange-50 to-amber-100 dark:from-orange-950/20 dark:to-amber-900/20 dark:border-orange-800';
+  const cuotaEstadoClass = cuotaAlDia
+    ? 'text-green-700 dark:text-green-300'
+    : estadoCuotaValor === 'vencido'
+      ? 'text-red-700 dark:text-red-300'
+      : 'text-orange-700 dark:text-orange-300';
 
   useEffect(() => {
     if (!isSocio) return;
+    let cancelled = false;
+
     const fetchEstadoCuota = async () => {
-      const res = await fetch('/api/cuota-estado', { method: 'GET' });
-      if (res.ok) {
-        const data = await res.json();
-        setCuotaPagada(data.pagada);
-        setCuotaMonto(data.monto);
-        setCuotaFechaLimite(data.fecha_limite);
+      try {
+        setLoadingEstadoCuota(true);
+        const res = await getCuotaEstado();
+        if (cancelled) return;
+        if (res.ok && res.data) {
+          setEstadoCuotaSocio(res.data as EstadoCuotaSocioCard);
+        } else {
+          setEstadoCuotaSocio(null);
+        }
+      } catch {
+        if (!cancelled) setEstadoCuotaSocio(null);
+      } finally {
+        if (!cancelled) setLoadingEstadoCuota(false);
       }
     };
+
     fetchEstadoCuota();
+    return () => {
+      cancelled = true;
+    };
   }, [isSocio]);
+
+  useEffect(() => {
+    if (!isSocio) return;
+    const socioId = user?.id_socio ?? user?.id;
+    if (!socioId) return;
+    let cancelled = false;
+
+    const fetchFichaMedica = async () => {
+      try {
+        const res = await getFichaMedicaActual(socioId);
+        if (cancelled) return;
+        const raw = res.data;
+        const ficha = Array.isArray(raw) ? raw[raw.length - 1] : raw;
+        setTieneFichaMedica(Boolean(res.ok && ficha && Object.keys(ficha).length > 0));
+      } catch {
+        if (!cancelled) setTieneFichaMedica(false);
+      }
+    };
+
+    fetchFichaMedica();
+    return () => {
+      cancelled = true;
+    };
+  }, [isSocio, user?.id, user?.id_socio]);
 
   const router = useRouter();
   const [loadingPago, setLoadingPago] = useState(false);
@@ -179,14 +269,16 @@ const DashboardInitialContent = () => {
                 <h1 className='text-2xl font-medium text-muted-foreground'>
                   {timeOfDay}
                 </h1>
-                <div className='flex items-center gap-4 mb-6'>
-                  <ProfileImage
-                    foto={userImage}
-                    alt={userName}
-                    size={80}
-                    showButton={false}
-                  />
-                  <h2 className='text-4xl font-black leading-tight tracking-tight sm:text-5xl md:text-6xl lg:text-7xl'>
+                <div className='flex flex-col gap-5 mb-6 sm:flex-row sm:items-center sm:gap-7'>
+                  <div className='shrink-0'>
+                    <ProfileImage
+                      foto={userImage}
+                      alt={userName}
+                      size={192}
+                      showButton={false}
+                    />
+                  </div>
+                  <h2 className='text-3xl font-black leading-tight tracking-tight sm:text-4xl md:text-5xl lg:text-6xl'>
                     <span className='text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary to-primary/80'>
                       {userName}
                     </span>
@@ -202,41 +294,45 @@ const DashboardInitialContent = () => {
             </div>
 
             {isSocio && (
-              <Card className='p-6 mb-4 border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 dark:border-blue-800'>
+              <Card className={`p-6 mb-4 ${cuotaCardClass}`}>
                 <div className='flex flex-col gap-4'>
                   <div className='flex flex-wrap items-center justify-between gap-4'>
                     <div className='flex flex-col gap-1'>
                       <span className='text-sm text-muted-foreground'>
-                        Estado de la cuota
+                        Estado de cuota
                       </span>
-                      <span
-                        className={`text-lg font-semibold ${
-                          cuotaPagada
-                            ? 'text-green-600 dark:text-green-400'
-                            : 'text-red-600 dark:text-red-400'
-                        }`}
-                      >
-                        {cuotaEstado}
-                      </span>
-                    </div>
-                    <div className='flex flex-col gap-1'>
-                      <span className='text-sm text-muted-foreground'>
-                        Monto
-                      </span>
-                      <span className='text-lg font-semibold text-blue-700 dark:text-blue-300'>
-                        {cuotaMonto ? `$${cuotaMonto}` : '-'}
+                      <span className={`inline-flex items-center gap-2 text-lg font-semibold ${cuotaEstadoClass}`}>
+                        {cuotaAlDia ? (
+                          <CheckCircle2 className='w-5 h-5' />
+                        ) : (
+                          <AlertCircle className='w-5 h-5' />
+                        )}
+                        {loadingEstadoCuota ? 'Consultando...' : cuotaEstadoLabel}
                       </span>
                     </div>
                     <div className='flex flex-col gap-1'>
                       <span className='text-sm text-muted-foreground'>
-                        Fecha límite de pago
+                        {cuotaAlDia ? 'Monto adeudado' : 'Monto a regularizar'}
+                      </span>
+                      <span className={`text-lg font-semibold ${cuotaAlDia ? 'text-green-700 dark:text-green-300' : 'text-blue-700 dark:text-blue-300'}`}>
+                        {cuotaAlDia ? '$ 0' : formatMoney(cuotaMontoAdeudado)}
+                      </span>
+                    </div>
+                    <div className='flex flex-col gap-1'>
+                      <span className='text-sm text-muted-foreground'>
+                        {cuotaFechaTitulo}
                       </span>
                       <span className='text-lg font-semibold text-orange-700 dark:text-orange-300'>
-                        {cuotaFechaLimite || '-'}
+                        {cuotaFechaLabel}
                       </span>
+                      {!cuotaAlDia && estadoCuotaSocio?.dias_gracia ? (
+                        <span className='text-xs text-muted-foreground'>
+                          Incluye {estadoCuotaSocio.dias_gracia} días de gracia.
+                        </span>
+                      ) : null}
                     </div>
                   </div>
-                  {!cuotaPagada && (
+                  {!cuotaAlDia && (
                     <div className='flex justify-end pt-2'>
                       <button
                         className='px-6 py-2 rounded bg-[#02a8e1] text-white font-semibold hover:bg-[#0288b1] dark:bg-[#0288b1] dark:hover:bg-[#02a8e1] transition-colors disabled:opacity-60'
@@ -250,6 +346,31 @@ const DashboardInitialContent = () => {
                 </div>
               </Card>
             )}
+
+            {isSocio && tieneFichaMedica === false ? (
+              <Card className='mb-4 border-amber-200 bg-gradient-to-r from-amber-50 to-orange-100 p-5 dark:border-amber-900 dark:from-amber-950/20 dark:to-orange-900/20'>
+                <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
+                  <div className='flex items-start gap-3'>
+                    <FileWarning className='mt-0.5 h-5 w-5 shrink-0 text-amber-700 dark:text-amber-300' />
+                    <div>
+                      <p className='font-semibold text-amber-900 dark:text-amber-100'>
+                        Ficha médica pendiente
+                      </p>
+                      <p className='mt-1 text-sm text-amber-800 dark:text-amber-200'>
+                        No es obligatoria para ingresar, pero es importante presentarla para que el gimnasio conozca antecedentes, apto médico y contactos preventivos.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type='button'
+                    onClick={() => router.push('/dashboard/ficha-medica')}
+                    className='rounded-md bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700'
+                  >
+                    Cargar ficha médica
+                  </button>
+                </div>
+              </Card>
+            ) : null}
 
             <Card className='p-6 bg-gradient-to-r backdrop-blur-sm from-primary/5 via-primary/10 to-primary/5 border-primary/20'>
               <div className='flex items-start gap-3'>

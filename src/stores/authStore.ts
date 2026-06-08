@@ -16,6 +16,7 @@ type StoreUser = Partial<Usuario> & {
   email?: string;
   rol?: string;
   permisos_menu?: string[] | null;
+  id_socio?: string;
   must_change_password?: boolean;
 };
 

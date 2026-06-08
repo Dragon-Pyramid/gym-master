@@ -1,7 +1,15 @@
 import { NextResponse } from 'next/server';
 import { authMiddleware } from '@/middlewares/auth.middleware';
-import { FindFichaMedicaSocio } from '@/services/fichaMedicaService';
+import { FindFichaMedicaSocio, resolveFichaMedicaSocioId } from '@/services/fichaMedicaService';
 
+
+
+function getFichaMedicaErrorStatus(message?: string) {
+  if (message?.includes('No autorizado')) return 403;
+  if (message?.includes('No se encontró')) return 404;
+  if (message?.includes('no proporcionado')) return 400;
+  return 500;
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -26,11 +34,13 @@ export async function GET(
       );
     }
 
-    const ficha = await FindFichaMedicaSocio(user, id);
+    const resolvedSocioId = await resolveFichaMedicaSocioId(user, id);
+    const ficha = await FindFichaMedicaSocio(user, resolvedSocioId);
 
     return NextResponse.json({ data: ficha }, { status: 200 });
   } catch (error: any) {
     console.log(error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const status = getFichaMedicaErrorStatus(error?.message);
+    return NextResponse.json({ error: error.message }, { status });
   }
 }

@@ -5,14 +5,73 @@ import { conexionBD } from '@/middlewares/conexionBd.middleware';
 import { uploadFile } from './fileUploadService';
 import { FichaMedica } from './../interfaces/fichaMedica.interface';
 
-//TODO SE DEBE RETORNAR LA FICHA CREADA
-// SE DEBE VINCULAR QUE SI TIENE LA FICHA MEDICA EN FOTO, SE DEBE SUBIR A CLOUDINARY
-// PREGUNTAR. EL ARRAY DE LINKS ARCHIVOS ADJUNTOS
+type FichaMedicaFiles = {
+  archivo_aprobacion?: FileUploadDTO | null;
+  archivos_adjuntos?: FileUploadDTO[];
+};
+
+
+function isPgrstNoRows(error: any) {
+  return error?.code === 'PGRST116' || String(error?.message ?? '').includes('0 rows');
+}
+
+export async function resolveFichaMedicaSocioId(user: JwtUser, requestedId: string) {
+  const supabase = conexionBD();
+
+  if (!requestedId) {
+    throw new Error('ID de socio no proporcionado');
+  }
+
+  const { data: socio, error } = await supabase
+    .from('socio')
+    .select('id_socio, usuario_id')
+    .or(`id_socio.eq.${requestedId},usuario_id.eq.${requestedId}`)
+    .maybeSingle();
+
+  if (error && !isPgrstNoRows(error)) {
+    console.log(error);
+    throw new Error('Error al resolver el socio de la ficha médica');
+  }
+
+  if (!socio?.id_socio) {
+    throw new Error('No se encontró el socio asociado para cargar la ficha médica');
+  }
+
+  if (user.rol === 'socio') {
+    const belongsToCurrentUser =
+      socio.id_socio === user.id_socio ||
+      socio.usuario_id === user.id ||
+      requestedId === user.id;
+
+    if (!belongsToCurrentUser) {
+      throw new Error('No autorizado para acceder a la ficha médica de otro socio');
+    }
+  }
+
+  return socio.id_socio as string;
+}
+
+async function uploadMedicalFiles(user: JwtUser, files: FichaMedicaFiles) {
+  const folder = `${user.rol}/fichas-medicas`;
+  const archivoAprobacionUrl = files.archivo_aprobacion
+    ? await uploadFile(files.archivo_aprobacion, `${folder}/aprobaciones`)
+    : null;
+
+  const archivosAdjuntosUrls = await Promise.all(
+    (files.archivos_adjuntos ?? []).map((file) => uploadFile(file, `${folder}/adjuntos`))
+  );
+
+  return {
+    archivoAprobacionUrl,
+    archivosAdjuntosUrls,
+  };
+}
+
 export const createFichaMedicaSocio = async (
   user: JwtUser,
   id_socio: string,
   createFichaMedicaDto: CreateFichaMedicaDto,
-  file: FileUploadDTO
+  files: FichaMedicaFiles = {}
 ) => {
   const supabase = conexionBD();
   const {
@@ -29,23 +88,19 @@ export const createFichaMedicaSocio = async (
     lesiones_previas,
     enfermedades_cronicas,
     cirugias_previas,
-    archivo_aprobacion,
     fecha_ultimo_control,
     observaciones_entrenador,
     observaciones_medico,
-    archivos_adjuntos,
     proxima_revision,
   } = createFichaMedicaDto;
 
-  const urlFicha = await uploadFile(file, `${user.rol}/fichas`);
-
-  const urlArchivosAdjuntos = await FindAllUrlFotoFichaMedica(user, id_socio);
+  const { archivoAprobacionUrl, archivosAdjuntosUrls } = await uploadMedicalFiles(user, files);
 
   const payload = {
     p_alergias: alergias ?? null,
     p_aprobacion_medica: aprobacion_medica ?? null,
-    p_archivo_aprobacion: null, // subir archivo aparte si corresponde
-    p_archivos_adjuntos: urlArchivosAdjuntos,
+    p_archivo_aprobacion: archivoAprobacionUrl,
+    p_archivos_adjuntos: archivosAdjuntosUrls.length ? archivosAdjuntosUrls : null,
     p_cirugias_previas: cirugias_previas ?? null,
     p_enfermedades_cronicas: enfermedades_cronicas ?? null,
     p_fecha_ultimo_control: fecha_ultimo_control ?? null,
@@ -81,6 +136,7 @@ export const FindFichaMedicaSocio = async (user: JwtUser, id_socio: string) => {
   });
 
   if (error) {
+    if (isPgrstNoRows(error)) return null;
     console.log(error);
     throw new Error('Error al buscar la ficha médica');
   }

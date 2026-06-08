@@ -1,7 +1,15 @@
 import { NextResponse } from 'next/server';
 import { authMiddleware } from '@/middlewares/auth.middleware';
-import { FindAllFichaMedicaSocio } from '@/services/fichaMedicaService';
+import { FindAllFichaMedicaSocio, resolveFichaMedicaSocioId } from '@/services/fichaMedicaService';
 
+
+
+function getFichaMedicaErrorStatus(message?: string) {
+  if (message?.includes('No autorizado')) return 403;
+  if (message?.includes('No se encontró')) return 404;
+  if (message?.includes('no proporcionado')) return 400;
+  return 500;
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -29,7 +37,8 @@ export async function GET(
     let page = parseInt(pageParam, 10);
     if (Number.isNaN(page) || page < 1) page = 1;
     const perPage = 5;
-    const ficha = await FindAllFichaMedicaSocio(user, id);
+    const resolvedSocioId = await resolveFichaMedicaSocioId(user, id);
+    const ficha = await FindAllFichaMedicaSocio(user, resolvedSocioId);
     const list = Array.isArray(ficha) ? ficha : [];
     const total = list.length;
     const totalPages = Math.ceil(total / perPage);
@@ -41,9 +50,10 @@ export async function GET(
     );
   } catch (error: any) {
     console.log(error);
+    const status = getFichaMedicaErrorStatus(error?.message);
     return NextResponse.json(
       { error: error?.message || 'Error interno' },
-      { status: 500 }
+      { status }
     );
   }
 }

@@ -73,12 +73,6 @@ export default function ChangePasswordPage() {
     }
   }, [isAuthenticated, isInitialized, router]);
 
-  useEffect(() => {
-    if (isInitialized && isAuthenticated && user && !user.must_change_password) {
-      router.replace('/dashboard');
-    }
-  }, [isAuthenticated, isInitialized, router, user]);
-
   const checks = useMemo(() => getPasswordPolicyChecks(password), [password]);
   const passwordsMatch = password === confirmPassword && confirmPassword.length > 0;
   const isPasswordValid = Object.values(checks).every(Boolean) && passwordsMatch;
@@ -127,9 +121,11 @@ export default function ChangePasswordPage() {
     }
   };
 
-  if (!isInitialized || !isAuthenticated || !user?.must_change_password) {
+  if (!isInitialized || !isAuthenticated) {
     return null;
   }
+
+  const isInitialPasswordChange = Boolean(user?.must_change_password);
 
   return (
     <div className='relative flex min-h-screen flex-col items-center justify-center bg-background px-4'>
@@ -162,10 +158,11 @@ export default function ChangePasswordPage() {
           <div className='mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary'>
             <LockKeyhole className='h-6 w-6' />
           </div>
-          <CardTitle>Cambiá tu contraseña inicial</CardTitle>
+          <CardTitle>{isInitialPasswordChange ? 'Cambiá tu contraseña inicial' : 'Cambiar contraseña'}</CardTitle>
           <CardDescription>
-            Tu usuario fue creado con una contraseña temporal. Para continuar,
-            debés definir una contraseña personal y segura.
+            {isInitialPasswordChange
+              ? 'Tu usuario fue creado con una contraseña temporal. Para continuar, debés definir una contraseña personal y segura.'
+              : 'Actualizá tu contraseña personal manteniendo los requisitos de seguridad de Gym Master.'}
           </CardDescription>
         </CardHeader>
 
