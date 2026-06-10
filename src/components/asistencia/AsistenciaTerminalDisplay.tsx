@@ -867,21 +867,25 @@ export default function AsistenciaTerminalDisplay() {
                   <span
                     className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-black uppercase tracking-[0.2em] 2xl:px-4 2xl:py-2 2xl:text-sm ${styles.badge}`}
                   >
-                    {event.variant === "success"
-                      ? "Ingreso autorizado"
-                      : event.variant === "debt"
-                        ? "Cuota pendiente"
-                        : event.variant === "inactive"
-                          ? "Ingreso bloqueado"
-                          : "Atención"}
+                    {event.tipoMovimiento === "salida"
+                      ? "Salida registrada"
+                      : event.variant === "success"
+                        ? "Ingreso autorizado"
+                        : event.variant === "debt"
+                          ? "Cuota pendiente"
+                          : event.variant === "inactive"
+                            ? "Ingreso bloqueado"
+                            : "Atención"}
                   </span>
 
                   <h2
                     className={`mt-4 text-4xl font-black leading-tight tracking-tight md:text-5xl 2xl:text-6xl ${styles.title}`}
                   >
-                    {event.variant === "success"
-                      ? `¡Bienvenido, ${event.nombre}!`
-                      : event.title}
+                    {event.tipoMovimiento === "salida"
+                      ? `¡Hasta luego, ${event.nombre}!`
+                      : event.variant === "success"
+                        ? `¡Bienvenido, ${event.nombre}!`
+                        : event.title}
                   </h2>
 
                   {event.variant !== "success" && (

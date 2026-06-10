@@ -90,9 +90,13 @@ function shouldUseSecureCookie(): boolean {
 
 export function getSessionFromCookie() {
   const token = getToken();
-  if (!token) return null;
+
+  if (!token) {
+    return null;
+  }
 
   const decoded = decodeJwtPayload(token);
+
   if (!decoded) {
     logoutSession();
     return null;
@@ -177,8 +181,6 @@ export function getToken() {
     return null;
   }
 
-  // En localhost puede quedar una cookie antigua porque antes se seteaba siempre
-  // como Secure. Si localStorage tiene una sesión renovada más nueva, usarla.
   return validCandidates.sort(
     (a, b) => getTokenSortValue(b) - getTokenSortValue(a),
   )[0];
