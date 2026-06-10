@@ -29,7 +29,13 @@ import {
 } from "@/services/qrService";
 import { formatFrontendDate, formatFrontendTime } from "@/utils/dateFormat";
 import { useAuthStore } from "@/stores/authStore";
-import { getToken, logoutSession } from "@/services/storageService";
+import {
+  getTerminalToken,
+  getToken,
+  loginTerminalSession,
+  logoutSession,
+  logoutTerminalSession,
+} from "@/services/storageService";
 import { jwtDecode } from "jwt-decode";
 
 type TerminalVariant = "idle" | "success" | "debt" | "inactive" | "error";
@@ -318,7 +324,6 @@ export default function AsistenciaTerminalDisplay() {
   const adShowTimeoutRef = useRef<number | null>(null);
   const adHideTimeoutRef = useRef<number | null>(null);
   const terminalRefreshInFlightRef = useRef(false);
-  const refreshSession = useAuthStore((state) => state.refreshSession);
   const logout = useAuthStore((state) => state.logout);
   const [sessionState, setSessionState] = useState<TerminalSessionState>(
     () => ({
@@ -348,7 +353,8 @@ export default function AsistenciaTerminalDisplay() {
 
   const ensureTerminalSession = useCallback(
     async (force = false) => {
-      const currentToken = getToken();
+      const currentTerminalToken = getTerminalToken();
+      const currentToken = currentTerminalToken || getToken();
       const currentExpiresAt = decodeTokenExpiration(currentToken);
 
       if (!currentToken) {
@@ -382,7 +388,7 @@ export default function AsistenciaTerminalDisplay() {
         }));
 
         const refreshed = await refreshTerminalSession();
-        refreshSession(refreshed.token);
+        loginTerminalSession(refreshed.token);
 
         const expiresAt = refreshed.expires_at
           ? new Date(refreshed.expires_at)
@@ -403,7 +409,7 @@ export default function AsistenciaTerminalDisplay() {
         terminalRefreshInFlightRef.current = false;
       }
     },
-    [markTerminalSessionExpired, refreshSession],
+    [markTerminalSessionExpired],
   );
 
   const handleTerminalError = useCallback(
@@ -456,7 +462,7 @@ export default function AsistenciaTerminalDisplay() {
   const loadRecent = async () => {
     try {
       setError(null);
-      const rows = await fetchAsistenciasRecientes();
+      const rows = await fetchAsistenciasRecientes({ terminalSession: true });
       const cleanRows = Array.isArray(rows) ? rows : [];
       setRecent(cleanRows.slice(0, 4));
 
@@ -742,6 +748,7 @@ export default function AsistenciaTerminalDisplay() {
                   <Button
                     type="button"
                     onClick={() => {
+                      logoutTerminalSession();
                       logoutSession();
                       logout();
                       window.location.href = "/auth/login/admin";
@@ -860,21 +867,25 @@ export default function AsistenciaTerminalDisplay() {
                   <span
                     className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-black uppercase tracking-[0.2em] 2xl:px-4 2xl:py-2 2xl:text-sm ${styles.badge}`}
                   >
-                    {event.variant === "success"
-                      ? "Ingreso autorizado"
-                      : event.variant === "debt"
-                        ? "Cuota pendiente"
-                        : event.variant === "inactive"
-                          ? "Ingreso bloqueado"
-                          : "Atención"}
+                    {event.tipoMovimiento === "salida"
+                      ? "Salida registrada"
+                      : event.variant === "success"
+                        ? "Ingreso autorizado"
+                        : event.variant === "debt"
+                          ? "Cuota pendiente"
+                          : event.variant === "inactive"
+                            ? "Ingreso bloqueado"
+                            : "Atención"}
                   </span>
 
                   <h2
                     className={`mt-4 text-4xl font-black leading-tight tracking-tight md:text-5xl 2xl:text-6xl ${styles.title}`}
                   >
-                    {event.variant === "success"
-                      ? `¡Bienvenido, ${event.nombre}!`
-                      : event.title}
+                    {event.tipoMovimiento === "salida"
+                      ? `¡Hasta luego, ${event.nombre}!`
+                      : event.variant === "success"
+                        ? `¡Bienvenido, ${event.nombre}!`
+                        : event.title}
                   </h2>
 
                   {event.variant !== "success" && (

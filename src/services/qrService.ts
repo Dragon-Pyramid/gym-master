@@ -1,239 +1,250 @@
 import axios from "axios";
-import { authHeader } from "@/services/storageService";
+import { authHeader, terminalAuthHeader } from "@/services/storageService";
 
 export interface EstadoCuotaAccesoQR {
-  estado_cuota?: string | null;
-  dias_vencido?: number;
-  periodo_hasta?: string | null;
-  ultimo_vencimiento?: string | null;
+estado_cuota?: string | null;
+dias_vencido?: number;
+periodo_hasta?: string | null;
+ultimo_vencimiento?: string | null;
 }
 
 export interface AsistenciaReciente {
-  id: string;
-  socio_id: string;
-  fecha: string; // 'YYYY-MM-DD'
-  hora_ingreso: string; // 'HH:MM:SS'
-  hora_egreso?: string | null; // 'HH:MM:SS'
-  access_status?: "al_dia" | "deuda" | "desactivado" | "salida" | string;
-  alert_type?: RegistroAsistenciaAlertType;
-  mensaje_acceso?: string | null;
-  estado_cuota?: EstadoCuotaAccesoQR | null;
-  tipo_movimiento?: RegistroAsistenciaMovimientoTipo;
-  socio?: {
-    id_socio: string;
-    nombre_completo: string;
-    foto: string | null;
-  } | null;
+id: string;
+socio_id: string;
+fecha: string; // 'YYYY-MM-DD'
+hora_ingreso: string; // 'HH:MM:SS'
+hora_egreso?: string | null; // 'HH:MM:SS'
+access_status?: "al_dia" | "deuda" | "desactivado" | "salida" | string;
+alert_type?: RegistroAsistenciaAlertType;
+mensaje_acceso?: string | null;
+estado_cuota?: EstadoCuotaAccesoQR | null;
+tipo_movimiento?: RegistroAsistenciaMovimientoTipo;
+socio?: {
+id_socio: string;
+nombre_completo: string;
+foto: string | null;
+} | null;
 }
 
 export type RegistroAsistenciaAlertType =
-  | "success"
-  | "debt"
-  | "inactive"
-  | "error";
+| "success"
+| "debt"
+| "inactive"
+| "error";
+
 export type RegistroAsistenciaMovimientoTipo = "entrada" | "salida";
 
 export interface RegistroAsistenciaQRResponse {
-  valido?: boolean;
-  message?: string;
-  error?: string;
-  access_status?:
-    | "al_dia"
-    | "deuda"
-    | "desactivado"
-    | "salida"
-    | "qr_expirado"
-    | "sin_socio"
-    | string;
-  alert_type?: RegistroAsistenciaAlertType;
-  bloquea_ingreso?: boolean;
-  mensaje_acceso?: string | null;
-  estado_cuota?: EstadoCuotaAccesoQR | null;
-  tipo_movimiento?: RegistroAsistenciaMovimientoTipo;
-  asistencia?: {
-    socio?: {
-      id_socio?: string;
-      nombre_completo?: string;
-      usuario_id?: {
-        foto?: string | null;
-        nombre?: string | null;
-      } | null;
-    } | null;
-  };
-  socio?: {
-    id_socio?: string;
-    nombre_completo?: string;
-    foto?: string | null;
-  } | null;
+valido?: boolean;
+message?: string;
+error?: string;
+access_status?:
+| "al_dia"
+| "deuda"
+| "desactivado"
+| "salida"
+| "qr_expirado"
+| "sin_socio"
+| string;
+alert_type?: RegistroAsistenciaAlertType;
+bloquea_ingreso?: boolean;
+mensaje_acceso?: string | null;
+estado_cuota?: EstadoCuotaAccesoQR | null;
+tipo_movimiento?: RegistroAsistenciaMovimientoTipo;
+asistencia?: {
+socio?: {
+id_socio?: string;
+nombre_completo?: string;
+usuario_id?: {
+foto?: string | null;
+nombre?: string | null;
+} | null;
+} | null;
+};
+socio?: {
+id_socio?: string;
+nombre_completo?: string;
+foto?: string | null;
+} | null;
 }
 
 export interface TerminalNotificacion {
-  id: string;
-  titulo: string;
-  asunto: string;
-  cuerpo: string;
-  tipo: string;
-  canal: string;
-  estado: string;
-  fecha_programada?: string | null;
-  fecha_vigencia_hasta?: string | null;
-  terminal_imagen_url?: string | null;
-  terminal_color_neon?: string | null;
-  terminal_duracion_segundos: number;
-  terminal_frecuencia_segundos: number;
+id: string;
+titulo: string;
+asunto: string;
+cuerpo: string;
+tipo: string;
+canal: string;
+estado: string;
+fecha_programada?: string | null;
+fecha_vigencia_hasta?: string | null;
+terminal_imagen_url?: string | null;
+terminal_color_neon?: string | null;
+terminal_duracion_segundos: number;
+terminal_frecuencia_segundos: number;
 }
 
 export interface QrDiarioResponse {
-  qrCode: string;
-  url: string;
-  token: string;
+qrCode: string;
+url: string;
+token: string;
 }
 
 export interface TerminalSessionRefreshResponse {
-  token: string;
-  expires_at?: string | null;
+token: string;
+expires_at?: string | null;
 }
 
 export class TerminalSessionError extends Error {
-  status?: number;
-  code?: string;
+status?: number;
+code?: string;
 
-  constructor(message: string, options?: { status?: number; code?: string }) {
-    super(message);
-    this.name = "TerminalSessionError";
-    this.status = options?.status;
-    this.code = options?.code;
-  }
+constructor(message: string, options?: { status?: number; code?: string }) {
+super(message);
+this.name = "TerminalSessionError";
+this.status = options?.status;
+this.code = options?.code;
+}
 }
 
 function buildApiError(error: unknown, fallback: string): Error {
-  const axiosError = error as {
-    response?: {
-      status?: number;
-      data?: {
-        error?: string;
-        message?: string;
-        error_code?: string;
-      };
-    };
-  };
+const axiosError = error as {
+response?: {
+status?: number;
+data?: {
+error?: string;
+message?: string;
+error_code?: string;
+};
+};
+};
 
-  const status = axiosError.response?.status;
-  const data = axiosError.response?.data;
-  const message = data?.error || data?.message || fallback;
-  const code = data?.error_code;
+const status = axiosError.response?.status;
+const data = axiosError.response?.data;
+const message = data?.error || data?.message || fallback;
+const code = data?.error_code;
 
-  if (status === 401 || status === 403 || code?.includes("TERMINAL_SESSION")) {
-    return new TerminalSessionError(message, { status, code });
-  }
+if (status === 401 || status === 403 || code?.includes("TERMINAL_SESSION")) {
+return new TerminalSessionError(message, { status, code });
+}
 
-  return new Error(message);
+return new Error(message);
 }
 
 export function isTerminalSessionError(
-  error: unknown,
+error: unknown,
 ): error is TerminalSessionError {
-  return error instanceof TerminalSessionError;
+return error instanceof TerminalSessionError;
 }
 
 export const refreshTerminalSession =
-  async (): Promise<TerminalSessionRefreshResponse> => {
-    try {
-      const response = await axios.post(
-        "/api/auth/terminal-session/refresh",
-        {},
-        {
-          headers: {
-            "Content-Type": "application/json",
-            ...authHeader(),
-          },
-        },
-      );
+async (): Promise<TerminalSessionRefreshResponse> => {
+try {
+const response = await axios.post(
+"/api/auth/terminal-session/refresh",
+{},
+{
+headers: {
+"Content-Type": "application/json",
+...terminalAuthHeader(),
+},
+},
+);
 
-      return response.data as TerminalSessionRefreshResponse;
-    } catch (error: unknown) {
-      throw buildApiError(error, "No se pudo renovar la sesión de Terminal.");
-    }
-  };
+  return response.data as TerminalSessionRefreshResponse;
+} catch (error: unknown) {
+  throw buildApiError(error, "No se pudo renovar la sesión de Terminal.");
+}
+
+};
 
 export const fetchQrDiario = async (): Promise<QrDiarioResponse> => {
-  try {
-    const response = await axios.get("/api/asistencias/qr-dia", {
-      headers: {
-        ...authHeader(),
-      },
-    });
-    return response.data as QrDiarioResponse;
-  } catch (error: unknown) {
-    throw buildApiError(error, "No se pudo cargar el QR diario de asistencia.");
-  }
+try {
+const response = await axios.get("/api/asistencias/qr-dia", {
+headers: {
+...terminalAuthHeader(),
+},
+});
+
+return response.data as QrDiarioResponse;
+
+} catch (error: unknown) {
+throw buildApiError(error, "No se pudo cargar el QR diario de asistencia.");
+}
 };
 
 export const fetchQrCode = async (): Promise<string> => {
-  const data = await fetchQrDiario();
-  return data.qrCode;
+const data = await fetchQrDiario();
+return data.qrCode;
 };
 
 export const registrarAsistenciaQR = async (
-  qr: string,
+qr: string,
 ): Promise<RegistroAsistenciaQRResponse> => {
-  let tokenAsistencia = qr;
-  try {
-    try {
-      const url = new URL(qr);
-      const queryToken = url.searchParams.get("tokenAsistencia");
-      if (queryToken) tokenAsistencia = queryToken;
-    } catch {}
+let tokenAsistencia = qr;
 
-    const response = await axios.post(
-      "/api/asistencias/registro-qr",
-      { qr: tokenAsistencia },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          ...authHeader(),
-        },
-      },
-    );
+try {
+try {
+const url = new URL(qr);
+const queryToken = url.searchParams.get("tokenAsistencia");
+if (queryToken) tokenAsistencia = queryToken;
+} catch {
+// Si no es una URL completa, se usa el valor recibido como token.
+}
 
-    return response.data;
-  } catch (error: unknown) {
-    const axiosError = error as {
-      response?: {
-        data?: RegistroAsistenciaQRResponse;
-      };
-    };
+const response = await axios.post(
+  "/api/asistencias/registro-qr",
+  { qr: tokenAsistencia },
+  {
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeader(),
+    },
+  },
+);
 
-    if (axiosError.response?.data) {
-      return {
-        ...axiosError.response.data,
-        error:
-          axiosError.response.data.error ||
-          "No se pudo registrar la asistencia.",
-      };
-    }
+return response.data as RegistroAsistenciaQRResponse;
 
-    return {
-      valido: false,
-      alert_type: "error",
-      error: "Error de red. Intente nuevamente.",
-    };
-  }
+} catch (error: unknown) {
+const axiosError = error as {
+response?: {
+data?: RegistroAsistenciaQRResponse;
+};
 };
 
-export const fetchAsistenciasRecientes = async (): Promise<
-  AsistenciaReciente[]
-> => {
-  try {
-    const response = await axios.get("/api/asistencias/recientes", {
-      headers: {
-        ...authHeader(),
-      },
-    });
-    return response.data as AsistenciaReciente[];
-  } catch (error: unknown) {
-    throw buildApiError(error, "Error al obtener asistencias recientes.");
-  }
+if (axiosError.response?.data) {
+  return {
+    ...axiosError.response.data,
+    error:
+      axiosError.response.data.error ||
+      "No se pudo registrar la asistencia.",
+  };
+}
+
+return {
+  valido: false,
+  alert_type: "error",
+  error: "Error de red. Intente nuevamente.",
+};
+
+}
+};
+
+export const fetchAsistenciasRecientes = async (options?: {
+terminalSession?: boolean;
+}): Promise<AsistenciaReciente[]> => {
+try {
+const response = await axios.get("/api/asistencias/recientes", {
+headers: {
+...(options?.terminalSession ? terminalAuthHeader() : authHeader()),
+},
+});
+
+return response.data as AsistenciaReciente[];
+
+} catch (error: unknown) {
+throw buildApiError(error, "Error al obtener asistencias recientes.");
+}
 };
 
 export const fetchTerminalNotificaciones = async (): Promise<
@@ -242,9 +253,10 @@ export const fetchTerminalNotificaciones = async (): Promise<
   try {
     const response = await axios.get("/api/notificaciones/terminal", {
       headers: {
-        ...authHeader(),
+        ...terminalAuthHeader(),
       },
     });
+
     return response.data as TerminalNotificacion[];
   } catch (error: unknown) {
     throw buildApiError(error, "Error de red al obtener avisos de Terminal.");
