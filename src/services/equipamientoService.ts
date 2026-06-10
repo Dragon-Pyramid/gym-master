@@ -1,5 +1,6 @@
 import { CreateEquipamentoDTO, Equipamento, UpdateEquipamentoDTO } from "@/interfaces/equipamiento.interface";
 import { AlertasMantenimientoEquipamientoResponse } from "@/interfaces/equipamientoAlertas.interface";
+import { EquipamientoMantenimientoBiResponse } from "@/interfaces/equipamientoMantenimientoBi.interface";
 import { TipoEquipamiento } from "@/enums/tipoEquipamiento.enum";
 import { getSupabaseClient, supabase } from "./supabaseClient";
 import dayjs from "dayjs";
@@ -155,4 +156,20 @@ export const getAlertasMantenimientoEquipamientos = async (
   }
 
   return payload as AlertasMantenimientoEquipamientoResponse;
+};
+
+
+export const getEquipamientoMantenimientoBi = async (): Promise<EquipamientoMantenimientoBiResponse> => {
+  const response = await fetch("/api/equipamientos/mantenimiento-bi", {
+    method: "GET",
+    cache: "no-store",
+  });
+
+  const payload = await response.json();
+
+  if (!response.ok) {
+    throw new Error(payload?.error || "Error al obtener BI de mantenimiento de equipamiento");
+  }
+
+  return payload as EquipamientoMantenimientoBiResponse;
 };

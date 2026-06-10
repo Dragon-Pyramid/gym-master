@@ -981,6 +981,20 @@ const endpointDefinitions: EndpointDefinition[] = [
     source: "src/app/api/equipamientos/alertas-mantenimiento/route.ts",
   },
   {
+    path: "/api/equipamientos/mantenimiento-bi",
+    methods: ["GET"],
+    tag: "Equipamiento",
+    summary: "BI de mantenimiento de equipamiento",
+    description:
+      "Devuelve métricas, reportes y datos gráficos para mantenimiento de equipamiento: estado del parque, costos mensuales, distribución por tipo/ubicación, ranking por costo/frecuencia, historial reciente de mantenimiento y recomendaciones para evaluar venta o reemplazo de equipos con mantenimiento repetido o costoso.",
+    auth: false,
+    admin: false,
+    notImplemented: false,
+    statuses: [200, 500],
+    queryParams: [],
+    source: "src/app/api/equipamientos/mantenimiento-bi/route.ts",
+  },
+  {
     path: "/api/equipamientos/{id}",
     methods: ["PUT", "DELETE"],
     tag: "Equipamiento",

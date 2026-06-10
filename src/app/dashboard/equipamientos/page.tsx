@@ -2,13 +2,16 @@
 
 import { useAuthStore } from "@/stores/authStore";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useCatalogosParametrizables } from "@/hooks/useCatalogosParametrizables";
 import { Equipamento } from "@/interfaces/equipamiento.interface";
 import { AlertasMantenimientoEquipamientoResponse } from "@/interfaces/equipamientoAlertas.interface";
+import { EquipamientoMantenimientoBiResponse } from "@/interfaces/equipamientoMantenimientoBi.interface";
 import {
   getAllEquipamientos,
   deleteEquipamiento,
   getAlertasMantenimientoEquipamientos,
+  getEquipamientoMantenimientoBi,
 } from "@/services/equipamientoService";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import EquipamientoModal from "@/components/modal/EquipamientoModal";
@@ -23,43 +26,163 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { AlertTriangle, CalendarClock, CheckCircle2, FileSpreadsheet, Filter, Printer, RefreshCw, Search, Wrench } from "lucide-react";
+import {
+  AlertTriangle,
+  BarChart3,
+  CalendarClock,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  FileSpreadsheet,
+  FileText,
+  Filter,
+  RefreshCw,
+  Search,
+  TrendingUp,
+  Wrench,
+} from "lucide-react";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { AppHeader } from "@/components/header/AppHeader";
 import { AppFooter } from "@/components/footer/AppFooter";
 import ExcelJS from "exceljs";
-import { buildTimestampedDownloadFileName } from '@/utils/downloadFileName';
+import { buildTimestampedDownloadFileName } from "@/utils/downloadFileName";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50];
+const ESTADO_EQUIPAMIENTO_OPTIONS = ["operativo", "en mantenimiento", "fuera de servicio"];
+const CHART_COLORS = ["#02a8e1", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6"];
+const PDF_CHART_COLORS: Array<[number, number, number]> = [
+  [2, 168, 225],
+  [34, 197, 94],
+  [245, 158, 11],
+  [239, 68, 68],
+  [139, 92, 246],
+  [20, 184, 166],
+];
+
+const currencyFormatter = new Intl.NumberFormat("es-AR", {
+  style: "currency",
+  currency: "ARS",
+  maximumFractionDigits: 0,
+});
+
+function formatCurrency(value?: number | null) {
+  return currencyFormatter.format(Number(value ?? 0));
+}
+
+function normalizeSearch(value: unknown) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function uniqueSorted(values: Array<string | null | undefined>) {
+  return Array.from(new Set(values.map((value) => String(value ?? "").trim()).filter(Boolean))).sort();
+}
+
+function sanitizePdfText(value: unknown, fallback = "-") {
+  const text = String(value ?? "").trim();
+  return text.length > 0 ? text : fallback;
+}
+
+function EmptyChart({ label }: { label: string }) {
+  return (
+    <div className="flex h-[260px] items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground">
+      {label}
+    </div>
+  );
+}
+
+function MetricCard({
+  title,
+  value,
+  helper,
+  tone = "slate",
+}: {
+  title: string;
+  value: string | number;
+  helper?: string;
+  tone?: "red" | "amber" | "blue" | "emerald" | "slate" | "violet";
+}) {
+  const tones = {
+    red: "border-red-100 bg-red-50 text-red-900",
+    amber: "border-amber-100 bg-amber-50 text-amber-900",
+    blue: "border-blue-100 bg-blue-50 text-blue-900",
+    emerald: "border-emerald-100 bg-emerald-50 text-emerald-900",
+    slate: "border-slate-100 bg-slate-50 text-slate-900",
+    violet: "border-violet-100 bg-violet-50 text-violet-900",
+  } as const;
+
+  return (
+    <Card className={tones[tone]}>
+      <CardContent className="p-4">
+        <p className="text-sm font-medium opacity-80">{title}</p>
+        <p className="mt-1 text-2xl font-bold">{value}</p>
+        {helper && <p className="mt-1 text-xs opacity-70">{helper}</p>}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function EquipamientosPage() {
-  const { user, isAuthenticated, initializeAuth, isInitialized } =
-    useAuthStore();
+  const { isAuthenticated, initializeAuth, isInitialized } = useAuthStore();
   const router = useRouter();
   const [equipos, setEquipos] = useState<Equipamento[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
-  const [selectedEquipo, setSelectedEquipo] = useState<Equipamento | null>(
-    null
-  );
+  const [selectedEquipo, setSelectedEquipo] = useState<Equipamento | null>(null);
   const [openModalVer, setOpenModalVer] = useState(false);
   const [equipoVer, setEquipoVer] = useState<Equipamento | null>(null);
   const [selectedTipos, setSelectedTipos] = useState<string[]>([]);
   const [selectedEstados, setSelectedEstados] = useState<string[]>([]);
   const [selectedUbicaciones, setSelectedUbicaciones] = useState<string[]>([]);
   const [filtrosOpen, setFiltrosOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [alertasMantenimiento, setAlertasMantenimiento] =
     useState<AlertasMantenimientoEquipamientoResponse | null>(null);
+  const [biMantenimiento, setBiMantenimiento] =
+    useState<EquipamientoMantenimientoBiResponse | null>(null);
   const [loadingAlertas, setLoadingAlertas] = useState(false);
+  const { catalogos } = useCatalogosParametrizables();
 
-  const tipos = Array.from(
-    new Set(equipos.map((equipo) => String(equipo.tipo ?? "").trim()).filter(Boolean))
-  ).sort();
-  const estados = ["operativo", "en mantenimiento", "fuera de servicio"];
-  const ubicaciones = Array.from(
-    new Set(
-      equipos.map((equipo) => String(equipo.ubicacion ?? "").trim()).filter(Boolean)
-    )
-  ).sort();
+  const tipoEquipamientoCatalogo = useMemo(
+    () => catalogos.find((catalogo) => catalogo.key === "tipo_equipamiento") ?? null,
+    [catalogos],
+  );
+  const ubicacionEquipamientoCatalogo = useMemo(
+    () => catalogos.find((catalogo) => catalogo.key === "ubicacion_equipamiento") ?? null,
+    [catalogos],
+  );
+
+  const tipos = useMemo(() => {
+    const catalogo = tipoEquipamientoCatalogo?.items
+      ?.filter((item) => item.activo)
+      .map((item) => item.nombre);
+    const usados = equipos.map((equipo) => String(equipo.tipo ?? ""));
+    return uniqueSorted([...(catalogo ?? []), ...usados]);
+  }, [equipos, tipoEquipamientoCatalogo]);
+
+  const estados = useMemo(() => ESTADO_EQUIPAMIENTO_OPTIONS, []);
+
+  const ubicaciones = useMemo(() => {
+    const catalogo = ubicacionEquipamientoCatalogo?.items
+      ?.filter((item) => item.activo)
+      .map((item) => item.nombre);
+    const usadas = equipos.map((equipo) => String(equipo.ubicacion ?? ""));
+    return uniqueSorted([...(catalogo ?? []), ...usadas]);
+  }, [equipos, ubicacionEquipamientoCatalogo]);
 
   useEffect(() => {
     initializeAuth();
@@ -73,19 +196,27 @@ export default function EquipamientosPage() {
 
   const loadEquipos = async () => {
     setLoading(true);
-    const data = await getAllEquipamientos();
-    setEquipos(data ?? []);
-    setLoading(false);
+    try {
+      const data = await getAllEquipamientos();
+      setEquipos(data ?? []);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const loadAlertasMantenimiento = async () => {
+  const loadMantenimientoAnalytics = async () => {
     try {
       setLoadingAlertas(true);
-      const data = await getAlertasMantenimientoEquipamientos(5);
-      setAlertasMantenimiento(data);
+      const [alertas, bi] = await Promise.all([
+        getAlertasMantenimientoEquipamientos(5),
+        getEquipamientoMantenimientoBi(),
+      ]);
+      setAlertasMantenimiento(alertas);
+      setBiMantenimiento(bi);
     } catch (error) {
-      console.error("Error al cargar alertas de mantenimiento:", error);
+      console.error("Error al cargar métricas de mantenimiento:", error);
       setAlertasMantenimiento(null);
+      setBiMantenimiento(null);
     } finally {
       setLoadingAlertas(false);
     }
@@ -94,59 +225,79 @@ export default function EquipamientosPage() {
   useEffect(() => {
     if (isInitialized && isAuthenticated) {
       loadEquipos();
-      loadAlertasMantenimiento();
+      loadMantenimientoAnalytics();
     }
   }, [isInitialized, isAuthenticated]);
 
-  const getFilteredEquipos = () => {
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedTipos, selectedEstados, selectedUbicaciones, pageSize]);
+
+  const filteredEquipos = useMemo(() => {
     let equiposFiltrados = [...equipos];
+
     if (selectedTipos.length > 0) {
-      equiposFiltrados = equiposFiltrados.filter((e) =>
-        selectedTipos.includes(e.tipo)
-      );
+      equiposFiltrados = equiposFiltrados.filter((e) => selectedTipos.includes(String(e.tipo ?? "")));
     }
+
     if (selectedEstados.length > 0) {
-      equiposFiltrados = equiposFiltrados.filter((e) =>
-        selectedEstados.includes(e.estado)
-      );
+      equiposFiltrados = equiposFiltrados.filter((e) => selectedEstados.includes(String(e.estado ?? "")));
     }
+
     if (selectedUbicaciones.length > 0) {
       equiposFiltrados = equiposFiltrados.filter((e) =>
-        selectedUbicaciones.includes(e.ubicacion)
+        selectedUbicaciones.includes(String(e.ubicacion ?? "")),
       );
     }
+
     if (searchTerm.trim() !== "") {
-      const lower = searchTerm.toLowerCase();
-      equiposFiltrados = equiposFiltrados.filter(
-        (e) =>
-          String(e.nombre ?? "").toLowerCase().includes(lower) ||
-          String(e.tipo ?? "").toLowerCase().includes(lower) ||
-          String(e.estado ?? "").toLowerCase().includes(lower) ||
-          String(e.ubicacion ?? "").toLowerCase().includes(lower)
+      const lower = normalizeSearch(searchTerm);
+      equiposFiltrados = equiposFiltrados.filter((e) =>
+        [e.nombre, e.tipo, e.estado, e.ubicacion, e.marca, e.modelo, e.observaciones]
+          .map(normalizeSearch)
+          .some((value) => value.includes(lower)),
       );
     }
+
     return equiposFiltrados;
-  };
+  }, [equipos, searchTerm, selectedEstados, selectedTipos, selectedUbicaciones]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredEquipos.length / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedEquipos = filteredEquipos.slice(
+    (safeCurrentPage - 1) * pageSize,
+    safeCurrentPage * pageSize,
+  );
 
   const handleExportExcel = async () => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Equipamientos");
     worksheet.columns = [
-      { header: "ID", key: "id", width: 20 },
+      { header: "ID", key: "id", width: 36 },
       { header: "Nombre", key: "nombre", width: 30 },
-      { header: "Tipo", key: "tipo", width: 20 },
+      { header: "Tipo", key: "tipo", width: 22 },
+      { header: "Marca", key: "marca", width: 22 },
+      { header: "Modelo", key: "modelo", width: 22 },
       { header: "Estado", key: "estado", width: 20 },
-      { header: "Ubicación", key: "ubicacion", width: 20 },
+      { header: "Ubicación", key: "ubicacion", width: 24 },
+      { header: "Última revisión", key: "ultima_revision", width: 18 },
+      { header: "Próxima revisión", key: "proxima_revision", width: 18 },
     ];
-    getFilteredEquipos().forEach((e) => {
+
+    filteredEquipos.forEach((e) => {
       worksheet.addRow({
         id: e.id,
         nombre: e.nombre,
         tipo: e.tipo,
+        marca: e.marca,
+        modelo: e.modelo,
         estado: e.estado,
         ubicacion: e.ubicacion,
+        ultima_revision: e.ultima_revision,
+        proxima_revision: e.proxima_revision,
       });
     });
+
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -157,6 +308,257 @@ export default function EquipamientosPage() {
     a.download = buildTimestampedDownloadFileName("listado-equipamientos", "xlsx");
     a.click();
     window.URL.revokeObjectURL(url);
+  };
+
+
+  const handleDownloadPdf = async () => {
+    const { jsPDF } = await import("jspdf");
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 12;
+    let y = margin;
+
+    const addPageIfNeeded = (needed = 14) => {
+      if (y + needed > pageHeight - margin) {
+        doc.addPage();
+        y = margin;
+      }
+    };
+
+    const sectionTitle = (title: string) => {
+      addPageIfNeeded(12);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.setTextColor(15, 23, 42);
+      doc.text(title, margin, y);
+      y += 7;
+      doc.setDrawColor(226, 232, 240);
+      doc.line(margin, y, pageWidth - margin, y);
+      y += 5;
+    };
+
+    const drawMetric = (label: string, value: string, x: number, boxY: number, width: number) => {
+      doc.setFillColor(248, 250, 252);
+      doc.setDrawColor(226, 232, 240);
+      doc.roundedRect(x, boxY, width, 18, 2, 2, "FD");
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(71, 85, 105);
+      doc.text(label, x + 3, boxY + 6);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(2, 132, 199);
+      doc.text(value, x + 3, boxY + 14);
+    };
+
+    const drawHorizontalBars = (
+      title: string,
+      data: Array<{ label: string; total: number; costo?: number }>,
+      x: number,
+      boxY: number,
+      width: number,
+      height: number,
+    ) => {
+      doc.setDrawColor(226, 232, 240);
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(x, boxY, width, height, 2, 2, "FD");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(15, 23, 42);
+      doc.text(title, x + 4, boxY + 7);
+
+      const rows = data.slice(0, 6);
+      const max = Math.max(...rows.map((row) => row.total), 1);
+      let rowY = boxY + 15;
+
+      rows.forEach((row, index) => {
+        const color = PDF_CHART_COLORS[index % PDF_CHART_COLORS.length];
+        const barWidth = Math.max(4, ((width - 45) * row.total) / max);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(51, 65, 85);
+        doc.text(sanitizePdfText(row.label), x + 4, rowY + 3);
+        doc.setFillColor(...color);
+        doc.rect(x + 38, rowY, barWidth, 4, "F");
+        doc.setFont("helvetica", "bold");
+        doc.text(String(row.total), x + 40 + barWidth, rowY + 3.4);
+        rowY += 7;
+      });
+    };
+
+    const drawMonthlyCost = (
+      title: string,
+      data: Array<{ periodo: string; costo: number; mantenimientos: number }>,
+      x: number,
+      boxY: number,
+      width: number,
+      height: number,
+    ) => {
+      doc.setDrawColor(226, 232, 240);
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(x, boxY, width, height, 2, 2, "FD");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(15, 23, 42);
+      doc.text(title, x + 4, boxY + 7);
+
+      const rows = data.slice(-6);
+      const max = Math.max(...rows.map((row) => row.costo), 1);
+      const chartBottom = boxY + height - 12;
+      const barAreaHeight = height - 25;
+      const gap = 3;
+      const barWidth = Math.max(6, (width - 18 - gap * Math.max(rows.length - 1, 0)) / Math.max(rows.length, 1));
+
+      rows.forEach((row, index) => {
+        const barHeight = Math.max(2, (barAreaHeight * row.costo) / max);
+        const bx = x + 7 + index * (barWidth + gap);
+        const by = chartBottom - barHeight;
+        doc.setFillColor(2, 168, 225);
+        doc.rect(bx, by, barWidth, barHeight, "F");
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7);
+        doc.setTextColor(71, 85, 105);
+        doc.text(row.periodo.slice(5), bx, chartBottom + 4);
+      });
+    };
+
+    const drawTable = (headers: string[], rows: string[][], widths: number[]) => {
+      const rowHeight = 7;
+
+      const drawTableHeader = () => {
+        addPageIfNeeded(rowHeight * 2);
+        let x = margin;
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setFillColor(226, 232, 240);
+        doc.setDrawColor(148, 163, 184);
+        doc.setTextColor(15, 23, 42);
+
+        headers.forEach((header, index) => {
+          doc.setFillColor(226, 232, 240);
+          doc.setDrawColor(148, 163, 184);
+          doc.setTextColor(15, 23, 42);
+          doc.rect(x, y, widths[index], rowHeight, "FD");
+          doc.text(sanitizePdfText(header), x + 2, y + 4.8);
+          x += widths[index];
+        });
+
+        y += rowHeight;
+      };
+
+      drawTableHeader();
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(15, 23, 42);
+
+      rows.forEach((row, rowIndex) => {
+        if (y + rowHeight + 2 > pageHeight - margin) {
+          doc.addPage();
+          y = margin;
+          drawTableHeader();
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(8);
+          doc.setTextColor(15, 23, 42);
+        }
+
+        let x = margin;
+        const isEven = rowIndex % 2 === 0;
+
+        row.forEach((cell, index) => {
+          doc.setDrawColor(226, 232, 240);
+          doc.setFillColor(isEven ? 255 : 248, isEven ? 255 : 250, isEven ? 255 : 252);
+          doc.rect(x, y, widths[index], rowHeight, "FD");
+          doc.setTextColor(15, 23, 42);
+          const text = doc.splitTextToSize(sanitizePdfText(cell), widths[index] - 4)[0] ?? "";
+          doc.text(text, x + 2, y + 4.8);
+          x += widths[index];
+        });
+
+        y += rowHeight;
+      });
+
+      y += 5;
+    };
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.setTextColor(2, 132, 199);
+    doc.text("Gym Master · Reporte de equipamiento y mantenimiento", margin, y);
+    y += 8;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(71, 85, 105);
+    doc.text(`Generado: ${new Date().toLocaleString("es-AR")}`, margin, y);
+    y += 6;
+    doc.text(
+      `Filtros: tipo=${selectedTipos.join(", ") || "todos"}; estado=${selectedEstados.join(", ") || "todos"}; ubicación=${selectedUbicaciones.join(", ") || "todas"}; búsqueda=${searchTerm || "sin búsqueda"}`,
+      margin,
+      y,
+    );
+    y += 8;
+
+    sectionTitle("Resumen ejecutivo");
+    const metricWidth = (pageWidth - margin * 2 - 10) / 6;
+    const metricsY = y;
+    drawMetric("Total equipos", String(biMantenimiento?.resumen.total_equipos ?? equipos.length), margin, metricsY, metricWidth);
+    drawMetric("Operativos", String(biMantenimiento?.resumen.operativos ?? 0), margin + (metricWidth + 2) * 1, metricsY, metricWidth);
+    drawMetric("En mantenimiento", String(biMantenimiento?.resumen.en_mantenimiento ?? 0), margin + (metricWidth + 2) * 2, metricsY, metricWidth);
+    drawMetric("Fuera servicio", String(biMantenimiento?.resumen.fuera_de_servicio ?? 0), margin + (metricWidth + 2) * 3, metricsY, metricWidth);
+    drawMetric("Vencidos", String(biMantenimiento?.resumen.vencidos ?? 0), margin + (metricWidth + 2) * 4, metricsY, metricWidth);
+    drawMetric("Costo 90 días", formatCurrency(biMantenimiento?.resumen.costo_ultimos_90_dias), margin + (metricWidth + 2) * 5, metricsY, metricWidth);
+    y += 25;
+
+    sectionTitle("Gráficos de métricas");
+    drawHorizontalBars("Estado del parque", biMantenimiento?.por_estado ?? [], margin, y, 86, 56);
+    drawMonthlyCost("Costo mensual", biMantenimiento?.costo_mensual ?? [], margin + 94, y, 86, 56);
+    drawHorizontalBars("Equipos por tipo", biMantenimiento?.por_tipo ?? [], margin + 188, y, 86, 56);
+    y += 64;
+
+    sectionTitle("Listado de equipamientos");
+    drawTable(
+      ["Nombre", "Tipo", "Estado", "Ubicación", "Marca/Modelo", "Próx. rev."],
+      filteredEquipos.map((equipo) => [
+        sanitizePdfText(equipo.nombre),
+        sanitizePdfText(equipo.tipo),
+        sanitizePdfText(equipo.estado),
+        sanitizePdfText(equipo.ubicacion),
+        `${sanitizePdfText(equipo.marca)} ${sanitizePdfText(equipo.modelo)}`.trim(),
+        sanitizePdfText(equipo.proxima_revision),
+      ]),
+      [46, 32, 34, 34, 56, 34],
+    );
+
+    sectionTitle("Historial reciente de mantenimiento");
+    drawTable(
+      ["Equipo", "Fecha", "Tipo mant.", "Estado", "Costo", "Técnico"],
+      (biMantenimiento?.mantenimientos_recientes ?? []).map((mantenimiento) => [
+        sanitizePdfText(mantenimiento.equipo_nombre),
+        sanitizePdfText(mantenimiento.fecha_mantenimiento),
+        sanitizePdfText(mantenimiento.tipo_mantenimiento),
+        sanitizePdfText(mantenimiento.estado),
+        formatCurrency(mantenimiento.costo),
+        sanitizePdfText(mantenimiento.tecnico_responsable),
+      ]),
+      [48, 28, 38, 32, 30, 60],
+    );
+
+    sectionTitle("Recomendaciones de venta/reemplazo");
+    drawTable(
+      ["Equipo", "Ubicación", "Score", "Costo 180", "Recomendación"],
+      (biMantenimiento?.recomendaciones_reemplazo ?? []).map((item) => [
+        sanitizePdfText(item.nombre),
+        sanitizePdfText(item.ubicacion),
+        String(item.score_reemplazo),
+        formatCurrency(item.costo_180_dias),
+        sanitizePdfText(item.recomendacion),
+      ]),
+      [48, 35, 20, 30, 103],
+    );
+
+    doc.save(buildTimestampedDownloadFileName("reporte-equipamiento-mantenimiento", "pdf"));
   };
 
   if (!isInitialized) {
@@ -170,10 +572,13 @@ export default function EquipamientosPage() {
   const resumenAlertas = alertasMantenimiento?.resumen;
   const alertasOperativas = alertasMantenimiento?.alertas_operativas ?? [];
   const proximasAlertas = alertasOperativas.slice(0, 5);
+  const resumenBi = biMantenimiento?.resumen;
 
   const handleRefreshMantenimiento = async () => {
-    await Promise.all([loadEquipos(), loadAlertasMantenimiento()]);
+    await Promise.all([loadEquipos(), loadMantenimientoAnalytics()]);
   };
+
+  const activeFiltersCount = selectedTipos.length + selectedEstados.length + selectedUbicaciones.length;
 
   return (
     <SidebarProvider>
@@ -182,77 +587,141 @@ export default function EquipamientosPage() {
         <SidebarInset>
           <AppHeader title="Equipamientos" />
           <main className="flex-1 p-6 space-y-6">
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-              <Card className="border-red-100 bg-red-50">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-red-700">Vencidos</p>
-                      <p className="mt-1 text-2xl font-bold text-red-900">
-                        {resumenAlertas?.vencidos ?? 0}
-                      </p>
+            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+              <MetricCard title="Vencidos" value={resumenAlertas?.vencidos ?? 0} tone="red" />
+              <MetricCard title="Próximos" value={resumenAlertas?.proximos ?? 0} tone="amber" helper="Umbral 5 días" />
+              <MetricCard title="En mantenimiento" value={resumenAlertas?.en_mantenimiento ?? 0} tone="blue" />
+              <MetricCard title="Sin fecha" value={resumenAlertas?.sin_fecha ?? 0} tone="slate" />
+              <MetricCard title="Costo 90 días" value={formatCurrency(resumenBi?.costo_ultimos_90_dias)} tone="violet" />
+              <MetricCard title="Revisar reemplazo" value={resumenBi?.equipos_revisar_reemplazo ?? 0} tone="red" helper="Score técnico/comercial" />
+            </section>
+
+            <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between gap-4 border-b p-4">
+                  <div>
+                    <h2 className="text-xl font-bold">Métricas de mantenimiento</h2>
+                    <p className="text-sm text-muted-foreground">
+                      Costos, frecuencia y señales para decidir si mantener, reparar o reemplazar.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleRefreshMantenimiento}
+                    disabled={loadingAlertas}
+                    className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${loadingAlertas ? "animate-spin" : ""}`} />
+                    Actualizar
+                  </Button>
+                </CardHeader>
+                <CardContent className="grid gap-4 p-4 lg:grid-cols-2">
+                  <div className="rounded-xl border p-4">
+                    <div className="mb-3 flex items-center gap-2 font-semibold">
+                      <BarChart3 className="h-4 w-4" /> Estado del parque
                     </div>
-                    <AlertTriangle className="h-8 w-8 text-red-600" />
+                    {biMantenimiento?.por_estado?.length ? (
+                      <ResponsiveContainer width="100%" height={260}>
+                        <PieChart>
+                          <Pie
+                            data={biMantenimiento.por_estado}
+                            dataKey="total"
+                            nameKey="label"
+                            innerRadius={55}
+                            outerRadius={90}
+                            paddingAngle={2}
+                          >
+                            {biMantenimiento.por_estado.map((entry, index) => (
+                              <Cell key={entry.label} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <EmptyChart label="Sin datos para estado del parque." />
+                    )}
+                  </div>
+
+                  <div className="rounded-xl border p-4">
+                    <div className="mb-3 flex items-center gap-2 font-semibold">
+                      <TrendingUp className="h-4 w-4" /> Costo mensual
+                    </div>
+                    {biMantenimiento?.costo_mensual?.length ? (
+                      <ResponsiveContainer width="100%" height={260}>
+                        <BarChart data={biMantenimiento.costo_mensual}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="periodo" />
+                          <YAxis />
+                          <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                          <Bar dataKey="costo" name="Costo" fill="#02a8e1" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <EmptyChart label="Sin costos mensuales para graficar." />
+                    )}
+                  </div>
+
+                  <div className="rounded-xl border p-4 lg:col-span-2">
+                    <div className="mb-3 flex items-center gap-2 font-semibold">
+                      <Wrench className="h-4 w-4" /> Mantenimientos por tipo
+                    </div>
+                    {biMantenimiento?.por_tipo?.length ? (
+                      <ResponsiveContainer width="100%" height={260}>
+                        <BarChart data={biMantenimiento.por_tipo} layout="vertical" margin={{ left: 80 }}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis type="number" allowDecimals={false} />
+                          <YAxis type="category" dataKey="label" />
+                          <Tooltip />
+                          <Bar dataKey="total" name="Equipos" fill="#22c55e" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <EmptyChart label="Sin datos por tipo de equipamiento." />
+                    )}
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-amber-100 bg-amber-50">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-amber-700">Próximos</p>
-                      <p className="mt-1 text-2xl font-bold text-amber-900">
-                        {resumenAlertas?.proximos ?? 0}
-                      </p>
+              <Card>
+                <CardHeader className="border-b p-4">
+                  <h2 className="text-xl font-bold">Recomendaciones operativas</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Equipos con mantenimiento repetido, alto costo o estado crítico.
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-3 p-4">
+                  {biMantenimiento?.recomendaciones_reemplazo?.length ? (
+                    biMantenimiento.recomendaciones_reemplazo.map((item) => (
+                      <div key={item.id_equipamiento} className="rounded-xl border bg-white p-4 shadow-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-semibold text-slate-950">{item.nombre}</p>
+                            <p className="mt-1 text-xs text-slate-500">
+                              {item.tipo || "Sin tipo"} · {item.ubicacion || "Sin ubicación"}
+                            </p>
+                          </div>
+                          <span className="rounded-full bg-red-100 px-2 py-1 text-xs font-semibold text-red-700">
+                            Score {item.score_reemplazo}
+                          </span>
+                        </div>
+                        <p className="mt-3 text-sm text-slate-700">{item.recomendacion}</p>
+                        <div className="mt-2 grid gap-2 text-xs text-slate-500 sm:grid-cols-2">
+                          <span>Correctivos 180 días: {item.correctivos_180_dias}</span>
+                          <span>Costo 180 días: {formatCurrency(item.costo_180_dias)}</span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="rounded-lg border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-800">
+                      No hay equipos con recomendación de reemplazo en este momento.
                     </div>
-                    <CalendarClock className="h-8 w-8 text-amber-600" />
-                  </div>
+                  )}
                 </CardContent>
               </Card>
-
-              <Card className="border-blue-100 bg-blue-50">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-blue-700">En mantenimiento</p>
-                      <p className="mt-1 text-2xl font-bold text-blue-900">
-                        {resumenAlertas?.en_mantenimiento ?? 0}
-                      </p>
-                    </div>
-                    <Wrench className="h-8 w-8 text-blue-600" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-slate-100 bg-slate-50">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-slate-700">Sin fecha</p>
-                      <p className="mt-1 text-2xl font-bold text-slate-900">
-                        {resumenAlertas?.sin_fecha ?? 0}
-                      </p>
-                    </div>
-                    <AlertTriangle className="h-8 w-8 text-slate-500" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-emerald-100 bg-emerald-50">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-medium text-emerald-700">Sin alerta</p>
-                      <p className="mt-1 text-2xl font-bold text-emerald-900">
-                        {resumenAlertas?.ok ?? 0}
-                      </p>
-                    </div>
-                    <CheckCircle2 className="h-8 w-8 text-emerald-600" />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            </section>
 
             <Card className="w-full">
               <CardHeader className="flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap">
@@ -281,15 +750,10 @@ export default function EquipamientosPage() {
                 ) : (
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                     {proximasAlertas.map((alerta) => (
-                      <div
-                        key={alerta.id}
-                        className="rounded-xl border bg-white p-4 shadow-sm"
-                      >
+                      <div key={alerta.id} className="rounded-xl border bg-white p-4 shadow-sm">
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="font-semibold text-slate-950">
-                              {alerta.nombre}
-                            </p>
+                            <p className="font-semibold text-slate-950">{alerta.nombre}</p>
                             <p className="mt-1 text-xs text-slate-500">
                               {alerta.tipo || "Sin tipo"} · {alerta.ubicacion || "Sin ubicación"}
                             </p>
@@ -319,7 +783,15 @@ export default function EquipamientosPage() {
 
             <Card className="w-full">
               <CardHeader className="flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap">
-                <h2 className="text-xl font-bold">Listado de Equipamientos</h2>
+                <div>
+                  <h2 className="text-xl font-bold">Listado de equipamientos</h2>
+                  <p className="text-sm text-muted-foreground">
+                    {filteredEquipos.length} resultado{filteredEquipos.length === 1 ? "" : "s"} filtrado{filteredEquipos.length === 1 ? "" : "s"} de {equipos.length} equipos activos.
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Tipos y ubicaciones se toman de catálogos parametrizables. Los estados se mantienen normalizados para control operativo.
+                  </p>
+                </div>
                 <div className="flex flex-wrap items-center w-full gap-2 md:w-auto">
                   <div className="flex items-center flex-grow gap-2 md:flex-grow-0">
                     <Popover open={filtrosOpen} onOpenChange={setFiltrosOpen}>
@@ -327,14 +799,9 @@ export default function EquipamientosPage() {
                         <Button variant="outline" className="min-w-[120px]">
                           <Filter className="w-4 h-4 mr-2" />
                           Filtros
-                          {selectedTipos.length +
-                            selectedEstados.length +
-                            selectedUbicaciones.length >
-                            0 && (
+                          {activeFiltersCount > 0 && (
                             <span className="px-1 ml-1 text-xs text-blue-600 bg-blue-100 rounded-full">
-                              {selectedTipos.length +
-                                selectedEstados.length +
-                                selectedUbicaciones.length}
+                              {activeFiltersCount}
                             </span>
                           )}
                         </Button>
@@ -342,46 +809,32 @@ export default function EquipamientosPage() {
                       <PopoverContent className="p-0 w-72" align="start">
                         <div className="p-4 space-y-4">
                           <div>
-                            <div className="pb-2 text-sm font-medium text-gray-700">
-                              Tipo
-                            </div>
+                            <div className="pb-2 text-sm font-medium text-gray-700">Tipo</div>
                             <div className="space-y-2">
                               {tipos.map((tipo) => (
-                                <div
-                                  key={tipo}
-                                  className="flex items-center space-x-2"
-                                >
+                                <div key={tipo} className="flex items-center space-x-2">
                                   <Checkbox
                                     id={`tipo-${tipo}`}
                                     checked={selectedTipos.includes(tipo)}
                                     onCheckedChange={() =>
                                       setSelectedTipos((prev) =>
-                                        prev.includes(tipo)
-                                          ? prev.filter((t) => t !== tipo)
-                                          : [...prev, tipo]
+                                        prev.includes(tipo) ? prev.filter((t) => t !== tipo) : [...prev, tipo],
                                       )
                                     }
                                   />
-                                  <label
-                                    htmlFor={`tipo-${tipo}`}
-                                    className="text-sm cursor-pointer"
-                                  >
+                                  <label htmlFor={`tipo-${tipo}`} className="text-sm cursor-pointer">
                                     {tipo}
                                   </label>
                                 </div>
                               ))}
                             </div>
                           </div>
+
                           <div className="pt-4 border-t">
-                            <div className="pb-2 text-sm font-medium text-gray-700">
-                              Estado
-                            </div>
+                            <div className="pb-2 text-sm font-medium text-gray-700">Estado</div>
                             <div className="space-y-2">
                               {estados.map((estado) => (
-                                <div
-                                  key={estado}
-                                  className="flex items-center space-x-2"
-                                >
+                                <div key={estado} className="flex items-center space-x-2">
                                   <Checkbox
                                     id={`estado-${estado}`}
                                     checked={selectedEstados.includes(estado)}
@@ -389,74 +842,87 @@ export default function EquipamientosPage() {
                                       setSelectedEstados((prev) =>
                                         prev.includes(estado)
                                           ? prev.filter((e) => e !== estado)
-                                          : [...prev, estado]
+                                          : [...prev, estado],
                                       )
                                     }
                                   />
-                                  <label
-                                    htmlFor={`estado-${estado}`}
-                                    className="text-sm cursor-pointer"
-                                  >
+                                  <label htmlFor={`estado-${estado}`} className="text-sm cursor-pointer">
                                     {estado}
                                   </label>
                                 </div>
                               ))}
                             </div>
                           </div>
+
                           <div className="pt-4 border-t">
-                            <div className="pb-2 text-sm font-medium text-gray-700">
-                              Ubicación
-                            </div>
+                            <div className="pb-2 text-sm font-medium text-gray-700">Ubicación</div>
                             <div className="space-y-2">
                               {ubicaciones.map((ubicacion) => (
-                                <div
-                                  key={ubicacion}
-                                  className="flex items-center space-x-2"
-                                >
+                                <div key={ubicacion} className="flex items-center space-x-2">
                                   <Checkbox
                                     id={`ubicacion-${ubicacion}`}
-                                    checked={selectedUbicaciones.includes(
-                                      ubicacion
-                                    )}
+                                    checked={selectedUbicaciones.includes(ubicacion)}
                                     onCheckedChange={() =>
                                       setSelectedUbicaciones((prev) =>
                                         prev.includes(ubicacion)
                                           ? prev.filter((u) => u !== ubicacion)
-                                          : [...prev, ubicacion]
+                                          : [...prev, ubicacion],
                                       )
                                     }
                                   />
-                                  <label
-                                    htmlFor={`ubicacion-${ubicacion}`}
-                                    className="text-sm cursor-pointer"
-                                  >
+                                  <label htmlFor={`ubicacion-${ubicacion}`} className="text-sm cursor-pointer">
                                     {ubicacion}
                                   </label>
                                 </div>
                               ))}
                             </div>
                           </div>
+
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => {
+                              setSelectedTipos([]);
+                              setSelectedEstados([]);
+                              setSelectedUbicaciones([]);
+                            }}
+                          >
+                            Limpiar filtros
+                          </Button>
                         </div>
                       </PopoverContent>
                     </Popover>
+
                     <div className="relative flex-grow md:flex-grow-0">
                       <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                       <Input
                         type="search"
-                        placeholder="Buscar por nombre, tipo..."
-                        className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] w-full"
+                        placeholder="Buscar nombre, marca, modelo, tipo, ubicación..."
+                        className="pl-8 sm:w-[320px] md:w-[260px] lg:w-[360px] w-full"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                       />
                     </div>
                   </div>
+
                   <Button
-                    onClick={() => window.print()}
+                    type="button"
+                    variant="outline"
+                    onClick={() => router.push("/dashboard/parametrizacion")}
+                    className="flex items-center gap-2 bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                  >
+                    <Filter className="w-4 h-4" />
+                    <span className="hidden sm:inline">Catálogos</span>
+                  </Button>
+
+                  <Button
+                    onClick={handleDownloadPdf}
                     variant="outline"
                     className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
                   >
-                    <Printer className="w-4 h-4" />
-                    <span className="hidden sm:inline">Imprimir</span>
+                    <FileText className="w-4 h-4" />
+                    <span className="hidden sm:inline">Descargar PDF</span>
                   </Button>
                   <Button
                     variant="outline"
@@ -479,27 +945,72 @@ export default function EquipamientosPage() {
                 </div>
               </CardHeader>
               <CardContent className="p-4 space-y-4">
-                <div className="overflow-x-auto">
-                  <EquipamientoTable
-                    equipos={getFilteredEquipos()}
-                    onEdit={(equipo) => {
-                      setSelectedEquipo(equipo);
-                      setOpenModal(true);
-                    }}
-                    onView={(equipo) => {
-                      setEquipoVer(equipo);
-                      setOpenModalVer(true);
-                    }}
-                    onDelete={async (equipo) => {
-                      const confirmar = window.confirm(
-                        "¿Está seguro de eliminar el equipo?"
-                      );
-                      if (!confirmar) return;
-                      await deleteEquipamiento(equipo.id);
-                      await handleRefreshMantenimiento();
-                    }}
-                  />
-                </div>
+                {loading ? (
+                  <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
+                    Cargando equipamientos...
+                  </div>
+                ) : (
+                  <>
+                    <div className="overflow-x-auto">
+                      <EquipamientoTable
+                        equipos={paginatedEquipos}
+                        onEdit={(equipo) => {
+                          setSelectedEquipo(equipo);
+                          setOpenModal(true);
+                        }}
+                        onView={(equipo) => {
+                          setEquipoVer(equipo);
+                          setOpenModalVer(true);
+                        }}
+                        onDelete={async (equipo) => {
+                          const confirmar = window.confirm("¿Está seguro de eliminar el equipo?");
+                          if (!confirmar) return;
+                          await deleteEquipamiento(equipo.id);
+                          await handleRefreshMantenimiento();
+                        }}
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-3 border-t pt-4 md:flex-row md:items-center md:justify-between">
+                      <div className="text-sm text-muted-foreground">
+                        Página {safeCurrentPage} de {totalPages} · mostrando {paginatedEquipos.length} de {filteredEquipos.length}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <select
+                          className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                          value={pageSize}
+                          onChange={(e) => setPageSize(Number(e.target.value))}
+                        >
+                          {PAGE_SIZE_OPTIONS.map((option) => (
+                            <option key={option} value={option}>
+                              {option} por página
+                            </option>
+                          ))}
+                        </select>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={safeCurrentPage <= 1}
+                          onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                          Anterior
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={safeCurrentPage >= totalPages}
+                          onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                        >
+                          Siguiente
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </main>
