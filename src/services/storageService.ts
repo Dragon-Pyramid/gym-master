@@ -12,22 +12,6 @@ interface JwtPayload {
   exp?: number;
 }
 
-export function getSessionFromCookie() {
-  const token = getToken();
-  if (!token) return null;
-  try {
-    const decoded = jwtDecode<JwtPayload>(token);
-    if (decoded.exp && decoded.exp * 1000 < Date.now()) {
-      logoutSession();
-      return null;
-    }
-    return decoded;
-  } catch {
-    logoutSession();
-    return null;
-  }
-}
-
 const TOKEN_KEY = "token";
 const AUTH_STORAGE_KEY = "auth-storage";
 
@@ -54,8 +38,64 @@ function getPersistedAuthToken(): string | null {
   }
 }
 
+function decodeJwtPayload(token?: string | null): JwtPayload | null {
+  if (!token) return null;
+
+  try {
+    return jwtDecode<JwtPayload>(token);
+  } catch {
+    return null;
+  }
+}
+
+function getTokenExpiration(token?: string | null): number | null {
+  const decoded = decodeJwtPayload(token);
+  return decoded?.exp ? decoded.exp * 1000 : null;
+}
+
+function isTokenExpired(token?: string | null): boolean {
+  const expiration = getTokenExpiration(token);
+  return Boolean(expiration && expiration <= Date.now());
+}
+
+function getTokenSortValue(token: string): number {
+  return getTokenExpiration(token) ?? Number.MAX_SAFE_INTEGER;
+}
+
+function shouldUseSecureCookie(): boolean {
+  if (typeof window === "undefined") {
+    return process.env.NODE_ENV === "production";
+  }
+
+  return window.location.protocol === "https:";
+}
+
+export function getSessionFromCookie() {
+  const token = getToken();
+  if (!token) return null;
+
+  const decoded = decodeJwtPayload(token);
+  if (!decoded) {
+    logoutSession();
+    return null;
+  }
+
+  if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+    logoutSession();
+    return null;
+  }
+
+  return decoded;
+}
+
 export function loginSession(token: string) {
-  Cookies.set(TOKEN_KEY, token, { sameSite: "strict", secure: true });
+  const expiresAt = getTokenExpiration(token);
+
+  Cookies.set(TOKEN_KEY, token, {
+    sameSite: "strict",
+    secure: shouldUseSecureCookie(),
+    ...(expiresAt ? { expires: new Date(expiresAt) } : {}),
+  });
 }
 
 export function logoutSession() {
@@ -71,7 +111,27 @@ export function logoutSession() {
 }
 
 export function getToken() {
-  return Cookies.get(TOKEN_KEY) || getPersistedAuthToken();
+  const cookieToken = Cookies.get(TOKEN_KEY) || null;
+  const persistedToken = getPersistedAuthToken();
+  const candidates = [cookieToken, persistedToken]
+    .filter((token): token is string => Boolean(token && token.trim()))
+    .filter((token, index, array) => array.indexOf(token) === index);
+
+  const validCandidates = candidates.filter((token) => !isTokenExpired(token));
+
+  if (validCandidates.length === 0) {
+    if (cookieToken && isTokenExpired(cookieToken)) {
+      Cookies.remove(TOKEN_KEY);
+    }
+
+    return null;
+  }
+
+  // En localhost puede quedar una cookie antigua porque antes se seteaba siempre
+  // como Secure. Si localStorage tiene una sesión renovada más nueva, usarla.
+  return validCandidates.sort(
+    (a, b) => getTokenSortValue(b) - getTokenSortValue(a),
+  )[0];
 }
 
 export function authHeader(): Record<string, string> {

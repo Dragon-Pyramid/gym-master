@@ -1,9 +1,8 @@
-import { authMiddleware } from '@/middlewares/auth.middleware';
-import { NextResponse } from 'next/server';
-import { conexionBD } from '@/middlewares/conexionBd.middleware';
+import { authMiddleware } from "@/middlewares/auth.middleware";
+import { NextResponse } from "next/server";
+import { conexionBD } from "@/middlewares/conexionBd.middleware";
 
-
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 type EstadoCuotaAcceso = {
   estado_cuota?: string | null;
@@ -12,14 +11,13 @@ type EstadoCuotaAcceso = {
   ultimo_vencimiento?: string | null;
 };
 
-
 function isAuthSessionError(error: unknown) {
-  const message = error instanceof Error ? error.message.toLowerCase() : '';
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
   return (
-    message.includes('token') ||
-    message.includes('jwt') ||
-    message.includes('authorization') ||
-    message.includes('unauthorized')
+    message.includes("token") ||
+    message.includes("jwt") ||
+    message.includes("authorization") ||
+    message.includes("unauthorized")
   );
 }
 
@@ -40,35 +38,40 @@ function normalizeEstadoCuota(row: any): EstadoCuotaAcceso | null {
 }
 
 function isCuotaConDeuda(estado: EstadoCuotaAcceso | null) {
-  return estado?.estado_cuota === 'vencido' || estado?.estado_cuota === 'sin_pagos';
+  return (
+    estado?.estado_cuota === "vencido" || estado?.estado_cuota === "sin_pagos"
+  );
 }
 
 function buildMensajeDeuda(estado: EstadoCuotaAcceso | null) {
-  if (estado?.estado_cuota === 'sin_pagos') {
-    return 'El socio no registra pagos activos. Debe dirigirse a administración para regularizar su situación.';
+  if (estado?.estado_cuota === "sin_pagos") {
+    return "El socio no registra pagos activos. Debe dirigirse a administración para regularizar su situación.";
   }
 
   const periodo = estado?.periodo_hasta || estado?.ultimo_vencimiento;
-  const periodoTexto = periodo ? ` con vencimiento ${periodo}` : ' correspondiente';
+  const periodoTexto = periodo
+    ? ` con vencimiento ${periodo}`
+    : " correspondiente";
 
   return `El socio adeuda la cuota${periodoTexto}. Debe dirigirse a administración para regularizar su situación.`;
 }
 
 async function enrichAsistenciaConEstadoCuota(supabase: any, row: any) {
-  const { data, error } = await supabase.rpc('obtener_estado_cuota_socio', {
+  const { data, error } = await supabase.rpc("obtener_estado_cuota_socio", {
     p_id_socio: row.socio_id,
   });
 
   if (error) {
     console.warn(
-      'No se pudo enriquecer asistencia reciente con estado de cuota:',
-      error.message
+      "No se pudo enriquecer asistencia reciente con estado de cuota:",
+      error.message,
     );
 
     return {
       ...row,
-      access_status: 'al_dia',
-      alert_type: 'success',
+      tipo_movimiento: row.hora_egreso ? "salida" : "entrada",
+      access_status: row.hora_egreso ? "salida" : "al_dia",
+      alert_type: "success",
       mensaje_acceso: null,
       estado_cuota: null,
     };
@@ -79,10 +82,11 @@ async function enrichAsistenciaConEstadoCuota(supabase: any, row: any) {
   if (row.socio?.activo === false) {
     return {
       ...row,
-      access_status: 'desactivado',
-      alert_type: 'inactive',
+      tipo_movimiento: row.hora_egreso ? "salida" : "entrada",
+      access_status: row.hora_egreso ? "salida" : "desactivado",
+      alert_type: "inactive",
       mensaje_acceso:
-        'El socio se encuentra desactivado. Debe regularizar su situación en administración.',
+        "El socio se encuentra desactivado. Debe regularizar su situación en administración.",
       estado_cuota: estado,
     };
   }
@@ -91,9 +95,14 @@ async function enrichAsistenciaConEstadoCuota(supabase: any, row: any) {
 
   return {
     ...row,
-    access_status: tieneDeuda ? 'deuda' : 'al_dia',
-    alert_type: tieneDeuda ? 'debt' : 'success',
-    mensaje_acceso: tieneDeuda ? buildMensajeDeuda(estado) : null,
+    tipo_movimiento: row.hora_egreso ? "salida" : "entrada",
+    access_status: row.hora_egreso ? "salida" : tieneDeuda ? "deuda" : "al_dia",
+    alert_type: row.hora_egreso ? "success" : tieneDeuda ? "debt" : "success",
+    mensaje_acceso: row.hora_egreso
+      ? "Salida registrada correctamente."
+      : tieneDeuda
+        ? buildMensajeDeuda(estado)
+        : null,
     estado_cuota: estado,
   };
 }
@@ -102,7 +111,7 @@ export async function GET(req: Request) {
   try {
     const { user } = await authMiddleware(req);
     if (!user) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
     const supabase = conexionBD();
@@ -111,28 +120,33 @@ export async function GET(req: Request) {
     // Se enriquecen con estado de cuota para que el dashboard admin no muestre
     // bienvenida cuando el ingreso corresponde a un socio sin pagos o moroso.
     const { data, error } = await supabase
-      .from('asistencia')
-      .select(`
+      .from("asistencia")
+      .select(
+        `
         id,
         socio_id,
         fecha,
         hora_ingreso,
+        hora_egreso,
+        actualizado_en,
         socio:socio_id (
           id_socio,
           nombre_completo,
           foto,
           activo
         )
-      `)
-      .order('fecha', { ascending: false })
-      .order('hora_ingreso', { ascending: false })
-      .order('id', { ascending: false }) // ← tiebreaker estable
+      `,
+      )
+      .order("actualizado_en", { ascending: false })
+      .order("fecha", { ascending: false })
+      .order("hora_ingreso", { ascending: false })
+      .order("id", { ascending: false }) // ← tiebreaker estable
       .limit(4);
 
     if (error) throw new Error(error.message);
 
     const enriched = await Promise.all(
-      (data ?? []).map((row) => enrichAsistenciaConEstadoCuota(supabase, row))
+      (data ?? []).map((row) => enrichAsistenciaConEstadoCuota(supabase, row)),
     );
 
     return NextResponse.json(enriched, { status: 200 });
@@ -140,15 +154,16 @@ export async function GET(req: Request) {
     if (isAuthSessionError(error)) {
       return NextResponse.json(
         {
-          error: 'La sesión de Terminal expiró. Iniciá sesión nuevamente o renová la sesión.',
-          error_code: 'TERMINAL_SESSION_EXPIRED',
+          error:
+            "La sesión de Terminal expiró. Iniciá sesión nuevamente o renová la sesión.",
+          error_code: "TERMINAL_SESSION_EXPIRED",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     const errorMessage =
-      error instanceof Error ? error.message : 'Error desconocido';
+      error instanceof Error ? error.message : "Error desconocido";
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

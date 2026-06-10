@@ -8,7 +8,14 @@ import { AppFooter } from "@/components/footer/AppFooter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, FileText, FileSpreadsheet, MonitorUp } from "lucide-react";
+import {
+  Search,
+  FileText,
+  FileSpreadsheet,
+  MonitorUp,
+  Users,
+  AlertTriangle,
+} from "lucide-react";
 import {
   getAllAsistencias,
   deleteAsistencia,
@@ -20,11 +27,16 @@ import { Asistencia } from "@/interfaces/asistencia.interface";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
-import { formatFrontendTime } from '@/utils/dateFormat';
+import { formatFrontendTime } from "@/utils/dateFormat";
 import ExcelJS from "exceljs";
-import { buildTimestampedDownloadFileName } from '@/utils/downloadFileName';
+import { buildTimestampedDownloadFileName } from "@/utils/downloadFileName";
 import { downloadCommercialReportPdf } from "@/utils/commercialReportPdf";
 import { JwtUser } from "@/interfaces/jwtUser.interface";
+import { AforoAsistenciaResumen } from "@/interfaces/asistenciaAforo.interface";
+import {
+  fetchAforoAsistencia,
+  registrarSalidaAdministrativa,
+} from "@/services/asistenciaAforoService";
 
 const ASISTENCIAS_PAGE_SIZE = 10;
 const ASISTENCIAS_AUTO_REFRESH_MS = 5000;
@@ -62,6 +74,7 @@ export default function AsistenciasPage() {
     useState<Asistencia | null>(null);
   const [openModalVer, setOpenModalVer] = useState(false);
   const [asistenciaVer, setAsistenciaVer] = useState<Asistencia | null>(null);
+  const [aforo, setAforo] = useState<AforoAsistenciaResumen | null>(null);
 
   useEffect(() => {
     initializeAuth();
@@ -72,6 +85,15 @@ export default function AsistenciasPage() {
       router.push("/auth/login");
     }
   }, [isAuthenticated, isInitialized, router]);
+
+  const loadAforo = useCallback(async () => {
+    try {
+      const data = await fetchAforoAsistencia();
+      setAforo(data);
+    } catch (error: unknown) {
+      console.warn("No se pudo cargar el aforo actual", error);
+    }
+  }, []);
 
   const loadAsistencias = useCallback(
     async (options?: { silent?: boolean; resetPage?: boolean }) => {
@@ -94,6 +116,7 @@ export default function AsistenciasPage() {
         }
 
         setLastUpdatedAt(new Date());
+        await loadAforo();
       } finally {
         if (silent) {
           setIsAutoRefreshing(false);
@@ -102,7 +125,7 @@ export default function AsistenciasPage() {
         }
       }
     },
-    [user],
+    [user, loadAforo],
   );
 
   const handleDownloadPdf = async () => {
@@ -112,13 +135,27 @@ export default function AsistenciasPage() {
         subtitle: "Reporte de ingresos, egresos y filtros de asistencia.",
         fileName: "listado-asistencias-gym-master",
         rows: filteredAsistencias,
-        metrics: [{ label: "Asistencias filtradas", value: filteredAsistencias.length }],
+        metrics: [
+          { label: "Asistencias filtradas", value: filteredAsistencias.length },
+        ],
         filtersLabel: `Período: ${periodFilter}${fechaDesde ? ` · Desde: ${fechaDesde}` : ""}${fechaHasta ? ` · Hasta: ${fechaHasta}` : ""}${searchTerm.trim() ? ` · Búsqueda: ${searchTerm.trim()}` : ""}`,
         columns: [
-          { header: "Socio", width: 48, getValue: (a) => a.socio?.nombre_completo || a.socio_id },
+          {
+            header: "Socio",
+            width: 48,
+            getValue: (a) => a.socio?.nombre_completo || a.socio_id,
+          },
           { header: "Fecha", width: 26, getValue: (a) => a.fecha },
-          { header: "Hora ingreso", width: 28, getValue: (a) => a.hora_ingreso || "-" },
-          { header: "Hora egreso", width: 28, getValue: (a) => a.hora_egreso || "-" },
+          {
+            header: "Hora ingreso",
+            width: 28,
+            getValue: (a) => a.hora_ingreso || "-",
+          },
+          {
+            header: "Hora egreso",
+            width: 28,
+            getValue: (a) => a.hora_egreso || "-",
+          },
           { header: "ID socio", width: 56, getValue: (a) => a.socio_id },
         ],
       });
@@ -156,7 +193,10 @@ export default function AsistenciasPage() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = buildTimestampedDownloadFileName("listado-asistencias", "xlsx");
+    a.download = buildTimestampedDownloadFileName(
+      "listado-asistencias",
+      "xlsx",
+    );
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -173,6 +213,21 @@ export default function AsistenciasPage() {
       await loadAsistencias();
     } catch (error: unknown) {
       toast.error("Error al eliminar asistencia");
+    }
+  };
+
+  const handleRegisterExit = async (asistencia: Asistencia) => {
+    const socioNombre =
+      asistencia.socio?.nombre_completo || asistencia.socio_id;
+    const confirmar = window.confirm(`¿Registrar salida para ${socioNombre}?`);
+    if (!confirmar) return;
+
+    try {
+      const response = await registrarSalidaAdministrativa(asistencia.id);
+      toast.success(response.message || "Salida registrada correctamente");
+      await loadAsistencias({ silent: true, resetPage: false });
+    } catch (error: unknown) {
+      toast.error((error as Error).message || "No se pudo registrar la salida");
     }
   };
 
@@ -201,8 +256,12 @@ export default function AsistenciasPage() {
     const startOfWeekDate = new Date(today);
     startOfWeekDate.setDate(today.getDate() - 6);
     const startOfWeek = startOfWeekDate.toISOString().slice(0, 10);
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
-    const startOfYear = new Date(today.getFullYear(), 0, 1).toISOString().slice(0, 10);
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+      .toISOString()
+      .slice(0, 10);
+    const startOfYear = new Date(today.getFullYear(), 0, 1)
+      .toISOString()
+      .slice(0, 10);
 
     const filtered = asistencias.filter((a) => {
       const socioNombre =
@@ -267,6 +326,77 @@ export default function AsistenciasPage() {
         <SidebarInset>
           <AppHeader title="Asistencias" />
           <main className="flex-1 p-6 space-y-6">
+            <div className="grid gap-4 md:grid-cols-4">
+              <Card className="border-emerald-100 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/20">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Dentro ahora
+                      </p>
+                      <p className="text-3xl font-black">
+                        {aforo?.aforo_actual ?? "--"}
+                      </p>
+                    </div>
+                    <Users className="h-8 w-8 text-emerald-600" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Capacidad configurada
+                  </p>
+                  <p className="text-3xl font-black">
+                    {aforo?.capacidad_maxima ?? "--"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Variable GYM_MASTER_AFORO_MAXIMO
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Ocupación
+                  </p>
+                  <p className="text-3xl font-black">
+                    {aforo ? `${aforo.porcentaje_ocupacion}%` : "--"}
+                  </p>
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-[#02a8e1]"
+                      style={{
+                        width: `${Math.min(aforo?.porcentaje_ocupacion ?? 0, 100)}%`,
+                      }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card
+                className={
+                  aforo?.estado === "critico" || aforo?.estado === "alto"
+                    ? "border-red-200 bg-red-50/70 dark:border-red-900 dark:bg-red-950/20"
+                    : ""
+                }
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-amber-500" />
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Estado
+                    </p>
+                  </div>
+                  <p className="mt-1 text-xl font-black capitalize">
+                    {aforo?.estado ?? "--"}
+                  </p>
+                  <p className="line-clamp-2 text-xs text-muted-foreground">
+                    {aforo?.mensaje_estado ?? "Sin datos de aforo."}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
             <Card className="w-full">
               <CardHeader className="flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap">
                 <h2 className="text-xl font-bold">Listado de Asistencias</h2>
@@ -325,6 +455,16 @@ export default function AsistenciasPage() {
                   <Button
                     type="button"
                     variant="outline"
+                    onClick={() => router.push("/dashboard/asistencias/aforo")}
+                    className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
+                  >
+                    <Users className="w-4 h-4" />
+                    <span className="hidden sm:inline">Salida / Aforo</span>
+                    <span className="sm:hidden">Aforo</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
                     onClick={() =>
                       window.open(
                         "/dashboard/asistencias/terminal",
@@ -350,7 +490,8 @@ export default function AsistenciasPage() {
               <CardContent className="p-4 space-y-4">
                 <div className="flex flex-col gap-1 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
                   <span>
-                    Actualización automática cada {ASISTENCIAS_AUTO_REFRESH_MS / 1000}
+                    Actualización automática cada{" "}
+                    {ASISTENCIAS_AUTO_REFRESH_MS / 1000}
                     s.
                     {isAutoRefreshing ? " Sincronizando asistencias..." : ""}
                   </span>
@@ -375,6 +516,7 @@ export default function AsistenciasPage() {
                       setOpenModalVer(true);
                     }}
                     onDelete={handleDeleteAsistencia}
+                    onRegisterExit={handleRegisterExit}
                   />
                 </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil } from "lucide-react";
+import { LogOut, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -21,6 +21,7 @@ export default function AsistenciaTable({
   onEdit,
   onView,
   onDelete,
+  onRegisterExit,
   totalAsistencias,
 }: {
   asistencias: Asistencia[];
@@ -28,6 +29,7 @@ export default function AsistenciaTable({
   onEdit: (asistencia: Asistencia) => void;
   onView?: (asistencia: Asistencia) => void;
   onDelete?: (asistencia: Asistencia) => void | Promise<void>;
+  onRegisterExit?: (asistencia: Asistencia) => void | Promise<void>;
   totalAsistencias?: number;
 }) {
   if (loading) {
@@ -82,6 +84,17 @@ export default function AsistenciaTable({
               >
                 Ver
               </Button>
+              {!a.hora_egreso && onRegisterExit && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onRegisterExit(a)}
+                  title="Registrar salida"
+                  className="border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                >
+                  <LogOut className="w-4 h-4" />
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="outline"
