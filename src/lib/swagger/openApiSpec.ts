@@ -508,6 +508,32 @@ const endpointDefinitions: EndpointDefinition[] = [
     "source": "src/app/api/empleados-sueldos/[id]/route.ts"
   },
 
+
+  {
+    "path": "/api/socios/demografia-promociones-bi",
+    "methods": [
+      "GET"
+    ],
+    "tag": "Socios / BI",
+    "summary": "BI demográfico de socios y promociones sugeridas",
+    "description": "Consolida distribución por género, franjas etarias, altas, asistencia, pagos, consumo por segmento y sugerencias comerciales para promociones del gimnasio.",
+    "auth": true,
+    "admin": true,
+    "notImplemented": false,
+    "statuses": [
+      200,
+      400,
+      401,
+      403,
+      500
+    ],
+    "queryParams": [
+      "desde",
+      "hasta"
+    ],
+    "source": "src/app/api/socios/demografia-promociones-bi/route.ts"
+  },
+
   {
     "path": "/api/finanzas/dashboard-bi",
     "methods": [

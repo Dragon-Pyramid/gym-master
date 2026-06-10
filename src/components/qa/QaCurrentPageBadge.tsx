@@ -25,6 +25,7 @@ const PAGE_FILES: Record<string, string> = {
   "/dashboard/evolucion-fisica": "src/app/dashboard/evolucion-fisica/page.tsx",
   "/dashboard/ficha-medica": "src/app/dashboard/ficha-medica/page.tsx",
   "/dashboard/finanzas": "src/app/dashboard/finanzas/page.tsx",
+  "/dashboard/bi-socios-demografia-promociones": "src/app/dashboard/bi-socios-demografia-promociones/page.tsx",
   "/dashboard/gestion-dietas": "src/app/dashboard/gestion-dietas/page.tsx",
   "/dashboard/gestor-dietas": "src/app/dashboard/gestor-dietas/page.tsx",
   "/dashboard/gestor-evolucion-fisica": "src/app/dashboard/gestor-evolucion-fisica/page.tsx",

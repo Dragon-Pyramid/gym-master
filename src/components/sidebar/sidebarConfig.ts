@@ -117,6 +117,7 @@ export const sections: SidebarSectionType[] = [
       { title: 'Servicios', link: '/dashboard/servicios', level: 2 },
       { title: 'Gastos / Egresos', link: '/dashboard/otros-gastos', level: 2 },
       { title: 'Finanzas / BI', link: '/dashboard/finanzas', level: 2 },
+      { title: 'BI Socios / Promociones', link: '/dashboard/bi-socios-demografia-promociones', level: 2 },
       { title: 'Sueldos', link: '/dashboard/empleados-sueldos', level: 2 },
       { title: 'Notificaciones', link: '/dashboard/notificaciones', level: 2 },
       { title: 'Mensajes Socios', link: '/dashboard/mensajes-admin', level: 2 },
