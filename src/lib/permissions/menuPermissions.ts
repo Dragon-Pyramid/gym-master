@@ -229,6 +229,13 @@ export const MENU_PERMISSION_GROUPS: Array<{
         roles: ['admin', 'usuario'],
       },
       {
+        key: 'BI Socios / Promociones',
+        label: 'BI Socios / Promociones',
+        path: '/dashboard/bi-socios-demografia-promociones',
+        group: 'Administración',
+        roles: ['admin', 'usuario'],
+      },
+      {
         key: 'Sueldos',
         label: 'Sueldos',
         path: '/dashboard/empleados-sueldos',
