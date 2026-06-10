@@ -1,5 +1,5 @@
 import axios from "axios";
-import { authHeader } from "@/services/storageService";
+import { authHeader, terminalAuthHeader } from "@/services/storageService";
 
 export interface EstadoCuotaAccesoQR {
   estado_cuota?: string | null;
@@ -145,7 +145,7 @@ export const refreshTerminalSession =
         {
           headers: {
             "Content-Type": "application/json",
-            ...authHeader(),
+            ...terminalAuthHeader(),
           },
         },
       );
@@ -160,7 +160,7 @@ export const fetchQrDiario = async (): Promise<QrDiarioResponse> => {
   try {
     const response = await axios.get("/api/asistencias/qr-dia", {
       headers: {
-        ...authHeader(),
+        ...terminalAuthHeader(),
       },
     });
     return response.data as QrDiarioResponse;
@@ -221,13 +221,13 @@ export const registrarAsistenciaQR = async (
   }
 };
 
-export const fetchAsistenciasRecientes = async (): Promise<
-  AsistenciaReciente[]
-> => {
+export const fetchAsistenciasRecientes = async (options?: {
+  terminalSession?: boolean;
+}): Promise<AsistenciaReciente[]> => {
   try {
     const response = await axios.get("/api/asistencias/recientes", {
       headers: {
-        ...authHeader(),
+        ...(options?.terminalSession ? terminalAuthHeader() : authHeader()),
       },
     });
     return response.data as AsistenciaReciente[];
@@ -242,7 +242,7 @@ export const fetchTerminalNotificaciones = async (): Promise<
   try {
     const response = await axios.get("/api/notificaciones/terminal", {
       headers: {
-        ...authHeader(),
+        ...terminalAuthHeader(),
       },
     });
     return response.data as TerminalNotificacion[];
