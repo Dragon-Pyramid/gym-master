@@ -64,7 +64,7 @@ export default function AsistenciaForm({
           socio_id: form.id_socio,
           fecha: form.fecha,
           hora_ingreso: form.hora_ingreso,
-          hora_egreso: form.hora_egreso,
+          hora_egreso: form.hora_egreso || null,
         };
         await updateAsistencia(undefined as any, asistencia.id, updateData);
         toast.success("Asistencia actualizada");
@@ -73,7 +73,7 @@ export default function AsistenciaForm({
           socio_id: form.id_socio,
           fecha: form.fecha,
           hora_ingreso: form.hora_ingreso,
-          hora_egreso: form.hora_egreso,
+          hora_egreso: form.hora_egreso || null,
         };
         await createAsistencia(undefined as any, createData);
         toast.success("Asistencia creada");
@@ -155,8 +155,8 @@ export default function AsistenciaForm({
         {loading
           ? "Guardando..."
           : asistencia
-          ? "Actualizar Asistencia"
-          : "Registrar Asistencia"}
+            ? "Actualizar Asistencia"
+            : "Registrar Asistencia"}
       </Button>
 
       <Button

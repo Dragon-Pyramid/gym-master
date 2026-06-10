@@ -3,7 +3,7 @@ export interface Asistencia {
   socio_id: string;
   fecha: string; // YYYY-MM-DD
   hora_ingreso: string; // ISO string o HH:mm:ssZ
-  hora_egreso: string; // ISO string o HH:mm:ssZ
+  hora_egreso?: string | null; // ISO string o HH:mm:ssZ
   socio?: {
     nombre_completo: string;
   };
@@ -13,24 +13,23 @@ export interface CreateAsistenciaDto {
   socio_id: string;
   fecha: string;
   hora_ingreso: string;
-  hora_egreso: string;
+  hora_egreso?: string | null;
 }
 
 export interface UpdateAsistenciaDto {
   socio_id?: string;
   fecha?: string;
   hora_ingreso?: string;
-  hora_egreso?: string;
+  hora_egreso?: string | null;
 }
 
 export interface ResponseAsistencia {
   id: string;
   fecha: string;
   hora_ingreso: string;
-  hora_egreso: string;
+  hora_egreso?: string | null;
   socio: {
     socio_id: string;
     nombre_completo: string;
   };
-
 }

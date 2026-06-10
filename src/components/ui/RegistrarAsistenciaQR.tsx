@@ -1,14 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { useEffect, useRef, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   registrarAsistenciaQR,
   RegistroAsistenciaQRResponse,
-} from '@/services/qrService';
-import BienvenidaSocio from './BienvenidaSocio';
-import { Socio } from '@/interfaces/socio.interface';
-import { Usuario } from '@/interfaces/usuario.interface';
-import { supabaseBrowser } from '@/lib/supabase-browser';
+} from "@/services/qrService";
+import BienvenidaSocio from "./BienvenidaSocio";
+import { Socio } from "@/interfaces/socio.interface";
+import { Usuario } from "@/interfaces/usuario.interface";
+import { supabaseBrowser } from "@/lib/supabase-browser";
 
 type BrowserBarcodeDetector = {
   detect: (source: HTMLVideoElement) => Promise<Array<{ rawValue?: string }>>;
@@ -19,13 +19,15 @@ type BrowserBarcodeDetectorConstructor = new (options?: {
 }) => BrowserBarcodeDetector;
 
 function getBarcodeDetectorConstructor() {
-  if (typeof window === 'undefined') return null;
+  if (typeof window === "undefined") return null;
 
   return (
-    window as Window & {
-      BarcodeDetector?: BrowserBarcodeDetectorConstructor;
-    }
-  ).BarcodeDetector ?? null;
+    (
+      window as Window & {
+        BarcodeDetector?: BrowserBarcodeDetectorConstructor;
+      }
+    ).BarcodeDetector ?? null
+  );
 }
 
 function getSocioDisplayData(res: RegistroAsistenciaQRResponse) {
@@ -54,7 +56,8 @@ function getSocioDisplayData(res: RegistroAsistenciaQRResponse) {
 function broadcastAdminAccessEvent(payload: {
   event_id: string;
   access_status?: string;
-  alert_type?: 'success' | 'debt' | 'inactive' | 'error';
+  alert_type?: "success" | "debt" | "inactive" | "error";
+  tipo_movimiento?: "entrada" | "salida";
   mensaje_acceso?: string | null;
   socio?: {
     id_socio?: string;
@@ -62,18 +65,20 @@ function broadcastAdminAccessEvent(payload: {
     foto?: string | null;
   };
 }) {
-  const channel = supabaseBrowser.channel('gym-master-asistencia-access-events');
+  const channel = supabaseBrowser.channel(
+    "gym-master-asistencia-access-events",
+  );
   const timeout = window.setTimeout(() => {
     supabaseBrowser.removeChannel(channel);
   }, 2000);
 
   channel.subscribe(async (status) => {
-    if (status !== 'SUBSCRIBED') return;
+    if (status !== "SUBSCRIBED") return;
 
     window.clearTimeout(timeout);
     await channel.send({
-      type: 'broadcast',
-      event: 'access_event',
+      type: "broadcast",
+      event: "access_event",
       payload,
     });
 
@@ -85,10 +90,10 @@ function broadcastAdminAccessEvent(payload: {
 
 export function RegistrarAsistenciaQR() {
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
   const [cameraKey, setCameraKey] = useState(0);
-  const [cameraHint, setCameraHint] = useState('');
+  const [cameraHint, setCameraHint] = useState("");
   const [cameraReady, setCameraReady] = useState(false);
   const lastScanRef = useRef<{ value: string; at: number } | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -100,7 +105,8 @@ export function RegistrarAsistenciaQR() {
   const [welcomeData, setWelcomeData] = useState<{
     nombre?: string;
     foto?: string | null;
-    variant?: 'success' | 'debt' | 'inactive';
+    variant?: "success" | "debt" | "inactive";
+    movementType?: "entrada" | "salida";
     message?: string | null;
   }>({});
 
@@ -140,17 +146,21 @@ export function RegistrarAsistenciaQR() {
 
     loadingRef.current = true;
     setLoading(true);
-    setError('');
-    setMessage('');
-    setCameraHint('');
+    setError("");
+    setMessage("");
+    setCameraHint("");
 
     try {
       const res = await registrarAsistenciaQR(data);
 
-      const { id_socio, nombre: responseNombre, foto } = getSocioDisplayData(res);
+      const {
+        id_socio,
+        nombre: responseNombre,
+        foto,
+      } = getSocioDisplayData(res);
       let nombre = responseNombre;
 
-      if (!nombre && 'usuario' in res && res.usuario) {
+      if (!nombre && "usuario" in res && res.usuario) {
         const usuario = res.usuario as Usuario;
         nombre = usuario.nombre || undefined;
       }
@@ -158,38 +168,41 @@ export function RegistrarAsistenciaQR() {
       if (!nombre) {
         try {
           const url = new URL(data);
-          const qname = url.searchParams.get('nombre');
+          const qname = url.searchParams.get("nombre");
           if (qname) nombre = qname;
         } catch {}
       }
 
       const shouldNotifyAccessDisplay =
-        res.alert_type === 'success' ||
-        res.alert_type === 'debt' ||
-        res.alert_type === 'inactive' ||
-        res.access_status === 'al_dia' ||
-        res.access_status === 'deuda' ||
-        res.access_status === 'desactivado';
+        res.alert_type === "success" ||
+        res.alert_type === "debt" ||
+        res.alert_type === "inactive" ||
+        res.access_status === "al_dia" ||
+        res.access_status === "deuda" ||
+        res.access_status === "desactivado" ||
+        res.access_status === "salida" ||
+        res.tipo_movimiento === "salida";
 
       if (shouldNotifyAccessDisplay) {
         const asistenciaId =
-          res.asistencia && 'id' in res.asistencia
-            ? String((res.asistencia as { id?: string }).id ?? '')
-            : '';
+          res.asistencia && "id" in res.asistencia
+            ? String((res.asistencia as { id?: string }).id ?? "")
+            : "";
 
         broadcastAdminAccessEvent({
           event_id: asistenciaId
-            ? `asistencia-${asistenciaId}-${res.alert_type ?? 'success'}`
-            : `${res.access_status ?? res.alert_type ?? 'access'}-${
-                id_socio ?? 'socio'
+            ? `asistencia-${asistenciaId}-${res.alert_type ?? "success"}`
+            : `${res.access_status ?? res.alert_type ?? "access"}-${
+                id_socio ?? "socio"
               }-${Date.now()}`,
           access_status: res.access_status,
           alert_type: res.alert_type,
+          tipo_movimiento: res.tipo_movimiento,
           mensaje_acceso:
             res.mensaje_acceso ||
             res.message ||
             res.error ||
-            'Asistencia registrada correctamente.',
+            "Asistencia registrada correctamente.",
           socio: {
             id_socio,
             nombre_completo: nombre,
@@ -198,42 +211,50 @@ export function RegistrarAsistenciaQR() {
         });
       }
 
-      if (res.alert_type === 'inactive' || res.access_status === 'desactivado') {
+      if (
+        res.alert_type === "inactive" ||
+        res.access_status === "desactivado"
+      ) {
         setWelcomeData({
           nombre,
           foto,
-          variant: 'inactive',
+          variant: "inactive",
           message:
             res.error ||
-            'Usted está desactivado. Regularice su situación en administración.',
+            "Usted está desactivado. Regularice su situación en administración.",
         });
-        setError(res.error || 'Socio desactivado.');
+        setError(res.error || "Socio desactivado.");
         setShowWelcome(true);
         return;
       }
 
       if (res.error && !res.valido) {
-        setError(res.error || 'No se pudo registrar la asistencia.');
+        setError(res.error || "No se pudo registrar la asistencia.");
         return;
       }
 
       if (res.valido || res.message) {
-        const variant = res.alert_type === 'debt' ? 'debt' : 'success';
+        const variant = res.alert_type === "debt" ? "debt" : "success";
+        const movementType = res.tipo_movimiento;
         const finalMessage =
           res.mensaje_acceso ||
           res.message ||
-          'Asistencia registrada correctamente.';
+          "Asistencia registrada correctamente.";
 
         setMessage(finalMessage);
         setWelcomeData({
           nombre,
           foto,
           variant,
-          message: variant === 'debt' ? finalMessage : null,
+          movementType,
+          message:
+            variant === "debt" || movementType === "salida"
+              ? finalMessage
+              : null,
         });
         setShowWelcome(true);
       } else {
-        setError('No se pudo registrar la asistencia.');
+        setError("No se pudo registrar la asistencia.");
       }
     } finally {
       loadingRef.current = false;
@@ -246,21 +267,23 @@ export function RegistrarAsistenciaQR() {
 
     async function startCamera() {
       stopCamera();
-      setError('');
-      setMessage('');
-      setCameraHint('Iniciando cámara...');
+      setError("");
+      setMessage("");
+      setCameraHint("Iniciando cámara...");
       setCameraReady(false);
 
       try {
         if (!navigator.mediaDevices?.getUserMedia) {
-          setCameraHint('Este navegador no permite acceder a la cámara desde esta página.');
+          setCameraHint(
+            "Este navegador no permite acceder a la cámara desde esta página.",
+          );
           return;
         }
 
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: false,
           video: {
-            facingMode: { ideal: 'environment' },
+            facingMode: { ideal: "environment" },
             width: { ideal: 1280 },
             height: { ideal: 720 },
           },
@@ -277,25 +300,25 @@ export function RegistrarAsistenciaQR() {
         if (!video) return;
 
         video.srcObject = stream;
-        video.setAttribute('playsinline', 'true');
+        video.setAttribute("playsinline", "true");
         video.muted = true;
         await video.play();
 
         if (cancelled) return;
 
         setCameraReady(true);
-        setCameraHint('');
+        setCameraHint("");
 
         const BarcodeDetectorClass = getBarcodeDetectorConstructor();
 
         if (!BarcodeDetectorClass) {
           setCameraHint(
-            'La cámara está activa, pero este navegador no soporta detección QR nativa. Probá con Chrome actualizado.'
+            "La cámara está activa, pero este navegador no soporta detección QR nativa. Probá con Chrome actualizado.",
           );
           return;
         }
 
-        const detector = new BarcodeDetectorClass({ formats: ['qr_code'] });
+        const detector = new BarcodeDetectorClass({ formats: ["qr_code"] });
 
         scanTimerRef.current = window.setInterval(async () => {
           const currentVideo = videoRef.current;
@@ -322,22 +345,28 @@ export function RegistrarAsistenciaQR() {
       } catch (cameraError: any) {
         const name = cameraError?.name;
 
-        if (name === 'NotAllowedError') {
-          setCameraHint('No se pudo acceder a la cámara. Revisá los permisos del navegador.');
+        if (name === "NotAllowedError") {
+          setCameraHint(
+            "No se pudo acceder a la cámara. Revisá los permisos del navegador.",
+          );
           return;
         }
 
-        if (name === 'NotFoundError') {
-          setCameraHint('No se encontró una cámara disponible para escanear.');
+        if (name === "NotFoundError") {
+          setCameraHint("No se encontró una cámara disponible para escanear.");
           return;
         }
 
-        if (name === 'NotReadableError') {
-          setCameraHint('La cámara está ocupada por otra aplicación o el navegador no pudo iniciarla.');
+        if (name === "NotReadableError") {
+          setCameraHint(
+            "La cámara está ocupada por otra aplicación o el navegador no pudo iniciarla.",
+          );
           return;
         }
 
-        setCameraHint('No se pudo iniciar la cámara. Reintentá o actualizá la página.');
+        setCameraHint(
+          "No se pudo iniciar la cámara. Reintentá o actualizá la página.",
+        );
       }
     }
 
@@ -351,59 +380,61 @@ export function RegistrarAsistenciaQR() {
   }, [cameraKey]);
 
   return (
-    <Card className='w-full max-w-xl mx-auto'>
+    <Card className="w-full max-w-xl mx-auto">
       <CardHeader>
         <CardTitle>Escanear QR para registrar asistencia</CardTitle>
       </CardHeader>
-      <CardContent className='flex flex-col items-center gap-6'>
-        <div className='relative flex items-center justify-center w-full max-w-xs overflow-hidden bg-slate-900 border rounded-lg aspect-square'>
+      <CardContent className="flex flex-col items-center gap-6">
+        <div className="relative flex items-center justify-center w-full max-w-xs overflow-hidden bg-slate-900 border rounded-lg aspect-square">
           <video
             ref={videoRef}
-            className='absolute inset-0 object-cover w-full h-full'
+            className="absolute inset-0 object-cover w-full h-full"
             playsInline
             muted
             autoPlay
           />
 
           {!cameraReady && (
-            <div className='absolute inset-0 flex items-center justify-center px-6 text-sm text-center text-white bg-slate-900'>
+            <div className="absolute inset-0 flex items-center justify-center px-6 text-sm text-center text-white bg-slate-900">
               Iniciando cámara...
             </div>
           )}
 
-          <div className='absolute inset-8 border-2 border-white/80 rounded-2xl shadow-[0_0_0_999px_rgba(15,23,42,0.28)]' />
-          <div className='absolute w-12 h-1 -translate-x-1/2 bg-[#02a8e1] rounded-full top-8 left-1/2' />
-          <div className='absolute w-12 h-1 -translate-x-1/2 bg-[#02a8e1] rounded-full bottom-8 left-1/2' />
+          <div className="absolute inset-8 border-2 border-white/80 rounded-2xl shadow-[0_0_0_999px_rgba(15,23,42,0.28)]" />
+          <div className="absolute w-12 h-1 -translate-x-1/2 bg-[#02a8e1] rounded-full top-8 left-1/2" />
+          <div className="absolute w-12 h-1 -translate-x-1/2 bg-[#02a8e1] rounded-full bottom-8 left-1/2" />
         </div>
 
-        <p className='max-w-sm text-xs text-center text-muted-foreground'>
-          Apuntá la cámara al QR del día. El lector usa la cámara nativa del navegador
-          para mostrar el preview y detectar el código.
+        <p className="max-w-sm text-xs text-center text-muted-foreground">
+          Apuntá la cámara al QR del día. El lector usa la cámara nativa del
+          navegador para mostrar el preview y detectar el código.
         </p>
 
         {cameraHint && (
-          <div className='max-w-sm text-sm font-medium text-center text-amber-700'>
+          <div className="max-w-sm text-sm font-medium text-center text-amber-700">
             {cameraHint}
           </div>
         )}
 
-        {loading && <div className='text-blue-600'>Registrando...</div>}
+        {loading && <div className="text-blue-600">Registrando...</div>}
         {message && (
           <div
             className={`font-semibold text-center ${
-              welcomeData.variant === 'debt' ? 'text-red-600' : 'text-green-600'
+              welcomeData.variant === "debt" ? "text-red-600" : "text-green-600"
             }`}
           >
             {message}
           </div>
         )}
-        {error && <div className='font-semibold text-center text-red-600'>{error}</div>}
+        {error && (
+          <div className="font-semibold text-center text-red-600">{error}</div>
+        )}
         <Button
           onClick={() => {
-            setError('');
-            setMessage('');
+            setError("");
+            setMessage("");
             setShowWelcome(false);
-            setCameraHint('');
+            setCameraHint("");
             setCameraReady(false);
             setCameraKey((value) => value + 1);
             lastScanRef.current = null;
@@ -417,6 +448,7 @@ export function RegistrarAsistenciaQR() {
           nombre={welcomeData.nombre}
           foto={welcomeData.foto}
           variant={welcomeData.variant}
+          movementType={welcomeData.movementType}
           message={welcomeData.message}
           onClose={() => setShowWelcome(false)}
         />

@@ -4,6 +4,10 @@ import {
   CreateAsistenciaDto,
   UpdateAsistenciaDto,
 } from "../interfaces/asistencia.interface";
+import {
+  AforoAsistenciaResumen,
+  AsistenciaMovimientoResumen,
+} from "@/interfaces/asistenciaAforo.interface";
 import dayjs from "dayjs";
 import jwt from "jsonwebtoken";
 import QRCode from "qrcode";
@@ -174,6 +178,137 @@ function getSocioAccessPayload(socio: any) {
   };
 }
 
+function getConfiguredAforoMaximo() {
+  const rawValue =
+    process.env.GYM_MASTER_AFORO_MAXIMO ||
+    process.env.NEXT_PUBLIC_GYM_MASTER_AFORO_MAXIMO ||
+    "80";
+  const parsed = Number(rawValue);
+
+  return Number.isFinite(parsed) && parsed > 0 ? Math.trunc(parsed) : 80;
+}
+
+function getAforoEstado(porcentaje: number): AforoAsistenciaResumen["estado"] {
+  if (porcentaje >= 100) return "critico";
+  if (porcentaje >= 85) return "alto";
+  if (porcentaje >= 65) return "medio";
+  return "normal";
+}
+
+function getAforoMensaje(estado: AforoAsistenciaResumen["estado"]) {
+  if (estado === "critico") {
+    return "Aforo completo o superado. Conviene pausar nuevos ingresos y revisar salidas pendientes.";
+  }
+
+  if (estado === "alto") {
+    return "Ocupación alta. Recomendado monitorear accesos y horarios pico.";
+  }
+
+  if (estado === "medio") {
+    return "Ocupación moderada. El gimnasio opera con margen disponible.";
+  }
+
+  return "Ocupación normal. Hay disponibilidad operativa.";
+}
+
+function normalizeAsistenciaMovimiento(row: any): AsistenciaMovimientoResumen {
+  const horaIngreso = String(row.hora_ingreso ?? "");
+  const horaEgreso = row.hora_egreso ? String(row.hora_egreso) : null;
+  const tipoMovimiento = horaEgreso ? "salida" : "entrada";
+
+  return {
+    id: String(row.id),
+    socio_id: String(row.socio_id),
+    fecha: String(row.fecha),
+    hora_ingreso: horaIngreso,
+    hora_egreso: horaEgreso,
+    tipo_movimiento: tipoMovimiento,
+    ultimo_movimiento: horaEgreso || horaIngreso,
+    socio: row.socio
+      ? {
+          id_socio: row.socio.id_socio,
+          nombre_completo: row.socio.nombre_completo,
+          foto: row.socio.foto ?? null,
+          activo: row.socio.activo ?? null,
+        }
+      : null,
+  };
+}
+
+function sortByUltimoMovimientoDesc(
+  a: AsistenciaMovimientoResumen,
+  b: AsistenciaMovimientoResumen,
+) {
+  return `${b.fecha}T${b.ultimo_movimiento}`.localeCompare(
+    `${a.fecha}T${a.ultimo_movimiento}`,
+  );
+}
+
+async function findAsistenciaAbiertaDelDia(
+  supabase: any,
+  socioId: string,
+  fecha: string,
+) {
+  const { data, error } = await supabase
+    .from("asistencia")
+    .select(
+      `
+        *,
+        socio: socio_id (
+          id_socio,
+          nombre_completo,
+          foto,
+          activo
+        )
+      `,
+    )
+    .eq("socio_id", socioId)
+    .eq("fecha", fecha)
+    .is("hora_egreso", null)
+    .order("hora_ingreso", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("Error al verificar asistencia abierta");
+  }
+
+  return data;
+}
+
+async function cerrarAsistenciaAbierta(
+  supabase: any,
+  asistenciaId: string,
+  horaEgreso: string,
+  fechaActualizacion: string,
+) {
+  const { data, error } = await supabase
+    .from("asistencia")
+    .update({
+      hora_egreso: horaEgreso,
+      actualizado_en: fechaActualizacion,
+    })
+    .eq("id", asistenciaId)
+    .select(
+      `
+        *,
+        socio: socio_id (
+          id_socio,
+          nombre_completo,
+          foto,
+          activo
+        )
+      `,
+    )
+    .single();
+
+  if (error) {
+    throw new Error(`Error al registrar la salida: ${error.message}`);
+  }
+
+  return data;
+}
+
 export const registrarAsistenciaDesdeQR = async (
   tokenAsistencia: string,
   user: JwtUser,
@@ -211,6 +346,35 @@ export const registrarAsistenciaDesdeQR = async (
       error: "No se encontró un socio asociado a tu cuenta.",
       access_status: "sin_socio",
       alert_type: "error",
+    };
+  }
+
+  // SI EXISTE UNA ASISTENCIA ABIERTA PARA HOY, EL QR REGISTRA SALIDA.
+  const asistenciaAbierta = await findAsistenciaAbiertaDelDia(
+    supabase,
+    socio.id_socio,
+    hoy,
+  );
+
+  if (asistenciaAbierta) {
+    const ahora = getArgentinaDateTimeParts();
+    const asistenciaCerrada = await cerrarAsistenciaAbierta(
+      supabase,
+      asistenciaAbierta.id,
+      ahora.hora,
+      `${ahora.fecha} ${ahora.hora}`,
+    );
+
+    return {
+      valido: true,
+      message: "Salida registrada correctamente. ¡Hasta luego!",
+      asistencia: asistenciaCerrada,
+      access_status: "salida",
+      alert_type: "success",
+      tipo_movimiento: "salida",
+      socio: getSocioAccessPayload(socio),
+      estado_cuota: null,
+      mensaje_acceso: "Salida registrada correctamente. ¡Hasta luego!",
     };
   }
 
@@ -254,45 +418,6 @@ export const registrarAsistenciaDesdeQR = async (
   const tieneDeuda = isCuotaConDeuda(estadoCuota);
   const mensajeDeuda = tieneDeuda ? buildMensajeDeuda(estadoCuota) : null;
 
-  //VERIFICO SI YA EXISTE UNA ASISTENCIA PARA HOY
-  const { data: dataSocioAsistencia, error: errorSocioAsistencia } =
-    await supabase
-      .from("asistencia")
-      .select(
-        `
-        *,
-        socio: socio_id (
-          id_socio, 
-          nombre_completo,
-          usuario_id (
-            foto,
-            nombre
-          )
-        )
-      `,
-      )
-      .eq("socio_id", socio.id_socio)
-      .eq("fecha", hoy)
-      .single();
-
-  if (errorSocioAsistencia && errorSocioAsistencia.code !== "PGRST116") {
-    throw new Error("Error al verificar asistencia existente");
-  }
-
-  if (dataSocioAsistencia) {
-    return {
-      valido: true,
-      message: tieneDeuda
-        ? `Asistencia ya registrada para hoy. ${mensajeDeuda}`
-        : "Asistencia ya registrada para hoy. ¡Bienvenido de nuevo!",
-      asistencia: dataSocioAsistencia,
-      access_status: tieneDeuda ? "deuda" : "al_dia",
-      alert_type: tieneDeuda ? "debt" : "success",
-      estado_cuota: estadoCuota,
-      mensaje_acceso: mensajeDeuda,
-    };
-  }
-
   //CREO LA ASISTENCIA
   const { data: nuevaAsistencia, error: errorNuevaAsistencia } = await supabase
     .from("asistencia")
@@ -329,13 +454,139 @@ export const registrarAsistenciaDesdeQR = async (
   return {
     valido: true,
     message: tieneDeuda
-      ? `Asistencia registrada. ${mensajeDeuda}`
-      : "Asistencia registrada correctamente.",
+      ? `Ingreso registrado. ${mensajeDeuda}`
+      : "Ingreso registrado correctamente.",
     asistencia: nuevaAsistencia,
     access_status: tieneDeuda ? "deuda" : "al_dia",
     alert_type: tieneDeuda ? "debt" : "success",
+    tipo_movimiento: "entrada",
+    socio: getSocioAccessPayload(socio),
     estado_cuota: estadoCuota,
     mensaje_acceso: mensajeDeuda,
+  };
+};
+
+export const registrarSalidaAsistencia = async (
+  user: JwtUser,
+  asistenciaId: string,
+) => {
+  if (user.rol !== "admin" && user.rol !== "usuario") {
+    throw new Error("No autorizado para registrar salidas administrativas");
+  }
+
+  const supabase = conexionBD();
+  const ahora = getArgentinaDateTimeParts();
+
+  const { data: asistencia, error: fetchError } = await supabase
+    .from("asistencia")
+    .select(
+      `
+        *,
+        socio: socio_id (
+          id_socio,
+          nombre_completo,
+          foto,
+          activo
+        )
+      `,
+    )
+    .eq("id", asistenciaId)
+    .maybeSingle();
+
+  if (fetchError) throw new Error(fetchError.message);
+  if (!asistencia) throw new Error("No se encontró la asistencia indicada");
+
+  if (asistencia.hora_egreso) {
+    return {
+      message: "La salida ya estaba registrada.",
+      asistencia: normalizeAsistenciaMovimiento(asistencia),
+    };
+  }
+
+  const asistenciaCerrada = await cerrarAsistenciaAbierta(
+    supabase,
+    asistenciaId,
+    ahora.hora,
+    `${ahora.fecha} ${ahora.hora}`,
+  );
+
+  return {
+    message: "Salida registrada correctamente.",
+    asistencia: normalizeAsistenciaMovimiento(asistenciaCerrada),
+  };
+};
+
+export const getAforoAsistencia = async (
+  user: JwtUser,
+): Promise<AforoAsistenciaResumen> => {
+  if (user.rol !== "admin" && user.rol !== "usuario") {
+    throw new Error("No autorizado para consultar aforo");
+  }
+
+  const supabase = conexionBD();
+  const ahora = getArgentinaDateTimeParts();
+  const capacidadMaxima = getConfiguredAforoMaximo();
+
+  const selectSocio = `
+    id,
+    socio_id,
+    fecha,
+    hora_ingreso,
+    hora_egreso,
+    socio: socio_id (
+      id_socio,
+      nombre_completo,
+      foto,
+      activo
+    )
+  `;
+
+  const { data: asistenciasHoy, error: asistenciasHoyError } = await supabase
+    .from("asistencia")
+    .select(selectSocio)
+    .eq("fecha", ahora.fecha)
+    .order("hora_ingreso", { ascending: false });
+
+  if (asistenciasHoyError) {
+    throw new Error(asistenciasHoyError.message);
+  }
+
+  const { count: antiguasAbiertasCount, error: antiguasError } = await supabase
+    .from("asistencia")
+    .select("id", { count: "exact", head: true })
+    .lt("fecha", ahora.fecha)
+    .is("hora_egreso", null);
+
+  if (antiguasError) {
+    throw new Error(antiguasError.message);
+  }
+
+  const movimientos = (asistenciasHoy ?? []).map(normalizeAsistenciaMovimiento);
+  const sociosDentro = movimientos
+    .filter((row) => !row.hora_egreso)
+    .sort((a, b) => a.hora_ingreso.localeCompare(b.hora_ingreso));
+
+  const aforoActual = sociosDentro.length;
+  const porcentajeOcupacion = capacidadMaxima
+    ? Math.round((aforoActual / capacidadMaxima) * 100)
+    : 0;
+  const estado = getAforoEstado(porcentajeOcupacion);
+
+  return {
+    fecha: ahora.fecha,
+    hora_actual: ahora.hora,
+    aforo_actual: aforoActual,
+    capacidad_maxima: capacidadMaxima,
+    porcentaje_ocupacion: porcentajeOcupacion,
+    estado,
+    mensaje_estado: getAforoMensaje(estado),
+    entradas_hoy: movimientos.length,
+    salidas_hoy: movimientos.filter((row) => Boolean(row.hora_egreso)).length,
+    asistencias_abiertas_antiguas: antiguasAbiertasCount ?? 0,
+    socios_dentro: sociosDentro,
+    movimientos_recientes: movimientos
+      .sort(sortByUltimoMovimientoDesc)
+      .slice(0, 12),
   };
 };
 
