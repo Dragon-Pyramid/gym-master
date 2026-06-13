@@ -1,9 +1,11 @@
 import dayjs from "dayjs";
 import { stripe } from "@/lib/stripe";
 import { JwtUser } from "@/interfaces/jwtUser.interface";
-import { conexionBD } from "@/middlewares/conexionBd.middleware";
 import { getSocioByIdUsuario } from "./socioService";
 import { calcularDescuentoPago } from "@/lib/cuotas/descuentoPago";
+import { combinarDescuentosPago } from "@/lib/cuotas/descuentoPagoBonificacion";
+import { getSupabaseServerClient } from "@/services/supabaseServerClient";
+import type { PagoBonificacionMensualSocio } from "@/interfaces/pago.interface";
 import { fetchCuotaDescuentoConfig } from "@/services/cuotaDescuentoService";
 import type { PagoDescuentoPreview } from "@/interfaces/pago.interface";
 import { assertGimnasioStripeDisponible } from "@/services/gimnasioParametrizacionServerService";
@@ -40,11 +42,51 @@ const getStripeCurrency = (): string => {
   return process.env.STRIPE_CURRENCY || "usd";
 };
 
+function getYearMonthFromDate(dateIso: string) {
+  const [anio, mes] = dateIso.slice(0, 10).split("-").map(Number);
+  return { anio, mes };
+}
+
+async function fetchBonificacionMensualForPago(
+  socioId: string,
+  fechaReferencia: string,
+): Promise<PagoBonificacionMensualSocio | null> {
+  const supabase = getSupabaseServerClient();
+  const { anio, mes } = getYearMonthFromDate(fechaReferencia);
+  const { data, error } = await supabase
+    .from("socio_ranking_bonificacion_mensual")
+    .select("socio_id,anio,mes,ranking,bonificado,descuento_porcentaje,motivo,observaciones")
+    .eq("socio_id", socioId)
+    .eq("anio", anio)
+    .eq("mes", mes)
+    .eq("bonificado", true)
+    .gt("descuento_porcentaje", 0)
+    .maybeSingle();
+
+  if (error) {
+    if (error.code === "42P01" || /schema cache|does not exist/i.test(error.message ?? "")) return null;
+    throw new Error(error.message);
+  }
+
+  return data
+    ? {
+        socio_id: data.socio_id,
+        anio: Number(data.anio),
+        mes: Number(data.mes),
+        ranking: data.ranking ?? null,
+        bonificado: Boolean(data.bonificado),
+        descuento_porcentaje: Number(data.descuento_porcentaje ?? 0),
+        motivo: data.motivo ?? null,
+        observaciones: data.observaciones ?? null,
+      }
+    : null;
+}
+
 async function buildPagoCuotaContext(
   user: JwtUser,
   options: CreateSessionPagoOptions = {}
 ): Promise<PagoCuotaContext> {
-  const supabase = conexionBD();
+  const supabase = getSupabaseServerClient();
 
   const mesesCubiertos = toPositiveInt(options.meses_cubiertos, 1);
 
@@ -91,10 +133,15 @@ async function buildPagoCuotaContext(
     .format("YYYY-MM-DD");
 
   const descuentoConfig = await fetchCuotaDescuentoConfig(supabase);
-  const preview = calcularDescuentoPago({
+  const previewPagoAdelantado = calcularDescuentoPago({
     cuotaMonto: Number(cuota.monto ?? 0),
     mesesCubiertos,
     config: descuentoConfig,
+  });
+  const bonificacionMensual = await fetchBonificacionMensualForPago(socio.id_socio, periodoDesde);
+  const preview = combinarDescuentosPago({
+    previewPagoAdelantado,
+    bonificacionMensual,
   });
 
   return {

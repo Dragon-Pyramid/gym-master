@@ -13,6 +13,8 @@ import {
 } from '@/services/morosidadService';
 import { calcularDescuentoPago } from '@/lib/cuotas/descuentoPago';
 import { fetchCuotaDescuentoConfig } from '@/services/cuotaDescuentoService';
+import { combinarDescuentosPago } from '@/lib/cuotas/descuentoPagoBonificacion';
+import type { PagoBonificacionMensualSocio } from '@/interfaces/pago.interface';
 
 const allowedManagerRoles = new Set(['admin', 'usuario']);
 
@@ -56,6 +58,71 @@ function normalizeUuidString(value: unknown): string | null {
   const normalized = normalizeString(value);
   if (!normalized) return null;
   return uuidRegex.test(normalized) ? normalized : null;
+}
+
+function getYearMonthFromDate(dateIso: string) {
+  const clean = dateIso.slice(0, 10);
+  const [anio, mes] = clean.split('-').map(Number);
+  return {
+    anio: Number.isInteger(anio) ? anio : new Date().getFullYear(),
+    mes: Number.isInteger(mes) ? mes : new Date().getMonth() + 1,
+  };
+}
+
+function normalizeBonificacionRow(row: any): PagoBonificacionMensualSocio {
+  return {
+    socio_id: row.socio_id,
+    anio: Number(row.anio),
+    mes: Number(row.mes),
+    ranking: row.ranking ?? null,
+    bonificado: Boolean(row.bonificado),
+    descuento_porcentaje: Number(row.descuento_porcentaje ?? 0),
+    motivo: row.motivo ?? null,
+    observaciones: row.observaciones ?? null,
+  };
+}
+
+async function fetchBonificacionesMensuales(supabase: ReturnType<typeof getSupabaseServerClient>) {
+  const { data, error } = await supabase
+    .from('socio_ranking_bonificacion_mensual')
+    .select('socio_id,anio,mes,ranking,bonificado,descuento_porcentaje,motivo,observaciones')
+    .eq('bonificado', true)
+    .gt('descuento_porcentaje', 0);
+
+  if (error) {
+    if (error.code === '42P01' || /schema cache|does not exist/i.test(error.message ?? '')) {
+      return [];
+    }
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map(normalizeBonificacionRow);
+}
+
+async function fetchBonificacionMensualForPago(
+  supabase: ReturnType<typeof getSupabaseServerClient>,
+  socioId: string,
+  fechaReferencia: string,
+): Promise<PagoBonificacionMensualSocio | null> {
+  const { anio, mes } = getYearMonthFromDate(fechaReferencia);
+  const { data, error } = await supabase
+    .from('socio_ranking_bonificacion_mensual')
+    .select('socio_id,anio,mes,ranking,bonificado,descuento_porcentaje,motivo,observaciones')
+    .eq('socio_id', socioId)
+    .eq('anio', anio)
+    .eq('mes', mes)
+    .eq('bonificado', true)
+    .gt('descuento_porcentaje', 0)
+    .maybeSingle();
+
+  if (error) {
+    if (error.code === '42P01' || /schema cache|does not exist/i.test(error.message ?? '')) {
+      return null;
+    }
+    throw new Error(error.message);
+  }
+
+  return data ? normalizeBonificacionRow(data) : null;
 }
 
 function normalizePago(row: any): ResponsePago {
@@ -131,7 +198,7 @@ export async function fetchPagoFormOptionsServer(
   assertCanManagePayments(user);
   const supabase = getSupabaseServerClient();
 
-  const [sociosResult, cuotasResult] = await Promise.all([
+  const [sociosResult, cuotasResult, bonificacionesMensuales] = await Promise.all([
     supabase
       .from('socio')
       .select('id_socio,nombre_completo,email,activo,descuento_activo')
@@ -142,6 +209,7 @@ export async function fetchPagoFormOptionsServer(
       .select('id,descripcion,monto,periodo,fecha_inicio,fecha_fin,activo')
       .eq('activo', true)
       .order('fecha_inicio', { ascending: false }),
+    fetchBonificacionesMensuales(supabase),
   ]);
 
   if (sociosResult.error) throw new Error(sociosResult.error.message);
@@ -153,6 +221,7 @@ export async function fetchPagoFormOptionsServer(
     socios: sociosResult.data ?? [],
     cuotas: cuotasResult.data ?? [],
     descuento_config: descuentoConfig,
+    bonificaciones_mensuales: bonificacionesMensuales,
   };
 }
 
@@ -231,10 +300,19 @@ export async function createPagoManualServer(
     normalizeString(payload.periodo_hasta) ?? addMonthsIso(periodoDesde, mesesCubiertos);
 
   const descuentoConfig = await fetchCuotaDescuentoConfig(supabase);
-  const previewDescuento = calcularDescuentoPago({
+  const previewPagoAdelantado = calcularDescuentoPago({
     cuotaMonto: toNumber(cuota.monto, 0),
     mesesCubiertos,
     config: descuentoConfig,
+  });
+  const bonificacionMensual = await fetchBonificacionMensualForPago(
+    supabase,
+    payload.socio_id,
+    periodoDesde,
+  );
+  const previewDescuento = combinarDescuentosPago({
+    previewPagoAdelantado,
+    bonificacionMensual,
   });
   const montoPagadoCalculado = toNumber(payload.monto_pagado, previewDescuento.total);
   const montoPagado = montoPagadoCalculado > 0 ? montoPagadoCalculado : previewDescuento.total;

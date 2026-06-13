@@ -406,6 +406,21 @@ const endpointDefinitions: EndpointDefinition[] = [
     source: "src/app/api/empleados-sueldos/[id]/route.ts",
   },
 
+
+  {
+    path: "/api/socios/ranking-bonificacion-mensual",
+    methods: ["GET", "PATCH"],
+    tag: "Socios",
+    summary: "Ranking y bonificación mensual de socios",
+    description:
+      "Calcula el ranking mensual de socios por asistencia y cuota al día. Permite registrar o quitar bonificaciones comerciales mensuales.",
+    auth: true,
+    admin: false,
+    notImplemented: false,
+    statuses: [200, 400, 401, 403, 409, 500],
+    queryParams: ["anio", "mes"],
+    source: "src/app/api/socios/ranking-bonificacion-mensual/route.ts",
+  },
   {
     path: "/api/socios/demografia-promociones-bi",
     methods: ["GET"],

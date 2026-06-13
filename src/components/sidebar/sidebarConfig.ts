@@ -130,6 +130,11 @@ export const sections: SidebarSectionType[] = [
         link: "/dashboard/bi-socios-demografia-promociones",
         level: 2,
       },
+      {
+        title: "Ranking / Bonificación",
+        link: "/dashboard/socios-ranking-bonificacion",
+        level: 2,
+      },
       { title: "Sueldos", link: "/dashboard/empleados-sueldos", level: 2 },
       { title: "Notificaciones", link: "/dashboard/notificaciones", level: 2 },
       { title: "Mensajes Socios", link: "/dashboard/mensajes-admin", level: 2 },
