@@ -75,6 +75,22 @@ const normalizeClienteTipo = (clienteTipo?: string | null): VentaClienteTipo => 
   return 'consumidor_final';
 };
 
+/**
+ * PostgREST construye los filtros `.in()` dentro de la URL.
+ * En historiales grandes de ventas, enviar cientos o miles de UUID en una
+ * sola consulta puede terminar en 400 Bad Request por URL demasiado larga.
+ * Por eso el detalle se recupera en tandas chicas y luego se agrupa en memoria.
+ */
+const VENTA_DETALLE_BATCH_SIZE = 80;
+
+function chunkArray<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+}
+
 const normalizeVentaPayload = (payload: CreateVentaConDetalleDto) => {
   const detalles = payload.detalles ?? (payload.venta_detalle ? [payload.venta_detalle] : []);
   const clienteTipo = normalizeClienteTipo(payload.venta.cliente_tipo);
@@ -181,21 +197,30 @@ async function getDetallesByVentaIds(ventaIds: string[]) {
   if (!ventaIds.length) return new Map<string, VentaDetalle[]>();
 
   const supabase = conexionBD();
-  const { data, error } = await supabase
-    .from('venta_detalle')
-    .select(
+  const uniqueVentaIds = Array.from(new Set(ventaIds.filter(Boolean)));
+  const detalles: VentaDetalle[] = [];
+
+  for (const ventaIdBatch of chunkArray(uniqueVentaIds, VENTA_DETALLE_BATCH_SIZE)) {
+    const { data, error } = await supabase
+      .from('venta_detalle')
+      .select(
+        `
+        *,
+        producto:producto_id(id, nombre),
+        servicio:servicio_id(id, nombre)
       `
-      *,
-      producto:producto_id(id, nombre),
-      servicio:servicio_id(id, nombre)
-    `
-    )
-    .in('venta_id', ventaIds)
-    .order('creado_en', { ascending: true });
+      )
+      .in('venta_id', ventaIdBatch)
+      .order('creado_en', { ascending: true });
 
-  if (error) throw new Error(error.message);
+    if (error) {
+      throw new Error(`No se pudo cargar el detalle del historial de ventas: ${error.message}`);
+    }
 
-  return (data as VentaDetalle[]).reduce((map, detalle) => {
+    detalles.push(...((data ?? []) as VentaDetalle[]));
+  }
+
+  return detalles.reduce((map, detalle) => {
     const current = map.get(detalle.venta_id) ?? [];
     current.push(detalle);
     map.set(detalle.venta_id, current);
@@ -250,6 +275,7 @@ export const createVenta = async (
       estado: 'pagada',
       activo: true,
       comprobante_codigo: comprobanteCodigo,
+      registrado_por: user?.id ?? null,
     })
     .select(
       `
