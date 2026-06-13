@@ -323,6 +323,7 @@ export default function ActividadesPage() {
   const actividadesOptions = dashboard?.actividades ?? actividades;
   const sociosOptions = dashboard?.socios ?? [];
   const empleadosOptions = dashboard?.empleados ?? [];
+  const ubicacionesOptions = dashboard?.ubicaciones ?? [];
 
   const selectedSocio = useMemo(
     () => sociosOptions.find((socio) => socio.id_socio === inscripcionForm.socio_id) ?? null,
@@ -818,7 +819,33 @@ export default function ActividadesPage() {
                       </div>
                       <div className="space-y-1.5">
                         <Label>Ubicación</Label>
-                        <Input value={turnoForm.ubicacion} onChange={(event) => setTurnoForm((prev) => ({ ...prev, ubicacion: event.target.value }))} placeholder="Sala 1 / Box / Spinning" />
+                        {ubicacionesOptions.length ? (
+                          <select
+                            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                            value={turnoForm.ubicacion}
+                            onChange={(event) =>
+                              setTurnoForm((prev) => ({ ...prev, ubicacion: event.target.value }))
+                            }
+                          >
+                            <option value="">Seleccionar ubicación</option>
+                            {ubicacionesOptions.map((ubicacion) => (
+                              <option key={ubicacion.id} value={ubicacion.nombre}>
+                                {ubicacion.nombre}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <Input
+                            value={turnoForm.ubicacion}
+                            onChange={(event) =>
+                              setTurnoForm((prev) => ({ ...prev, ubicacion: event.target.value }))
+                            }
+                            placeholder="Sala 1 / Box / Spinning"
+                          />
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          Las ubicaciones se administran desde Parametrización → Ubicaciones del gimnasio.
+                        </p>
                       </div>
                       <div className="space-y-1.5">
                         <Label>Vigencia desde</Label>

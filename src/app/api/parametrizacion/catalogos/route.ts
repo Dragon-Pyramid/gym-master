@@ -150,6 +150,17 @@ const catalogDefinitions: CatalogDefinition[] = [
     priority: "Alta",
     editable: true,
   },
+
+  {
+    key: "ubicacion_gimnasio",
+    table: "ubicacion_gimnasio",
+    title: "Ubicaciones del gimnasio",
+    description:
+      "Catálogo global de zonas, salas y sectores físicos del gimnasio para actividades, equipamiento, mantenimiento, asistencia y BI.",
+    status: "Disponible",
+    priority: "Alta",
+    editable: true,
+  },
   {
     key: "tipo_mantenimiento",
     table: "tipo_mantenimiento",

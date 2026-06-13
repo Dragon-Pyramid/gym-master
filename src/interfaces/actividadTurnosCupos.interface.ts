@@ -29,6 +29,15 @@ export interface ActividadEmpleadoOption {
   activo?: boolean | null;
 }
 
+export interface ActividadUbicacionOption {
+  id: string;
+  codigo: string;
+  nombre: string;
+  descripcion?: string | null;
+  activo?: boolean | null;
+  orden?: number | null;
+}
+
 export interface ActividadTurno {
   id: string;
   actividad_id: string;
@@ -98,6 +107,7 @@ export interface ActividadTurnosCuposDashboard {
   actividades: ActividadBaseOption[];
   socios: ActividadSocioOption[];
   empleados: ActividadEmpleadoOption[];
+  ubicaciones: ActividadUbicacionOption[];
   turnos: ActividadTurno[];
   inscripciones: ActividadTurnoInscripcion[];
   kpis: ActividadTurnosCuposKpis;
