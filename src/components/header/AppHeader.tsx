@@ -2,8 +2,9 @@
 
 import React from 'react';
 import { useSidebar } from '../ui/sidebar';
-import { Bell, Lock, Moon, Search, Settings, SlidersHorizontal, Sun, User } from 'lucide-react';
+import { Lock, Moon, Search, Settings, SlidersHorizontal, Sun, User } from 'lucide-react';
 import ProfileImage from '@/components/perfil/ProfileImage';
+import { HeaderNotificationsBell } from '@/components/header/HeaderNotificationsBell';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -114,21 +115,7 @@ export const AppHeader = ({ title }: AppHeaderProps) => {
           </Tooltip>
         </TooltipProvider>
 
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant='ghost'
-                size='icon'
-                className='text-muted-foreground hover:text-foreground'
-                onClick={() => router.push(isAdmin ? '/dashboard/notificaciones' : '/dashboard/mensajes')}
-              >
-                <Bell className='h-5 w-5' />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Notificaciones</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <HeaderNotificationsBell />
 
         <DropdownMenu>
           <TooltipProvider>
