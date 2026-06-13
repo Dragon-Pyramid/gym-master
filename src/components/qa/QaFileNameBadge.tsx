@@ -6,12 +6,16 @@ interface QaFileNameBadgeProps {
   position?: "inline" | "fixed";
 }
 
+function shouldShowQaBadges() {
+  return process.env.NEXT_PUBLIC_QA_FILE_BADGES === "true";
+}
+
 export function QaFileNameBadge({
   file,
   className = "",
   position = "inline",
 }: QaFileNameBadgeProps) {
-  if (process.env.NEXT_PUBLIC_QA_FILE_BADGES === "false") {
+  if (!shouldShowQaBadges()) {
     return null;
   }
 
@@ -21,7 +25,7 @@ export function QaFileNameBadge({
       title={file}
       data-qa-file-badge={file}
     >
-      QA: {file}
+      Archivo: {file}
     </span>
   );
 

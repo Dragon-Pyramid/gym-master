@@ -10,6 +10,7 @@ type EndpointDefinition = {
   statuses: number[];
   queryParams: string[];
   source: string;
+  internal?: boolean;
 };
 
 type OpenApiOperation = Record<string, unknown>;
@@ -1656,15 +1657,16 @@ const endpointDefinitions: EndpointDefinition[] = [
     path: "/api/test-alertas",
     methods: ["POST"],
     tag: "Alertas",
-    summary: "Prueba de alertas de deuda",
+    summary: "Validacion interna de alertas de deuda",
     description:
-      "Endpoint técnico para probar alertas o desactivación de socios con deuda.",
+      "Endpoint interno para validar alertas o desactivacion de socios con deuda en ambientes controlados.",
     auth: false,
     admin: false,
     notImplemented: false,
     statuses: [200, 500],
     queryParams: [],
     source: "src/app/api/test-alertas/route.ts",
+    internal: true,
   },
   {
     path: "/api/usuarios/{id}/perfil",
@@ -2418,8 +2420,14 @@ function buildOperation(endpoint: EndpointDefinition, method: string) {
 
 function buildPaths() {
   const paths: Record<string, OpenApiPathItem> = {};
+  const exposeInternalEndpoints =
+    process.env.NEXT_PUBLIC_EXPOSE_INTERNAL_TEST_ENDPOINTS === "true";
 
   for (const endpoint of endpointDefinitions) {
+    if (endpoint.internal && !exposeInternalEndpoints) {
+      continue;
+    }
+
     const pathItem = paths[endpoint.path] ?? {};
 
     for (const method of endpoint.methods) {

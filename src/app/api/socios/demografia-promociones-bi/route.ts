@@ -219,7 +219,7 @@ function buildPromotions(params: {
   if (franjaDominante) {
     promociones.push({
       titulo: 'Oferta principal para la franja demográfica dominante',
-      descripcion: `${franjaDominante.franja} reúne ${franjaDominante.cantidad_socios} socios activos/demo.`,
+      descripcion: `${franjaDominante.franja} reúne ${franjaDominante.cantidad_socios} socios activos.`,
       segmento: franjaDominante.franja,
       accion_sugerida: 'Ajustar comunicación, horarios y beneficios comerciales a la franja con mayor presencia.',
       prioridad: 'media',

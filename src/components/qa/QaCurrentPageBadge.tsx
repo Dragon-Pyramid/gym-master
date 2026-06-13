@@ -87,8 +87,11 @@ export function QaCurrentPageBadge() {
   const file =
     PAGE_FILES[normalizedPath] ??
     DYNAMIC_PAGE_FILES.find((entry) => entry.pattern.test(normalizedPath))
-      ?.file ??
-    `Ruta no mapeada: ${normalizedPath}`;
+      ?.file;
+
+  if (!file) {
+    return null;
+  }
 
   return <QaFileNameBadge file={file} position="fixed" />;
 }

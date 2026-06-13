@@ -12,7 +12,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: 'Gym Master',
-  description: 'Sistema de administración de gimnasios',
+  description: 'ERP inteligente para la gestion integral de gimnasios',
 };
 
 export default function RootLayout({

@@ -451,9 +451,6 @@ export default function ParametrizacionPage() {
                           Configuración administrativa
                         </div>
                         <h1 className="mt-2 text-2xl font-bold">Parametrización de catálogos</h1>
-                        <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-200">
-                          Consulta y administración base de catálogos reales para eliminar progresivamente valores hardcodeados en formularios, reportes y procesos administrativos.
-                        </p>
                       </div>
                       <div className="rounded-2xl border border-white/15 bg-white/10 p-4 text-sm backdrop-blur">
                         <p className="font-semibold">Última lectura</p>
