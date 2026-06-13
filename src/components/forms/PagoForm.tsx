@@ -26,6 +26,10 @@ import { useCatalogoParametrizable } from "@/hooks/useCatalogosParametrizables";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { calcularDescuentoPago, formatDiscountPercent } from "@/lib/cuotas/descuentoPago";
+import {
+  combinarDescuentosPago,
+  resolveBonificacionMensualForPeriod,
+} from "@/lib/cuotas/descuentoPagoBonificacion";
 
 export interface PagoFormProps {
   pago?: ResponsePago | null;
@@ -113,6 +117,7 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
   const [options, setOptions] = useState<PagoManualFormOptions>({
     socios: [],
     cuotas: [],
+    bonificaciones_mensuales: [],
   });
   const [loading, setLoading] = useState(false);
   const [loadingOptions, setLoadingOptions] = useState(true);
@@ -208,6 +213,25 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
     [selectedCuota?.monto, form.meses_cubiertos, options.descuento_config]
   );
 
+  const bonificacionMensualActiva = useMemo(
+    () =>
+      resolveBonificacionMensualForPeriod({
+        socioId: form.socio_id,
+        fechaReferencia: form.periodo_desde || form.fecha_pago,
+        bonificaciones: options.bonificaciones_mensuales,
+      }),
+    [form.fecha_pago, form.periodo_desde, form.socio_id, options.bonificaciones_mensuales]
+  );
+
+  const pagoPreview = useMemo(
+    () =>
+      combinarDescuentosPago({
+        previewPagoAdelantado: descuentoPreview,
+        bonificacionMensual: bonificacionMensualActiva,
+      }),
+    [bonificacionMensualActiva, descuentoPreview]
+  );
+
   const descuentoConfigActivo =
     options.descuento_config?.activo === true &&
     Number(options.descuento_config?.porcentaje ?? 0) > 0;
@@ -217,19 +241,19 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
 
     setForm((prev) => ({
       ...prev,
-      subtotal: descuentoPreview.subtotal,
-      descuento_porcentaje: descuentoPreview.descuento_porcentaje,
-      descuento_monto: descuentoPreview.descuento_monto,
-      descuento_motivo: descuentoPreview.mensaje ?? "",
-      monto_pagado: descuentoPreview.total,
+      subtotal: pagoPreview.subtotal,
+      descuento_porcentaje: pagoPreview.descuento_porcentaje,
+      descuento_monto: pagoPreview.descuento_monto,
+      descuento_motivo: pagoPreview.mensaje ?? "",
+      monto_pagado: pagoPreview.total,
     }));
   }, [
     selectedCuota,
-    descuentoPreview.subtotal,
-    descuentoPreview.descuento_porcentaje,
-    descuentoPreview.descuento_monto,
-    descuentoPreview.mensaje,
-    descuentoPreview.total,
+    pagoPreview.subtotal,
+    pagoPreview.descuento_porcentaje,
+    pagoPreview.descuento_monto,
+    pagoPreview.mensaje,
+    pagoPreview.total,
     pago,
   ]);
 
@@ -487,31 +511,36 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
         />
       </div>
 
-      {descuentoConfigActivo ? (
+      {(descuentoConfigActivo || pagoPreview.bonificacion_mensual_aplicada) ? (
         <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-3 text-sm text-cyan-900 md:col-span-2">
           <p className="font-semibold">
-            Descuento por pago adelantado
+            Descuentos y bonificación aplicados
           </p>
           <p className="mt-1">
-            {descuentoPreview.mensaje ??
+            {pagoPreview.mensaje ??
               `Pagando ${options.descuento_config?.cuotas_minimas ?? 2} o más cuotas se aplicará ${formatDiscountPercent(
                 Number(options.descuento_config?.porcentaje ?? 0)
               )} de descuento.`}
           </p>
+          {pagoPreview.bonificacion_mensual_aplicada ? (
+            <p className="mt-2 rounded-lg bg-white/70 px-3 py-2 text-xs font-medium text-cyan-900">
+              Bonificación mensual activa para este socio: {formatDiscountPercent(pagoPreview.bonificacion_mensual_porcentaje ?? 0)}.
+            </p>
+          ) : null}
           <div className="mt-3 grid gap-2 text-xs md:grid-cols-4">
             <div>
               <span className="text-cyan-700">Subtotal</span>
-              <p className="font-semibold">{formatMoney(descuentoPreview.subtotal)}</p>
+              <p className="font-semibold">{formatMoney(pagoPreview.subtotal)}</p>
             </div>
             <div>
               <span className="text-cyan-700">Descuento</span>
               <p className="font-semibold">
-                {formatMoney(descuentoPreview.descuento_monto)} ({formatDiscountPercent(descuentoPreview.descuento_porcentaje)})
+                {formatMoney(pagoPreview.descuento_monto)} ({formatDiscountPercent(pagoPreview.descuento_porcentaje)})
               </p>
             </div>
             <div>
               <span className="text-cyan-700">Total sugerido</span>
-              <p className="font-semibold">{formatMoney(descuentoPreview.total)}</p>
+              <p className="font-semibold">{formatMoney(pagoPreview.total)}</p>
             </div>
             <div>
               <span className="text-cyan-700">Meses cubiertos</span>

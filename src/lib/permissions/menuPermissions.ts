@@ -243,6 +243,13 @@ export const MENU_PERMISSION_GROUPS: Array<{
         roles: ["admin", "usuario"],
       },
       {
+        key: "Ranking / Bonificación",
+        label: "Ranking / Bonificación",
+        path: "/dashboard/socios-ranking-bonificacion",
+        group: "Administración",
+        roles: ["admin", "usuario"],
+      },
+      {
         key: "Sueldos",
         label: "Sueldos",
         path: "/dashboard/empleados-sueldos",
@@ -337,6 +344,7 @@ export const DEFAULT_MENU_PERMISSIONS_BY_ROLE: Record<AppRole, string[]> = {
   usuario: [
     "Inicio",
     "Socios",
+    "Ranking / Bonificación",
     "Asistencias",
     "Salida / Aforo",
     "Pagos",

@@ -27,7 +27,25 @@ export interface PagoDescuentoPreview {
   periodo_desde?: string;
   periodo_hasta?: string;
   fecha_vencimiento?: string;
+  bonificacion_mensual_aplicada?: boolean;
+  bonificacion_mensual_porcentaje?: number;
+  bonificacion_mensual_monto?: number;
+  bonificacion_mensual_motivo?: string | null;
+  descuento_pago_adelantado_porcentaje?: number;
+  descuento_pago_adelantado_monto?: number;
 }
+
+export interface PagoBonificacionMensualSocio {
+  socio_id: string;
+  anio: number;
+  mes: number;
+  ranking?: number | null;
+  bonificado: boolean;
+  descuento_porcentaje: number;
+  motivo?: string | null;
+  observaciones?: string | null;
+}
+
 
 export interface Pago {
   id: string;
@@ -171,6 +189,7 @@ export interface PagoManualFormOptions {
     activo?: boolean | null;
   }>;
   descuento_config?: PagoDescuentoConfig | null;
+  bonificaciones_mensuales?: PagoBonificacionMensualSocio[];
 }
 
 

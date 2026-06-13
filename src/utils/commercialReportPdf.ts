@@ -386,7 +386,7 @@ const drawCharts = (
 
   const gap = 6;
   const availableWidth = pageWidth - PAGE_MARGIN * 2;
-  const chartWidth = (availableWidth - gap) / 2;
+  const halfChartWidth = (availableWidth - gap) / 2;
   const chartHeight = 68;
 
   for (let index = 0; index < charts.length; index += 2) {
@@ -394,10 +394,18 @@ const drawCharts = (
       y = addPageHeader();
     }
 
-    drawChartCard(doc, charts[index], PAGE_MARGIN, y, chartWidth, chartHeight);
-    if (charts[index + 1]) {
-      drawChartCard(doc, charts[index + 1], PAGE_MARGIN + chartWidth + gap, y, chartWidth, chartHeight);
+    const secondChart = charts[index + 1];
+
+    if (!secondChart) {
+      // Si el reporte tiene un solo gráfico, o queda un gráfico impar al final,
+      // usar todo el ancho disponible. Mejora la lectura de etiquetas largas
+      // en rankings y reportes comerciales.
+      drawChartCard(doc, charts[index], PAGE_MARGIN, y, availableWidth, chartHeight);
+    } else {
+      drawChartCard(doc, charts[index], PAGE_MARGIN, y, halfChartWidth, chartHeight);
+      drawChartCard(doc, secondChart, PAGE_MARGIN + halfChartWidth + gap, y, halfChartWidth, chartHeight);
     }
+
     y += chartHeight + 8;
   }
 
