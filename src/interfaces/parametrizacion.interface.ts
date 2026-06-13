@@ -12,6 +12,7 @@ export type CatalogoParametrizableKey =
   | "categoria_producto"
   | "tipo_equipamiento"
   | "ubicacion_equipamiento"
+  | "ubicacion_gimnasio"
   | "tipo_mantenimiento";
 
 export type CatalogoParametrizableStatus = "Disponible" | "Planificado" | "Base existente";

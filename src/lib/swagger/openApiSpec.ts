@@ -1350,7 +1350,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     tag: "Parametrización",
     summary: "Catálogos parametrizables",
     description:
-      "Consulta, crea y actualiza registros de catálogos parametrizables. GET lista tipos de empleado, medios de pago, gastos, ingresos, categorías de producto, tipos/ubicaciones de equipamiento y tipos de mantenimiento. POST crea nuevos registros con código, nombre, descripción, orden y campos específicos. PATCH edita, activa o desactiva registros sin hard delete.",
+      "Consulta, crea y actualiza registros de catálogos parametrizables. GET lista tipos de empleado, medios de pago, gastos, ingresos, categorías de producto, tipos/ubicaciones de equipamiento, ubicaciones globales del gimnasio y tipos de mantenimiento. POST crea nuevos registros con código, nombre, descripción, orden y campos específicos. PATCH edita, activa o desactiva registros sin hard delete.",
     auth: false,
     admin: false,
     notImplemented: false,
@@ -2204,6 +2204,17 @@ function getRequestBody(endpoint: EndpointDefinition, method: string) {
                 es_online: true,
               },
             },
+            ubicacionGimnasio: {
+              summary: "Crear ubicación global del gimnasio",
+              value: {
+                catalogo: "ubicacion_gimnasio",
+                codigo: "sala_funcional",
+                nombre: "Sala funcional",
+                descripcion: "Zona destinada a clases funcionales y entrenamiento grupal.",
+                activo: true,
+                orden: 20,
+              },
+            },
             desactivar: {
               summary: "Desactivar registro sin hard delete",
               value: {
@@ -2678,6 +2689,7 @@ export const openApiSpec = {
               "categoria_producto",
               "tipo_equipamiento",
               "ubicacion_equipamiento",
+              "ubicacion_gimnasio",
               "tipo_mantenimiento",
             ],
           },

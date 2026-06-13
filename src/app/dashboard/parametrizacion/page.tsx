@@ -152,6 +152,12 @@ const catalogUiDefinitions: Record<CatalogoParametrizableKey, CatalogUiDefinitio
     href: "/dashboard/equipamientos",
     tags: ["zonas", "sala", "depósito", "bar/snack"],
   },
+
+  ubicacion_gimnasio: {
+    icon: Database,
+    href: "/dashboard/actividades",
+    tags: ["sala principal", "funcional", "spinning", "cardio", "fuerza"],
+  },
   tipo_mantenimiento: {
     icon: Wrench,
     href: "/dashboard/equipamientos",

@@ -8,6 +8,7 @@ import type {
   ActividadTurno,
   ActividadTurnoInscripcion,
   ActividadTurnosCuposDashboard,
+  ActividadUbicacionOption,
 } from "@/interfaces/actividadTurnosCupos.interface";
 
 export const dynamic = "force-dynamic";
@@ -73,6 +74,7 @@ function buildEmptyDashboard(params: {
   actividades: ActividadBaseOption[];
   socios: ActividadSocioOption[];
   empleados: ActividadEmpleadoOption[];
+  ubicaciones: ActividadUbicacionOption[];
   warnings: string[];
   schemaReady: boolean;
 }): ActividadTurnosCuposDashboard {
@@ -83,6 +85,7 @@ function buildEmptyDashboard(params: {
     actividades: params.actividades,
     socios: params.socios,
     empleados: params.empleados,
+    ubicaciones: params.ubicaciones,
     turnos: [],
     inscripciones: [],
     kpis: {
@@ -142,6 +145,32 @@ export async function GET(req: Request) {
     const socios = (sociosResult.data ?? []) as ActividadSocioOption[];
     const empleados = empleadosResult.error ? [] : ((empleadosResult.data ?? []) as ActividadEmpleadoOption[]);
 
+    const ubicacionesResult = await selectOptional<BasicRow[]>(
+      supabase
+        .from("ubicacion_gimnasio")
+        .select("id, codigo, nombre, descripcion, activo, orden")
+        .eq("activo", true)
+        .order("orden", { ascending: true })
+        .order("nombre", { ascending: true }),
+    );
+
+    const ubicaciones: ActividadUbicacionOption[] = ubicacionesResult.missing
+      ? []
+      : ((ubicacionesResult.data ?? []) as BasicRow[]).map((ubicacion) => ({
+          id: String(ubicacion.id),
+          codigo: String(ubicacion.codigo ?? ""),
+          nombre: String(ubicacion.nombre ?? ""),
+          descripcion: ubicacion.descripcion ? String(ubicacion.descripcion) : null,
+          activo: ubicacion.activo !== false,
+          orden: ubicacion.orden == null ? null : Number(ubicacion.orden),
+        }));
+
+    if (ubicacionesResult.missing) {
+      warnings.push(
+        "El catálogo global de ubicaciones todavía no existe. Aplicá la migración de ubicaciones para usar el selector parametrizable.",
+      );
+    }
+
     const turnosResult = await selectOptional<BasicRow[]>(
       supabase
         .from("actividad_turno")
@@ -168,7 +197,7 @@ export async function GET(req: Request) {
       );
 
       return NextResponse.json(
-        buildEmptyDashboard({ actividades, socios, empleados, warnings, schemaReady: false }),
+        buildEmptyDashboard({ actividades, socios, empleados, ubicaciones, warnings, schemaReady: false }),
         { status: 200 },
       );
     }
@@ -279,6 +308,7 @@ export async function GET(req: Request) {
       actividades,
       socios,
       empleados,
+      ubicaciones,
       turnos,
       inscripciones,
       kpis: {
