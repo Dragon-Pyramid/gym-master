@@ -16,6 +16,77 @@ type OpenApiOperation = Record<string, unknown>;
 type OpenApiPathItem = Record<string, OpenApiOperation>;
 
 const endpointDefinitions: EndpointDefinition[] = [
+
+  {
+    path: "/api/actividades/turnos-cupos",
+    methods: ["GET"],
+    tag: "Actividades",
+    summary: "Dashboard de actividades, turnos y cupos",
+    description:
+      "Devuelve KPIs, turnos, cupos, inscripciones, lista de espera y métricas operativas de actividades grupales.",
+    auth: true,
+    admin: false,
+    notImplemented: false,
+    statuses: [200, 401, 500],
+    queryParams: [],
+    source: "src/app/api/actividades/turnos-cupos/route.ts",
+  },
+  {
+    path: "/api/actividades/turnos-cupos/turnos",
+    methods: ["POST"],
+    tag: "Actividades",
+    summary: "Crear turno de actividad",
+    description:
+      "Crea un turno programado con día, horario, cupo, instructor, ubicación, vigencia y estado operativo.",
+    auth: true,
+    admin: false,
+    notImplemented: false,
+    statuses: [201, 400, 401, 500],
+    queryParams: [],
+    source: "src/app/api/actividades/turnos-cupos/turnos/route.ts",
+  },
+  {
+    path: "/api/actividades/turnos-cupos/turnos/{id}",
+    methods: ["PUT", "DELETE"],
+    tag: "Actividades",
+    summary: "Actualizar o eliminar turno de actividad",
+    description:
+      "Actualiza los datos de un turno o elimina un turno junto con sus inscripciones asociadas según reglas de base de datos.",
+    auth: true,
+    admin: false,
+    notImplemented: false,
+    statuses: [200, 400, 401, 500],
+    queryParams: [],
+    source: "src/app/api/actividades/turnos-cupos/turnos/[id]/route.ts",
+  },
+  {
+    path: "/api/actividades/turnos-cupos/inscripciones",
+    methods: ["POST"],
+    tag: "Actividades",
+    summary: "Inscribir socio a turno",
+    description:
+      "Inscribe un socio a un turno activo y lo deriva automáticamente a lista de espera cuando el cupo está completo.",
+    auth: true,
+    admin: false,
+    notImplemented: false,
+    statuses: [201, 400, 401, 500],
+    queryParams: [],
+    source: "src/app/api/actividades/turnos-cupos/inscripciones/route.ts",
+  },
+  {
+    path: "/api/actividades/turnos-cupos/inscripciones/{id}",
+    methods: ["PUT", "DELETE"],
+    tag: "Actividades",
+    summary: "Actualizar o eliminar inscripción",
+    description:
+      "Permite marcar asistencia, ausencia, cancelación, lista de espera o eliminar una inscripción de turno.",
+    auth: true,
+    admin: false,
+    notImplemented: false,
+    statuses: [200, 400, 401, 500],
+    queryParams: [],
+    source: "src/app/api/actividades/turnos-cupos/inscripciones/[id]/route.ts",
+  },
   {
     path: "/api/gimnasio-parametrizacion",
     methods: ["GET", "PATCH"],
