@@ -26,7 +26,7 @@ import CuotasEstadoDashboard from '@/components/dashboard/cuotas/CuotasEstadoDas
 import { useEffect, useRef, useState } from 'react';
 import QrDisplayModal from '@/components/ui/qr-display';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, BarChart3, DollarSign, Megaphone, Wrench } from 'lucide-react';
 import { getAllEquipamientos } from '@/services/equipamientoService';
 import { getAllMantenimientos } from '@/services/mantenimientoService';
 import {
@@ -62,6 +62,16 @@ type AdminAccessEventPayload = {
     foto?: string | null;
   } | null;
 };
+
+const dashboardCurrencyFormatter = new Intl.NumberFormat('es-AR', {
+  style: 'currency',
+  currency: 'ARS',
+  maximumFractionDigits: 0,
+});
+
+function formatDashboardCurrency(value: number) {
+  return dashboardCurrencyFormatter.format(Number(value ?? 0));
+}
 
 ChartJS.register(
   CategoryScale,
@@ -562,27 +572,78 @@ export default function DashboardPage() {
                   </Card>
                 )}
 
-                <div className='p-5'>
-                  <h1 className='mb-4 text-3xl font-bold'>
-                    Bienvenido al Panel de Control
-                  </h1>
-                  <p className='text-lg text-gray-700 dark:text-gray-300'>
-                    Este es tu panel de control administrativo.
-                  </p>
-                  <div className='flex items-center justify-start w-full mt-6'>
-                    <Button
-                      className='px-6 py-3 text-base font-medium'
-                      onClick={() => {
-                        setShowQr(true);
-                        const url = new URL(window.location.href);
-                        url.searchParams.set('qr', 'open');
-                        window.history.pushState({}, '', url);
-                      }}
-                    >
-                      QR del Día
-                    </Button>
+                <section className='rounded-2xl border bg-gradient-to-r from-slate-950 via-slate-900 to-sky-900 p-6 text-white shadow-sm'>
+                  <div className='flex flex-col justify-between gap-5 xl:flex-row xl:items-center'>
+                    <div className='space-y-2'>
+                      <p className='text-xs font-semibold uppercase tracking-[0.24em] text-sky-200'>
+                        Panel ejecutivo
+                      </p>
+                      <h1 className='text-3xl font-bold'>Visión general del gimnasio</h1>
+                      <p className='max-w-3xl text-sm leading-6 text-slate-200'>
+                        Resumen operativo para decidir rápido: cuotas, mensajes, equipamiento, mantenimiento, comercial y BI.
+                      </p>
+                    </div>
+                    <div className='flex flex-wrap gap-2'>
+                      <Button
+                        className='bg-[#02a8e1] text-white hover:bg-[#0288b1]'
+                        onClick={() => {
+                          setShowQr(true);
+                          const url = new URL(window.location.href);
+                          url.searchParams.set('qr', 'open');
+                          window.history.pushState({}, '', url);
+                        }}
+                      >
+                        QR del día
+                      </Button>
+                      <Button
+                        variant='secondary'
+                        onClick={() => window.open('/dashboard/asistencias/terminal', '_blank', 'noopener,noreferrer')}
+                      >
+                        Terminal
+                      </Button>
+                      <Button variant='secondary' onClick={() => router.push('/dashboard/finanzas')}>
+                        Finanzas / BI
+                      </Button>
+                      <Button variant='secondary' onClick={() => router.push('/dashboard/comercial')}>
+                        Comercial
+                      </Button>
+                      <Button variant='secondary' onClick={() => router.push('/dashboard/bi-socios-demografia-promociones')}>
+                        BI Socios
+                      </Button>
+                    </div>
                   </div>
-                </div>
+
+                  <div className='mt-6 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4'>
+                    <div className='rounded-xl border border-white/10 bg-white/10 p-4'>
+                      <div className='flex items-center gap-2 text-sky-100'>
+                        <Megaphone className='h-4 w-4' />
+                        <p className='text-sm font-medium'>Mensajes sin responder</p>
+                      </div>
+                      <p className='mt-2 text-2xl font-bold'>{loadingMensajesPendientes ? '...' : mensajesSinResponder}</p>
+                    </div>
+                    <div className='rounded-xl border border-white/10 bg-white/10 p-4'>
+                      <div className='flex items-center gap-2 text-sky-100'>
+                        <Wrench className='h-4 w-4' />
+                        <p className='text-sm font-medium'>Equipos en revisión</p>
+                      </div>
+                      <p className='mt-2 text-2xl font-bold'>{equiposEnRevision}</p>
+                    </div>
+                    <div className='rounded-xl border border-white/10 bg-white/10 p-4'>
+                      <div className='flex items-center gap-2 text-sky-100'>
+                        <BarChart3 className='h-4 w-4' />
+                        <p className='text-sm font-medium'>Próximos mantenimientos</p>
+                      </div>
+                      <p className='mt-2 text-2xl font-bold'>{proximosMantenimientos}</p>
+                    </div>
+                    <div className='rounded-xl border border-white/10 bg-white/10 p-4'>
+                      <div className='flex items-center gap-2 text-sky-100'>
+                        <DollarSign className='h-4 w-4' />
+                        <p className='text-sm font-medium'>Costo mant. mes</p>
+                      </div>
+                      <p className='mt-2 text-2xl font-bold'>{formatDashboardCurrency(costoMantenimientoMensual)}</p>
+                    </div>
+                  </div>
+                </section>
 
                 <div className='grid grid-cols-1 gap-4 mt-6 md:grid-cols-2 xl:grid-cols-3'>
                   <CuotasEstadoDashboard />
