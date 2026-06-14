@@ -1767,6 +1767,62 @@ const endpointDefinitions: EndpointDefinition[] = [
     source: "src/app/api/swagger-json/route.ts",
   },
   {
+    path: "/api/rag/coach/status",
+    methods: ["GET"],
+    tag: "RAG Coach",
+    summary: "Estado técnico del RAG Coach",
+    description:
+      "Devuelve configuración no sensible, advertencias operativas y conteos de documentos/chunks para validar la base RAG desde Swagger o herramientas administrativas.",
+    auth: true,
+    admin: true,
+    notImplemented: false,
+    statuses: [200, 401, 403, 500],
+    queryParams: [],
+    source: "src/app/api/rag/coach/status/route.ts",
+  },
+  {
+    path: "/api/rag/coach/ingest/ejercicios",
+    methods: ["POST"],
+    tag: "RAG Coach",
+    summary: "Ingestar ejercicios reales al RAG",
+    description:
+      "Indexa ejercicios activos de Gym Master como documentos/chunks RAG usando datos reales del catálogo. Requiere rol administrador y proveedor de embeddings configurado cuando genera vectores.",
+    auth: true,
+    admin: true,
+    notImplemented: false,
+    statuses: [200, 207, 400, 401, 403, 500],
+    queryParams: [],
+    source: "src/app/api/rag/coach/ingest/ejercicios/route.ts",
+  },
+  {
+    path: "/api/rag/coach/vectorize/pending",
+    methods: ["POST"],
+    tag: "RAG Coach",
+    summary: "Vectorizar chunks RAG pendientes",
+    description:
+      "Genera embeddings para chunks RAG activos que todavía no tienen vector, usando el provider configurado en backend. Permite validar la vectorización sin exponer tokens en SQL Studio ni frontend.",
+    auth: true,
+    admin: true,
+    notImplemented: false,
+    statuses: [200, 207, 400, 401, 403, 500],
+    queryParams: [],
+    source: "src/app/api/rag/coach/vectorize/pending/route.ts",
+  },
+  {
+    path: "/api/rag/coach/search",
+    methods: ["POST"],
+    tag: "RAG Coach",
+    summary: "Buscar conocimiento RAG",
+    description:
+      "Ejecuta una búsqueda semántica contra rag_document_chunk mediante match_rag_chunks. Sirve para validar recuperación RAG desde Swagger antes de conectar el chat final de rutinas/dietas.",
+    auth: true,
+    admin: true,
+    notImplemented: false,
+    statuses: [200, 400, 401, 403, 500],
+    queryParams: [],
+    source: "src/app/api/rag/coach/search/route.ts",
+  },
+  {
     path: "/api/rutinas/rag-assistant/generar",
     methods: ["POST"],
     tag: "Rutinas",
@@ -1905,6 +1961,12 @@ const tags = [
     name: "Rutinas",
     description: "Generación, historial y eliminación de rutinas.",
   },
+  {
+    name: "RAG Coach",
+    description:
+      "Herramientas administrativas para validar ingesta, vectorización y búsqueda semántica del Gym Master RAG Coach.",
+  },
+
   {
     name: "Dietas",
     description: "Generación y consulta de dietas.",
@@ -2190,6 +2252,71 @@ function getRequestBody(endpoint: EndpointDefinition, method: string) {
                 type: "string",
                 description: "Token QR recibido desde el lector o cámara.",
                 example: "qr_2026_05_23_abcd",
+              },
+            },
+          },
+        },
+      },
+    };
+  }
+
+  if (endpoint.path === "/api/rag/coach/ingest/ejercicios") {
+    return {
+      required: false,
+      content: {
+        "application/json": {
+          schema: { $ref: "#/components/schemas/RagIngestExercisesRequest" },
+          examples: {
+            previewLimitado: {
+              summary: "Ingesta limitada de ejercicios",
+              value: { limit: 10, force: false, onlyMissing: true, delayMs: 750 },
+            },
+            reindexar: {
+              summary: "Reindexar ejercicios aunque ya existan",
+              value: { limit: 25, force: true, delayMs: 1000 },
+            },
+          },
+        },
+      },
+    };
+  }
+
+  if (endpoint.path === "/api/rag/coach/vectorize/pending") {
+    return {
+      required: false,
+      content: {
+        "application/json": {
+          schema: { $ref: "#/components/schemas/RagVectorizePendingRequest" },
+          examples: {
+            pendientes: {
+              summary: "Vectorizar chunks pendientes",
+              value: { limit: 25, force: false, delayMs: 750 },
+            },
+            revectorizar: {
+              summary: "Forzar vectorización de chunks activos",
+              value: { limit: 10, force: true, delayMs: 1000 },
+            },
+          },
+        },
+      },
+    };
+  }
+
+  if (endpoint.path === "/api/rag/coach/search") {
+    return {
+      required: true,
+      content: {
+        "application/json": {
+          schema: { $ref: "#/components/schemas/RagSearchRequest" },
+          examples: {
+            piernasPrincipiante: {
+              summary: "Buscar ejercicios para piernas principiante",
+              value: {
+                query: "rutina de piernas para socio principiante",
+                domains: ["exercise"],
+                sourceTables: ["ejercicio"],
+                matchCount: 8,
+                matchThreshold: 0.72,
               },
             },
           },
@@ -2690,6 +2817,109 @@ export const openApiSpec = {
             type: "string",
             format: "password",
             example: "NuevaClave2026!",
+          },
+        },
+      },
+      RagIngestExercisesRequest: {
+        type: "object",
+        properties: {
+          limit: {
+            type: "integer",
+            minimum: 1,
+            maximum: 100,
+            example: 25,
+            description: "Cantidad máxima de ejercicios a procesar en la corrida.",
+          },
+          force: {
+            type: "boolean",
+            example: false,
+            description: "Cuando vale true, reindexa aunque el hash del contenido no haya cambiado.",
+          },
+          onlyMissing: {
+            type: "boolean",
+            example: true,
+            description: "Reservado para flujos de ingesta incremental.",
+          },
+          delayMs: {
+            type: "integer",
+            minimum: 0,
+            maximum: 5000,
+            example: 750,
+            description: "Pausa en milisegundos entre embeddings para reducir errores 429 del proveedor.",
+          },
+        },
+      },
+      RagVectorizePendingRequest: {
+        type: "object",
+        properties: {
+          limit: {
+            type: "integer",
+            minimum: 1,
+            maximum: 100,
+            example: 25,
+            description: "Cantidad máxima de chunks a vectorizar.",
+          },
+          force: {
+            type: "boolean",
+            example: false,
+            description:
+              "Cuando vale true, vuelve a generar embeddings para chunks activos aunque ya tengan vector.",
+          },
+          delayMs: {
+            type: "integer",
+            minimum: 0,
+            maximum: 5000,
+            example: 750,
+            description: "Pausa en milisegundos entre embeddings para reducir errores 429 del proveedor.",
+          },
+        },
+      },
+      RagSearchRequest: {
+        type: "object",
+        required: ["query"],
+        properties: {
+          query: {
+            type: "string",
+            minLength: 3,
+            example: "rutina para piernas nivel principiante",
+          },
+          domains: {
+            type: "array",
+            items: {
+              type: "string",
+              enum: [
+                "exercise",
+                "routine_rule",
+                "diet_rule",
+                "safety",
+                "evolution",
+                "business",
+                "general",
+              ],
+            },
+            example: ["exercise"],
+          },
+          sourceTables: {
+            type: "array",
+            items: { type: "string" },
+            example: ["ejercicio"],
+          },
+          metadata: {
+            type: "object",
+            additionalProperties: true,
+            example: { media_quality: "completo" },
+          },
+          matchThreshold: {
+            type: "number",
+            minimum: 0,
+            maximum: 1,
+            example: 0.72,
+          },
+          matchCount: {
+            type: "integer",
+            minimum: 1,
+            maximum: 30,
+            example: 8,
           },
         },
       },

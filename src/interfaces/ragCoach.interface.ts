@@ -39,6 +39,8 @@ export interface RagHealthResponse {
     chunks: number;
     exerciseDocuments: number;
     activeChunks: number;
+    embeddedChunks?: number;
+    pendingEmbeddingChunks?: number;
   };
   warnings: string[];
 }
@@ -61,6 +63,7 @@ export interface RagIngestExercisesRequest {
   limit?: number;
   force?: boolean;
   onlyMissing?: boolean;
+  delayMs?: number;
 }
 
 export interface RagIngestExercisesResponse {
@@ -69,6 +72,23 @@ export interface RagIngestExercisesResponse {
   indexed: number;
   skipped: number;
   failed: number;
+  errors: string[];
+}
+
+export interface RagVectorizePendingRequest {
+  limit?: number;
+  force?: boolean;
+  delayMs?: number;
+}
+
+export interface RagVectorizePendingResponse {
+  ok: boolean;
+  processed: number;
+  vectorized: number;
+  skipped: number;
+  failed: number;
+  provider?: RagEmbeddingProvider;
+  model?: string;
   errors: string[];
 }
 
