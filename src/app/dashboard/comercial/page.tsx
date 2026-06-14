@@ -54,6 +54,11 @@ const initialState: LoadState = {
   ventas: [],
 };
 
+function formatPercent(value: number) {
+  if (!Number.isFinite(value)) return '0.0%';
+  return `${value.toFixed(1)}%`;
+}
+
 function DashboardMetric({
   title,
   value,
@@ -169,14 +174,24 @@ export default function ComercialKioscoPage() {
       0
     );
 
+    const productosSinStock = productosActivos.filter((producto) => Number(producto.stock ?? 0) <= 0);
+    const ticketPromedio = ventasActivas.length > 0 ? ventasTotal / ventasActivas.length : 0;
+    const porcentajeStockCritico = productosActivos.length > 0
+      ? (productosCriticos.length / productosActivos.length) * 100
+      : 0;
+
     return {
       productosActivos: productosActivos.length,
       productosCriticos,
+      productosSinStock,
+      porcentajeStockCritico,
       valorInventario: calcularValorInventario(productosActivos),
       proveedores: data.proveedores.length,
       servicios: data.servicios.filter((servicio) => servicio.activo !== false)
         .length,
+      ventasActivas: ventasActivas.length,
       ventasTotal,
+      ticketPromedio,
     };
   }, [data]);
 
@@ -223,7 +238,7 @@ export default function ComercialKioscoPage() {
               </div>
             </section>
 
-            <section className='grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4'>
+            <section className='grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6'>
               <DashboardMetric
                 title='Productos activos'
                 value={loading ? '...' : String(metrics.productosActivos)}
@@ -233,8 +248,14 @@ export default function ComercialKioscoPage() {
               <DashboardMetric
                 title='Stock crítico'
                 value={loading ? '...' : String(metrics.productosCriticos.length)}
-                description='Productos en mínimo operativo o sin stock.'
+                description={loading ? 'Calculando...' : `${formatPercent(metrics.porcentajeStockCritico)} del catálogo activo.`}
                 icon={AlertTriangle}
+              />
+              <DashboardMetric
+                title='Sin stock'
+                value={loading ? '...' : String(metrics.productosSinStock.length)}
+                description='Productos que requieren acción inmediata.'
+                icon={Boxes}
               />
               <DashboardMetric
                 title='Inventario estimado'
@@ -243,7 +264,13 @@ export default function ComercialKioscoPage() {
                 icon={Boxes}
               />
               <DashboardMetric
-                title='Ventas registradas'
+                title='Ventas activas'
+                value={loading ? '...' : String(metrics.ventasActivas)}
+                description={loading ? 'Calculando...' : `Ticket prom.: ${formatCurrencyARS(metrics.ticketPromedio)}`}
+                icon={ReceiptText}
+              />
+              <DashboardMetric
+                title='Total vendido'
                 value={loading ? '...' : formatCurrencyARS(metrics.ventasTotal)}
                 description='Total vendido sin ventas anuladas.'
                 icon={BarChart3}
@@ -337,16 +364,30 @@ export default function ComercialKioscoPage() {
               <CardHeader>
                 <CardTitle className='flex items-center gap-2 text-lg'>
                   <ShoppingCart className='h-5 w-5 text-sky-600' />
-                  Próximas integraciones financieras
+                  Lectura ejecutiva comercial
                 </CardTitle>
               </CardHeader>
-              <CardContent className='grid grid-cols-1 gap-3 text-sm text-muted-foreground md:grid-cols-2'>
-                <p>
-                  Las ventas del kiosco, los servicios adicionales y las cuotas deberán alimentar los ingresos del gimnasio.
-                </p>
-                <p>
-                  Las compras, proveedores, gastos generales, sueldos, mantenimiento y equipamiento alimentarán egresos y BI mensual.
-                </p>
+              <CardContent className='grid grid-cols-1 gap-4 text-sm md:grid-cols-3'>
+                <div className='rounded-xl border bg-slate-50 p-4'>
+                  <p className='font-semibold'>Ingresos comerciales</p>
+                  <p className='mt-1 text-muted-foreground'>
+                    {loading ? 'Calculando...' : `${metrics.ventasActivas} ventas activas por ${formatCurrencyARS(metrics.ventasTotal)}.`}
+                  </p>
+                </div>
+                <div className='rounded-xl border bg-slate-50 p-4'>
+                  <p className='font-semibold'>Stock y reposición</p>
+                  <p className='mt-1 text-muted-foreground'>
+                    {loading ? 'Calculando...' : `${metrics.productosCriticos.length} críticos y ${metrics.productosSinStock.length} sin stock.`}
+                  </p>
+                </div>
+                <div className='rounded-xl border bg-slate-50 p-4'>
+                  <p className='font-semibold'>Decisión sugerida</p>
+                  <p className='mt-1 text-muted-foreground'>
+                    {metrics.productosCriticos.length > 0
+                      ? 'Priorizar reposición de productos críticos antes de nuevas promociones.'
+                      : 'Catálogo estable para impulsar ventas y servicios adicionales.'}
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </main>
