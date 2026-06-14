@@ -38,6 +38,28 @@ function getItemsLabel(compra: Compra) {
   return detalles.map((detalle) => `${detalle.cantidad} x ${detalle.producto?.nombre ?? 'Producto'}`).join(' | ');
 }
 
+function isDateWithinRange(value: string | null | undefined, from: string, to: string) {
+  const normalized = String(value ?? '').slice(0, 10);
+  if (!normalized) return false;
+  if (from && normalized < from) return false;
+  if (to && normalized > to) return false;
+  return true;
+}
+
+function getDateRangeLabel(from: string, to: string) {
+  if (from && to) return `Período: ${formatFrontendDate(from)} a ${formatFrontendDate(to)}`;
+  if (from) return `Desde: ${formatFrontendDate(from)}`;
+  if (to) return `Hasta: ${formatFrontendDate(to)}`;
+  return 'Período: todos';
+}
+
+const COMPRA_FILTER_LABELS: Record<CompraFilter, string> = {
+  todas: 'Todas',
+  pendiente: 'Pendientes',
+  pagada: 'Pagadas',
+  anulada: 'Anuladas',
+};
+
 export default function ComprasPage() {
   const { isAuthenticated, initializeAuth, isInitialized } = useAuthStore();
   const router = useRouter();
@@ -46,6 +68,8 @@ export default function ComprasPage() {
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState<CompraFilter>('todas');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
@@ -87,6 +111,7 @@ export default function ComprasPage() {
     const search = searchTerm.toLowerCase().trim();
     return compras.filter((compra) => {
       if (filter !== 'todas' && compra.estado !== filter) return false;
+      if (!isDateWithinRange(compra.fecha, dateFrom, dateTo)) return false;
       if (!search) return true;
       return (
         (compra.proveedor?.nombre ?? '').toLowerCase().includes(search) ||
@@ -97,20 +122,20 @@ export default function ComprasPage() {
         getItemsLabel(compra).toLowerCase().includes(search)
       );
     });
-  }, [compras, filter, searchTerm]);
+  }, [compras, filter, dateFrom, dateTo, searchTerm]);
 
-  useEffect(() => setCurrentPage(1), [searchTerm, filter]);
+  useEffect(() => setCurrentPage(1), [searchTerm, filter, dateFrom, dateTo]);
 
   const metrics = useMemo(() => {
-    const activas = compras.filter((compra) => compra.estado !== 'anulada' && compra.activo !== false);
-    const anuladas = compras.filter((compra) => compra.estado === 'anulada' || compra.activo === false);
+    const activas = filteredCompras.filter((compra) => compra.estado !== 'anulada' && compra.activo !== false);
+    const anuladas = filteredCompras.filter((compra) => compra.estado === 'anulada' || compra.activo === false);
     return {
       activas: activas.length,
-      pendientes: compras.filter((compra) => compra.estado === 'pendiente').length,
+      pendientes: filteredCompras.filter((compra) => compra.estado === 'pendiente').length,
       anuladas: anuladas.length,
       totalComprado: activas.reduce((acc, compra) => acc + Number(compra.total ?? 0), 0),
     };
-  }, [compras]);
+  }, [filteredCompras]);
 
   const totalPages = Math.max(1, Math.ceil(filteredCompras.length / COMPRAS_PAGE_SIZE));
   const safeCurrentPage = Math.min(currentPage, totalPages);
@@ -169,7 +194,7 @@ export default function ComprasPage() {
           { label: 'Anuladas', value: metrics.anuladas },
           { label: 'Total comprado', value: formatCurrencyARS(metrics.totalComprado) },
         ],
-        filtersLabel: `Filtro: ${filter}${searchTerm.trim() ? ` · Búsqueda: ${searchTerm.trim()}` : ''}`,
+        filtersLabel: `Filtro: ${COMPRA_FILTER_LABELS[filter]} · ${getDateRangeLabel(dateFrom, dateTo)}${searchTerm.trim() ? ` · Búsqueda: ${searchTerm.trim()}` : ''}`,
         columns: [
           { header: 'Proveedor', width: 34, getValue: (compra) => compra.proveedor?.nombre ?? '-' },
           { header: 'Fecha', width: 18, getValue: (compra) => formatFrontendDate(compra.fecha) },
@@ -236,6 +261,27 @@ export default function ComprasPage() {
                   ].map(([value, label]) => (
                     <Button key={value} type="button" size="sm" variant={filter === value ? 'default' : 'outline'} onClick={() => setFilter(value as CompraFilter)}>{label}</Button>
                   ))}
+                </div>
+                <div className="grid gap-3 rounded-xl border bg-slate-50/60 p-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
+                  <label className="space-y-1 text-sm font-medium">
+                    <span>Desde</span>
+                    <Input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} />
+                  </label>
+                  <label className="space-y-1 text-sm font-medium">
+                    <span>Hasta</span>
+                    <Input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} />
+                  </label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setDateFrom('');
+                      setDateTo('');
+                    }}
+                    disabled={!dateFrom && !dateTo}
+                  >
+                    Limpiar fechas
+                  </Button>
                 </div>
                 <div className="overflow-x-auto">
                   <CompraTable

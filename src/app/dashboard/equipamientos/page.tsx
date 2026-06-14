@@ -320,9 +320,25 @@ export default function EquipamientosPage() {
     let y = margin;
 
     const addPageIfNeeded = (needed = 14) => {
-      if (y + needed > pageHeight - margin) {
+      if (y + needed > pageHeight - margin - 10) {
         doc.addPage();
         y = margin;
+      }
+    };
+
+    const addReportFooters = () => {
+      const totalPages = doc.getNumberOfPages();
+
+      for (let page = 1; page <= totalPages; page += 1) {
+        doc.setPage(page);
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.2);
+        doc.line(margin, pageHeight - 10, pageWidth - margin, pageHeight - 10);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139);
+        doc.text("Gym Master · Equipamiento y mantenimiento", margin, pageHeight - 5);
+        doc.text(`Página ${page} de ${totalPages}`, pageWidth - margin, pageHeight - 5, { align: "right" });
       }
     };
 
@@ -432,14 +448,14 @@ export default function EquipamientosPage() {
 
         doc.setFont("helvetica", "bold");
         doc.setFontSize(8);
-        doc.setFillColor(226, 232, 240);
-        doc.setDrawColor(148, 163, 184);
-        doc.setTextColor(15, 23, 42);
+        doc.setFillColor(15, 23, 42);
+        doc.setDrawColor(30, 41, 59);
+        doc.setTextColor(255, 255, 255);
 
         headers.forEach((header, index) => {
-          doc.setFillColor(226, 232, 240);
-          doc.setDrawColor(148, 163, 184);
-          doc.setTextColor(15, 23, 42);
+          doc.setFillColor(15, 23, 42);
+          doc.setDrawColor(30, 41, 59);
+          doc.setTextColor(255, 255, 255);
           doc.rect(x, y, widths[index], rowHeight, "FD");
           doc.text(sanitizePdfText(header), x + 2, y + 4.8);
           x += widths[index];
@@ -558,6 +574,7 @@ export default function EquipamientosPage() {
       [48, 35, 20, 30, 103],
     );
 
+    addReportFooters();
     doc.save(buildTimestampedDownloadFileName("reporte-equipamiento-mantenimiento", "pdf"));
   };
 
