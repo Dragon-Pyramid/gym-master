@@ -105,12 +105,19 @@ export async function getRagHealth(user: JwtUser): Promise<RagHealthResponse> {
   if (status.provider === 'openai' && !status.openaiConfigured) warnings.push('Falta OPENAI_API_KEY.');
 
   try {
-    const [documents, chunks, exerciseDocuments, activeChunks] = await Promise.all([
-      safeCount('rag_document'),
-      safeCount('rag_document_chunk'),
-      safeCount('rag_document', (query) => query.eq('domain', 'exercise')),
-      safeCount('rag_document_chunk', (query) => query.eq('active', true)),
-    ]);
+    const [documents, chunks, exerciseDocuments, activeChunks, embeddedChunks, pendingEmbeddingChunks] =
+      await Promise.all([
+        safeCount('rag_document'),
+        safeCount('rag_document_chunk'),
+        safeCount('rag_document', (query) => query.eq('domain', 'exercise')),
+        safeCount('rag_document_chunk', (query) => query.eq('active', true)),
+        safeCount('rag_document_chunk', (query) => query.eq('active', true).not('embedding', 'is', null)),
+        safeCount('rag_document_chunk', (query) => query.eq('active', true).is('embedding', null)),
+      ]);
+
+    if (pendingEmbeddingChunks > 0) {
+      warnings.push(`Hay ${pendingEmbeddingChunks} chunks RAG activos sin embedding.`);
+    }
 
     return {
       ok: true,
@@ -120,6 +127,8 @@ export async function getRagHealth(user: JwtUser): Promise<RagHealthResponse> {
         chunks,
         exerciseDocuments,
         activeChunks,
+        embeddedChunks,
+        pendingEmbeddingChunks,
       },
       warnings,
     };

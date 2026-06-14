@@ -1,11 +1,17 @@
 import { createHash } from 'node:crypto';
 import { JwtUser } from '@/interfaces/jwtUser.interface';
-import { RagIngestExercisesRequest, RagIngestExercisesResponse } from '@/interfaces/ragCoach.interface';
+import {
+  RagIngestExercisesRequest,
+  RagIngestExercisesResponse,
+  RagVectorizePendingRequest,
+  RagVectorizePendingResponse,
+} from '@/interfaces/ragCoach.interface';
 import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 import { createSingleRagEmbedding } from './ragEmbeddingProviderService';
 
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 100;
+const MAX_DELAY_MS = 5000;
 
 type ExerciseRow = Record<string, any>;
 
@@ -33,6 +39,15 @@ function hashContent(content: string) {
 function safeLimit(value?: number) {
   if (!Number.isInteger(value) || !value || value <= 0) return DEFAULT_LIMIT;
   return Math.min(value, MAX_LIMIT);
+}
+
+function safeDelayMs(value?: number) {
+  if (!Number.isInteger(value) || !value || value <= 0) return 0;
+  return Math.min(value, MAX_DELAY_MS);
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function hasCloudinary(row: ExerciseRow) {
@@ -176,6 +191,7 @@ async function upsertExerciseDocument(row: ExerciseRow, force: boolean) {
   const { content, metadata } = buildExerciseContent(row);
   const contentHash = hashContent(content);
   const sourceId = String(row.id_ejercicio);
+  const tokenCount = Math.ceil(content.length / 4);
 
   const { data: existing, error: existingError } = await supabase
     .from('rag_document')
@@ -217,25 +233,41 @@ async function upsertExerciseDocument(row: ExerciseRow, force: boolean) {
     throw new Error(documentError.message);
   }
 
+  const { data: chunk, error: chunkUpsertError } = await supabase
+    .from('rag_document_chunk')
+    .upsert(
+      {
+        document_id: document.id,
+        chunk_index: 0,
+        content,
+        token_count: tokenCount,
+        embedding: null,
+        metadata,
+        active: true,
+        actualizado_en: new Date().toISOString(),
+      },
+      { onConflict: 'document_id,chunk_index' },
+    )
+    .select('id')
+    .single();
+
+  if (chunkUpsertError) {
+    throw new Error(chunkUpsertError.message);
+  }
+
   const embedding = await createSingleRagEmbedding(content);
-  const tokenCount = Math.ceil(content.length / 4);
 
-  const { error: chunkError } = await supabase.from('rag_document_chunk').upsert(
-    {
-      document_id: document.id,
-      chunk_index: 0,
-      content,
-      token_count: tokenCount,
+  const { error: chunkVectorError } = await supabase
+    .from('rag_document_chunk')
+    .update({
       embedding: embedding.embedding,
-      metadata,
-      active: true,
+      token_count: tokenCount,
       actualizado_en: new Date().toISOString(),
-    },
-    { onConflict: 'document_id,chunk_index' },
-  );
+    })
+    .eq('id', chunk.id);
 
-  if (chunkError) {
-    throw new Error(chunkError.message);
+  if (chunkVectorError) {
+    throw new Error(chunkVectorError.message);
   }
 
   return { indexed: true, skipped: false };
@@ -248,6 +280,7 @@ export async function ingestExercisesForRag(
   assertAdmin(user);
 
   const limit = safeLimit(payload.limit);
+  const delayMs = safeDelayMs(payload.delayMs);
   const exercises = await fetchExercises(limit);
   const response: RagIngestExercisesResponse = {
     ok: true,
@@ -258,7 +291,8 @@ export async function ingestExercisesForRag(
     errors: [],
   };
 
-  for (const exercise of exercises) {
+  for (let index = 0; index < exercises.length; index += 1) {
+    const exercise = exercises[index];
     try {
       const result = await upsertExerciseDocument(exercise, Boolean(payload.force));
       if (result.indexed) response.indexed += 1;
@@ -266,6 +300,87 @@ export async function ingestExercisesForRag(
     } catch (error: any) {
       response.failed += 1;
       response.errors.push(`${exercise.nombre_ejercicio}: ${error?.message ?? 'error desconocido'}`);
+    }
+
+    if (delayMs > 0 && index < exercises.length - 1) {
+      await sleep(delayMs);
+    }
+  }
+
+  response.ok = response.failed === 0;
+  return response;
+}
+
+export async function vectorizePendingRagChunks(
+  user: JwtUser,
+  payload: RagVectorizePendingRequest = {},
+): Promise<RagVectorizePendingResponse> {
+  assertAdmin(user);
+
+  const limit = safeLimit(payload.limit);
+  const delayMs = safeDelayMs(payload.delayMs);
+  const supabase = getSupabaseServerClient();
+
+  let query = supabase
+    .from('rag_document_chunk')
+    .select('id, content, token_count, active, document_id')
+    .eq('active', true)
+    .order('creado_en', { ascending: true })
+    .limit(limit);
+
+  if (!payload.force) {
+    query = query.is('embedding', null);
+  }
+
+  const { data: chunks, error } = await query;
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const response: RagVectorizePendingResponse = {
+    ok: true,
+    processed: chunks?.length ?? 0,
+    vectorized: 0,
+    skipped: 0,
+    failed: 0,
+    errors: [],
+  };
+
+  const chunksToVectorize = chunks ?? [];
+  for (let index = 0; index < chunksToVectorize.length; index += 1) {
+    const chunk = chunksToVectorize[index];
+    try {
+      const content = String(chunk.content ?? '').replace(/\s+/g, ' ').trim();
+      if (content.length < 3) {
+        response.skipped += 1;
+        continue;
+      }
+
+      const embedding = await createSingleRagEmbedding(content);
+      response.provider = embedding.provider;
+      response.model = embedding.model;
+
+      const { error: updateError } = await supabase
+        .from('rag_document_chunk')
+        .update({
+          embedding: embedding.embedding,
+          token_count: chunk.token_count ?? Math.ceil(content.length / 4),
+          actualizado_en: new Date().toISOString(),
+        })
+        .eq('id', chunk.id);
+
+      if (updateError) {
+        throw new Error(updateError.message);
+      }
+
+      response.vectorized += 1;
+    } catch (error: any) {
+      response.failed += 1;
+      response.errors.push(`${chunk.id}: ${error?.message ?? 'error desconocido'}`);
+    }
+
+    if (delayMs > 0 && index < chunksToVectorize.length - 1) {
+      await sleep(delayMs);
     }
   }
 
