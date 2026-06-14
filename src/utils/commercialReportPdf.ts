@@ -188,13 +188,23 @@ const addHeader = (
   doc.line(PAGE_MARGIN, HEADER_HEIGHT + 3, pageWidth - PAGE_MARGIN, HEADER_HEIGHT + 3);
 };
 
-const addFooter = (doc: jsPDF, pageWidth: number, pageHeight: number, footerText: string) => {
-  const pageNumber = doc.getNumberOfPages();
+const addFooter = (
+  doc: jsPDF,
+  pageWidth: number,
+  pageHeight: number,
+  footerText: string,
+  currentPage: number,
+  totalPages: number
+) => {
+  doc.setDrawColor(...BORDER);
+  doc.setLineWidth(0.2);
+  doc.line(PAGE_MARGIN, pageHeight - 10, pageWidth - PAGE_MARGIN, pageHeight - 10);
+
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.setTextColor(...MUTED);
   doc.text(footerText, PAGE_MARGIN, pageHeight - 5);
-  doc.text(`Página ${pageNumber}`, pageWidth - PAGE_MARGIN, pageHeight - 5, {
+  doc.text(`Página ${currentPage} de ${totalPages}`, pageWidth - PAGE_MARGIN, pageHeight - 5, {
     align: "right",
   });
 };
@@ -251,6 +261,34 @@ const formatCompactMoney = (value: number): string => {
   return `$${Math.round(value)}`;
 };
 
+const formatCompactNumber = (value: number): string => {
+  const abs = Math.abs(value);
+  if (abs >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000) return `${Math.round(value / 1_000)}k`;
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+};
+
+const chartLooksMonetary = (chart: CommercialReportChart): boolean => {
+  const haystack = [
+    chart.title,
+    ...chart.series.flatMap((serie) => [serie.key, serie.label]),
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  return /monto|costo|coste|total vendido|vendido|venta|ventas|recaud|ingreso|egreso|saldo|pago|importe|precio|ars|\$/.test(haystack);
+};
+
+const formatChartAxisValue = (chart: CommercialReportChart, value: number): string => {
+  return chartLooksMonetary(chart) ? formatCompactMoney(value) : formatCompactNumber(value);
+};
+
+const compactLabel = (value: unknown, maxChars: number): string => {
+  const text = normalizeText(value, "").trim();
+  if (text.length <= maxChars) return text;
+  return `${text.slice(0, Math.max(1, maxChars - 1))}…`;
+};
+
 const setPdfColor = (doc: jsPDF, color: [number, number, number], mode: "draw" | "fill" | "text") => {
   if (mode === "draw") doc.setDrawColor(color[0], color[1], color[2]);
   if (mode === "fill") doc.setFillColor(color[0], color[1], color[2]);
@@ -298,7 +336,7 @@ const drawChartCard = (
     const gridY = plotY + (plotHeight / 3) * i;
     const gridValue = max - (adjustedRange / 3) * i;
     doc.line(plotX, gridY, plotX + plotWidth, gridY);
-    doc.text(formatCompactMoney(gridValue), x + 2, gridY + 1.5);
+    doc.text(formatChartAxisValue(chart, gridValue), x + 2, gridY + 1.5);
   }
 
   doc.setDrawColor(148, 163, 184);
@@ -334,9 +372,10 @@ const drawChartCard = (
         doc.rect(barX, barY, barWidth, barHeight, "F");
       });
 
+      const maxLabelChars = Math.max(4, Math.floor(groupWidth * 0.72));
       doc.setFontSize(6.2);
       doc.setTextColor(...MUTED);
-      doc.text(normalizeText(item[chart.labelKey], ""), plotX + itemIndex * groupWidth + groupWidth / 2, bottomY + 4, { align: "center" });
+      doc.text(compactLabel(item[chart.labelKey], maxLabelChars), plotX + itemIndex * groupWidth + groupWidth / 2, bottomY + 4, { align: "center" });
     });
   } else {
     chart.series.forEach((serie) => {
@@ -355,9 +394,10 @@ const drawChartCard = (
     });
 
     data.forEach((item, index) => {
+      const maxLabelChars = Math.max(4, Math.floor(plotWidth / Math.max(data.length, 1) * 0.72));
       doc.setFontSize(6.2);
       doc.setTextColor(...MUTED);
-      doc.text(normalizeText(item[chart.labelKey], ""), xForIndex(index), bottomY + 4, { align: "center" });
+      doc.text(compactLabel(item[chart.labelKey], maxLabelChars), xForIndex(index), bottomY + 4, { align: "center" });
     });
   }
 
@@ -492,12 +532,12 @@ export async function downloadCommercialReportPdf<T>({
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8.5);
     doc.setTextColor(...MUTED);
-    doc.text(filtersLabel, PAGE_MARGIN, y);
-    y += 6;
+    const filterLines = doc.splitTextToSize(filtersLabel, pageWidth - PAGE_MARGIN * 2).slice(0, 3);
+    doc.text(filterLines, PAGE_MARGIN, y);
+    y += filterLines.length * 4 + 3;
   }
 
   y = drawCharts(doc, charts, pageWidth, pageHeight, y, () => {
-    addFooter(doc, pageWidth, pageHeight, resolvedFooterText);
     doc.addPage();
     addHeader(doc, pageWidth, logoDataUrl, title, subtitle, resolvedBrandName, resolvedBrandSubtitle);
     return HEADER_HEIGHT + 10;
@@ -531,7 +571,6 @@ export async function downloadCommercialReportPdf<T>({
     );
 
     if (y + rowHeight > pageHeight - FOOTER_HEIGHT - 6) {
-      addFooter(doc, pageWidth, pageHeight, resolvedFooterText);
       doc.addPage();
       addHeader(doc, pageWidth, logoDataUrl, title, subtitle, resolvedBrandName, resolvedBrandSubtitle);
       y = HEADER_HEIGHT + 10;
@@ -569,7 +608,7 @@ export async function downloadCommercialReportPdf<T>({
   const pages = doc.getNumberOfPages();
   for (let page = 1; page <= pages; page += 1) {
     doc.setPage(page);
-    addFooter(doc, pageWidth, pageHeight, resolvedFooterText);
+    addFooter(doc, pageWidth, pageHeight, resolvedFooterText, page, pages);
   }
 
   doc.save(fileName.toLowerCase().endsWith(".pdf") ? fileName : buildTimestampedDownloadFileName(fileName, "pdf"));

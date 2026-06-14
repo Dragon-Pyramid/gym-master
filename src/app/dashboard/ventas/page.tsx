@@ -9,7 +9,7 @@ import { AppFooter } from '@/components/footer/AppFooter';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { FileSpreadsheet, Plus, Search, Store } from 'lucide-react';
+import { FileSpreadsheet, FileText, Plus, Search, Store } from 'lucide-react';
 import { deleteVenta, getAllVentas } from '@/services/ventaService';
 import VentaModal from '@/components/modal/VentaModal';
 import VentaViewModal from '@/components/modal/VentaViewModal';
@@ -22,6 +22,8 @@ import ExcelJS from 'exceljs';
 import { buildTimestampedDownloadFileName } from '@/utils/downloadFileName';
 import { formatCurrencyARS } from '@/lib/comercial/productos';
 import { PaginationControls } from '@/components/ui/PaginationControls';
+import { downloadCommercialReportPdf } from '@/utils/commercialReportPdf';
+import { formatFrontendDate } from '@/utils/dateFormat';
 
 const VENTAS_PAGE_SIZE = 10;
 
@@ -49,6 +51,29 @@ function getVentaItemsLabel(venta: Venta) {
     .join(' | ');
 }
 
+function isDateWithinRange(value: string | null | undefined, from: string, to: string) {
+  const normalized = String(value ?? '').slice(0, 10);
+  if (!normalized) return false;
+  if (from && normalized < from) return false;
+  if (to && normalized > to) return false;
+  return true;
+}
+
+function getDateRangeLabel(from: string, to: string) {
+  if (from && to) return `Período: ${formatFrontendDate(from)} a ${formatFrontendDate(to)}`;
+  if (from) return `Desde: ${formatFrontendDate(from)}`;
+  if (to) return `Hasta: ${formatFrontendDate(to)}`;
+  return 'Período: todos';
+}
+
+const VENTA_FILTER_LABELS: Record<VentaFilter, string> = {
+  todas: 'Todas',
+  socio: 'Socios',
+  consumidor_final: 'Consumidor final',
+  visitante: 'Visitantes',
+  anuladas: 'Anuladas',
+};
+
 export default function VentasPage() {
   const { user, isAuthenticated, initializeAuth, isInitialized } = useAuthStore();
   const router = useRouter();
@@ -56,6 +81,8 @@ export default function VentasPage() {
   const [filteredVentas, setFilteredVentas] = useState<ResponseVenta[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [ventaFilter, setVentaFilter] = useState<VentaFilter>('todas');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
@@ -95,8 +122,8 @@ export default function VentasPage() {
   };
 
   const metrics = useMemo(() => {
-    const activas = ventas.filter((venta) => venta.activo !== false && venta.estado !== 'anulada');
-    const anuladas = ventas.filter((venta) => venta.activo === false || venta.estado === 'anulada');
+    const activas = filteredVentas.filter((venta) => venta.activo !== false && venta.estado !== 'anulada');
+    const anuladas = filteredVentas.filter((venta) => venta.activo === false || venta.estado === 'anulada');
     const totalVendido = activas.reduce((acc, venta) => acc + Number(venta.total ?? 0), 0);
     const itemsVendidos = activas.reduce(
       (acc, venta) =>
@@ -114,7 +141,7 @@ export default function VentasPage() {
       totalVendido,
       itemsVendidos,
     };
-  }, [ventas]);
+  }, [filteredVentas]);
 
   const handleExportExcel = async () => {
     const workbook = new ExcelJS.Workbook();
@@ -158,6 +185,36 @@ export default function VentasPage() {
     window.URL.revokeObjectURL(url);
   };
 
+
+  const handleDownloadPdf = async () => {
+    try {
+      await downloadCommercialReportPdf({
+        title: 'Listado de Ventas',
+        subtitle: 'Ventas de kiosco a socios, visitantes y consumidores finales.',
+        fileName: 'listado-ventas-kiosco',
+        rows: filteredVentas,
+        metrics: [
+          { label: 'Ventas activas', value: metrics.activas },
+          { label: 'Total vendido', value: formatCurrencyARS(metrics.totalVendido) },
+          { label: 'Ítems vendidos', value: metrics.itemsVendidos },
+          { label: 'Anuladas', value: metrics.anuladas },
+        ],
+        filtersLabel: `Filtro: ${VENTA_FILTER_LABELS[ventaFilter]} · ${getDateRangeLabel(dateFrom, dateTo)}${searchTerm.trim() ? ` · Búsqueda: ${searchTerm.trim()}` : ''}`,
+        columns: [
+          { header: 'Cliente', width: 34, getValue: (venta) => getVentaClienteLabel(venta) },
+          { header: 'Tipo', width: 20, getValue: (venta) => venta.cliente_tipo ?? 'consumidor_final' },
+          { header: 'Detalle', width: 72, getValue: (venta) => getVentaItemsLabel(venta) },
+          { header: 'Método', width: 20, getValue: (venta) => venta.metodo_pago ?? 'efectivo' },
+          { header: 'Total', width: 22, getValue: (venta) => formatCurrencyARS(venta.total), align: 'right' },
+          { header: 'Fecha', width: 18, getValue: (venta) => formatFrontendDate(venta.fecha) },
+          { header: 'Estado', width: 18, getValue: (venta) => venta.estado ?? (venta.activo === false ? 'anulada' : 'pagada') },
+        ],
+      });
+    } catch {
+      toast.error('No se pudo generar el PDF de ventas');
+    }
+  };
+
   useEffect(() => {
     if (isInitialized && isAuthenticated) {
       loadVentas();
@@ -176,6 +233,7 @@ export default function VentasPage() {
         if (estado === 'anulada') return false;
       }
       if (ventaFilter === 'todas' && estado === 'anulada') return false;
+      if (!isDateWithinRange(venta.fecha, dateFrom, dateTo)) return false;
 
       if (!lowercaseSearch) return true;
 
@@ -189,11 +247,11 @@ export default function VentasPage() {
     });
 
     setFilteredVentas(filtered);
-  }, [searchTerm, ventaFilter, ventas]);
+  }, [searchTerm, ventaFilter, dateFrom, dateTo, ventas]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, ventaFilter]);
+  }, [searchTerm, ventaFilter, dateFrom, dateTo]);
 
   const totalVentas = filteredVentas.length;
   const totalPages = Math.max(1, Math.ceil(totalVentas / VENTAS_PAGE_SIZE));
@@ -278,6 +336,14 @@ export default function VentasPage() {
                   </div>
                   <Button
                     variant='outline'
+                    onClick={handleDownloadPdf}
+                    className='flex items-center gap-2 border-[#02a8e1] bg-white text-[#02a8e1] hover:bg-[#e6f7fd]'
+                  >
+                    <FileText className='h-4 w-4' />
+                    <span className='hidden sm:inline'>PDF</span>
+                  </Button>
+                  <Button
+                    variant='outline'
                     onClick={handleExportExcel}
                     className='flex items-center gap-2 border-[#02a8e1] bg-white text-[#02a8e1] hover:bg-[#e6f7fd]'
                   >
@@ -313,6 +379,27 @@ export default function VentasPage() {
                       {label}
                     </Button>
                   ))}
+                </div>
+                <div className='grid gap-3 rounded-xl border bg-slate-50/60 p-3 md:grid-cols-[1fr_1fr_auto] md:items-end'>
+                  <label className='space-y-1 text-sm font-medium'>
+                    <span>Desde</span>
+                    <Input type='date' value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} />
+                  </label>
+                  <label className='space-y-1 text-sm font-medium'>
+                    <span>Hasta</span>
+                    <Input type='date' value={dateTo} onChange={(event) => setDateTo(event.target.value)} />
+                  </label>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    onClick={() => {
+                      setDateFrom('');
+                      setDateTo('');
+                    }}
+                    disabled={!dateFrom && !dateTo}
+                  >
+                    Limpiar fechas
+                  </Button>
                 </div>
                 <div className='overflow-x-auto'>
                   <VentaTable
