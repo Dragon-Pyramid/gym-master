@@ -126,6 +126,49 @@ function getImageSource(item?: EjercicioMediaCatalogItem | null) {
   );
 }
 
+
+function hasCloudinaryMedia(item?: EjercicioMediaCatalogItem | null) {
+  return Boolean(
+    item?.imagen_origen === "cloudinary" || item?.cloudinary_public_id,
+  );
+}
+
+function hasYoutubeMedia(item?: EjercicioMediaCatalogItem | null) {
+  return Boolean(
+    item?.video_youtube_url ||
+      item?.youtube_url_es ||
+      item?.youtube_url_en ||
+      item?.youtube_principal,
+  );
+}
+
+function getMediaQuality(item?: EjercicioMediaCatalogItem | null) {
+  const hasImage = hasCloudinaryMedia(item);
+  const hasYoutube = hasYoutubeMedia(item);
+  const youtubeReviewed =
+    item?.youtube_review_status === "validado" ||
+    item?.youtube_review_status === "sugerido";
+
+  if (hasImage && hasYoutube && youtubeReviewed) {
+    return { label: "Completo", className: "border-emerald-200 bg-emerald-50 text-emerald-700" };
+  }
+
+  if (hasImage && hasYoutube) {
+    return { label: "Revisar video", className: "border-sky-200 bg-sky-50 text-sky-700" };
+  }
+
+  if (hasImage || hasYoutube) {
+    return { label: "Parcial", className: "border-amber-200 bg-amber-50 text-amber-700" };
+  }
+
+  return { label: "Pendiente", className: "border-red-200 bg-red-50 text-red-700" };
+}
+
+function percentage(value: number, total: number) {
+  if (!total) return 0;
+  return Math.round((value / total) * 100);
+}
+
 function isAdminRole(role?: string | null) {
   const normalizedRole = role?.trim().toLowerCase();
   return normalizedRole === "admin" || normalizedRole === "administrador";
@@ -219,6 +262,18 @@ export default function RutinasExerciseMediaCatalogPage() {
       "",
     [selectedExercise],
   );
+
+  const catalogReadiness = useMemo(() => {
+    const total = summary.total || 0;
+    const imageCoverage = percentage(summary.conCloudinary, total);
+    const youtubeCoverage = percentage(summary.conYoutube, total);
+    const completeCoverage = percentage(
+      Math.min(summary.conCloudinary, summary.conYoutube),
+      total,
+    );
+
+    return { imageCoverage, youtubeCoverage, completeCoverage };
+  }, [summary]);
 
   const loadFilters = useCallback(async () => {
     const [objetivosResponse, nivelesResponse] = await Promise.all([
@@ -773,6 +828,24 @@ export default function RutinasExerciseMediaCatalogPage() {
     }
   };
 
+  const handleShowCriticalPendings = () => {
+    setPage(1);
+    setMediaStatus("pendiente_cloudinary");
+  };
+
+  const handleShowYoutubeReview = () => {
+    setPage(1);
+    setMediaStatus("youtube_revision");
+  };
+
+  const handleClearCatalogFilters = () => {
+    setPage(1);
+    setSearchTerm("");
+    setObjetivoFilter("todos");
+    setNivelFilter("todos");
+    setMediaStatus("todos");
+  };
+
   if (loading && !items.length) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -801,8 +874,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                   Catálogo visual de ejercicios
                 </h1>
                 <p className="max-w-3xl text-sm text-slate-600">
-                  Homogeneizá imágenes/GIFs en Cloudinary y asociá videos de
-                  YouTube por ejercicio para web, mobile, PDF y futuro RAG.
+                  Prepará una base visual consistente para web, mobile, PDFs y futuro RAG: imágenes/GIFs seguros en Cloudinary y videos de técnica revisados.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -847,7 +919,7 @@ export default function RutinasExerciseMediaCatalogPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
               <Card className="border-emerald-100 bg-white">
                 <CardContent className="p-4">
                   <p className="text-xs font-medium text-slate-500">
@@ -899,6 +971,56 @@ export default function RutinasExerciseMediaCatalogPage() {
                 </CardContent>
               </Card>
             </div>
+
+            <Card className="border-slate-200 bg-white">
+              <CardContent className="p-4">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">
+                      Preparación del catálogo para RAG y experiencia mobile
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      Prioridad: ejercicios con imagen segura en Cloudinary, videos ES/EN revisados y sin fallback visible para socios.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-3 lg:min-w-[460px]">
+                    <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3">
+                      <p className="font-semibold text-emerald-800">Imágenes Cloudinary</p>
+                      <p className="text-xl font-bold text-emerald-900">{catalogReadiness.imageCoverage}%</p>
+                    </div>
+                    <div className="rounded-xl border border-red-100 bg-red-50 p-3">
+                      <p className="font-semibold text-red-800">Videos YouTube</p>
+                      <p className="text-xl font-bold text-red-900">{catalogReadiness.youtubeCoverage}%</p>
+                    </div>
+                    <div className="rounded-xl border border-sky-100 bg-sky-50 p-3">
+                      <p className="font-semibold text-sky-800">Base completa</p>
+                      <p className="text-xl font-bold text-sky-900">{catalogReadiness.completeCoverage}%</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" onClick={handleShowCriticalPendings}>
+                    Ver pendientes de imagen ({summary.pendientesCloudinary})
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setPage(1);
+                      setMediaStatus("pendiente_youtube");
+                    }}
+                  >
+                    Ver pendientes de video ({summary.pendientesYoutube})
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleShowYoutubeReview}>
+                    Revisar YouTube ({summary.youtubePendientesRevision ?? 0})
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={handleClearCatalogFilters}>
+                    Limpiar auditoría
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
 
             {(error || success) && (
               <div
@@ -1372,7 +1494,76 @@ export default function RutinasExerciseMediaCatalogPage() {
                 </CardHeader>
 
                 <CardContent className="p-0">
-                  <div className="overflow-x-auto">
+                  <div className="space-y-3 p-3 md:hidden">
+                    {items.map((item) => {
+                      const active = selectedExercise?.id_ejercicio === item.id_ejercicio;
+                      const hasYoutube = hasYoutubeMedia(item);
+                      const hasCloudinary = hasCloudinaryMedia(item);
+                      const youtubeEsUrl = getYoutubeEsUrl(item);
+                      const youtubeEnUrl = getYoutubeEnUrl(item);
+                      const quality = getMediaQuality(item);
+
+                      return (
+                        <button
+                          key={item.id_ejercicio}
+                          type="button"
+                          onClick={() => setSelectedExercise(item)}
+                          className={`w-full rounded-2xl border p-3 text-left shadow-sm ${active ? "border-sky-300 bg-sky-50" : "border-slate-200 bg-white"}`}
+                        >
+                          <div className="flex gap-3">
+                            <img
+                              src={getImageSource(item)}
+                              alt={item.nombre_ejercicio}
+                              className="h-20 w-20 rounded-xl border bg-slate-100 object-cover"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold text-slate-900">{item.nombre_ejercicio}</p>
+                              <p className="text-xs text-slate-500">
+                                {item.grupo_muscular_nombre ?? "Grupo sin dato"} · {item.objetivo_nombre ?? `Objetivo ${item.id_objetivo}`}
+                              </p>
+                              <div className="mt-2 flex flex-wrap gap-1.5">
+                                <span className={`inline-flex rounded-full border px-2 py-1 text-[11px] ${quality.className}`}>
+                                  {quality.label}
+                                </span>
+                                <span className={`inline-flex rounded-full border px-2 py-1 text-[11px] ${hasCloudinary ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"}`}>
+                                  {hasCloudinary ? "Imagen OK" : "Imagen pendiente"}
+                                </span>
+                                <span className={`inline-flex rounded-full border px-2 py-1 text-[11px] ${hasYoutube ? "border-red-200 bg-red-50 text-red-700" : "border-slate-200 bg-slate-50 text-slate-500"}`}>
+                                  {hasYoutube ? "Video OK" : "Video pendiente"}
+                                </span>
+                              </div>
+                              <div className="mt-2 flex gap-2">
+                                {youtubeEsUrl && (
+                                  <a
+                                    href={youtubeEsUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(event) => event.stopPropagation()}
+                                    className="rounded-md border border-red-200 bg-red-50 px-2 py-1 text-[11px] font-semibold text-red-700"
+                                  >
+                                    Video ES
+                                  </a>
+                                )}
+                                {youtubeEnUrl && (
+                                  <a
+                                    href={youtubeEnUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(event) => event.stopPropagation()}
+                                    className="rounded-md border border-sky-200 bg-sky-50 px-2 py-1 text-[11px] font-semibold text-sky-700"
+                                  >
+                                    Video EN
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="hidden overflow-x-auto md:block">
                     <table className="w-full text-sm">
                       <thead className="text-left bg-slate-100 text-slate-600">
                         <tr>
@@ -1380,6 +1571,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                           <th className="px-4 py-3">Objetivo / Nivel</th>
                           <th className="px-4 py-3">Imagen</th>
                           <th className="px-4 py-3">Video</th>
+                          <th className="px-4 py-3">Calidad</th>
                           <th className="px-4 py-3 text-center">Ver (ES)</th>
                           <th className="px-4 py-3 text-center">Ver (EN)</th>
                           <th className="px-4 py-3 text-right">Acción</th>
@@ -1390,16 +1582,11 @@ export default function RutinasExerciseMediaCatalogPage() {
                           const active =
                             selectedExercise?.id_ejercicio ===
                             item.id_ejercicio;
-                          const hasYoutube =
-                            !!item.video_youtube_url ||
-                            !!item.youtube_url_es ||
-                            !!item.youtube_url_en ||
-                            !!item.youtube_principal;
+                          const hasYoutube = hasYoutubeMedia(item);
                           const youtubeEsUrl = getYoutubeEsUrl(item);
                           const youtubeEnUrl = getYoutubeEnUrl(item);
-                          const hasCloudinary =
-                            item.imagen_origen === "cloudinary" ||
-                            !!item.cloudinary_public_id;
+                          const hasCloudinary = hasCloudinaryMedia(item);
+                          const quality = getMediaQuality(item);
 
                           return (
                             <tr
@@ -1456,6 +1643,13 @@ export default function RutinasExerciseMediaCatalogPage() {
                                       ? "YouTube validado"
                                       : "YouTube"
                                     : "Pendiente"}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span
+                                  className={`inline-flex rounded-full border px-2 py-1 text-xs ${quality.className}`}
+                                >
+                                  {quality.label}
                                 </span>
                               </td>
                               <td className="px-4 py-3 text-center">
@@ -1585,6 +1779,18 @@ export default function RutinasExerciseMediaCatalogPage() {
                             {selectedExercise.cloudinary_public_id ?? "-"}
                           </p>
                         </div>
+                      </div>
+
+                      <div className={`rounded-lg border p-3 text-xs ${getMediaQuality(selectedExercise).className}`}>
+                        <p className="font-semibold">Estado para socio/RAG: {getMediaQuality(selectedExercise).label}</p>
+                        <p>
+                          {hasCloudinaryMedia(selectedExercise)
+                            ? "Imagen principal segura para web, mobile y PDF."
+                            : "Prioridad: subir o importar imagen/GIF a Cloudinary."}{" "}
+                          {hasYoutubeMedia(selectedExercise)
+                            ? "Video asociado para explicar técnica."
+                            : "Pendiente asociar video de técnica ES/EN."}
+                        </p>
                       </div>
 
                       <div className="space-y-3">
