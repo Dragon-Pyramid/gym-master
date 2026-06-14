@@ -67,19 +67,19 @@ export const AppHeader = ({ title }: AppHeaderProps) => {
   const isAdmin = user?.rol === 'admin';
 
   return (
-    <header className='flex w-full flex-col items-center justify-between border-b border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:flex-row'>
-      <div className='mb-4 flex items-center gap-3 md:mb-0 md:w-auto'>
+    <header className='sticky top-0 z-40 flex w-full flex-wrap items-center justify-between gap-3 border-b border-border bg-background/95 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:px-4 md:py-3'>
+      <div className='flex min-w-0 items-center gap-2 md:gap-3'>
         <Image
           src='/gm_logo.svg'
           alt='Gym Master Logo'
-          width={isMobile ? 60 : 120}
-          height={isMobile ? 60 : 120}
+          width={isMobile ? 44 : 120}
+          height={isMobile ? 44 : 120}
           className='rounded-sm dark:invert'
         />
-        <h1 className='text-xl font-semibold tracking-tight'>{title}</h1>
+        <h1 className='max-w-[46vw] truncate text-base font-semibold tracking-tight md:max-w-none md:text-xl'>{title}</h1>
       </div>
 
-      <div className='flex items-center gap-4'>
+      <div className='flex items-center gap-1 sm:gap-2 md:gap-4'>
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -97,7 +97,9 @@ export const AppHeader = ({ title }: AppHeaderProps) => {
           </Tooltip>
         </TooltipProvider>
 
-        <FechaHora />
+        <div className='hidden md:block'>
+          <FechaHora />
+        </div>
 
         <TooltipProvider>
           <Tooltip>

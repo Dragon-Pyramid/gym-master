@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import Image from 'next/image';
 import { Card } from '@/components/ui/card';
-import { AlertCircle, CheckCircle2, Clock, Dumbbell, FileWarning, Star, ClipboardCheck } from 'lucide-react';
+import { Activity, AlertCircle, CheckCircle2, ChevronRight, Clock, CreditCard, Dumbbell, FileWarning, HeartPulse, MessageCircle, QrCode, Star, ClipboardCheck, Utensils } from 'lucide-react';
 import ProfileImage from '@/components/perfil/ProfileImage';
 import { formatFrontendDate, formatFrontendTime } from '@/utils/dateFormat';
 
@@ -246,6 +246,58 @@ const DashboardInitialContent = () => {
     }
   };
 
+  const socioMobileActions = [
+    {
+      title: cuotaAlDia ? 'Mi cuota' : 'Pagar cuota',
+      description: cuotaAlDia ? 'Ver historial' : 'Regularizar',
+      href: cuotaAlDia ? '/dashboard/mi-cuenta/historial-pagos' : '/dashboard/mi-cuenta/pagar-cuota',
+      icon: CreditCard,
+      className: cuotaAlDia ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-sky-200 bg-sky-50 text-sky-900',
+    },
+    {
+      title: 'QR / asistencia',
+      description: 'Ingreso al gym',
+      href: '/dashboard/control-asistencia',
+      icon: QrCode,
+      className: 'border-indigo-200 bg-indigo-50 text-indigo-900',
+    },
+    {
+      title: 'Rutina',
+      description: 'Entrenamiento',
+      href: '/dashboard/rutinas/asistente',
+      icon: Dumbbell,
+      className: 'border-orange-200 bg-orange-50 text-orange-900',
+    },
+    {
+      title: 'Dieta',
+      description: 'Plan alimentario',
+      href: '/dashboard/dietas',
+      icon: Utensils,
+      className: 'border-lime-200 bg-lime-50 text-lime-900',
+    },
+    {
+      title: 'Evolución',
+      description: 'Progreso físico',
+      href: '/dashboard/evolucion-fisica',
+      icon: Activity,
+      className: 'border-violet-200 bg-violet-50 text-violet-900',
+    },
+    {
+      title: 'Ficha médica',
+      description: tieneFichaMedica === false ? 'Completar' : 'Consultar',
+      href: '/dashboard/ficha-medica',
+      icon: HeartPulse,
+      className: tieneFichaMedica === false ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-rose-200 bg-rose-50 text-rose-900',
+    },
+    {
+      title: 'Mensajes',
+      description: 'Casilla',
+      href: '/dashboard/mensajes',
+      icon: MessageCircle,
+      className: 'border-slate-200 bg-slate-50 text-slate-900',
+    },
+  ];
+
   return (
     <div className='p-4 bg-gradient-to-br from-background via-background to-muted/20 md:p-8'>
       <div className='mx-auto max-w-7xl'>
@@ -369,6 +421,49 @@ const DashboardInitialContent = () => {
                     Cargar ficha médica
                   </button>
                 </div>
+              </Card>
+            ) : null}
+
+            {isSocio ? (
+              <Card className='border-sky-100 bg-white/95 p-4 shadow-sm dark:border-sky-900/60 dark:bg-slate-950/70 md:hidden'>
+                <div className='mb-4 flex items-center justify-between gap-3'>
+                  <div>
+                    <p className='text-xs font-semibold uppercase tracking-[0.22em] text-sky-600 dark:text-sky-300'>
+                      Accesos rápidos
+                    </p>
+                    <h2 className='text-lg font-bold'>Tu app del gimnasio</h2>
+                  </div>
+                  <span className='rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 dark:bg-sky-950 dark:text-sky-200'>
+                    Mobile web
+                  </span>
+                </div>
+
+                <div className='grid grid-cols-2 gap-3'>
+                  {socioMobileActions.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <button
+                        key={item.title}
+                        type='button'
+                        onClick={() => router.push(item.href)}
+                        className={`flex min-h-[92px] flex-col justify-between rounded-2xl border p-3 text-left shadow-sm transition active:scale-[0.98] ${item.className}`}
+                      >
+                        <div className='flex items-center justify-between gap-2'>
+                          <Icon className='h-5 w-5' />
+                          <ChevronRight className='h-4 w-4 opacity-60' />
+                        </div>
+                        <div>
+                          <p className='text-sm font-bold'>{item.title}</p>
+                          <p className='text-xs opacity-75'>{item.description}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <p className='mt-3 text-xs leading-5 text-muted-foreground'>
+                  Experiencia web responsive conectada a tu gimnasio. Podés usarla desde el navegador o como acceso directo PWA en el celular.
+                </p>
               </Card>
             ) : null}
 
