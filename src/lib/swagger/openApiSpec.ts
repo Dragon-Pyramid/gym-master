@@ -1828,7 +1828,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     tag: "Rutinas",
     summary: "Generar rutina desde asistente RAG",
     description:
-      "Endpoint puente para el futuro gym-master-rag-coach. Si el microservicio RAG está configurado, consulta el servicio externo para sugerir parámetros; si no, usa fallback local con el generador formal de Gym Master. No expone claves en frontend.",
+      "Genera una rutina desde el asistente conversacional. Primero consulta el RAG interno de Gym Master para recuperar ejercicios reales indexados; si existe microservicio externo configurado, lo usa como puente; si no hay resultados RAG, mantiene fallback seguro con el generador formal. No expone claves en frontend.",
     auth: true,
     admin: false,
     notImplemented: false,
@@ -2187,7 +2187,7 @@ function getRequestBody(endpoint: EndpointDefinition, method: string) {
               value: {
                 email: "admin@gymmaster.local",
                 password: "********",
-                userType: "admin",
+                rol: "admin",
               },
             },
           },
@@ -2317,6 +2317,42 @@ function getRequestBody(endpoint: EndpointDefinition, method: string) {
                 sourceTables: ["ejercicio"],
                 matchCount: 8,
                 matchThreshold: 0.72,
+              },
+            },
+          },
+        },
+      },
+    };
+  }
+
+  if (endpoint.path === "/api/rutinas/rag-assistant/generar") {
+    return {
+      required: true,
+      content: {
+        "application/json": {
+          schema: { $ref: "#/components/schemas/RagRutinasAssistantRequest" },
+          examples: {
+            socioRutina: {
+              summary: "Generar rutina con RAG interno",
+              value: {
+                objetivo: 1,
+                nivel: 1,
+                dias: 3,
+                idioma: "es",
+                mensajeSocio: "Quiero ganar masa muscular, entrenar 3 días por semana y priorizar piernas. Soy principiante.",
+                restricciones: "Cuidar rodilla derecha, evitar impacto alto.",
+              },
+            },
+            adminConSocio: {
+              summary: "Prueba técnica admin indicando socio",
+              value: {
+                objetivo: 1,
+                nivel: 1,
+                dias: 3,
+                idioma: "es",
+                mensajeSocio: "Rutina de fuerza inicial de 3 días con ejercicios seguros.",
+                restricciones: "Sin saltos ni impacto alto.",
+                id_socio: "2d2a45df-0fd5-4f4e-9c01-5de07dca1111",
               },
             },
           },
@@ -2781,10 +2817,11 @@ export const openApiSpec = {
             format: "password",
             example: "********",
           },
-          userType: {
+          rol: {
             type: "string",
             enum: ["admin", "usuario", "socio"],
             example: "admin",
+            description: "Rol esperado por /api/custom-login. No usar userType.",
           },
         },
       },
@@ -2920,6 +2957,52 @@ export const openApiSpec = {
             minimum: 1,
             maximum: 30,
             example: 8,
+          },
+        },
+      },
+      RagRutinasAssistantRequest: {
+        type: "object",
+        required: ["objetivo", "nivel", "dias"],
+        properties: {
+          objetivo: {
+            type: "integer",
+            minimum: 1,
+            example: 1,
+            description: "ID del objetivo de entrenamiento seleccionado.",
+          },
+          nivel: {
+            type: "integer",
+            minimum: 1,
+            example: 1,
+            description: "ID del nivel del socio.",
+          },
+          dias: {
+            type: "integer",
+            minimum: 1,
+            maximum: 6,
+            example: 3,
+            description: "Cantidad de días por semana disponibles para entrenar.",
+          },
+          idioma: {
+            type: "string",
+            enum: ["es", "en"],
+            example: "es",
+          },
+          mensajeSocio: {
+            type: "string",
+            maxLength: 1200,
+            example: "Quiero ganar masa muscular, entrenar 3 días por semana y priorizar piernas. Soy principiante.",
+          },
+          restricciones: {
+            type: "string",
+            maxLength: 1200,
+            example: "Cuidar rodilla derecha, evitar impacto alto.",
+          },
+          id_socio: {
+            type: "string",
+            format: "uuid",
+            nullable: true,
+            description: "Solo para pruebas/admin. El socio logueado se resuelve automáticamente.",
           },
         },
       },

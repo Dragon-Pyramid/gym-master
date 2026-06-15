@@ -32,9 +32,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
-import { Nivel } from '@/interfaces/niveles.interface';
-import { Objetivo } from '@/interfaces/objetivo.interface';
-import { RagRutinasAssistantResponseData } from '@/interfaces/ragRutinasAssistant.interface';
+import type { Nivel } from '@/interfaces/niveles.interface';
+import type { Objetivo } from '@/interfaces/objetivo.interface';
+import type { RagRutinasAssistantResponseData } from '@/interfaces/ragRutinasAssistant.interface';
 import { getNiveles, getObjetivos } from '@/services/apiClient';
 import { generarRutinaConAsistente } from '@/services/ragRutinasAssistantService';
 import { useAuthStore } from '@/stores/authStore';
@@ -820,6 +820,35 @@ export default function RutinasAssistantPage() {
                         <div className='rounded-xl bg-background/80 p-3 text-muted-foreground'>
                           <p>{result.resumen}</p>
                         </div>
+
+                        {result.ragContext?.used && result.ragContext.results.length > 0 && (
+                          <div className='rounded-xl bg-background/80 p-3 text-muted-foreground'>
+                            <p className='font-semibold text-foreground'>Conocimiento RAG aplicado</p>
+                            <p className='mt-1'>
+                              Se recuperaron {result.ragContext.results.length} referencias de ejercicios reales para orientar la rutina.
+                            </p>
+                            <ul className='mt-2 list-disc space-y-1 pl-5'>
+                              {result.ragContext.results.slice(0, 5).map((source) => (
+                                <li key={source.chunkId}>
+                                  <span className='font-medium text-foreground'>{source.title}</span>
+                                  <span> · score {source.similarity.toFixed(2)}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {result.advertencias.length > 0 && (
+                          <div className='rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100'>
+                            <p className='font-semibold'>Advertencias técnicas</p>
+                            <ul className='mt-2 list-disc space-y-1 pl-5'>
+                              {result.advertencias.map((warning) => (
+                                <li key={warning}>{warning}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
                         <Button asChild>
                           <Link href='/dashboard/rutinas'>Ir al menú Rutinas</Link>
                         </Button>

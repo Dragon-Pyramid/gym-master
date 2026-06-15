@@ -17,14 +17,41 @@ export interface RagRutinasParametrosFinales {
   idioma: RagRutinasIdioma;
 }
 
+export interface RagRutinasContextResult {
+  chunkId: string;
+  documentId: string;
+  title: string;
+  sourceId: string;
+  sourceTable: string;
+  domain: string;
+  content: string;
+  metadata: Record<string, unknown>;
+  documentMetadata: Record<string, unknown>;
+  similarity: number;
+}
+
+export interface RagRutinasContextSummary {
+  enabled: boolean;
+  used: boolean;
+  query: string;
+  provider?: string;
+  model?: string;
+  matchThreshold?: number;
+  matchCount?: number;
+  results: RagRutinasContextResult[];
+  summary: string;
+  warnings: string[];
+}
+
 export interface RagRutinasAssistantResponseData {
-  modo: 'rag_bridge' | 'local_fallback';
+  modo: 'external_rag_bridge' | 'internal_rag' | 'local_fallback';
   ragConfigurado: boolean;
   rutinaGenerada: unknown;
   parametros: RagRutinasParametrosFinales;
   mensajeFinal: string;
   resumen: string;
   advertencias: string[];
+  ragContext?: RagRutinasContextSummary;
   ragRespuesta?: unknown;
   ragError?: string;
 }
