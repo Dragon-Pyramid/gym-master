@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { authMiddleware } from '@/middlewares/auth.middleware';
 import { dataGeneracionRutina } from '@/services/rutinaService';
-import {
+import { buildRutinasRagContext } from '@/services/server/ragRutinasCoachService';
+import type {
   RagRutinasAssistantRequest,
+  RagRutinasContextSummary,
   RagRutinasIdioma,
 } from '@/interfaces/ragRutinasAssistant.interface';
 
@@ -158,6 +160,24 @@ export async function POST(req: Request) {
       },
     };
 
+    let internalRagContext: RagRutinasContextSummary | undefined;
+    let internalRagError: string | undefined;
+
+    try {
+      internalRagContext = await buildRutinasRagContext(user, {
+        objetivo: baseObjetivo,
+        nivel: baseNivel,
+        dias: baseDias,
+        idioma,
+        mensajeSocio,
+        restricciones,
+        id_socio: body.id_socio,
+      });
+    } catch (error) {
+      internalRagError = error instanceof Error ? error.message : 'Error desconocido al consultar RAG interno';
+      console.warn('RAG interno de rutinas no disponible. Se usa fallback local:', internalRagError);
+    }
+
     let ragRespuesta: RagCoachResponse | undefined;
     let ragError: string | undefined;
     const ragConfigurado = Boolean(getRagCoachEndpoint());
@@ -183,17 +203,32 @@ export async function POST(req: Request) {
       id_socio: body.id_socio,
     });
 
+    const ragContextUsed = Boolean(internalRagContext?.used);
+    const modo: 'external_rag_bridge' | 'internal_rag' | 'local_fallback' = ragRespuesta ? 'external_rag_bridge' : ragContextUsed ? 'internal_rag' : 'local_fallback';
+    const warnings = [
+      ...(Array.isArray(ragRespuesta?.advertencias) ? ragRespuesta.advertencias : []),
+      ...(internalRagContext?.warnings ?? []),
+      ...(internalRagError ? [internalRagError] : []),
+    ];
+
     const mensajeFinal =
       ragRespuesta?.mensajeFinal ||
-      'Tu rutina se generó en base a los datos indicados. Dirigite al menú Rutinas y allí la encontrarás.';
+      (ragContextUsed
+        ? 'Tu rutina se generó usando el generador formal de Gym Master y referencias reales recuperadas por el RAG Coach.'
+        : 'Tu rutina se generó en base a los datos indicados. Dirigite al menú Rutinas y allí la encontrarás.');
+
+    const resumen =
+      ragRespuesta?.resumen ||
+      internalRagContext?.summary ||
+      'Se utilizó el generador formal de Gym Master con los parámetros seleccionados por el socio.';
 
     return NextResponse.json(
       {
         ok: true,
         message: 'Rutina generada correctamente desde el asistente.',
         data: {
-          modo: ragRespuesta ? 'rag_bridge' : 'local_fallback',
-          ragConfigurado,
+          modo,
+          ragConfigurado: ragConfigurado || Boolean(internalRagContext?.enabled),
           rutinaGenerada,
           parametros: {
             objetivo: objetivoFinal,
@@ -202,12 +237,9 @@ export async function POST(req: Request) {
             idioma: idiomaFinal,
           },
           mensajeFinal,
-          resumen:
-            ragRespuesta?.resumen ||
-            'Se utilizó el generador formal de Gym Master con los parámetros seleccionados por el socio.',
-          advertencias: Array.isArray(ragRespuesta?.advertencias)
-            ? ragRespuesta.advertencias
-            : [],
+          resumen,
+          advertencias: warnings,
+          ragContext: internalRagContext,
           ragRespuesta,
           ragError,
         },
