@@ -21,6 +21,7 @@ type ChatMessage = {
   content: string;
   actions?: RagCoachChatActionResult[];
   suggestedReplies?: string[];
+  contextSummary?: string;
 };
 
 const quickPrompts = [
@@ -118,6 +119,7 @@ export default function CoachIaPage() {
         content: res.data.reply,
         actions: res.data.actions,
         suggestedReplies: res.data.suggestedReplies,
+        contextSummary: res.data.contextSummary,
       };
 
       setMessages((current) => [...current, assistantMessage]);
@@ -188,6 +190,12 @@ export default function CoachIaPage() {
                         }`}
                       >
                         <div className="whitespace-pre-line">{message.content}</div>
+
+                        {message.contextSummary && message.role === 'assistant' && (
+                          <div className="mt-3 rounded-xl border border-cyan-100 bg-cyan-50 px-3 py-2 text-xs text-cyan-900">
+                            <strong>Contexto aplicado:</strong> {message.contextSummary}
+                          </div>
+                        )}
 
                         {message.actions?.some((action) => action.viewPath) && (
                           <div className="mt-3 flex flex-wrap gap-2">

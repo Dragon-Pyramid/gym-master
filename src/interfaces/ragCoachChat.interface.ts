@@ -36,6 +36,8 @@ export interface RagCoachChatResponseData {
   suggestedReplies: string[];
   missingParams: string[];
   coachNotes: string[];
+  contextSummary?: string;
+  contextHints?: string[];
   nextBestStep?: string;
 }
 

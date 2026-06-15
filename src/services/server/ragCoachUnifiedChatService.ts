@@ -11,6 +11,7 @@ import { findAllEvolucionesSocioByIdSocio } from '@/services/evolucionSocioServi
 import { buildRutinasRagContext } from './ragRutinasCoachService';
 import { buildDietasRagContext } from './ragDietasCoachService';
 import { analyzeEvolucionFisicaWithRag } from './ragEvolucionFisicaCoachService';
+import { buildRagCoachSocioContext, type RagCoachSocioContext } from './ragCoachSocioContextService';
 
 const MAX_MESSAGE_LENGTH = 1600;
 
@@ -57,7 +58,7 @@ function detectIntent(message: string): RagCoachChatIntent {
   return 'unknown';
 }
 
-function inferObjective(message: string) {
+function inferObjective(message: string, context?: RagCoachSocioContext | null) {
   const text = normalize(message);
   if (/\b(definicion|definir|marcar|bajar grasa|quemar grasa)\b/.test(text)) return 2;
   if (/\b(bajar de peso|adelgazar|perder peso)\b/.test(text)) return 3;
@@ -66,17 +67,17 @@ function inferObjective(message: string) {
   if (/\b(rehabilitacion|recuperacion|lesion)\b/.test(text)) return 6;
   if (/\b(salud|sentirme mejor|bienestar)\b/.test(text)) return 7;
   if (/\b(estres|antiestr[eé]s|estresado)\b/.test(text)) return 10;
-  return 1;
+  return context?.socio?.objetivo ?? 1;
 }
 
-function inferLevel(message: string) {
+function inferLevel(message: string, context?: RagCoachSocioContext | null) {
   const text = normalize(message);
   if (/\b(avanzado|experto|mucho tiempo|anos entrenando|años entrenando)\b/.test(text)) return 3;
   if (/\b(intermedio|algo de experiencia|hace meses)\b/.test(text)) return 2;
-  return 1;
+  return context?.socio?.nivel ?? 1;
 }
 
-function inferDays(message: string) {
+function inferDays(message: string, context?: RagCoachSocioContext | null) {
   const text = normalize(message);
   const direct = text.match(/(?:^|\D)([1-6])\s*(?:dias?|veces|entrenamientos?)(?:\s+por\s+semana)?(?:\D|$)/);
   if (direct?.[1]) return Number(direct[1]);
@@ -96,7 +97,7 @@ function inferDays(message: string) {
     if (new RegExp(`\\b${word}\\s+(dias?|veces|entrenamientos?)\\b`).test(text)) return value;
   }
 
-  return 3;
+  return context?.socio?.diasPorSemana ?? 3;
 }
 
 function inferRestrictions(message: string) {
@@ -110,6 +111,29 @@ function inferRestrictions(message: string) {
   if (/\b(diabetes|glucemia|insulina)\b/.test(text)) restrictions.push('Validar pauta alimentaria con profesional por condición glucémica declarada.');
 
   return restrictions.join(' | ');
+}
+
+function mergeRestrictions(messageRestrictions: string, context?: RagCoachSocioContext | null) {
+  const values = [
+    messageRestrictions,
+    ...(context?.fichaMedica.restriccionesSeguras ?? []),
+  ]
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  return Array.from(new Set(values)).join(' | ');
+}
+
+function getContextCoachLine(context?: RagCoachSocioContext | null) {
+  if (!context) return '';
+  return context.resumenHumano;
+}
+
+function buildContextAwareGuidance(name: string, message: string, context?: RagCoachSocioContext | null) {
+  const base = buildGuidanceReply(name, message, context);
+  const contextLine = getContextCoachLine(context);
+  if (!contextLine) return base;
+  return `${base}\n\n${contextLine}`;
 }
 
 function todayIso() {
@@ -134,7 +158,15 @@ function evolutionViewMessage() {
   return 'Podés volver a consultar tu seguimiento desde Menú Personal → Evolución Física.';
 }
 
-async function getEvolutionSuggestion(user: JwtUser, socioId: string) {
+async function getEvolutionSuggestion(user: JwtUser, socioId: string, context?: RagCoachSocioContext | null) {
+  if (context) {
+    if (context.evolucion.total === 0) {
+      return 'Todavía no tenés evolución física inicial cargada. Para que el Coach pueda medir mejor tu progreso, te recomiendo cargar peso, altura, cintura y medidas básicas desde Menú Personal → Evolución Física.';
+    }
+
+    return 'Ya tenés evolución física cargada. Te recomiendo actualizarla una vez por mes para comparar avances reales y ajustar rutina/dieta con más precisión.';
+  }
+
   try {
     const rows = await findAllEvolucionesSocioByIdSocio(user, socioId);
     if (!rows.length) {
@@ -147,11 +179,11 @@ async function getEvolutionSuggestion(user: JwtUser, socioId: string) {
   }
 }
 
-async function generateRoutineAction(user: JwtUser, socioId: string, message: string): Promise<RagCoachChatActionResult> {
-  const objetivo = inferObjective(message);
-  const nivel = inferLevel(message);
-  const dias = inferDays(message);
-  const restricciones = inferRestrictions(message);
+async function generateRoutineAction(user: JwtUser, socioId: string, message: string, context?: RagCoachSocioContext | null): Promise<RagCoachChatActionResult> {
+  const objetivo = inferObjective(message, context);
+  const nivel = inferLevel(message, context);
+  const dias = inferDays(message, context);
+  const restricciones = mergeRestrictions(inferRestrictions(message), context);
 
   await buildRutinasRagContext(user, {
     objetivo,
@@ -187,9 +219,9 @@ async function generateRoutineAction(user: JwtUser, socioId: string, message: st
   };
 }
 
-async function generateDietAction(user: JwtUser, socioId: string, message: string): Promise<RagCoachChatActionResult> {
-  const objetivo = inferObjective(message);
-  const restricciones = inferRestrictions(message);
+async function generateDietAction(user: JwtUser, socioId: string, message: string, context?: RagCoachSocioContext | null): Promise<RagCoachChatActionResult> {
+  const objetivo = inferObjective(message, context);
+  const restricciones = mergeRestrictions(inferRestrictions(message), context);
   const fechaInicio = todayIso();
   const fechaFin = addDaysIso(30);
 
@@ -230,13 +262,13 @@ async function generateDietAction(user: JwtUser, socioId: string, message: strin
   };
 }
 
-async function analyzeEvolutionAction(user: JwtUser, socioId: string, message: string): Promise<RagCoachChatActionResult> {
+async function analyzeEvolutionAction(user: JwtUser, socioId: string, message: string, context?: RagCoachSocioContext | null): Promise<RagCoachChatActionResult> {
   const analysis = await analyzeEvolucionFisicaWithRag(user, {
     socio_id: socioId,
     idioma: 'es',
     objetivo: cleanText(message, 500),
     mensajeSocio: message,
-    restricciones: inferRestrictions(message),
+    restricciones: mergeRestrictions(inferRestrictions(message), context),
   });
 
   return {
@@ -250,11 +282,14 @@ async function analyzeEvolutionAction(user: JwtUser, socioId: string, message: s
   };
 }
 
-function buildGuidanceReply(name: string, message: string) {
+function buildGuidanceReply(name: string, message: string, context?: RagCoachSocioContext | null) {
   const normalized = normalize(message);
 
   if (/\b(no se|no se que|por donde empiezo|ayuda|mejorar mi fisico)\b/.test(normalized)) {
-    return `Perfecto, ${name}. Podemos empezar simple. Primero definamos si tu prioridad es ganar masa, bajar grasa, mejorar resistencia o sentirte mejor. Después puedo ayudarte con rutina, dieta y seguimiento de evolución física según lo que necesites.`;
+    const hint = context?.rutinas.total === 0
+      ? ' Como todavía no veo rutinas previas, podemos empezar por una rutina base.'
+      : ' También puedo revisar lo que ya venís trabajando para no repetir enfoques.';
+    return `Perfecto, ${name}. Podemos empezar simple. Primero definamos si tu prioridad es ganar masa, bajar grasa, mejorar resistencia o sentirte mejor. Después puedo ayudarte con rutina, dieta y seguimiento de evolución física según lo que necesites.${hint}`;
   }
 
   return `${name}, puedo ayudarte con rutina, dieta o evolución física. Contame tu objetivo, cuántos días podés entrenar y si tenés alguna lesión o restricción.`;
@@ -282,6 +317,11 @@ export async function handleUnifiedRagCoachChat(
     throw new Error('Debe indicar un socio para usar el Coach IA.');
   }
 
+  const socioContext = await buildRagCoachSocioContext(user, effectiveSocioId).catch((error) => {
+    console.warn('No se pudo construir contexto del socio para el Coach IA:', error);
+    return null;
+  });
+
   const intent = detectIntent(message);
   const actions: RagCoachChatActionResult[] = [];
   const coachNotes: string[] = [];
@@ -289,28 +329,31 @@ export async function handleUnifiedRagCoachChat(
   const suggestedReplies: string[] = [];
 
   if (intent === 'routine_request' || intent === 'routine_and_diet_request') {
-    actions.push(await generateRoutineAction(user, effectiveSocioId, message));
+    actions.push(await generateRoutineAction(user, effectiveSocioId, message, socioContext));
     coachNotes.push('Después de generar una rutina, conviene ofrecer una dieta que acompañe el mismo objetivo.');
     suggestedReplies.push('Sí, quiero una dieta que acompañe mi rutina');
   }
 
   if (intent === 'diet_request' || intent === 'routine_and_diet_request') {
-    actions.push(await generateDietAction(user, effectiveSocioId, message));
+    actions.push(await generateDietAction(user, effectiveSocioId, message, socioContext));
     coachNotes.push('La dieta fue generada como orientación general y debe respetar disclaimers nutricionales.');
   }
 
   if (intent === 'evolution_analysis_request') {
-    actions.push(await analyzeEvolutionAction(user, effectiveSocioId, message));
+    actions.push(await analyzeEvolutionAction(user, effectiveSocioId, message, socioContext));
   }
 
-  const evolutionSuggestion = await getEvolutionSuggestion(user, effectiveSocioId);
+  const evolutionSuggestion = await getEvolutionSuggestion(user, effectiveSocioId, socioContext);
+  const contextLine = getContextCoachLine(socioContext);
+  if (contextLine) coachNotes.push(contextLine);
+  coachNotes.push(...(socioContext?.hints ?? []));
   suggestedReplies.push('Analizar mi evolución física', 'Quiero cargar mi evolución inicial');
 
   if (actions.length === 0) {
     return {
       greeting,
       intent,
-      reply: `${buildGuidanceReply(name, message)}\n\n${evolutionSuggestion}`,
+      reply: `${buildContextAwareGuidance(name, message, socioContext)}\n\n${evolutionSuggestion}`,
       actions: [
         {
           type: 'guidance_only',
@@ -321,7 +364,9 @@ export async function handleUnifiedRagCoachChat(
       ],
       suggestedReplies: ['Quiero una rutina', 'Quiero una dieta', 'Quiero revisar mi evolución física'],
       missingParams: ['objetivo', 'días disponibles', 'nivel o experiencia', 'restricciones'],
-      coachNotes: ['El usuario todavía no pidió una acción concreta o faltan parámetros.'],
+      coachNotes: [...coachNotes, 'El usuario todavía no pidió una acción concreta o faltan parámetros.'],
+      contextSummary: socioContext?.resumenHumano,
+      contextHints: socioContext?.hints,
       nextBestStep: 'Pedir objetivo, disponibilidad semanal y restricciones.',
     };
   }
@@ -331,14 +376,18 @@ export async function handleUnifiedRagCoachChat(
     ? '\n\nSi querés, también puedo prepararte una dieta orientativa que acompañe esta rutina de entrenamiento.'
     : '';
 
+  const contextSuffix = contextLine ? `\n\n${contextLine}` : '';
+
   return {
     greeting,
     intent,
-    reply: `${actionMessages}${offerDiet}\n\n${evolutionSuggestion}`,
+    reply: `${actionMessages}${offerDiet}\n\n${evolutionSuggestion}${contextSuffix}`,
     actions,
     suggestedReplies,
     missingParams,
     coachNotes,
+    contextSummary: socioContext?.resumenHumano,
+    contextHints: socioContext?.hints,
     nextBestStep: intent === 'routine_request'
       ? 'Ofrecer dieta complementaria y seguimiento de evolución física.'
       : 'Sugerir seguimiento mensual de evolución física si el socio está comprometido.',
