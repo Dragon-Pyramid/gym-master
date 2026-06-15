@@ -972,6 +972,20 @@ const endpointDefinitions: EndpointDefinition[] = [
     source: "src/app/api/dieta/generar/route.ts",
   },
   {
+    path: "/api/dieta/rag-assistant/generar",
+    methods: ["POST"],
+    tag: "Dietas",
+    summary: "Generar dieta desde asistente RAG",
+    description:
+      "Genera una dieta con el generador formal de Gym Master y consulta el RAG interno para recuperar reglas nutricionales reales desde comida_base. Mantiene fallback seguro y disclaimers nutricionales.",
+    auth: true,
+    admin: false,
+    notImplemented: false,
+    statuses: [201, 400, 401, 500],
+    queryParams: [],
+    source: "src/app/api/dieta/rag-assistant/generar/route.ts",
+  },
+  {
     path: "/api/dieta/{id}",
     methods: ["GET"],
     tag: "Dietas",
@@ -1795,6 +1809,20 @@ const endpointDefinitions: EndpointDefinition[] = [
     source: "src/app/api/rag/coach/ingest/ejercicios/route.ts",
   },
   {
+    path: "/api/rag/coach/ingest/dietas",
+    methods: ["POST"],
+    tag: "RAG Coach",
+    summary: "Ingestar reglas nutricionales al RAG",
+    description:
+      "Indexa reglas nutricionales reales desde comida_base como documentos/chunks RAG del dominio diet_rule. Requiere rol administrador y proveedor de embeddings configurado.",
+    auth: true,
+    admin: true,
+    notImplemented: false,
+    statuses: [200, 207, 400, 401, 403, 500],
+    queryParams: [],
+    source: "src/app/api/rag/coach/ingest/dietas/route.ts",
+  },
+  {
     path: "/api/rag/coach/vectorize/pending",
     methods: ["POST"],
     tag: "RAG Coach",
@@ -2281,6 +2309,27 @@ function getRequestBody(endpoint: EndpointDefinition, method: string) {
     };
   }
 
+  if (endpoint.path === "/api/rag/coach/ingest/dietas") {
+    return {
+      required: false,
+      content: {
+        "application/json": {
+          schema: { $ref: "#/components/schemas/RagIngestDietRulesRequest" },
+          examples: {
+            reglasNutricionales: {
+              summary: "Ingesta limitada de reglas de comida_base",
+              value: { limit: 10, force: false, onlyMissing: true, delayMs: 750 },
+            },
+            reindexarReglas: {
+              summary: "Reindexar reglas nutricionales aunque ya existan",
+              value: { limit: 25, force: true, delayMs: 1000 },
+            },
+          },
+        },
+      },
+    };
+  }
+
   if (endpoint.path === "/api/rag/coach/vectorize/pending") {
     return {
       required: false,
@@ -2353,6 +2402,45 @@ function getRequestBody(endpoint: EndpointDefinition, method: string) {
                 mensajeSocio: "Rutina de fuerza inicial de 3 días con ejercicios seguros.",
                 restricciones: "Sin saltos ni impacto alto.",
                 id_socio: "2d2a45df-0fd5-4f4e-9c01-5de07dca1111",
+              },
+            },
+          },
+        },
+      },
+    };
+  }
+
+  if (endpoint.path === "/api/dieta/rag-assistant/generar") {
+    return {
+      required: true,
+      content: {
+        "application/json": {
+          schema: { $ref: "#/components/schemas/RagDietasAssistantRequest" },
+          examples: {
+            dietaRag: {
+              summary: "Generar dieta con RAG interno",
+              value: {
+                socio_id: "2d2a45df-0fd5-4f4e-9c01-5de07dca1111",
+                objetivo: 1,
+                fecha_inicio: "2026-06-15",
+                fecha_fin: "2026-07-15",
+                idioma: "es",
+                mensajeSocio: "Quiero bajar grasa sin perder músculo y necesito comidas simples.",
+                restricciones: "Evitar exceso de sodio. No tengo alergias conocidas.",
+                preferencias: "Prefiero pollo, arroz, verduras y comidas económicas.",
+              },
+            },
+            cuidadoNutricional: {
+              summary: "Caso con advertencia de seguridad",
+              value: {
+                socio_id: "2d2a45df-0fd5-4f4e-9c01-5de07dca1111",
+                objetivo: 2,
+                fecha_inicio: "2026-06-15",
+                fecha_fin: "2026-07-15",
+                idioma: "es",
+                mensajeSocio: "Quiero mejorar mi alimentación y entreno tres veces por semana.",
+                restricciones: "Tengo hipertensión.",
+                preferencias: "Comidas simples y sin frituras.",
               },
             },
           },
@@ -2886,6 +2974,35 @@ export const openApiSpec = {
           },
         },
       },
+      RagIngestDietRulesRequest: {
+        type: "object",
+        properties: {
+          limit: {
+            type: "integer",
+            minimum: 1,
+            maximum: 100,
+            example: 25,
+            description: "Cantidad máxima de reglas nutricionales de comida_base a procesar.",
+          },
+          force: {
+            type: "boolean",
+            example: false,
+            description: "Cuando vale true, reindexa aunque el hash del contenido no haya cambiado.",
+          },
+          onlyMissing: {
+            type: "boolean",
+            example: true,
+            description: "Reservado para flujos de ingesta incremental.",
+          },
+          delayMs: {
+            type: "integer",
+            minimum: 0,
+            maximum: 5000,
+            example: 750,
+            description: "Pausa en milisegundos entre embeddings para reducir errores 429 del proveedor.",
+          },
+        },
+      },
       RagVectorizePendingRequest: {
         type: "object",
         properties: {
@@ -3003,6 +3120,53 @@ export const openApiSpec = {
             format: "uuid",
             nullable: true,
             description: "Solo para pruebas/admin. El socio logueado se resuelve automáticamente.",
+          },
+        },
+      },
+      RagDietasAssistantRequest: {
+        type: "object",
+        required: ["socio_id", "objetivo", "fecha_inicio", "fecha_fin"],
+        properties: {
+          socio_id: {
+            type: "string",
+            format: "uuid",
+            example: "2d2a45df-0fd5-4f4e-9c01-5de07dca1111",
+          },
+          objetivo: {
+            type: "integer",
+            minimum: 1,
+            example: 1,
+            description: "ID del objetivo nutricional/de entrenamiento.",
+          },
+          fecha_inicio: {
+            type: "string",
+            format: "date",
+            example: "2026-06-15",
+          },
+          fecha_fin: {
+            type: "string",
+            format: "date",
+            example: "2026-07-15",
+          },
+          idioma: {
+            type: "string",
+            enum: ["es", "en"],
+            example: "es",
+          },
+          mensajeSocio: {
+            type: "string",
+            maxLength: 1200,
+            example: "Quiero bajar grasa sin perder músculo y necesito comidas simples.",
+          },
+          restricciones: {
+            type: "string",
+            maxLength: 1200,
+            example: "Evitar exceso de sodio. No tengo alergias conocidas.",
+          },
+          preferencias: {
+            type: "string",
+            maxLength: 1200,
+            example: "Prefiero pollo, arroz, verduras y comidas económicas.",
           },
         },
       },

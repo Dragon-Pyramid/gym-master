@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto';
 import { JwtUser } from '@/interfaces/jwtUser.interface';
 import {
+  RagIngestDietRulesRequest,
+  RagIngestDietRulesResponse,
   RagIngestExercisesRequest,
   RagIngestExercisesResponse,
   RagVectorizePendingRequest,
@@ -14,6 +16,7 @@ const MAX_LIMIT = 100;
 const MAX_DELAY_MS = 5000;
 
 type ExerciseRow = Record<string, any>;
+type DietRuleRow = Record<string, any>;
 
 function normalizeRole(role?: string | null) {
   return role?.trim().toLowerCase() ?? '';
@@ -186,6 +189,158 @@ async function fetchExercises(limit: number) {
   return data ?? [];
 }
 
+
+function buildDietRuleMetadata(row: DietRuleRow) {
+  const objetivo = getRelatedName(row.objetivo, 'nombre_objetivo');
+
+  return {
+    id: row.id,
+    tipo_comida: row.tipo_comida,
+    objetivo,
+    objetivo_id: row.objetivo_id,
+    calorias_aprox: row.calorias_aprox ?? null,
+    proteinas_aprox: row.proteinas_aprox ?? null,
+    carbohidratos_aprox: row.carbohidratos_aprox ?? null,
+    grasas_aprox: row.grasas_aprox ?? null,
+  };
+}
+
+function buildDietRuleContent(row: DietRuleRow) {
+  const metadata = buildDietRuleMetadata(row);
+  const lines = [
+    `Regla nutricional Gym Master: ${row.tipo_comida}`,
+    metadata.objetivo ? `Objetivo asociado: ${metadata.objetivo}` : null,
+    row.descripcion ? `Descripción alimentaria: ${row.descripcion}` : null,
+    row.calorias_aprox ? `Calorías aproximadas: ${row.calorias_aprox}` : null,
+    row.proteinas_aprox ? `Proteínas aproximadas: ${row.proteinas_aprox} g` : null,
+    row.carbohidratos_aprox ? `Carbohidratos aproximados: ${row.carbohidratos_aprox} g` : null,
+    row.grasas_aprox ? `Grasas aproximadas: ${row.grasas_aprox} g` : null,
+    'Uso recomendado: orientar una dieta de gimnasio de forma general, simple y segura.',
+    'Límite de seguridad: no reemplaza nutricionista ni indicación médica individual.',
+  ].filter(Boolean);
+
+  return {
+    content: lines.join('\n'),
+    metadata,
+  };
+}
+
+async function fetchDietRules(limit: number) {
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('comida_base')
+    .select(
+      `
+      id,
+      tipo_comida,
+      objetivo_id,
+      descripcion,
+      calorias_aprox,
+      proteinas_aprox,
+      carbohidratos_aprox,
+      grasas_aprox,
+      objetivo:objetivo!comida_base_objetivo_id_fkey(nombre_objetivo)
+    `,
+    )
+    .order('objetivo_id', { ascending: true })
+    .order('tipo_comida', { ascending: true })
+    .limit(limit);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data ?? [];
+}
+
+async function upsertDietRuleDocument(row: DietRuleRow, force: boolean) {
+  const supabase = getSupabaseServerClient();
+  const { content, metadata } = buildDietRuleContent(row);
+  const contentHash = hashContent(content);
+  const sourceId = String(row.id);
+  const title = `${metadata.objetivo ? `${metadata.objetivo} - ` : ''}${row.tipo_comida}`;
+  const tokenCount = Math.ceil(content.length / 4);
+
+  const { data: existing, error: existingError } = await supabase
+    .from('rag_document')
+    .select('id, content_hash')
+    .eq('domain', 'diet_rule')
+    .eq('source_table', 'comida_base')
+    .eq('source_id', sourceId)
+    .maybeSingle();
+
+  if (existingError) {
+    throw new Error(existingError.message);
+  }
+
+  if (existing?.id && existing.content_hash === contentHash && !force) {
+    return { indexed: false, skipped: true };
+  }
+
+  const { data: document, error: documentError } = await supabase
+    .from('rag_document')
+    .upsert(
+      {
+        id: existing?.id,
+        domain: 'diet_rule',
+        source_table: 'comida_base',
+        source_id: sourceId,
+        title,
+        language: 'es-AR',
+        metadata,
+        content_hash: contentHash,
+        active: true,
+        actualizado_en: new Date().toISOString(),
+      },
+      { onConflict: 'domain,source_table,source_id' },
+    )
+    .select('id')
+    .single();
+
+  if (documentError) {
+    throw new Error(documentError.message);
+  }
+
+  const { data: chunk, error: chunkUpsertError } = await supabase
+    .from('rag_document_chunk')
+    .upsert(
+      {
+        document_id: document.id,
+        chunk_index: 0,
+        content,
+        token_count: tokenCount,
+        embedding: null,
+        metadata,
+        active: true,
+        actualizado_en: new Date().toISOString(),
+      },
+      { onConflict: 'document_id,chunk_index' },
+    )
+    .select('id')
+    .single();
+
+  if (chunkUpsertError) {
+    throw new Error(chunkUpsertError.message);
+  }
+
+  const embedding = await createSingleRagEmbedding(content);
+
+  const { error: chunkVectorError } = await supabase
+    .from('rag_document_chunk')
+    .update({
+      embedding: embedding.embedding,
+      token_count: tokenCount,
+      actualizado_en: new Date().toISOString(),
+    })
+    .eq('id', chunk.id);
+
+  if (chunkVectorError) {
+    throw new Error(chunkVectorError.message);
+  }
+
+  return { indexed: true, skipped: false };
+}
+
 async function upsertExerciseDocument(row: ExerciseRow, force: boolean) {
   const supabase = getSupabaseServerClient();
   const { content, metadata } = buildExerciseContent(row);
@@ -303,6 +458,44 @@ export async function ingestExercisesForRag(
     }
 
     if (delayMs > 0 && index < exercises.length - 1) {
+      await sleep(delayMs);
+    }
+  }
+
+  response.ok = response.failed === 0;
+  return response;
+}
+
+export async function ingestDietRulesForRag(
+  user: JwtUser,
+  payload: RagIngestDietRulesRequest = {},
+): Promise<RagIngestDietRulesResponse> {
+  assertAdmin(user);
+
+  const limit = safeLimit(payload.limit);
+  const delayMs = safeDelayMs(payload.delayMs);
+  const dietRules = await fetchDietRules(limit);
+  const response: RagIngestDietRulesResponse = {
+    ok: true,
+    processed: dietRules.length,
+    indexed: 0,
+    skipped: 0,
+    failed: 0,
+    errors: [],
+  };
+
+  for (let index = 0; index < dietRules.length; index += 1) {
+    const dietRule = dietRules[index];
+    try {
+      const result = await upsertDietRuleDocument(dietRule, Boolean(payload.force));
+      if (result.indexed) response.indexed += 1;
+      if (result.skipped) response.skipped += 1;
+    } catch (error: any) {
+      response.failed += 1;
+      response.errors.push(`${dietRule.tipo_comida ?? dietRule.id}: ${error?.message ?? 'error desconocido'}`);
+    }
+
+    if (delayMs > 0 && index < dietRules.length - 1) {
       await sleep(delayMs);
     }
   }
