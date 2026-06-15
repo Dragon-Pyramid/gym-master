@@ -1809,6 +1809,20 @@ const endpointDefinitions: EndpointDefinition[] = [
     source: "src/app/api/rag/coach/status/route.ts",
   },
   {
+    path: "/api/rag/coach/chat",
+    methods: ["POST"],
+    tag: "RAG Coach",
+    summary: "Chat unificado del Coach IA",
+    description:
+      "Recibe un mensaje conversacional del socio, detecta intención y puede generar rutina, dieta o analizar evolución física. Devuelve una respuesta de coach y siempre indica dónde ver los resultados generados.",
+    auth: true,
+    admin: false,
+    notImplemented: false,
+    statuses: [200, 400, 401, 403, 500],
+    queryParams: [],
+    source: "src/app/api/rag/coach/chat/route.ts",
+  },
+  {
     path: "/api/rag/coach/ingest/ejercicios",
     methods: ["POST"],
     tag: "RAG Coach",
@@ -2294,6 +2308,40 @@ function getRequestBody(endpoint: EndpointDefinition, method: string) {
                 type: "string",
                 description: "Token QR recibido desde el lector o cámara.",
                 example: "qr_2026_05_23_abcd",
+              },
+            },
+          },
+        },
+      },
+    };
+  }
+
+  if (endpoint.path === "/api/rag/coach/chat") {
+    return {
+      required: true,
+      content: {
+        "application/json": {
+          schema: { $ref: "#/components/schemas/RagCoachChatRequest" },
+          examples: {
+            rutina: {
+              summary: "Pedir rutina conversacional",
+              value: {
+                message: "Quiero una rutina para ganar masa muscular 3 días por semana y cuidar la rodilla.",
+                socio_id: "me",
+              },
+            },
+            dieta: {
+              summary: "Pedir dieta conversacional",
+              value: {
+                message: "Quiero una dieta para bajar grasa sin perder músculo.",
+                socio_id: "me",
+              },
+            },
+            evolucion: {
+              summary: "Analizar evolución física",
+              value: {
+                message: "Estoy estancado, analizá mi evolución física y decime qué ajustar.",
+                socio_id: "me",
               },
             },
           },
@@ -3214,6 +3262,29 @@ export const openApiSpec = {
             type: "string",
             maxLength: 1200,
             example: "Prefiero pollo, arroz, verduras y comidas económicas.",
+          },
+        },
+      },
+      RagCoachChatRequest: {
+        type: "object",
+        required: ["message"],
+        properties: {
+          message: {
+            type: "string",
+            minLength: 2,
+            maxLength: 1600,
+            example: "Quiero una rutina para ganar masa muscular 3 días por semana.",
+          },
+          socio_id: {
+            type: "string",
+            nullable: true,
+            example: "me",
+            description: "UUID del socio o me para socio autenticado.",
+          },
+          conversationContext: {
+            type: "object",
+            additionalProperties: true,
+            description: "Contexto conversacional opcional para futuras versiones.",
           },
         },
       },

@@ -41,6 +41,11 @@ export const sections: SidebarSectionType[] = [
         level: 2,
       },
       {
+        title: "Coach IA",
+        link: "/dashboard/coach",
+        level: 2,
+      },
+      {
         title: "Asistente de Rutinas",
         link: "/dashboard/rutinas/asistente",
         level: 2,

@@ -262,6 +262,13 @@ const DashboardInitialContent = () => {
       className: 'border-indigo-200 bg-indigo-50 text-indigo-900',
     },
     {
+      title: 'Coach IA',
+      description: 'Rutina, dieta y progreso',
+      href: '/dashboard/coach',
+      icon: MessageCircle,
+      className: 'border-cyan-200 bg-cyan-50 text-cyan-900',
+    },
+    {
       title: 'Rutina',
       description: 'Entrenamiento',
       href: '/dashboard/rutinas/asistente',
