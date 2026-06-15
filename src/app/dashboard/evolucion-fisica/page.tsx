@@ -12,6 +12,7 @@ import EvolucionSocioForm from "@/components/forms/EvolucionSocioForm";
 import EvolucionSocioTable from "@/components/tables/EvolucionSocioTable";
 import EvolucionFisicaDashboard from "@/components/dashboard/evolucion-fisica/EvolucionFisicaDashboard";
 import EvolucionFisicaViewModal from "@/components/modal/EvolucionFisicaViewModal";
+import EvolucionFisicaRagCoachPanel from "@/components/dashboard/evolucion-fisica/EvolucionFisicaRagCoachPanel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -496,6 +497,13 @@ export default function EvolucionFisicaPage() {
                   />
                 </CardContent>
               </Card>
+            )}
+
+            {canRenderEvolutionData && (
+              <EvolucionFisicaRagCoachPanel
+                socioId={effectiveSocioId}
+                socioNombre={selectedSocioName}
+              />
             )}
 
             {canRenderEvolutionData ? (

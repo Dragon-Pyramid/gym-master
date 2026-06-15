@@ -1164,6 +1164,20 @@ const endpointDefinitions: EndpointDefinition[] = [
     source: "src/app/api/evolucion_socio/registro/route.ts",
   },
   {
+    path: "/api/evolucion_socio/rag-assistant/analizar",
+    methods: ["POST"],
+    tag: "Evolución física",
+    summary: "Analizar evolución física con RAG Coach",
+    description:
+      "Analiza registros reales de evolución física del socio, calcula tendencias y consulta el RAG interno para sugerencias prudentes de entrenamiento, dieta y hábitos. No guarda datos privados del socio como conocimiento global.",
+    auth: true,
+    admin: false,
+    notImplemented: false,
+    statuses: [200, 400, 401, 403, 500],
+    queryParams: [],
+    source: "src/app/api/evolucion_socio/rag-assistant/analizar/route.ts",
+  },
+  {
     path: "/api/file-upload",
     methods: ["POST"],
     tag: "Archivos",
@@ -2288,6 +2302,39 @@ function getRequestBody(endpoint: EndpointDefinition, method: string) {
     };
   }
 
+  if (endpoint.path === "/api/evolucion_socio/rag-assistant/analizar") {
+    return {
+      required: false,
+      content: {
+        "application/json": {
+          schema: { $ref: "#/components/schemas/RagEvolucionFisicaAssistantRequest" },
+          examples: {
+            socioAutenticado: {
+              summary: "Analizar evolución del socio autenticado",
+              value: {
+                socio_id: "me",
+                idioma: "es",
+                objetivo: "Bajar grasa sin perder masa muscular",
+                mensajeSocio: "Quiero saber si voy bien y qué debería ajustar esta semana.",
+                restricciones: "Cuidar rodilla derecha, evitar impacto alto.",
+              },
+            },
+            adminSocio: {
+              summary: "Admin analiza un socio específico",
+              value: {
+                socio_id: "2d2a45df-0fd5-4f4e-9c01-5de07dca1111",
+                idioma: "es",
+                objetivo: "Recomposición corporal",
+                mensajeSocio: "Analizar tendencia de peso, cintura y masa muscular.",
+                restricciones: "Sin datos clínicos informados.",
+              },
+            },
+          },
+        },
+      },
+    };
+  }
+
   if (endpoint.path === "/api/rag/coach/ingest/ejercicios") {
     return {
       required: false,
@@ -3167,6 +3214,37 @@ export const openApiSpec = {
             type: "string",
             maxLength: 1200,
             example: "Prefiero pollo, arroz, verduras y comidas económicas.",
+          },
+        },
+      },
+      RagEvolucionFisicaAssistantRequest: {
+        type: "object",
+        properties: {
+          socio_id: {
+            type: "string",
+            nullable: true,
+            example: "me",
+            description: "UUID del socio a analizar o me para socio autenticado.",
+          },
+          idioma: {
+            type: "string",
+            enum: ["es", "en"],
+            example: "es",
+          },
+          objetivo: {
+            type: "string",
+            maxLength: 1200,
+            example: "Bajar grasa sin perder masa muscular",
+          },
+          mensajeSocio: {
+            type: "string",
+            maxLength: 1200,
+            example: "Quiero saber si voy bien y qué debería ajustar esta semana.",
+          },
+          restricciones: {
+            type: "string",
+            maxLength: 1200,
+            example: "Cuidar rodilla derecha, evitar impacto alto.",
           },
         },
       },

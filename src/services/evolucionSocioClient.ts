@@ -128,3 +128,31 @@ export async function getEvolucionFisicaAdminResumen() {
       : [],
   };
 }
+
+export async function analizarEvolucionFisicaConRag(body: {
+  socio_id?: string;
+  idioma?: 'es' | 'en';
+  mensajeSocio?: string;
+  objetivo?: string;
+  restricciones?: string;
+}) {
+  const res = await fetch('/api/evolucion_socio/rag-assistant/analizar', {
+    method: 'POST',
+    headers: authHeaders(true),
+    body: JSON.stringify(body),
+  });
+
+  const data = await readJson(res);
+
+  if (!res.ok) {
+    throw new Error(
+      data?.error || data?.message || 'Error al analizar evolución física con RAG Coach'
+    );
+  }
+
+  return {
+    ok: res.ok,
+    data: data?.data,
+    message: data?.message as string | undefined,
+  };
+}
