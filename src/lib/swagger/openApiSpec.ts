@@ -1814,7 +1814,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     tag: "RAG Coach",
     summary: "Chat unificado del Coach IA",
     description:
-      "Recibe un mensaje conversacional del socio, detecta intención y puede generar rutina, dieta o analizar evolución física. Devuelve una respuesta de coach y siempre indica dónde ver los resultados generados.",
+      "Recibe un mensaje conversacional del socio, construye contexto real runtime con rutinas, dietas, evolución física, asistencia y ficha médica básica permitida; detecta intención y puede generar rutina, dieta o analizar evolución física. Devuelve una respuesta de coach y siempre indica dónde ver los resultados generados.",
     auth: true,
     admin: false,
     notImplemented: false,
@@ -3284,7 +3284,7 @@ export const openApiSpec = {
           conversationContext: {
             type: "object",
             additionalProperties: true,
-            description: "Contexto conversacional opcional para futuras versiones.",
+            description: "Contexto conversacional opcional para futuras versiones. El backend también construye contexto real del socio en tiempo de ejecución.",
           },
         },
       },
