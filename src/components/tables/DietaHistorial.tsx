@@ -12,7 +12,7 @@ import {
   TableRow,
   TableCaption,
 } from "@/components/ui/table";
-import { getDietasPorSocio, getSocioByUsuarioId } from "@/services/apiClient";
+import { getDietasPorSocio } from "@/services/apiClient";
 import type { Dieta } from "@/interfaces/dieta.interface";
 import { formatFrontendDate } from "@/utils/dateFormat";
 import {
@@ -24,9 +24,11 @@ import {
 } from "@/components/ui/dialog";
 
 export default function DietaHistorial({
-  userId,
+  socioId,
+  refreshKey = 0,
 }: {
-  userId: number | string;
+  socioId: number | string;
+  refreshKey?: number;
 }) {
   const [dietas, setDietas] = useState<Dieta[]>([]);
   const [selected, setSelected] = useState<Dieta | null>(null);
@@ -67,16 +69,20 @@ export default function DietaHistorial({
 
   useEffect(() => {
     const fetchDietas = async () => {
-      const socio = await getSocioByUsuarioId(userId.toString());
-      if (socio) {
-        const res = await getDietasPorSocio(socio.id_socio);
-        if (res.ok && Array.isArray(res.data)) {
-          setDietas(res.data);
-        }
+      if (!socioId) {
+        setDietas([]);
+        return;
+      }
+
+      const res = await getDietasPorSocio(socioId.toString());
+      if (res.ok && Array.isArray(res.data)) {
+        setDietas(res.data);
+      } else {
+        setDietas([]);
       }
     };
     fetchDietas();
-  }, [userId]);
+  }, [socioId, refreshKey]);
   const dietasOrdenadas = [...dietas].sort((a, b) =>
     b.fecha_inicio.localeCompare(a.fecha_inicio)
   );

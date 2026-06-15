@@ -38,6 +38,7 @@ export interface RagHealthResponse {
     documents: number;
     chunks: number;
     exerciseDocuments: number;
+    dietDocuments?: number;
     activeChunks: number;
     embeddedChunks?: number;
     pendingEmbeddingChunks?: number;
@@ -67,6 +68,22 @@ export interface RagIngestExercisesRequest {
 }
 
 export interface RagIngestExercisesResponse {
+  ok: boolean;
+  processed: number;
+  indexed: number;
+  skipped: number;
+  failed: number;
+  errors: string[];
+}
+
+export interface RagIngestDietRulesRequest {
+  limit?: number;
+  force?: boolean;
+  onlyMissing?: boolean;
+  delayMs?: number;
+}
+
+export interface RagIngestDietRulesResponse {
   ok: boolean;
   processed: number;
   indexed: number;

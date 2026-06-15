@@ -21,6 +21,7 @@ export default function DietasPage() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [openModal, setOpenModal] = useState(false);
+  const [dietasRefreshKey, setDietasRefreshKey] = useState(0);
 
   useEffect(() => {
     initializeAuth();
@@ -86,7 +87,9 @@ export default function DietasPage() {
                   </Button>
                 </CardHeader>
                 <CardContent className="p-4">
-                  <DietaForm />
+                  <DietaForm
+                    onSuccess={() => setDietasRefreshKey((current) => current + 1)}
+                  />
                 </CardContent>
               </Card>
             )}
@@ -131,7 +134,16 @@ export default function DietasPage() {
                 </div>
               </CardHeader>
               <CardContent className="p-4">
-                {user?.id && <DietaHistorial userId={user.id} />}
+                {user?.id_socio ? (
+                  <DietaHistorial
+                    socioId={user.id_socio}
+                    refreshKey={dietasRefreshKey}
+                  />
+                ) : (
+                  <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                    No se pudo identificar el socio asociado a este usuario.
+                  </div>
+                )}
               </CardContent>
             </Card>
           </main>
