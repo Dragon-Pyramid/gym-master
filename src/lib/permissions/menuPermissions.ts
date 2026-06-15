@@ -83,6 +83,13 @@ export const MENU_PERMISSION_GROUPS: Array<{
         group: "Menú personal / socio",
         roles: ["socio"],
       },
+      {
+        key: "Coach IA",
+        label: "Coach IA",
+        path: "/dashboard/coach",
+        group: "Menú personal / socio",
+        roles: ["socio", "admin"],
+      },
     ],
   },
   {
@@ -366,6 +373,7 @@ export const DEFAULT_MENU_PERMISSIONS_BY_ROLE: Record<AppRole, string[]> = {
     "Pagar cuota",
     "Historial de pagos",
     "Evolución Física",
+    "Coach IA",
     "Perfil",
     "Preferencias",
   ],
@@ -444,6 +452,27 @@ function normalizeAppRole(role?: string | null): AppRole | null {
   }
 
   return null;
+}
+
+
+function withImplicitCoachPermission(role: AppRole, permissions: string[]) {
+  const merged = Array.from(new Set(permissions));
+
+  // Compatibilidad hacia atrás: muchos socios ya tienen permisos_menu
+  // guardado antes de existir el módulo Coach IA. Si el socio podía usar
+  // rutinas, dietas o evolución física, también puede acceder al Coach IA
+  // porque el chat unificado solo orquesta esas capacidades personales.
+  if (
+    role === "socio" &&
+    !merged.includes("Coach IA") &&
+    (merged.includes("Asistente de Rutinas") ||
+      merged.includes("Asistente de Dietas") ||
+      merged.includes("Evolución Física"))
+  ) {
+    merged.push("Coach IA");
+  }
+
+  return merged;
 }
 
 function getAllowedPermissionKeysForRole(role: AppRole) {
@@ -558,10 +587,16 @@ export function getEffectiveMenuPermissions(
     const allowed = getAllowedPermissionKeysForRole(normalizedRole);
 
     if (Array.isArray(permissions)) {
-      return permissions.filter((item) => allowed.has(item));
+      return withImplicitCoachPermission(
+        normalizedRole,
+        permissions.filter((item) => allowed.has(item)),
+      );
     }
 
-    return DEFAULT_MENU_PERMISSIONS_BY_ROLE[normalizedRole] ?? [];
+    return withImplicitCoachPermission(
+      normalizedRole,
+      DEFAULT_MENU_PERMISSIONS_BY_ROLE[normalizedRole] ?? [],
+    );
   }
 
   return [];
