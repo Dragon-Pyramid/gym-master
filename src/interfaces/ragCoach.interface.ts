@@ -65,6 +65,8 @@ export interface RagIngestExercisesRequest {
   force?: boolean;
   onlyMissing?: boolean;
   delayMs?: number;
+  maxRetries?: number;
+  retryDelayMs?: number;
 }
 
 export interface RagIngestExercisesResponse {
@@ -81,6 +83,8 @@ export interface RagIngestDietRulesRequest {
   force?: boolean;
   onlyMissing?: boolean;
   delayMs?: number;
+  maxRetries?: number;
+  retryDelayMs?: number;
 }
 
 export interface RagIngestDietRulesResponse {
@@ -96,6 +100,8 @@ export interface RagVectorizePendingRequest {
   limit?: number;
   force?: boolean;
   delayMs?: number;
+  maxRetries?: number;
+  retryDelayMs?: number;
 }
 
 export interface RagVectorizePendingResponse {

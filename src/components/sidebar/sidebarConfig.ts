@@ -119,6 +119,11 @@ export const sections: SidebarSectionType[] = [
         link: "/dashboard/rutinas/media",
         level: 2,
       },
+      {
+        title: "RAG Corpus",
+        link: "/dashboard/rag-corpus",
+        level: 2,
+      },
       { title: "Pagos", link: "/dashboard/pagos", level: 2 },
       { title: "Comercial / Kiosco", link: "/dashboard/comercial", level: 2 },
       { title: "Ventas", link: "/dashboard/ventas", level: 2 },
