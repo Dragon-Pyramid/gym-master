@@ -202,7 +202,7 @@ export default function RagCorpusPage() {
                   </div>
 
                   <p className="mt-3 text-xs text-muted-foreground">
-                    Recomendado para GitHub Models: tandas chicas, por ejemplo límite 10 y delay 1000 ms. Si aparece 429, continuar luego con “Vectorizar pendientes”.
+                    Recomendado: usar tandas controladas según el provider activo. Con OpenAI podés aumentar el límite progresivamente; si aparecen errores parciales, continuar luego con “Vectorizar pendientes”.
                   </p>
                 </Card>
 
