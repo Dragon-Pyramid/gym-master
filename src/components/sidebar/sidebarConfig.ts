@@ -1,6 +1,7 @@
 import {
   BarChart3,
   Bot,
+  Building2,
   CreditCard,
   Dumbbell,
   HeartPulse,
@@ -110,6 +111,17 @@ export const sections: SidebarSectionType[] = [
       {
         title: "Salida / Aforo",
         link: "/dashboard/asistencias/aforo",
+        level: 2,
+      },
+    ],
+  },
+  {
+    title: "Infraestructura",
+    icon: Building2,
+    items: [
+      {
+        title: "Mantenimiento Edilicio",
+        link: "/dashboard/infraestructura/mantenimiento-edilicio",
         level: 2,
       },
       { title: "Equipamientos", link: "/dashboard/equipamientos", level: 2 },
