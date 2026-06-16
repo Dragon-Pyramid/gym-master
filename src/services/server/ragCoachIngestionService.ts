@@ -14,6 +14,8 @@ import { createSingleRagEmbedding } from './ragEmbeddingProviderService';
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 100;
 const MAX_DELAY_MS = 5000;
+const MAX_RETRIES = 3;
+const DEFAULT_RETRY_DELAY_MS = 1500;
 
 type ExerciseRow = Record<string, any>;
 type DietRuleRow = Record<string, any>;
@@ -51,6 +53,50 @@ function safeDelayMs(value?: number) {
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function safeRetries(value?: number) {
+  if (!Number.isInteger(value) || value === undefined || value < 0) return 1;
+  return Math.min(value, MAX_RETRIES);
+}
+
+function safeRetryDelayMs(value?: number) {
+  if (!Number.isInteger(value) || !value || value <= 0) return DEFAULT_RETRY_DELAY_MS;
+  return Math.min(value, MAX_DELAY_MS);
+}
+
+async function fetchIndexedSourceIds(domain: string, sourceTable: string) {
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from('rag_document')
+    .select('source_id')
+    .eq('domain', domain)
+    .eq('source_table', sourceTable)
+    .eq('active', true);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? [])
+    .map((row) => String(row.source_id ?? '').trim())
+    .filter(Boolean);
+}
+
+async function runWithRetries<T>(fn: () => Promise<T>, retries: number, retryDelayMs: number): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (attempt >= retries) break;
+      await sleep(retryDelayMs);
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('Error desconocido al ejecutar reintento RAG.');
 }
 
 function hasCloudinary(row: ExerciseRow) {
@@ -140,9 +186,10 @@ function buildExerciseContent(row: ExerciseRow) {
   };
 }
 
-async function fetchExercises(limit: number) {
+async function fetchExercises(limit: number, onlyMissing: boolean) {
   const supabase = getSupabaseServerClient();
-  const { data, error } = await supabase
+  const indexedIds = onlyMissing ? await fetchIndexedSourceIds('exercise', 'ejercicio') : [];
+  let query = supabase
     .from('ejercicio')
     .select(
       `
@@ -178,7 +225,13 @@ async function fetchExercises(limit: number) {
       grupo_muscular:grupo_muscular!ejercicio_id_gm_fkey(nombre_gp)
     `,
     )
-    .eq('activo', true)
+    .eq('activo', true);
+
+  if (indexedIds.length > 0) {
+    query = query.not('id_ejercicio', 'in', `(${indexedIds.join(',')})`);
+  }
+
+  const { data, error } = await query
     .order('nombre_ejercicio', { ascending: true })
     .limit(limit);
 
@@ -225,9 +278,10 @@ function buildDietRuleContent(row: DietRuleRow) {
   };
 }
 
-async function fetchDietRules(limit: number) {
+async function fetchDietRules(limit: number, onlyMissing: boolean) {
   const supabase = getSupabaseServerClient();
-  const { data, error } = await supabase
+  const indexedIds = onlyMissing ? await fetchIndexedSourceIds('diet_rule', 'comida_base') : [];
+  let query = supabase
     .from('comida_base')
     .select(
       `
@@ -241,7 +295,13 @@ async function fetchDietRules(limit: number) {
       grasas_aprox,
       objetivo:objetivo!comida_base_objetivo_id_fkey(nombre_objetivo)
     `,
-    )
+    );
+
+  if (indexedIds.length > 0) {
+    query = query.not('id', 'in', `(${indexedIds.join(',')})`);
+  }
+
+  const { data, error } = await query
     .order('objetivo_id', { ascending: true })
     .order('tipo_comida', { ascending: true })
     .limit(limit);
@@ -253,7 +313,7 @@ async function fetchDietRules(limit: number) {
   return data ?? [];
 }
 
-async function upsertDietRuleDocument(row: DietRuleRow, force: boolean) {
+async function upsertDietRuleDocument(row: DietRuleRow, force: boolean, maxRetries: number, retryDelayMs: number) {
   const supabase = getSupabaseServerClient();
   const { content, metadata } = buildDietRuleContent(row);
   const contentHash = hashContent(content);
@@ -323,7 +383,7 @@ async function upsertDietRuleDocument(row: DietRuleRow, force: boolean) {
     throw new Error(chunkUpsertError.message);
   }
 
-  const embedding = await createSingleRagEmbedding(content);
+  const embedding = await runWithRetries(() => createSingleRagEmbedding(content), maxRetries, retryDelayMs);
 
   const { error: chunkVectorError } = await supabase
     .from('rag_document_chunk')
@@ -341,7 +401,7 @@ async function upsertDietRuleDocument(row: DietRuleRow, force: boolean) {
   return { indexed: true, skipped: false };
 }
 
-async function upsertExerciseDocument(row: ExerciseRow, force: boolean) {
+async function upsertExerciseDocument(row: ExerciseRow, force: boolean, maxRetries: number, retryDelayMs: number) {
   const supabase = getSupabaseServerClient();
   const { content, metadata } = buildExerciseContent(row);
   const contentHash = hashContent(content);
@@ -410,7 +470,7 @@ async function upsertExerciseDocument(row: ExerciseRow, force: boolean) {
     throw new Error(chunkUpsertError.message);
   }
 
-  const embedding = await createSingleRagEmbedding(content);
+  const embedding = await runWithRetries(() => createSingleRagEmbedding(content), maxRetries, retryDelayMs);
 
   const { error: chunkVectorError } = await supabase
     .from('rag_document_chunk')
@@ -436,7 +496,9 @@ export async function ingestExercisesForRag(
 
   const limit = safeLimit(payload.limit);
   const delayMs = safeDelayMs(payload.delayMs);
-  const exercises = await fetchExercises(limit);
+  const maxRetries = safeRetries(payload.maxRetries);
+  const retryDelayMs = safeRetryDelayMs(payload.retryDelayMs);
+  const exercises = await fetchExercises(limit, Boolean(payload.onlyMissing));
   const response: RagIngestExercisesResponse = {
     ok: true,
     processed: exercises.length,
@@ -449,7 +511,7 @@ export async function ingestExercisesForRag(
   for (let index = 0; index < exercises.length; index += 1) {
     const exercise = exercises[index];
     try {
-      const result = await upsertExerciseDocument(exercise, Boolean(payload.force));
+      const result = await upsertExerciseDocument(exercise, Boolean(payload.force), maxRetries, retryDelayMs);
       if (result.indexed) response.indexed += 1;
       if (result.skipped) response.skipped += 1;
     } catch (error: any) {
@@ -474,7 +536,9 @@ export async function ingestDietRulesForRag(
 
   const limit = safeLimit(payload.limit);
   const delayMs = safeDelayMs(payload.delayMs);
-  const dietRules = await fetchDietRules(limit);
+  const maxRetries = safeRetries(payload.maxRetries);
+  const retryDelayMs = safeRetryDelayMs(payload.retryDelayMs);
+  const dietRules = await fetchDietRules(limit, Boolean(payload.onlyMissing));
   const response: RagIngestDietRulesResponse = {
     ok: true,
     processed: dietRules.length,
@@ -487,7 +551,7 @@ export async function ingestDietRulesForRag(
   for (let index = 0; index < dietRules.length; index += 1) {
     const dietRule = dietRules[index];
     try {
-      const result = await upsertDietRuleDocument(dietRule, Boolean(payload.force));
+      const result = await upsertDietRuleDocument(dietRule, Boolean(payload.force), maxRetries, retryDelayMs);
       if (result.indexed) response.indexed += 1;
       if (result.skipped) response.skipped += 1;
     } catch (error: any) {
@@ -512,6 +576,8 @@ export async function vectorizePendingRagChunks(
 
   const limit = safeLimit(payload.limit);
   const delayMs = safeDelayMs(payload.delayMs);
+  const maxRetries = safeRetries(payload.maxRetries);
+  const retryDelayMs = safeRetryDelayMs(payload.retryDelayMs);
   const supabase = getSupabaseServerClient();
 
   let query = supabase
@@ -549,7 +615,7 @@ export async function vectorizePendingRagChunks(
         continue;
       }
 
-      const embedding = await createSingleRagEmbedding(content);
+      const embedding = await runWithRetries(() => createSingleRagEmbedding(content), maxRetries, retryDelayMs);
       response.provider = embedding.provider;
       response.model = embedding.model;
 

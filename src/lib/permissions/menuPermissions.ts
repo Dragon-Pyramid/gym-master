@@ -166,6 +166,13 @@ export const MENU_PERMISSION_GROUPS: Array<{
         roles: ["admin", "usuario"],
       },
       {
+        key: "RAG Corpus",
+        label: "RAG Corpus",
+        path: "/dashboard/rag-corpus",
+        group: "Administración",
+        roles: ["admin"],
+      },
+      {
         key: "Pagos",
         label: "Pagos",
         path: "/dashboard/pagos",

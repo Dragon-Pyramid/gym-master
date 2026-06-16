@@ -1795,6 +1795,34 @@ const endpointDefinitions: EndpointDefinition[] = [
     source: "src/app/api/swagger-json/route.ts",
   },
   {
+    path: "/api/rag/coach/corpus/status",
+    methods: ["GET"],
+    tag: "RAG Coach",
+    summary: "Estado detallado del corpus RAG",
+    description:
+      "Devuelve contadores detallados del corpus RAG por dominio, chunks pendientes, cobertura de ejercicios y reglas nutricionales.",
+    auth: true,
+    admin: true,
+    notImplemented: false,
+    statuses: [200, 401, 403, 500],
+    queryParams: [],
+    source: "src/app/api/rag/coach/corpus/status/route.ts",
+  },
+  {
+    path: "/api/rag/coach/corpus/run",
+    methods: ["POST"],
+    tag: "RAG Coach",
+    summary: "Ejecutar tanda controlada del corpus RAG",
+    description:
+      "Ejecuta una tanda de ingesta o vectorización del corpus RAG con límite y delay configurables para tolerar rate limits 429.",
+    auth: true,
+    admin: true,
+    notImplemented: false,
+    statuses: [200, 207, 400, 401, 403, 500],
+    queryParams: [],
+    source: "src/app/api/rag/coach/corpus/run/route.ts",
+  },
+  {
     path: "/api/rag/coach/status",
     methods: ["GET"],
     tag: "RAG Coach",
@@ -2309,6 +2337,27 @@ function getRequestBody(endpoint: EndpointDefinition, method: string) {
                 description: "Token QR recibido desde el lector o cámara.",
                 example: "qr_2026_05_23_abcd",
               },
+            },
+          },
+        },
+      },
+    };
+  }
+
+  if (endpoint.path === "/api/rag/coach/corpus/run") {
+    return {
+      required: true,
+      content: {
+        "application/json": {
+          schema: { $ref: "#/components/schemas/RagCorpusBatchRequest" },
+          examples: {
+            vectorizar: {
+              summary: "Vectorizar pendientes",
+              value: { action: "vectorize_pending", limit: 10, delayMs: 1000, force: false },
+            },
+            completa: {
+              summary: "Tanda completa chica",
+              value: { action: "all", limit: 10, delayMs: 1000, force: false, onlyMissing: true },
             },
           },
         },
@@ -3263,6 +3312,23 @@ export const openApiSpec = {
             maxLength: 1200,
             example: "Prefiero pollo, arroz, verduras y comidas económicas.",
           },
+        },
+      },
+      RagCorpusBatchRequest: {
+        type: "object",
+        required: ["action"],
+        properties: {
+          action: {
+            type: "string",
+            enum: ["ingest_exercises", "ingest_diet_rules", "vectorize_pending", "all"],
+            example: "vectorize_pending",
+          },
+          limit: { type: "integer", minimum: 1, maximum: 100, example: 10 },
+          force: { type: "boolean", example: false },
+          onlyMissing: { type: "boolean", example: true },
+          delayMs: { type: "integer", minimum: 0, maximum: 5000, example: 1000 },
+          maxRetries: { type: "integer", minimum: 0, maximum: 3, example: 1 },
+          retryDelayMs: { type: "integer", minimum: 0, maximum: 5000, example: 1500 },
         },
       },
       RagCoachChatRequest: {
