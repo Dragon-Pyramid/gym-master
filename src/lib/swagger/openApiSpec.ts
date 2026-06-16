@@ -19,6 +19,77 @@ type OpenApiPathItem = Record<string, OpenApiOperation>;
 const endpointDefinitions: EndpointDefinition[] = [
 
   {
+    path: "/api/infraestructura/mantenimiento-edilicio",
+    methods: ["GET"],
+    tag: "Infraestructura",
+    summary: "Dashboard de mantenimiento edilicio",
+    description:
+      "Devuelve sectores, categorías, activos edilicios, órdenes, alertas y métricas del módulo Infraestructura / Mantenimiento Edilicio.",
+    auth: true,
+    admin: false,
+    notImplemented: false,
+    statuses: [200, 401, 500],
+    queryParams: [],
+    source: "src/app/api/infraestructura/mantenimiento-edilicio/route.ts",
+  },
+  {
+    path: "/api/infraestructura/sectores",
+    methods: ["POST"],
+    tag: "Infraestructura",
+    summary: "Crear sector edilicio",
+    description:
+      "Registra un sector físico del gimnasio como recepción, salón, baño, depósito, patio, oficina o sala de máquinas.",
+    auth: true,
+    admin: false,
+    notImplemented: false,
+    statuses: [201, 400, 401, 500],
+    queryParams: [],
+    source: "src/app/api/infraestructura/sectores/route.ts",
+  },
+  {
+    path: "/api/infraestructura/activos",
+    methods: ["POST"],
+    tag: "Infraestructura",
+    summary: "Crear activo edilicio",
+    description:
+      "Registra un activo propio del edificio o infraestructura: luminarias, matafuegos, cañerías, baños, mobiliario, tableros, pisos, pintura o cartelería.",
+    auth: true,
+    admin: false,
+    notImplemented: false,
+    statuses: [201, 400, 401, 500],
+    queryParams: [],
+    source: "src/app/api/infraestructura/activos/route.ts",
+  },
+  {
+    path: "/api/infraestructura/ordenes",
+    methods: ["POST"],
+    tag: "Infraestructura",
+    summary: "Crear orden de mantenimiento edilicio",
+    description:
+      "Crea una orden correctiva, preventiva, de inspección, cambio, vencimiento o certificación asociada a un activo edilicio o sector.",
+    auth: true,
+    admin: false,
+    notImplemented: false,
+    statuses: [201, 400, 401, 500],
+    queryParams: [],
+    source: "src/app/api/infraestructura/ordenes/route.ts",
+  },
+  {
+    path: "/api/infraestructura/ordenes/{id}",
+    methods: ["PATCH"],
+    tag: "Infraestructura",
+    summary: "Actualizar orden de mantenimiento edilicio",
+    description:
+      "Actualiza el estado, resultado, costo real, certificado u observaciones de una orden de mantenimiento edilicio. Al completarse, actualiza el activo asociado.",
+    auth: true,
+    admin: false,
+    notImplemented: false,
+    statuses: [200, 400, 401, 500],
+    queryParams: [],
+    source: "src/app/api/infraestructura/ordenes/[id]/route.ts",
+  },
+
+  {
     path: "/api/actividades/turnos-cupos",
     methods: ["GET"],
     tag: "Actividades",

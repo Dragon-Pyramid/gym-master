@@ -152,11 +152,23 @@ export const MENU_PERMISSION_GROUPS: Array<{
         group: "Personal y Operaciones",
         roles: ["admin", "usuario"],
       },
+    ],
+  },
+  {
+    group: "Infraestructura",
+    items: [
+      {
+        key: "Mantenimiento Edilicio",
+        label: "Mantenimiento Edilicio",
+        path: "/dashboard/infraestructura/mantenimiento-edilicio",
+        group: "Infraestructura",
+        roles: ["admin", "usuario"],
+      },
       {
         key: "Equipamientos",
         label: "Equipamientos",
         path: "/dashboard/equipamientos",
-        group: "Personal y Operaciones",
+        group: "Infraestructura",
         roles: ["admin", "usuario"],
       },
     ],
