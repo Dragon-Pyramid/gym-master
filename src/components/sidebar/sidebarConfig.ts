@@ -1,9 +1,15 @@
 import {
+  BarChart3,
+  Bot,
   CreditCard,
   Dumbbell,
+  HeartPulse,
   LayoutDashboard,
+  MessageSquare,
   Settings,
-  ShieldBan,
+  ShoppingCart,
+  Users,
+  Wrench,
 } from "lucide-react";
 import React from "react";
 
@@ -19,6 +25,8 @@ export interface SidebarSectionType {
   items: SidebarItemType[];
 }
 
+// Menú reorganizado por áreas funcionales.
+// Importante: se conservan todas las rutas existentes; solo cambia el agrupamiento visual.
 export const sections: SidebarSectionType[] = [
   {
     title: "General",
@@ -26,20 +34,30 @@ export const sections: SidebarSectionType[] = [
     items: [{ title: "Inicio", link: "/dashboard", level: 2 }],
   },
   {
-    title: "Menú Personal",
-    icon: Dumbbell,
+    title: "Mi Gimnasio",
+    icon: CreditCard,
     items: [
       {
         title: "Control de Asistencia",
         link: "/dashboard/control-asistencia",
         level: 2,
       },
-      { title: "Ficha Médica", link: "/dashboard/ficha-medica", level: 2 },
       {
-        title: "Evolución Física",
-        link: "/dashboard/evolucion-fisica",
+        title: "Pagar cuota",
+        link: "/dashboard/mi-cuenta/pagar-cuota",
         level: 2,
       },
+      {
+        title: "Historial de pagos",
+        link: "/dashboard/mi-cuenta/historial-pagos",
+        level: 2,
+      },
+    ],
+  },
+  {
+    title: "Mi Coach",
+    icon: Bot,
+    items: [
       {
         title: "Coach IA",
         link: "/dashboard/coach",
@@ -56,6 +74,24 @@ export const sections: SidebarSectionType[] = [
         level: 2,
       },
       {
+        title: "Evolución Física",
+        link: "/dashboard/evolucion-fisica",
+        level: 2,
+      },
+    ],
+  },
+  {
+    title: "Mi Salud",
+    icon: HeartPulse,
+    items: [
+      { title: "Ficha Médica", link: "/dashboard/ficha-medica", level: 2 },
+    ],
+  },
+  {
+    title: "Comunicación",
+    icon: MessageSquare,
+    items: [
+      {
         title: "Mensajes",
         link: "/dashboard/mensajes",
         level: 2,
@@ -63,42 +99,26 @@ export const sections: SidebarSectionType[] = [
     ],
   },
   {
-    title: "Mi cuenta",
-    icon: CreditCard,
-    items: [
-      {
-        title: "Pagar cuota",
-        link: "/dashboard/mi-cuenta/pagar-cuota",
-        level: 2,
-      },
-      {
-        title: "Historial de pagos",
-        link: "/dashboard/mi-cuenta/historial-pagos",
-        level: 2,
-      },
-    ],
-  },
-  {
-    title: "Gestión de Gimnasio",
-    icon: Dumbbell,
+    title: "Personal y Operaciones",
+    icon: Users,
     items: [
       { title: "Socios", link: "/dashboard/socios", level: 2 },
       { title: "Actividades", link: "/dashboard/actividades", level: 2 },
       { title: "Empleados", link: "/dashboard/empleados", level: 2 },
-      // Rutas legacy deshabilitadas del menú visual: Rutinas, Dietas y Evolución Física.
-      // Se conservan los archivos/rutas para trazabilidad y compatibilidad, pero la operación actual usa los gestores administrativos.
-    ],
-  },
-  {
-    title: "Administración",
-    icon: ShieldBan,
-    items: [
+      { title: "Sueldos", link: "/dashboard/empleados-sueldos", level: 2 },
       { title: "Asistencias", link: "/dashboard/asistencias", level: 2 },
       {
         title: "Salida / Aforo",
         link: "/dashboard/asistencias/aforo",
         level: 2,
       },
+      { title: "Equipamientos", link: "/dashboard/equipamientos", level: 2 },
+    ],
+  },
+  {
+    title: "Entrenamiento y Salud",
+    icon: Dumbbell,
+    items: [
       {
         title: "Gestión de Rutinas",
         link: "/dashboard/gestor-rutinas",
@@ -119,20 +139,26 @@ export const sections: SidebarSectionType[] = [
         link: "/dashboard/rutinas/media",
         level: 2,
       },
-      {
-        title: "RAG Corpus",
-        link: "/dashboard/rag-corpus",
-        level: 2,
-      },
-      { title: "Pagos", link: "/dashboard/pagos", level: 2 },
+    ],
+  },
+  {
+    title: "Comercial y Stock",
+    icon: ShoppingCart,
+    items: [
       { title: "Comercial / Kiosco", link: "/dashboard/comercial", level: 2 },
       { title: "Ventas", link: "/dashboard/ventas", level: 2 },
       { title: "Compras", link: "/dashboard/compras", level: 2 },
-      { title: "Cuotas", link: "/dashboard/cuotas", level: 2 },
-      { title: "Proveedores", link: "/dashboard/proveedores", level: 2 },
-      { title: "Usuarios", link: "/dashboard/usuarios", level: 2 },
       { title: "Productos", link: "/dashboard/productos", level: 2 },
+      { title: "Proveedores", link: "/dashboard/proveedores", level: 2 },
       { title: "Servicios", link: "/dashboard/servicios", level: 2 },
+    ],
+  },
+  {
+    title: "Finanzas y BI",
+    icon: BarChart3,
+    items: [
+      { title: "Pagos", link: "/dashboard/pagos", level: 2 },
+      { title: "Cuotas", link: "/dashboard/cuotas", level: 2 },
       { title: "Gastos / Egresos", link: "/dashboard/otros-gastos", level: 2 },
       { title: "Finanzas / BI", link: "/dashboard/finanzas", level: 2 },
       {
@@ -145,9 +171,26 @@ export const sections: SidebarSectionType[] = [
         link: "/dashboard/socios-ranking-bonificacion",
         level: 2,
       },
-      { title: "Sueldos", link: "/dashboard/empleados-sueldos", level: 2 },
+    ],
+  },
+  {
+    title: "IA y RAG",
+    icon: Bot,
+    items: [
+      {
+        title: "RAG Corpus",
+        link: "/dashboard/rag-corpus",
+        level: 2,
+      },
+    ],
+  },
+  {
+    title: "Comunicación y Soporte",
+    icon: MessageSquare,
+    items: [
       { title: "Notificaciones", link: "/dashboard/notificaciones", level: 2 },
       { title: "Mensajes Socios", link: "/dashboard/mensajes-admin", level: 2 },
+      { title: "Avisos", link: "/dashboard/avisos", level: 2 },
       {
         title: "Soporte Dragon Pyramid",
         link: "/dashboard/soporte-dragon-pyramid",
@@ -158,20 +201,13 @@ export const sections: SidebarSectionType[] = [
         link: "/dashboard/respaldo-negocio",
         level: 2,
       },
-      { title: "Avisos", link: "/dashboard/avisos", level: 2 },
-      { title: "Equipamientos", link: "/dashboard/equipamientos", level: 2 },
     ],
   },
   {
-    title: "Configuración",
-    icon: Settings,
+    title: "Administración del Sistema",
+    icon: Wrench,
     items: [
-      { title: "Perfil", link: "/dashboard/perfil", level: 2 },
-      {
-        title: "Preferencias",
-        link: "/dashboard/settings/preferences",
-        level: 2,
-      },
+      { title: "Usuarios", link: "/dashboard/usuarios", level: 2 },
       {
         title: "Datos del Gimnasio",
         link: "/dashboard/gimnasio-parametrizacion",
@@ -180,6 +216,18 @@ export const sections: SidebarSectionType[] = [
       {
         title: "Parametrización",
         link: "/dashboard/parametrizacion",
+        level: 2,
+      },
+    ],
+  },
+  {
+    title: "Configuración Personal",
+    icon: Settings,
+    items: [
+      { title: "Perfil", link: "/dashboard/perfil", level: 2 },
+      {
+        title: "Preferencias",
+        link: "/dashboard/settings/preferences",
         level: 2,
       },
     ],
