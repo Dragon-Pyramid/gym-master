@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useCatalogosParametrizables } from "@/hooks/useCatalogosParametrizables";
 import { Equipamento } from "@/interfaces/equipamiento.interface";
+import { buildEquipamientoRiskRadar, equipamientoRiskTone } from "@/utils/equipamientoRisk";
 import { AlertasMantenimientoEquipamientoResponse } from "@/interfaces/equipamientoAlertas.interface";
 import { EquipamientoMantenimientoBiResponse } from "@/interfaces/equipamientoMantenimientoBi.interface";
 import {
@@ -578,6 +579,20 @@ export default function EquipamientosPage() {
     doc.save(buildTimestampedDownloadFileName("reporte-equipamiento-mantenimiento", "pdf"));
   };
 
+  const riskRadar = useMemo(() => {
+    return buildEquipamientoRiskRadar(
+      equipos,
+      biMantenimiento?.recomendaciones_reemplazo ?? [],
+    );
+  }, [equipos, biMantenimiento]);
+
+  const topRiskRadar = riskRadar.slice(0, 5);
+  const riesgoAltoCritico = riskRadar.filter((item) => item.nivel === "critico" || item.nivel === "alto");
+  const preventivosUrgentes = riskRadar.filter((item) =>
+    item.diasParaRevision !== null && item.diasParaRevision <= 5,
+  );
+  const sinRevisionProgramada = riskRadar.filter((item) => item.diasParaRevision === null);
+
   if (!isInitialized) {
     return <div>Cargando...</div>;
   }
@@ -611,6 +626,112 @@ export default function EquipamientosPage() {
               <MetricCard title="Sin fecha" value={resumenAlertas?.sin_fecha ?? 0} tone="slate" />
               <MetricCard title="Costo 90 días" value={formatCurrency(resumenBi?.costo_ultimos_90_dias)} tone="violet" />
               <MetricCard title="Revisar reemplazo" value={resumenBi?.equipos_revisar_reemplazo ?? 0} tone="red" helper="Score técnico/comercial" />
+            </section>
+
+            <section className="grid gap-4 xl:grid-cols-[1fr_1fr]">
+              <Card className="border-slate-200 bg-gradient-to-br from-white to-slate-50">
+                <CardHeader className="border-b p-4">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-amber-600" />
+                    <h2 className="text-xl font-bold">Radar técnico del parque</h2>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Score heurístico inspirado en CMMS: estado, próxima revisión, costos, fallas y señales de reemplazo.
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-3 p-4">
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-xl border bg-white p-3">
+                      <p className="text-xs text-muted-foreground">Alto / crítico</p>
+                      <p className="mt-1 text-2xl font-bold text-red-700">{riesgoAltoCritico.length}</p>
+                    </div>
+                    <div className="rounded-xl border bg-white p-3">
+                      <p className="text-xs text-muted-foreground">Preventivos urgentes</p>
+                      <p className="mt-1 text-2xl font-bold text-amber-700">{preventivosUrgentes.length}</p>
+                    </div>
+                    <div className="rounded-xl border bg-white p-3">
+                      <p className="text-xs text-muted-foreground">Sin revisión</p>
+                      <p className="mt-1 text-2xl font-bold text-slate-700">{sinRevisionProgramada.length}</p>
+                    </div>
+                  </div>
+
+                  {topRiskRadar.length ? (
+                    <div className="space-y-2">
+                      {topRiskRadar.map((item) => (
+                        <div key={item.id} className="rounded-xl border bg-white p-3 shadow-sm">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="font-semibold text-slate-950">{item.nombre}</p>
+                              <p className="mt-1 text-xs text-slate-500">
+                                {item.tipo || "Sin tipo"} · {item.ubicacion || "Sin ubicación"}
+                              </p>
+                            </div>
+                            <span className={`rounded-full border px-2 py-1 text-xs font-semibold capitalize ${equipamientoRiskTone[item.nivel]}`}>
+                              {item.nivel} · {item.score}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-sm text-slate-700">{item.mensaje}</p>
+                          {item.factores.length > 0 && (
+                            <p className="mt-1 text-xs text-slate-500">
+                              Factores: {item.factores.join(", ")}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-800">
+                      Sin equipamientos cargados para analizar riesgo técnico.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="border-b p-4">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                    <h2 className="text-xl font-bold">Acciones sugeridas</h2>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Próximos pasos operativos para reducir downtime, costos y fallas repetidas.
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-3 p-4">
+                  {riesgoAltoCritico.length > 0 && (
+                    <div className="rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-800">
+                      Priorizar diagnóstico de {riesgoAltoCritico.length} equipo{riesgoAltoCritico.length === 1 ? "" : "s"} con riesgo alto/crítico.
+                    </div>
+                  )}
+                  {preventivosUrgentes.length > 0 && (
+                    <div className="rounded-xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-800">
+                      Programar preventivos urgentes o vencidos para evitar salida de servicio.
+                    </div>
+                  )}
+                  {sinRevisionProgramada.length > 0 && (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                      Completar próxima revisión en equipos sin fecha para mejorar trazabilidad.
+                    </div>
+                  )}
+                  {(biMantenimiento?.recomendaciones_reemplazo?.length ?? 0) > 0 && (
+                    <div className="rounded-xl border border-violet-100 bg-violet-50 p-4 text-sm text-violet-800">
+                      Evaluar reparación vs. reemplazo en equipos con costo o correctivos repetidos.
+                    </div>
+                  )}
+                  {riesgoAltoCritico.length === 0 &&
+                    preventivosUrgentes.length === 0 &&
+                    sinRevisionProgramada.length === 0 &&
+                    (biMantenimiento?.recomendaciones_reemplazo?.length ?? 0) === 0 && (
+                      <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-800">
+                        No hay acciones críticas detectadas con los datos actuales.
+                      </div>
+                    )}
+
+                  <div className="rounded-xl border bg-white p-4 text-sm text-slate-600">
+                    Próxima evolución sugerida: planes preventivos por tipo de máquina, órdenes técnicas avanzadas, repuestos, QR y downtime.
+                  </div>
+                </CardContent>
+              </Card>
             </section>
 
             <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">

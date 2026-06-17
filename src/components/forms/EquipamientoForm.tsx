@@ -1,7 +1,7 @@
 "use client";
 
 import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   createEquipamiento,
   updateEquipamiento,
@@ -67,6 +67,40 @@ const fallbackUbicacionesEquipamiento: CatalogoParametrizableItem[] = [
   },
 ];
 
+const emptyEquipamientoFormValues: EquipamientoFormValues = {
+  nombre: "",
+  tipo: "",
+  id_tipo_equipamiento: "",
+  marca: "",
+  modelo: "",
+  estado: "operativo",
+  ubicacion: "",
+  id_ubicacion_equipamiento: "",
+  proxima_revision: "",
+  observaciones: "",
+};
+
+function toDateInputValue(value?: string | null) {
+  return value ? String(value).slice(0, 10) : "";
+}
+
+function mapEquipoToFormValues(equipo?: Equipamento): EquipamientoFormValues {
+  if (!equipo) return emptyEquipamientoFormValues;
+
+  return {
+    nombre: equipo.nombre ?? "",
+    tipo: String(equipo.tipo ?? ""),
+    id_tipo_equipamiento: equipo.id_tipo_equipamiento ?? "",
+    marca: equipo.marca ?? "",
+    modelo: equipo.modelo ?? "",
+    estado: (equipo.estado ?? "operativo") as EquipamientoFormValues["estado"],
+    ubicacion: equipo.ubicacion ?? "",
+    id_ubicacion_equipamiento: equipo.id_ubicacion_equipamiento ?? "",
+    proxima_revision: toDateInputValue(equipo.proxima_revision),
+    observaciones: equipo.observaciones ?? "",
+  };
+}
+
 export default function EquipamientoForm({
   initialValues,
   onSubmit,
@@ -79,20 +113,13 @@ export default function EquipamientoForm({
   loading?: boolean;
 }) {
   const isEdit = !!initialValues;
-  const [values, setValues] = useState<EquipamientoFormValues>(
-    initialValues || {
-      nombre: "",
-      tipo: "",
-      id_tipo_equipamiento: "",
-      marca: "",
-      modelo: "",
-      estado: "operativo",
-      ubicacion: "",
-      id_ubicacion_equipamiento: "",
-      proxima_revision: "",
-      observaciones: "",
-    }
+  const [values, setValues] = useState<EquipamientoFormValues>(() =>
+    mapEquipoToFormValues(initialValues)
   );
+
+  useEffect(() => {
+    setValues(mapEquipoToFormValues(initialValues));
+  }, [initialValues]);
   const [submitting, setSubmitting] = useState(false);
   const { items: tiposEquipamiento } = useCatalogoParametrizable(
     "tipo_equipamiento",
