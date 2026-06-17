@@ -1,11 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 import type {
   CreateInfraestructuraActivoDTO,
+  CreateInfraestructuraChecklistEjecucionDTO,
+  CreateInfraestructuraQrDTO,
   CreateInfraestructuraSectorDTO,
   CreateMantenimientoEdilicioOrdenDTO,
   InfraestructuraActivo,
   InfraestructuraCategoriaActivo,
+  InfraestructuraChecklistEjecucion,
+  InfraestructuraChecklistTemplate,
   InfraestructuraMantenimientoDashboard,
+  InfraestructuraQrCodigo,
+  InfraestructuraQrResolveResult,
   InfraestructuraSector,
   MantenimientoEdilicioOrden,
   UpdateMantenimientoEdilicioOrdenDTO,
@@ -139,10 +145,91 @@ function buildAlertas(activos: InfraestructuraActivo[]) {
     .slice(0, 12);
 }
 
+
+function normalizeQrCode(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 96);
+}
+
+function buildQrRoute(targetType: string) {
+  switch (targetType) {
+    case 'infra_activo':
+    case 'infra_sector':
+    case 'edilicio_orden':
+      return '/dashboard/infraestructura/mantenimiento-edilicio';
+    case 'equipamiento':
+      return '/dashboard/equipamientos';
+    case 'producto':
+      return '/dashboard/productos';
+    case 'servicio':
+      return '/dashboard/servicios';
+    default:
+      return '/dashboard/infraestructura/lector-qr-barra';
+  }
+}
+
+function buildGeneratedQrCode(targetType: string, targetId: string) {
+  return normalizeQrCode(`GM-${targetType.replace(/_/g, '-').toUpperCase()}-${targetId.slice(0, 8)}`);
+}
+
+async function getQrTargetTitle(supabase: ReturnType<typeof getInfraestructuraDbClient>, targetType: string, targetId: string) {
+  if (!targetId) throw new Error('El target_id es obligatorio para generar QR/código de barras.');
+
+  if (targetType === 'infra_activo') {
+    const { data, error } = await supabase.from('infraestructura_activo').select('id,nombre,codigo').eq('id', targetId).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error('No se encontró el activo edilicio para generar QR.');
+    return { titulo: String(data.nombre), metadata: { codigo_activo: data.codigo } };
+  }
+
+  if (targetType === 'infra_sector') {
+    const { data, error } = await supabase.from('infraestructura_sector').select('id,nombre,codigo,tipo').eq('id', targetId).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error('No se encontró el sector edilicio para generar QR.');
+    return { titulo: String(data.nombre), metadata: { codigo_sector: data.codigo, tipo: data.tipo } };
+  }
+
+  if (targetType === 'edilicio_orden') {
+    const { data, error } = await supabase.from('mantenimiento_edilicio_orden').select('id,titulo,estado').eq('id', targetId).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error('No se encontró la orden de mantenimiento edilicio para generar QR.');
+    return { titulo: String(data.titulo), metadata: { estado: data.estado } };
+  }
+
+  if (targetType === 'equipamiento') {
+    const { data, error } = await supabase.from('equipamiento').select('id,nombre,tipo,ubicacion').eq('id', targetId).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error('No se encontró el equipamiento para generar QR.');
+    return { titulo: String(data.nombre), metadata: { tipo: data.tipo, ubicacion: data.ubicacion } };
+  }
+
+  if (targetType === 'producto') {
+    const { data, error } = await supabase.from('producto').select('id,nombre,stock,precio').eq('id', targetId).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error('No se encontró el producto para generar código de barras/QR.');
+    return { titulo: String(data.nombre), metadata: { stock: data.stock, precio: data.precio } };
+  }
+
+  if (targetType === 'servicio') {
+    const { data, error } = await supabase.from('servicio').select('id,nombre,precio').eq('id', targetId).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) throw new Error('No se encontró el servicio para generar QR.');
+    return { titulo: String(data.nombre), metadata: { precio: data.precio } };
+  }
+
+  throw new Error('Tipo de destino QR no soportado.');
+}
+
 export async function getInfraestructuraMantenimientoDashboard(): Promise<InfraestructuraMantenimientoDashboard> {
   const supabase = getInfraestructuraDbClient();
 
-  const [sectoresResult, categoriasResult, activosResult, ordenesResult] = await Promise.all([
+  const [sectoresResult, categoriasResult, activosResult, ordenesResult, checklistsResult, ejecucionesResult, qrCodesResult] = await Promise.all([
     supabase
       .from('infraestructura_sector')
       .select('*')
@@ -164,9 +251,27 @@ export async function getInfraestructuraMantenimientoDashboard(): Promise<Infrae
       .order('fecha_vencimiento', { ascending: true, nullsFirst: false })
       .order('creado_en', { ascending: false })
       .limit(80),
+    supabase
+      .from('infraestructura_checklist_template')
+      .select('*, items:infraestructura_checklist_item(*)')
+      .eq('activo', true)
+      .order('orden', { ascending: true })
+      .order('nombre', { ascending: true }),
+    supabase
+      .from('infraestructura_checklist_ejecucion')
+      .select('*, template:infraestructura_checklist_template(*), infraestructura_activo(*), infraestructura_sector(*), mantenimiento_edilicio_orden(*)')
+      .eq('activo', true)
+      .order('ejecutado_en', { ascending: false })
+      .limit(20),
+    supabase
+      .from('infraestructura_qr_codigo')
+      .select('*')
+      .eq('activo', true)
+      .order('actualizado_en', { ascending: false })
+      .limit(50),
   ]);
 
-  const firstError = sectoresResult.error || categoriasResult.error || activosResult.error || ordenesResult.error;
+  const firstError = sectoresResult.error || categoriasResult.error || activosResult.error || ordenesResult.error || checklistsResult.error || ejecucionesResult.error || qrCodesResult.error;
   if (firstError) {
     throw new Error(firstError.message);
   }
@@ -175,6 +280,12 @@ export async function getInfraestructuraMantenimientoDashboard(): Promise<Infrae
   const categorias = (categoriasResult.data ?? []) as InfraestructuraCategoriaActivo[];
   const activos = (activosResult.data ?? []) as InfraestructuraActivo[];
   const ordenes = (ordenesResult.data ?? []) as MantenimientoEdilicioOrden[];
+  const checklists = ((checklistsResult.data ?? []) as InfraestructuraChecklistTemplate[]).map((template) => ({
+    ...template,
+    items: [...(template.items ?? [])].sort((a, b) => Number(a.orden ?? 0) - Number(b.orden ?? 0)),
+  }));
+  const checklistEjecuciones = (ejecucionesResult.data ?? []) as InfraestructuraChecklistEjecucion[];
+  const qrCodes = (qrCodesResult.data ?? []) as InfraestructuraQrCodigo[];
 
   return {
     generated_at: new Date().toISOString(),
@@ -183,6 +294,9 @@ export async function getInfraestructuraMantenimientoDashboard(): Promise<Infrae
     activos,
     ordenes,
     alertas: buildAlertas(activos),
+    checklists,
+    checklistEjecuciones,
+    qrCodes,
     metricas: calculateMetricas(sectores, activos, ordenes),
   };
 }
@@ -383,4 +497,138 @@ export async function updateMantenimientoEdilicioOrden(
   }
 
   return orden;
+}
+
+
+export async function createInfraestructuraQrCode(payload: CreateInfraestructuraQrDTO): Promise<InfraestructuraQrCodigo> {
+  const supabase = getInfraestructuraDbClient();
+  const targetType = String(payload.target_type ?? '').trim();
+  const targetId = String(payload.target_id ?? '').trim();
+
+  if (!targetType) throw new Error('El tipo de destino QR es obligatorio.');
+  if (!targetId) throw new Error('El identificador destino del QR es obligatorio.');
+
+  const targetInfo = await getQrTargetTitle(supabase, targetType, targetId);
+  const codigo = normalizeQrCode(payload.codigo || buildGeneratedQrCode(targetType, targetId));
+  const titulo = String(payload.titulo || targetInfo.titulo).trim();
+  const route = buildQrRoute(targetType);
+
+  const { data, error } = await supabase
+    .from('infraestructura_qr_codigo')
+    .upsert(
+      {
+        codigo,
+        target_type: targetType,
+        target_id: targetId,
+        titulo,
+        route,
+        metadata: { ...(targetInfo.metadata ?? {}), ...(payload.metadata ?? {}) },
+        activo: true,
+        actualizado_en: new Date().toISOString(),
+      },
+      { onConflict: 'codigo' },
+    )
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data as InfraestructuraQrCodigo;
+}
+
+export async function resolveInfraestructuraQrCode(codigoInput: string): Promise<InfraestructuraQrResolveResult> {
+  const supabase = getInfraestructuraDbClient();
+  const codigo = normalizeQrCode(String(codigoInput ?? ''));
+  if (!codigo) throw new Error('Ingresá o escaneá un código QR/barra válido.');
+
+  const { data, error } = await supabase
+    .from('infraestructura_qr_codigo')
+    .select('*')
+    .eq('codigo', codigo)
+    .eq('activo', true)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  if (!data) {
+    return { found: false, codigo };
+  }
+
+  const qr = data as InfraestructuraQrCodigo;
+  return {
+    found: true,
+    codigo: qr.codigo,
+    target_type: qr.target_type,
+    target_id: qr.target_id,
+    titulo: qr.titulo,
+    route: qr.route,
+    metadata: qr.metadata ?? null,
+  };
+}
+
+export async function createInfraestructuraChecklistEjecucion(
+  payload: CreateInfraestructuraChecklistEjecucionDTO,
+): Promise<InfraestructuraChecklistEjecucion> {
+  const supabase = getInfraestructuraDbClient();
+  const templateId = String(payload.template_id ?? '').trim();
+  if (!templateId) throw new Error('Seleccioná un checklist para ejecutar.');
+  if (!payload.activo_id && !payload.sector_id && !payload.orden_id) {
+    throw new Error('La ejecución debe estar asociada a un activo, sector u orden edilicia.');
+  }
+
+  const { data: template, error: templateError } = await supabase
+    .from('infraestructura_checklist_template')
+    .select('*, items:infraestructura_checklist_item(*)')
+    .eq('id', templateId)
+    .maybeSingle();
+  if (templateError) throw new Error(templateError.message);
+  if (!template) throw new Error('No se encontró el checklist seleccionado.');
+
+  const resultadoGeneral = payload.resultado_general || 'ok';
+  const { data: ejecucion, error: ejecucionError } = await supabase
+    .from('infraestructura_checklist_ejecucion')
+    .insert({
+      template_id: templateId,
+      activo_id: payload.activo_id || null,
+      sector_id: payload.sector_id || null,
+      orden_id: payload.orden_id || null,
+      resultado_general: resultadoGeneral,
+      notas: payload.notas || null,
+      foto_antes_url: payload.foto_antes_url || null,
+      foto_despues_url: payload.foto_despues_url || null,
+      ejecutado_por: payload.ejecutado_por || null,
+      activo: true,
+    })
+    .select()
+    .single();
+
+  if (ejecucionError) throw new Error(ejecucionError.message);
+
+  const templateItems = (template.items ?? []) as Array<{ id: string }>;
+  const explicitResponses = payload.respuestas ?? [];
+  const responsesByItem = new Map(explicitResponses.map((respuesta) => [respuesta.item_id, respuesta]));
+  const responsesPayload = templateItems.map((item) => {
+    const explicit = responsesByItem.get(item.id);
+    return {
+      ejecucion_id: ejecucion.id,
+      item_id: item.id,
+      resultado: explicit?.resultado || resultadoGeneral || 'ok',
+      observacion: explicit?.observacion || null,
+      foto_url: explicit?.foto_url || null,
+    };
+  });
+
+  if (responsesPayload.length > 0) {
+    const { error: respuestasError } = await supabase
+      .from('infraestructura_checklist_respuesta')
+      .insert(responsesPayload);
+    if (respuestasError) throw new Error(respuestasError.message);
+  }
+
+  const { data: fullData, error: fullError } = await supabase
+    .from('infraestructura_checklist_ejecucion')
+    .select('*, template:infraestructura_checklist_template(*), infraestructura_activo(*), infraestructura_sector(*), mantenimiento_edilicio_orden(*), respuestas:infraestructura_checklist_respuesta(*)')
+    .eq('id', ejecucion.id)
+    .single();
+  if (fullError) throw new Error(fullError.message);
+
+  return fullData as InfraestructuraChecklistEjecucion;
 }
