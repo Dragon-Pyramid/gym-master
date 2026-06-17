@@ -1,5 +1,6 @@
 import { JwtUser } from '@/interfaces/jwtUser.interface';
 import { getSupabaseServerClient } from '@/services/supabaseServerClient';
+import { isDefaultProfilePhoto } from '@/utils/profilePhoto';
 import {
   getEstadoCuotaSocioServer,
   getSociosEstadoCuotaServer,
@@ -16,6 +17,7 @@ export interface HeaderNotificationItem {
     | 'acceso'
     | 'mensaje'
     | 'ficha_medica'
+    | 'perfil'
     | 'stock'
     | 'mantenimiento'
     | 'sistema';
@@ -142,7 +144,11 @@ async function buildSocioNotifications(user: JwtUser): Promise<HeaderNotificatio
     console.warn('No se pudo construir notificación de cuota del socio:', error);
   }
 
-  const [{ count: mensajesRespondidos }, { data: fichaMedica }] = await Promise.all([
+  const [
+    { count: mensajesRespondidos },
+    { data: fichaMedica },
+    { data: socioPerfil },
+  ] = await Promise.all([
     supabase
       .from('socio_mensaje')
       .select('id', { count: 'exact', head: true })
@@ -155,7 +161,25 @@ async function buildSocioNotifications(user: JwtUser): Promise<HeaderNotificatio
       .eq('id_socio', socioId)
       .order('actualizado_en', { ascending: false })
       .limit(1),
+    supabase
+      .from('socio')
+      .select('foto')
+      .eq('id_socio', socioId)
+      .maybeSingle(),
   ]);
+
+  if (isDefaultProfilePhoto((socioPerfil as { foto?: string | null } | null)?.foto)) {
+    items.push({
+      id: `socio-foto-perfil-${socioId}`,
+      audience: 'socio',
+      type: 'perfil',
+      severity: 'baja',
+      title: 'Cargá tu foto de perfil',
+      summary: 'Todavía usás la imagen por defecto. Subí una foto o sacate una desde el celular para completar tu perfil.',
+      route: '/dashboard/perfil',
+      count: 1,
+    });
+  }
 
   if ((mensajesRespondidos ?? 0) > 0) {
     items.push({

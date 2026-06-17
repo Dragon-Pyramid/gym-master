@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Socio } from "@/interfaces/socio.interface";
 import { formatFrontendDateTime, formatFrontendDate } from '@/utils/dateFormat';
+import { getProfilePhotoOrDefault, isDefaultProfilePhoto } from '@/utils/profilePhoto';
 
 const sexoLabel = (value?: string | null) => {
   if (value === "M") return "Masculino";
@@ -38,6 +39,9 @@ export default function SocioViewModal({
 }) {
   if (!socio) return null;
 
+  const fotoPerfil = getProfilePhotoOrDefault(socio.foto);
+  const tieneFotoPropia = !isDefaultProfilePhoto(socio.foto);
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="!max-w-[90vw] sm:!max-w-[900px] !w-full bg-background text-foreground">
@@ -52,6 +56,43 @@ export default function SocioViewModal({
         </DialogHeader>
 
         <div className="mt-4 space-y-6">
+          <section className="rounded-xl border bg-muted/30 p-4">
+            <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+              <div className="relative h-28 w-28 overflow-hidden rounded-full border bg-white p-1 shadow-sm">
+                <img
+                  src={fotoPerfil}
+                  alt={`Foto de ${socio.nombre_completo}`}
+                  className="h-full w-full rounded-full object-cover"
+                  onError={(event) => {
+                    event.currentTarget.src = '/gm_logo.svg';
+                  }}
+                />
+              </div>
+              <div className="flex-1">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <h3 className="text-lg font-semibold text-foreground">{socio.nombre_completo}</h3>
+                  <span
+                    className={`inline-flex w-fit rounded-full border px-2 py-1 text-xs font-semibold ${
+                      tieneFotoPropia
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                        : 'border-amber-200 bg-amber-50 text-amber-700'
+                    }`}
+                  >
+                    {tieneFotoPropia ? 'Foto de perfil cargada' : 'Usa logo por defecto'}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {tieneFotoPropia
+                    ? 'El socio tiene una imagen propia cargada en su perfil.'
+                    : 'El socio todavía no cargó una foto propia; se muestra el logo de Gym Master como imagen por defecto.'}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  DNI: {socio.dni || '-'} · Email: {socio.email || '-'}
+                </p>
+              </div>
+            </div>
+          </section>
+
           <section>
             <h3 className="mb-3 text-sm font-semibold text-muted-foreground">Datos personales</h3>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
