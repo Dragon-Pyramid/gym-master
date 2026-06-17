@@ -1,9 +1,14 @@
 import type {
   CreateInfraestructuraActivoDTO,
+  CreateInfraestructuraChecklistEjecucionDTO,
+  CreateInfraestructuraQrDTO,
   CreateInfraestructuraSectorDTO,
   CreateMantenimientoEdilicioOrdenDTO,
   InfraestructuraActivo,
+  InfraestructuraChecklistEjecucion,
   InfraestructuraMantenimientoDashboard,
+  InfraestructuraQrCodigo,
+  InfraestructuraQrResolveResult,
   InfraestructuraSector,
   MantenimientoEdilicioOrden,
   UpdateMantenimientoEdilicioOrdenDTO,
@@ -63,4 +68,31 @@ export async function updateMantenimientoEdilicioOrdenClient(
     body: JSON.stringify(payload),
   });
   return parseJsonResponse<{ message: string; data: MantenimientoEdilicioOrden }>(response);
+}
+
+
+export async function createInfraestructuraQrCodeClient(payload: CreateInfraestructuraQrDTO) {
+  const response = await fetch('/api/infraestructura/qr', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return parseJsonResponse<{ message: string; data: InfraestructuraQrCodigo }>(response);
+}
+
+export async function resolveInfraestructuraQrCodeClient(codigo: string) {
+  const response = await fetch(`/api/infraestructura/qr/resolve?codigo=${encodeURIComponent(codigo)}`, {
+    method: 'GET',
+    cache: 'no-store',
+  });
+  return parseJsonResponse<{ message?: string; data: InfraestructuraQrResolveResult }>(response);
+}
+
+export async function createInfraestructuraChecklistEjecucionClient(payload: CreateInfraestructuraChecklistEjecucionDTO) {
+  const response = await fetch('/api/infraestructura/checklists/ejecuciones', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return parseJsonResponse<{ message: string; data: InfraestructuraChecklistEjecucion }>(response);
 }

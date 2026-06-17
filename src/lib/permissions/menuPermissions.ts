@@ -165,6 +165,13 @@ export const MENU_PERMISSION_GROUPS: Array<{
         roles: ["admin", "usuario"],
       },
       {
+        key: "Lector QR/barra",
+        label: "Lector QR/barra",
+        path: "/dashboard/infraestructura/lector-qr-barra",
+        group: "Infraestructura",
+        roles: ["admin", "usuario"],
+      },
+      {
         key: "Equipamientos",
         label: "Equipamientos",
         path: "/dashboard/equipamientos",

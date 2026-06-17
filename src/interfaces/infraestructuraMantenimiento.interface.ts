@@ -156,6 +156,94 @@ export interface MantenimientoEdilicioDocumento {
   creado_en?: string;
 }
 
+
+export type InfraestructuraQrTargetType =
+  | 'infra_activo'
+  | 'infra_sector'
+  | 'edilicio_orden'
+  | 'equipamiento'
+  | 'producto'
+  | 'servicio';
+
+export type InfraestructuraChecklistResultado = 'ok' | 'observado' | 'critico';
+
+export interface InfraestructuraQrCodigo {
+  id: string;
+  codigo: string;
+  target_type: InfraestructuraQrTargetType | string;
+  target_id: string;
+  titulo: string;
+  route: string;
+  metadata?: Record<string, unknown> | null;
+  activo: boolean;
+  creado_en?: string;
+  actualizado_en?: string;
+}
+
+export interface InfraestructuraChecklistItem {
+  id: string;
+  template_id: string;
+  texto: string;
+  tipo_respuesta: 'ok_observado_critico' | 'si_no' | 'texto' | string;
+  requerido: boolean;
+  orden: number;
+  activo: boolean;
+}
+
+export interface InfraestructuraChecklistTemplate {
+  id: string;
+  codigo: string;
+  nombre: string;
+  descripcion?: string | null;
+  ambito: 'activo' | 'sector' | 'categoria' | 'general' | string;
+  categoria_id?: string | null;
+  frecuencia_dias?: number | null;
+  activo: boolean;
+  orden?: number | null;
+  items?: InfraestructuraChecklistItem[];
+}
+
+export interface InfraestructuraChecklistRespuesta {
+  id: string;
+  ejecucion_id: string;
+  item_id: string;
+  resultado: InfraestructuraChecklistResultado | string;
+  observacion?: string | null;
+  foto_url?: string | null;
+  creado_en?: string;
+  item?: InfraestructuraChecklistItem | null;
+}
+
+export interface InfraestructuraChecklistEjecucion {
+  id: string;
+  template_id: string;
+  activo_id?: string | null;
+  sector_id?: string | null;
+  orden_id?: string | null;
+  resultado_general: InfraestructuraChecklistResultado | string;
+  notas?: string | null;
+  foto_antes_url?: string | null;
+  foto_despues_url?: string | null;
+  ejecutado_por?: string | null;
+  ejecutado_en?: string;
+  activo: boolean;
+  template?: InfraestructuraChecklistTemplate | null;
+  infraestructura_activo?: InfraestructuraActivo | null;
+  infraestructura_sector?: InfraestructuraSector | null;
+  mantenimiento_edilicio_orden?: MantenimientoEdilicioOrden | null;
+  respuestas?: InfraestructuraChecklistRespuesta[];
+}
+
+export interface InfraestructuraQrResolveResult {
+  found: boolean;
+  codigo?: string;
+  target_type?: InfraestructuraQrTargetType | string;
+  target_id?: string;
+  titulo?: string;
+  route?: string;
+  metadata?: Record<string, unknown> | null;
+}
+
 export interface InfraestructuraMantenimientoMetricas {
   totalSectores: number;
   totalActivos: number;
@@ -174,6 +262,9 @@ export interface InfraestructuraMantenimientoDashboard {
   activos: InfraestructuraActivo[];
   ordenes: MantenimientoEdilicioOrden[];
   alertas: InfraestructuraActivo[];
+  checklists: InfraestructuraChecklistTemplate[];
+  checklistEjecuciones: InfraestructuraChecklistEjecucion[];
+  qrCodes: InfraestructuraQrCodigo[];
   metricas: InfraestructuraMantenimientoMetricas;
 }
 
@@ -239,4 +330,38 @@ export interface UpdateMantenimientoEdilicioOrdenDTO {
   resultado?: string | null;
   observaciones?: string | null;
   certificado_url?: string | null;
+}
+
+
+export interface CreateInfraestructuraQrDTO {
+  target_type: InfraestructuraQrTargetType | string;
+  target_id: string;
+  titulo?: string | null;
+  codigo?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface ResolveInfraestructuraQrResponse {
+  message?: string;
+  data: InfraestructuraQrResolveResult;
+}
+
+export interface CreateInfraestructuraChecklistRespuestaDTO {
+  item_id: string;
+  resultado?: InfraestructuraChecklistResultado | string;
+  observacion?: string | null;
+  foto_url?: string | null;
+}
+
+export interface CreateInfraestructuraChecklistEjecucionDTO {
+  template_id: string;
+  activo_id?: string | null;
+  sector_id?: string | null;
+  orden_id?: string | null;
+  resultado_general?: InfraestructuraChecklistResultado | string;
+  notas?: string | null;
+  foto_antes_url?: string | null;
+  foto_despues_url?: string | null;
+  ejecutado_por?: string | null;
+  respuestas?: CreateInfraestructuraChecklistRespuestaDTO[];
 }

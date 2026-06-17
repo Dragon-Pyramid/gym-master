@@ -90,6 +90,49 @@ const endpointDefinitions: EndpointDefinition[] = [
   },
 
   {
+    path: "/api/infraestructura/qr",
+    methods: ["POST"],
+    tag: "Infraestructura",
+    summary: "Generar QR/código de barras interno",
+    description:
+      "Genera o actualiza un código QR/barra reutilizable para activos edilicios, sectores, órdenes edilicias, equipamientos, productos o servicios.",
+    auth: true,
+    admin: false,
+    notImplemented: false,
+    statuses: [201, 400, 401, 500],
+    queryParams: [],
+    source: "src/app/api/infraestructura/qr/route.ts",
+  },
+  {
+    path: "/api/infraestructura/qr/resolve",
+    methods: ["GET"],
+    tag: "Infraestructura",
+    summary: "Resolver código QR/barra",
+    description:
+      "Resuelve un código leído por cámara o ingresado manualmente y devuelve el módulo destino dentro de Gym Master.",
+    auth: true,
+    admin: false,
+    notImplemented: false,
+    statuses: [200, 400, 401, 500],
+    queryParams: ["codigo"],
+    source: "src/app/api/infraestructura/qr/resolve/route.ts",
+  },
+  {
+    path: "/api/infraestructura/checklists/ejecuciones",
+    methods: ["POST"],
+    tag: "Infraestructura",
+    summary: "Ejecutar checklist edilicio",
+    description:
+      "Registra una ejecución de checklist asociada a un activo edilicio, sector u orden de mantenimiento, con resultado general y respuestas base.",
+    auth: true,
+    admin: false,
+    notImplemented: false,
+    statuses: [201, 400, 401, 500],
+    queryParams: [],
+    source: "src/app/api/infraestructura/checklists/ejecuciones/route.ts",
+  },
+
+  {
     path: "/api/actividades/turnos-cupos",
     methods: ["GET"],
     tag: "Actividades",

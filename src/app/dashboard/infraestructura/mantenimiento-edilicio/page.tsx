@@ -6,10 +6,13 @@ import {
   AlertTriangle,
   Building2,
   CalendarClock,
+  ClipboardCheck,
   CheckCircle2,
   Loader2,
   Plus,
+  QrCode,
   RefreshCw,
+  ScanLine,
   ShieldCheck,
   Wrench,
 } from 'lucide-react';
@@ -24,13 +27,18 @@ import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import type {
   CreateInfraestructuraActivoDTO,
   CreateInfraestructuraSectorDTO,
+  CreateInfraestructuraChecklistEjecucionDTO,
+  CreateInfraestructuraQrDTO,
   CreateMantenimientoEdilicioOrdenDTO,
   InfraestructuraActivo,
+  InfraestructuraQrCodigo,
   InfraestructuraMantenimientoDashboard,
   InfraestructuraSectorTipo,
 } from '@/interfaces/infraestructuraMantenimiento.interface';
 import {
   createInfraestructuraActivoClient,
+  createInfraestructuraChecklistEjecucionClient,
+  createInfraestructuraQrCodeClient,
   createInfraestructuraSectorClient,
   createMantenimientoEdilicioOrdenClient,
   getInfraestructuraMantenimientoDashboardClient,
@@ -88,6 +96,55 @@ function formatDate(value?: string | null) {
 function labelFromValue(value?: string | null) {
   if (!value) return '-';
   return value.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function buildQrImageUrl(codigo?: string | null, size = 180) {
+  const value = String(codigo ?? '').trim();
+  if (!value) return '';
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=10&data=${encodeURIComponent(value)}`;
+}
+
+function printQrLabel({ codigo, titulo, subtitulo }: { codigo: string; titulo: string; subtitulo?: string }) {
+  const qrUrl = buildQrImageUrl(codigo, 260);
+  const safeTitle = titulo.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const safeSubtitle = String(subtitulo ?? '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const safeCode = codigo.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  const printWindow = window.open('', '_blank', 'width=520,height=720');
+  if (!printWindow) return;
+
+  printWindow.document.write(`
+    <!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Etiqueta QR - ${safeTitle}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 0; padding: 24px; color: #111827; }
+          .label { border: 2px solid #111827; border-radius: 16px; padding: 18px; width: 340px; text-align: center; }
+          .brand { font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #475569; }
+          h1 { font-size: 18px; margin: 10px 0 4px; }
+          .subtitle { font-size: 12px; color: #64748b; margin-bottom: 12px; }
+          img { width: 240px; height: 240px; image-rendering: pixelated; }
+          .code { margin-top: 10px; font-family: monospace; font-size: 13px; font-weight: 700; }
+          .hint { margin-top: 8px; font-size: 10px; color: #64748b; }
+          @media print { body { padding: 0; } .label { page-break-inside: avoid; } }
+        </style>
+      </head>
+      <body>
+        <div class="label">
+          <div class="brand">Gym Master</div>
+          <h1>${safeTitle}</h1>
+          ${safeSubtitle ? `<div class="subtitle">${safeSubtitle}</div>` : ''}
+          <img src="${qrUrl}" alt="QR ${safeCode}" />
+          <div class="code">${safeCode}</div>
+          <div class="hint">Escanear desde Infraestructura &gt; Lector QR/barra</div>
+        </div>
+        <script>window.onload = () => { window.print(); };</script>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
 }
 
 function daysUntil(value?: string | null) {
@@ -184,6 +241,21 @@ export default function MantenimientoEdilicioPage() {
     descripcion: '',
   });
 
+  const [checklistForm, setChecklistForm] = useState<CreateInfraestructuraChecklistEjecucionDTO>({
+    template_id: '',
+    activo_id: '',
+    sector_id: '',
+    orden_id: '',
+    resultado_general: 'ok',
+    notas: '',
+  });
+  const [qrForm, setQrForm] = useState<CreateInfraestructuraQrDTO>({
+    target_type: 'infra_activo',
+    target_id: '',
+    titulo: '',
+  });
+  const [lastQr, setLastQr] = useState<InfraestructuraQrCodigo | null>(null);
+
   const loadDashboard = async () => {
     setLoading(true);
     setError(null);
@@ -271,6 +343,48 @@ export default function MantenimientoEdilicioPage() {
       await registerSuccess('Orden de mantenimiento creada correctamente.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo crear la orden.');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+
+  const handleCreateChecklist = async (event: FormEvent) => {
+    event.preventDefault();
+    setSaving('checklist');
+    setError(null);
+    try {
+      await createInfraestructuraChecklistEjecucionClient({
+        ...checklistForm,
+        activo_id: checklistForm.activo_id || null,
+        sector_id: checklistForm.sector_id || null,
+        orden_id: checklistForm.orden_id || null,
+        notas: checklistForm.notas || null,
+      });
+      setChecklistForm({ template_id: '', activo_id: '', sector_id: '', orden_id: '', resultado_general: 'ok', notas: '' });
+      await registerSuccess('Checklist edilicio registrado correctamente.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo ejecutar el checklist.');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const handleCreateQr = async (event: FormEvent) => {
+    event.preventDefault();
+    setSaving('qr');
+    setError(null);
+    try {
+      const response = await createInfraestructuraQrCodeClient({
+        ...qrForm,
+        target_id: qrForm.target_id || '',
+        titulo: qrForm.titulo || null,
+      });
+      setLastQr(response.data);
+      setQrForm({ target_type: qrForm.target_type || 'infra_activo', target_id: '', titulo: '' });
+      await registerSuccess('Código QR/barra generado correctamente.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo generar el código QR/barra.');
     } finally {
       setSaving(null);
     }
@@ -480,6 +594,204 @@ export default function MantenimientoEdilicioPage() {
               </Card>
             </section>
 
+
+
+            <section className="grid gap-6 xl:grid-cols-3">
+              <Card className="p-5">
+                <div className="mb-4 flex items-center gap-2">
+                  <ClipboardCheck className="h-5 w-5 text-emerald-600" />
+                  <h2 className="text-lg font-semibold">Ejecutar checklist</h2>
+                </div>
+                <form className="space-y-3" onSubmit={handleCreateChecklist}>
+                  <Field label="Checklist">
+                    <SelectField value={String(checklistForm.template_id ?? '')} onChange={(value) => setChecklistForm((prev) => ({ ...prev, template_id: value }))}>
+                      <option value="">Seleccionar checklist</option>
+                      {(dashboard?.checklists ?? []).map((template) => <option key={template.id} value={template.id}>{template.nombre}</option>)}
+                    </SelectField>
+                  </Field>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <Field label="Activo">
+                      <SelectField value={String(checklistForm.activo_id ?? '')} onChange={(value) => setChecklistForm((prev) => ({ ...prev, activo_id: value }))}>
+                        <option value="">Sin activo</option>
+                        {(dashboard?.activos ?? []).map((activo) => <option key={activo.id} value={activo.id}>{activo.nombre}</option>)}
+                      </SelectField>
+                    </Field>
+                    <Field label="Sector">
+                      <SelectField value={String(checklistForm.sector_id ?? '')} onChange={(value) => setChecklistForm((prev) => ({ ...prev, sector_id: value }))}>
+                        <option value="">Sin sector</option>
+                        {(dashboard?.sectores ?? []).map((sector) => <option key={sector.id} value={sector.id}>{sector.nombre}</option>)}
+                      </SelectField>
+                    </Field>
+                  </div>
+                  <Field label="Orden relacionada">
+                    <SelectField value={String(checklistForm.orden_id ?? '')} onChange={(value) => setChecklistForm((prev) => ({ ...prev, orden_id: value }))}>
+                      <option value="">Sin orden</option>
+                      {(dashboard?.ordenes ?? []).slice(0, 30).map((orden) => <option key={orden.id} value={orden.id}>{orden.titulo}</option>)}
+                    </SelectField>
+                  </Field>
+                  <Field label="Resultado general">
+                    <SelectField value={String(checklistForm.resultado_general ?? 'ok')} onChange={(value) => setChecklistForm((prev) => ({ ...prev, resultado_general: value }))}>
+                      <option value="ok">OK</option>
+                      <option value="observado">Observado</option>
+                      <option value="critico">Crítico</option>
+                    </SelectField>
+                  </Field>
+                  <Field label="Notas">
+                    <textarea
+                      value={checklistForm.notas ?? ''}
+                      onChange={(e) => setChecklistForm((prev) => ({ ...prev, notas: e.target.value }))}
+                      className="min-h-[82px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      placeholder="Observaciones generales, fotos a cargar luego, hallazgos..."
+                    />
+                  </Field>
+                  <Button className="w-full" type="submit" disabled={saving === 'checklist'}>
+                    {saving === 'checklist' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ClipboardCheck className="mr-2 h-4 w-4" />}
+                    Guardar checklist
+                  </Button>
+                </form>
+              </Card>
+
+              <Card className="p-5">
+                <div className="mb-4 flex items-center gap-2">
+                  <QrCode className="h-5 w-5 text-sky-600" />
+                  <h2 className="text-lg font-semibold">QR activo / sector</h2>
+                </div>
+                <form className="space-y-3" onSubmit={handleCreateQr}>
+                  <Field label="Tipo">
+                    <SelectField value={String(qrForm.target_type ?? 'infra_activo')} onChange={(value) => setQrForm({ target_type: value, target_id: '', titulo: '' })}>
+                      <option value="infra_activo">Activo edilicio</option>
+                      <option value="infra_sector">Sector edilicio</option>
+                    </SelectField>
+                  </Field>
+                  <Field label="Destino">
+                    <SelectField value={String(qrForm.target_id ?? '')} onChange={(value) => setQrForm((prev) => ({ ...prev, target_id: value }))}>
+                      <option value="">Seleccionar</option>
+                      {qrForm.target_type === 'infra_sector'
+                        ? (dashboard?.sectores ?? []).map((sector) => <option key={sector.id} value={sector.id}>{sector.nombre}</option>)
+                        : (dashboard?.activos ?? []).map((activo) => <option key={activo.id} value={activo.id}>{activo.nombre}</option>)}
+                    </SelectField>
+                  </Field>
+                  <Field label="Título opcional">
+                    <Input value={qrForm.titulo ?? ''} onChange={(e) => setQrForm((prev) => ({ ...prev, titulo: e.target.value }))} placeholder="Ej: QR Matafuego recepción" />
+                  </Field>
+                  <Button className="w-full" type="submit" disabled={saving === 'qr'}>
+                    {saving === 'qr' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <QrCode className="mr-2 h-4 w-4" />}
+                    Generar QR/barra
+                  </Button>
+                </form>
+                {lastQr ? (
+                  <div className="mt-4 rounded-lg border bg-slate-50 p-3 text-sm">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                      <img
+                        src={buildQrImageUrl(lastQr.codigo, 144)}
+                        alt={`QR ${lastQr.codigo}`}
+                        className="h-32 w-32 rounded border bg-white p-2"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Último código</p>
+                        <p className="mt-1 break-all font-mono font-semibold text-slate-950">{lastQr.codigo}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{lastQr.titulo}</p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="mt-3"
+                          onClick={() => printQrLabel({ codigo: lastQr.codigo, titulo: lastQr.titulo, subtitulo: labelFromValue(lastQr.target_type) })}
+                        >
+                          Imprimir etiqueta
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+              </Card>
+
+              <Card className="p-5">
+                <div className="mb-4 flex items-center gap-2">
+                  <ScanLine className="h-5 w-5 text-violet-600" />
+                  <h2 className="text-lg font-semibold">Lector QR/barra</h2>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Base reutilizable para leer códigos con cámara. Sirve para Infraestructura, Equipamientos y deja preparada la evolución comercial para productos/kiosco.
+                </p>
+                <Button className="mt-4 w-full" type="button" variant="outline" onClick={() => window.location.href = '/dashboard/infraestructura/lector-qr-barra'}>
+                  <ScanLine className="mr-2 h-4 w-4" />
+                  Abrir lector
+                </Button>
+                <div className="mt-4 rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
+                  Próxima etapa comercial: celular escanea producto y la PC recibe el código en tiempo real para venta/alta/stock.
+                </div>
+              </Card>
+            </section>
+
+            <section className="grid gap-6 xl:grid-cols-2">
+              <Card className="p-5">
+                <div className="mb-4 flex items-center gap-2">
+                  <ClipboardCheck className="h-5 w-5 text-emerald-600" />
+                  <h2 className="text-lg font-semibold">Checklists recientes</h2>
+                </div>
+                <div className="space-y-3">
+                  {(dashboard?.checklistEjecuciones ?? []).length === 0 ? (
+                    <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Todavía no hay checklists ejecutados.</p>
+                  ) : (
+                    (dashboard?.checklistEjecuciones ?? []).slice(0, 6).map((ejecucion) => (
+                      <div key={ejecucion.id} className="rounded-lg border p-3">
+                        <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                          <div>
+                            <p className="font-semibold text-slate-950">{ejecucion.template?.nombre ?? 'Checklist edilicio'}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {ejecucion.infraestructura_activo?.nombre ?? ejecucion.infraestructura_sector?.nombre ?? ejecucion.mantenimiento_edilicio_orden?.titulo ?? 'Sin referencia'} · {formatDate(ejecucion.ejecutado_en)}
+                            </p>
+                          </div>
+                          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${ejecucion.resultado_general === 'critico' ? 'bg-red-100 text-red-800' : ejecucion.resultado_general === 'observado' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                            {labelFromValue(ejecucion.resultado_general)}
+                          </span>
+                        </div>
+                        {ejecucion.notas ? <p className="mt-2 text-xs text-muted-foreground">{ejecucion.notas}</p> : null}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </Card>
+
+              <Card className="p-5">
+                <div className="mb-4 flex items-center gap-2">
+                  <QrCode className="h-5 w-5 text-sky-600" />
+                  <h2 className="text-lg font-semibold">Códigos activos</h2>
+                </div>
+                <div className="space-y-3">
+                  {(dashboard?.qrCodes ?? []).length === 0 ? (
+                    <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Todavía no hay códigos QR/barra generados.</p>
+                  ) : (
+                    (dashboard?.qrCodes ?? []).slice(0, 8).map((qr) => (
+                      <div key={qr.id} className="rounded-lg border p-3">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                          <img
+                            src={buildQrImageUrl(qr.codigo, 120)}
+                            alt={`QR ${qr.codigo}`}
+                            className="h-24 w-24 rounded border bg-white p-1.5"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-slate-950">{qr.titulo}</p>
+                            <p className="mt-1 break-all font-mono text-xs text-slate-700">{qr.codigo}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">{labelFromValue(qr.target_type)} · {qr.route}</p>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="mt-2"
+                              onClick={() => printQrLabel({ codigo: qr.codigo, titulo: qr.titulo, subtitulo: labelFromValue(qr.target_type) })}
+                            >
+                              Imprimir etiqueta
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </Card>
+            </section>
             <section className="grid gap-6 xl:grid-cols-2">
               <Card className="p-5">
                 <div className="mb-4 flex items-center gap-2">
