@@ -11,6 +11,7 @@ import type {
   InfraestructuraChecklistTemplate,
   InfraestructuraMantenimientoDashboard,
   InfraestructuraQrCodigo,
+  InfraestructuraQrLabelsDashboard,
   InfraestructuraQrResolveResult,
   InfraestructuraSector,
   MantenimientoEdilicioOrden,
@@ -299,6 +300,100 @@ export async function getInfraestructuraMantenimientoDashboard(): Promise<Infrae
     qrCodes,
     metricas: calculateMetricas(sectores, activos, ordenes),
   };
+}
+
+
+export async function getInfraestructuraQrLabelsDashboard(): Promise<InfraestructuraQrLabelsDashboard> {
+  const supabase = getInfraestructuraDbClient();
+
+  const [qrCodesResult, activosResult, sectoresResult, equipamientosResult] = await Promise.all([
+    supabase
+      .from('infraestructura_qr_codigo')
+      .select('*')
+      .eq('activo', true)
+      .order('target_type', { ascending: true })
+      .order('titulo', { ascending: true }),
+    supabase
+      .from('infraestructura_activo')
+      .select('id,nombre,codigo,estado,criticidad,sector:infraestructura_sector(nombre,tipo)')
+      .eq('activo', true)
+      .order('nombre', { ascending: true }),
+    supabase
+      .from('infraestructura_sector')
+      .select('id,nombre,codigo,tipo,ubicacion_referencia')
+      .eq('activo', true)
+      .order('tipo', { ascending: true })
+      .order('nombre', { ascending: true }),
+    supabase
+      .from('equipamiento')
+      .select('id,nombre,tipo,marca,modelo,ubicacion,estado,activo')
+      .eq('activo', true)
+      .order('nombre', { ascending: true }),
+  ]);
+
+  const firstError = qrCodesResult.error || activosResult.error || sectoresResult.error || equipamientosResult.error;
+  if (firstError) {
+    throw new Error(firstError.message);
+  }
+
+  const activos = (activosResult.data ?? []).map((activo: any) => ({
+    id: String(activo.id),
+    nombre: String(activo.nombre ?? 'Activo edilicio'),
+    codigo: activo.codigo ?? null,
+    target_type: 'infra_activo',
+    subtitulo: [activo.sector?.nombre, labelFromDbValue(activo.estado), labelFromDbValue(activo.criticidad)]
+      .filter(Boolean)
+      .join(' · '),
+    metadata: {
+      codigo_activo: activo.codigo ?? null,
+      sector: activo.sector?.nombre ?? null,
+      estado: activo.estado ?? null,
+      criticidad: activo.criticidad ?? null,
+    },
+  }));
+
+  const sectores = (sectoresResult.data ?? []).map((sector: any) => ({
+    id: String(sector.id),
+    nombre: String(sector.nombre ?? 'Sector'),
+    codigo: sector.codigo ?? null,
+    target_type: 'infra_sector',
+    subtitulo: [labelFromDbValue(sector.tipo), sector.ubicacion_referencia].filter(Boolean).join(' · '),
+    metadata: {
+      codigo_sector: sector.codigo ?? null,
+      tipo: sector.tipo ?? null,
+      ubicacion_referencia: sector.ubicacion_referencia ?? null,
+    },
+  }));
+
+  const equipamientos = (equipamientosResult.data ?? []).map((equipo: any) => ({
+    id: String(equipo.id),
+    nombre: String(equipo.nombre ?? 'Equipamiento'),
+    codigo: null,
+    target_type: 'equipamiento',
+    subtitulo: [equipo.tipo, equipo.marca, equipo.modelo, equipo.ubicacion, labelFromDbValue(equipo.estado)]
+      .filter(Boolean)
+      .join(' · '),
+    metadata: {
+      tipo: equipo.tipo ?? null,
+      marca: equipo.marca ?? null,
+      modelo: equipo.modelo ?? null,
+      ubicacion: equipo.ubicacion ?? null,
+      estado: equipo.estado ?? null,
+    },
+  }));
+
+  return {
+    generated_at: new Date().toISOString(),
+    qrCodes: (qrCodesResult.data ?? []) as InfraestructuraQrCodigo[],
+    activos,
+    sectores,
+    equipamientos,
+  };
+}
+
+function labelFromDbValue(value?: string | null) {
+  if (!value) return '';
+  return String(value).replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 export async function createInfraestructuraSector(
