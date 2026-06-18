@@ -130,6 +130,11 @@ export const sections: SidebarSectionType[] = [
         level: 2,
       },
       { title: "Equipamientos", link: "/dashboard/equipamientos", level: 2 },
+      {
+        title: "Preventivos Equipos",
+        link: "/dashboard/infraestructura/equipamientos/preventivos",
+        level: 2,
+      },
     ],
   },
   {

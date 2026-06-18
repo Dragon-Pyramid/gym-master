@@ -178,6 +178,13 @@ export const MENU_PERMISSION_GROUPS: Array<{
         group: "Infraestructura",
         roles: ["admin", "usuario"],
       },
+      {
+        key: "Preventivos Equipos",
+        label: "Preventivos Equipos",
+        path: "/dashboard/infraestructura/equipamientos/preventivos",
+        group: "Infraestructura",
+        roles: ["admin", "usuario"],
+      },
     ],
   },
   {
