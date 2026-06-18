@@ -19,6 +19,63 @@ type OpenApiPathItem = Record<string, OpenApiOperation>;
 const endpointDefinitions: EndpointDefinition[] = [
 
   {
+    path: "/api/equipamientos/preventivos",
+    methods: ["GET"],
+    tag: "Equipamientos",
+    summary: "Dashboard preventivos de equipamientos",
+    description:
+      "Devuelve planes preventivos, órdenes técnicas, historial técnico, equipos y métricas de mantenimiento preventivo de máquinas.",
+    auth: true,
+    admin: false,
+    notImplemented: false,
+    statuses: [200, 401, 500],
+    queryParams: [],
+    source: "src/app/api/equipamientos/preventivos/route.ts",
+  },
+  {
+    path: "/api/equipamientos/preventivos/planes",
+    methods: ["POST"],
+    tag: "Equipamientos",
+    summary: "Crear plan preventivo de equipamiento",
+    description:
+      "Crea un plan preventivo por tipo de máquina con tareas técnicas y frecuencia en días.",
+    auth: true,
+    admin: false,
+    notImplemented: false,
+    statuses: [201, 400, 401, 500],
+    queryParams: [],
+    source: "src/app/api/equipamientos/preventivos/planes/route.ts",
+  },
+  {
+    path: "/api/equipamientos/preventivos/ordenes",
+    methods: ["POST"],
+    tag: "Equipamientos",
+    summary: "Crear orden técnica de equipamiento",
+    description:
+      "Crea una orden técnica preventiva, correctiva, de inspección, reparación o cambio de pieza para un equipamiento.",
+    auth: true,
+    admin: false,
+    notImplemented: false,
+    statuses: [201, 400, 401, 500],
+    queryParams: [],
+    source: "src/app/api/equipamientos/preventivos/ordenes/route.ts",
+  },
+  {
+    path: "/api/equipamientos/preventivos/ordenes/{id}",
+    methods: ["PATCH"],
+    tag: "Equipamientos",
+    summary: "Actualizar orden técnica de equipamiento",
+    description:
+      "Permite completar una orden técnica, registrar resultado, costo real, downtime y actualizar próxima revisión del equipo.",
+    auth: true,
+    admin: false,
+    notImplemented: false,
+    statuses: [200, 400, 401, 500],
+    queryParams: [],
+    source: "src/app/api/equipamientos/preventivos/ordenes/[id]/route.ts",
+  },
+
+  {
     path: "/api/infraestructura/mantenimiento-edilicio",
     methods: ["GET"],
     tag: "Infraestructura",
