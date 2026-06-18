@@ -8,6 +8,7 @@ import type {
   InfraestructuraChecklistEjecucion,
   InfraestructuraMantenimientoDashboard,
   InfraestructuraQrCodigo,
+  InfraestructuraQrLabelsDashboard,
   InfraestructuraQrResolveResult,
   InfraestructuraSector,
   MantenimientoEdilicioOrden,
@@ -70,6 +71,16 @@ export async function updateMantenimientoEdilicioOrdenClient(
   return parseJsonResponse<{ message: string; data: MantenimientoEdilicioOrden }>(response);
 }
 
+
+
+export async function getInfraestructuraQrLabelsDashboardClient() {
+  return parseJsonResponse<InfraestructuraQrLabelsDashboard>(
+    await fetch('/api/infraestructura/qr/labels', {
+      method: 'GET',
+      cache: 'no-store',
+    }),
+  );
+}
 
 export async function createInfraestructuraQrCodeClient(payload: CreateInfraestructuraQrDTO) {
   const response = await fetch('/api/infraestructura/qr', {

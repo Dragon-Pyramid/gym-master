@@ -175,6 +175,20 @@ const endpointDefinitions: EndpointDefinition[] = [
     source: "src/app/api/infraestructura/qr/resolve/route.ts",
   },
   {
+    path: "/api/infraestructura/qr/labels",
+    methods: ["GET"],
+    tag: "Infraestructura",
+    summary: "Dashboard de etiquetas QR",
+    description:
+      "Devuelve códigos QR activos y destinos imprimibles para etiquetas A4 de activos edilicios, sectores y equipamientos.",
+    auth: true,
+    admin: false,
+    notImplemented: false,
+    statuses: [200, 401, 500],
+    queryParams: [],
+    source: "src/app/api/infraestructura/qr/labels/route.ts",
+  },
+  {
     path: "/api/infraestructura/checklists/ejecuciones",
     methods: ["POST"],
     tag: "Infraestructura",

@@ -244,6 +244,24 @@ export interface InfraestructuraQrResolveResult {
   metadata?: Record<string, unknown> | null;
 }
 
+
+export interface InfraestructuraQrLabelTarget {
+  id: string;
+  nombre: string;
+  codigo?: string | null;
+  target_type: InfraestructuraQrTargetType | string;
+  subtitulo?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface InfraestructuraQrLabelsDashboard {
+  generated_at: string;
+  qrCodes: InfraestructuraQrCodigo[];
+  activos: InfraestructuraQrLabelTarget[];
+  sectores: InfraestructuraQrLabelTarget[];
+  equipamientos: InfraestructuraQrLabelTarget[];
+}
+
 export interface InfraestructuraMantenimientoMetricas {
   totalSectores: number;
   totalActivos: number;

@@ -129,6 +129,11 @@ export const sections: SidebarSectionType[] = [
         link: "/dashboard/infraestructura/lector-qr-barra",
         level: 2,
       },
+      {
+        title: "Etiquetas QR",
+        link: "/dashboard/infraestructura/etiquetas-qr",
+        level: 2,
+      },
       { title: "Equipamientos", link: "/dashboard/equipamientos", level: 2 },
       {
         title: "Preventivos Equipos",

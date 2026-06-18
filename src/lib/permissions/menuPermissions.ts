@@ -172,6 +172,13 @@ export const MENU_PERMISSION_GROUPS: Array<{
         roles: ["admin", "usuario"],
       },
       {
+        key: "Etiquetas QR",
+        label: "Etiquetas QR",
+        path: "/dashboard/infraestructura/etiquetas-qr",
+        group: "Infraestructura",
+        roles: ["admin", "usuario"],
+      },
+      {
         key: "Equipamientos",
         label: "Equipamientos",
         path: "/dashboard/equipamientos",
