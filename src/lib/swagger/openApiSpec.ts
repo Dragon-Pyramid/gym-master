@@ -1631,6 +1631,20 @@ const endpointDefinitions: EndpointDefinition[] = [
     source: "src/app/api/productos/stock-movimientos/route.ts",
   },
   {
+    path: "/api/comercial/stock-ledger",
+    methods: ["GET", "POST"],
+    tag: "Comercial / Stock",
+    summary: "Stock ledger comercial por ubicaciones",
+    description:
+      "Devuelve dashboard de stock por ubicación, movimientos auditables, ubicaciones activas y permite registrar compras, ajustes, transferencias, mermas, vencimientos, conteos físicos y uso interno. Actualiza el stock total del producto para mantener compatibilidad con ventas y reportes existentes.",
+    auth: true,
+    admin: true,
+    notImplemented: false,
+    statuses: [200, 201, 400, 401, 500],
+    queryParams: [],
+    source: "src/app/api/comercial/stock-ledger/route.ts",
+  },
+  {
     path: "/api/productos",
     methods: ["GET", "POST", "PUT", "DELETE"],
     tag: "Comercial",

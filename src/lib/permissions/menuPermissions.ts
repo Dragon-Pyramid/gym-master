@@ -259,6 +259,13 @@ export const MENU_PERMISSION_GROUPS: Array<{
         roles: ["admin", "usuario"],
       },
       {
+        key: "Stock Ledger",
+        label: "Stock Ledger",
+        path: "/dashboard/comercial/stock-ledger",
+        group: "Comercial y Stock",
+        roles: ["admin", "usuario"],
+      },
+      {
         key: "Proveedores",
         label: "Proveedores",
         path: "/dashboard/proveedores",

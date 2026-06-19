@@ -15,6 +15,7 @@ import {
   ShoppingCart,
   Store,
   Truck,
+  Warehouse,
 } from 'lucide-react';
 import { AppHeader } from '@/components/header/AppHeader';
 import { AppFooter } from '@/components/footer/AppFooter';
@@ -285,6 +286,12 @@ export default function ComercialKioscoPage() {
                 icon={Package}
               />
               <ActionCard
+                title='Stock ledger'
+                description='Stock por ubicación, movimientos auditables, conteo físico, mermas, transferencias y reposición base.'
+                href='/dashboard/comercial/stock-ledger'
+                icon={Warehouse}
+              />
+              <ActionCard
                 title='Ventas y tickets'
                 description='Ventas a socios o consumidores finales. La emisión de ticket formal queda preparada para la siguiente etapa.'
                 href='/dashboard/ventas'
@@ -320,12 +327,7 @@ export default function ComercialKioscoPage() {
                 href='/dashboard/servicios'
                 icon={Store}
               />
-              <ActionCard
-                title='Ajustes y recuento físico'
-                description='Próxima etapa: comparar stock real contra stock del sistema, registrar diferencias y auditar motivos.'
-                icon={ClipboardList}
-                disabled
-              />
+
               <ActionCard
                 title='Devoluciones y mermas'
                 description='Próxima etapa: devolución de productos vendidos, reintegro a stock o registro como merma/no apto.'
