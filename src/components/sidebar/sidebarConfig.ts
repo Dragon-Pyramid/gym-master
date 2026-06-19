@@ -176,6 +176,7 @@ export const sections: SidebarSectionType[] = [
       { title: "Ventas", link: "/dashboard/ventas", level: 2 },
       { title: "Compras", link: "/dashboard/compras", level: 2 },
       { title: "Productos", link: "/dashboard/productos", level: 2 },
+      { title: "Stock Ledger", link: "/dashboard/comercial/stock-ledger", level: 2 },
       { title: "Proveedores", link: "/dashboard/proveedores", level: 2 },
       { title: "Servicios", link: "/dashboard/servicios", level: 2 },
     ],
