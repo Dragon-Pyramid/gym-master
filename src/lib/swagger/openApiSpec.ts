@@ -1646,6 +1646,21 @@ const endpointDefinitions: EndpointDefinition[] = [
     source: "src/app/api/comercial/kiosco-pos/route.ts",
   },
 
+
+  {
+    path: "/api/comercial/compras-reposicion",
+    methods: ["GET", "POST"],
+    tag: "Comercial / Compras",
+    summary: "Compras, proveedores y reposición",
+    description:
+      "Devuelve dashboard de proveedores por producto, reposición sugerida, órdenes de compra y permite asociar producto-proveedor, crear órdenes y recibir mercadería integrada al Stock Ledger.",
+    auth: true,
+    admin: true,
+    notImplemented: false,
+    statuses: [200, 201, 400, 401, 500],
+    queryParams: [],
+    source: "src/app/api/comercial/compras-reposicion/route.ts",
+  },
   {
     path: "/api/comercial/caja",
     methods: ["GET", "POST"],
