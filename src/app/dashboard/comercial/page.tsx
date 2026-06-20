@@ -318,8 +318,8 @@ export default function ComercialKioscoPage() {
               />
               <ActionCard
                 title='Compras y reposición'
-                description='Registrá compras a proveedores, actualizá stock y mantené trazabilidad de costos.'
-                href='/dashboard/compras'
+                description='Generá reposición sugerida, órdenes de compra y recepción integrada al Stock Ledger.'
+                href='/dashboard/comercial/compras-reposicion'
                 icon={ShoppingCart}
               />
               <ActionCard

@@ -252,6 +252,13 @@ export const MENU_PERMISSION_GROUPS: Array<{
         roles: ["admin", "usuario"],
       },
       {
+        key: "Compras / Reposición",
+        label: "Compras / Reposición",
+        path: "/dashboard/comercial/compras-reposicion",
+        group: "Comercial y Stock",
+        roles: ["admin", "usuario"],
+      },
+      {
         key: "Ventas",
         label: "Ventas",
         path: "/dashboard/ventas",
