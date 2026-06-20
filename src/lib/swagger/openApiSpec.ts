@@ -1630,6 +1630,21 @@ const endpointDefinitions: EndpointDefinition[] = [
     queryParams: ["producto_id", "limit"],
     source: "src/app/api/productos/stock-movimientos/route.ts",
   },
+
+  {
+    path: "/api/comercial/kiosco-pos",
+    methods: ["GET", "POST"],
+    tag: "Comercial / POS",
+    summary: "POS/Kiosco venta rápida",
+    description:
+      "Devuelve productos, ubicaciones, stock por ubicación y ventas recientes para POS/Kiosco. También registra ventas rápidas, crea cabecera/detalle, descuenta stock desde la ubicación seleccionada, actualiza producto.stock, registra stock ledger y deja ticket imprimible.",
+    auth: true,
+    admin: true,
+    notImplemented: false,
+    statuses: [200, 201, 400, 401, 500],
+    queryParams: [],
+    source: "src/app/api/comercial/kiosco-pos/route.ts",
+  },
   {
     path: "/api/comercial/stock-ledger",
     methods: ["GET", "POST"],

@@ -173,6 +173,7 @@ export const sections: SidebarSectionType[] = [
     icon: ShoppingCart,
     items: [
       { title: "Comercial / Kiosco", link: "/dashboard/comercial", level: 2 },
+      { title: "POS / Kiosco", link: "/dashboard/comercial/kiosco", level: 2 },
       { title: "Ventas", link: "/dashboard/ventas", level: 2 },
       { title: "Compras", link: "/dashboard/compras", level: 2 },
       { title: "Productos", link: "/dashboard/productos", level: 2 },
