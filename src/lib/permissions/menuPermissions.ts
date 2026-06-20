@@ -245,6 +245,13 @@ export const MENU_PERMISSION_GROUPS: Array<{
         roles: ["admin", "usuario"],
       },
       {
+        key: "Caja / Cashup",
+        label: "Caja / Cashup",
+        path: "/dashboard/comercial/caja",
+        group: "Comercial y Stock",
+        roles: ["admin", "usuario"],
+      },
+      {
         key: "Ventas",
         label: "Ventas",
         path: "/dashboard/ventas",
@@ -449,6 +456,7 @@ export const DEFAULT_MENU_PERMISSIONS_BY_ROLE: Record<AppRole, string[]> = {
     "Pagos",
     "Comercial / Kiosco",
     "POS / Kiosco",
+    "Caja / Cashup",
     "Ventas",
     "Notificaciones",
     "Mensajes Socios",

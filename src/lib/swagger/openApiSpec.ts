@@ -1645,6 +1645,21 @@ const endpointDefinitions: EndpointDefinition[] = [
     queryParams: [],
     source: "src/app/api/comercial/kiosco-pos/route.ts",
   },
+
+  {
+    path: "/api/comercial/caja",
+    methods: ["GET", "POST"],
+    tag: "Comercial / Caja",
+    summary: "Caja comercial y cashup",
+    description:
+      "Gestiona apertura de caja, movimientos manuales de ingreso/retiro, ventas asociadas al turno, cierre con monto contado, diferencia y datos para reporte X/Z.",
+    auth: true,
+    admin: true,
+    notImplemented: false,
+    statuses: [200, 201, 400, 401, 500],
+    queryParams: [],
+    source: "src/app/api/comercial/caja/route.ts",
+  },
   {
     path: "/api/comercial/stock-ledger",
     methods: ["GET", "POST"],

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   AlertTriangle,
   BarChart3,
+  Banknote,
   Boxes,
   DollarSign,
   ClipboardList,
@@ -290,6 +291,12 @@ export default function ComercialKioscoPage() {
                 description='Venta rápida con carrito, búsqueda por código de barras, validación de stock y ticket imprimible básico.'
                 href='/dashboard/comercial/kiosco'
                 icon={Store}
+              />
+              <ActionCard
+                title='Caja / Cashup'
+                description='Apertura, ingresos, retiros, cierre esperado vs contado y reporte X/Z del turno comercial.'
+                href='/dashboard/comercial/caja'
+                icon={Banknote}
               />
               <ActionCard
                 title='Stock ledger'

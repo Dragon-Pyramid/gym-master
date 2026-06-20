@@ -108,6 +108,19 @@ async function getProductTotalStock(supabase: ReturnType<typeof getComercialDbCl
   return (data ?? []).reduce((total, row) => total + Number(row.cantidad ?? 0), 0);
 }
 
+async function getOpenCashSessionId(supabase: ReturnType<typeof getComercialDbClient>) {
+  const { data, error } = await supabase
+    .from('comercial_caja_sesion')
+    .select('id')
+    .eq('estado', 'abierta')
+    .order('fecha_apertura', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) return null;
+  return data?.id ?? null;
+}
+
 async function getLocationStockRow(
   supabase: ReturnType<typeof getComercialDbClient>,
   productoId: string,
@@ -276,6 +289,7 @@ export async function createComercialKioscoPosVenta(
 
   const total = normalizedItems.reduce((sum, item) => sum + item.total_linea, 0);
   const comprobanteCodigo = buildComprobanteCodigo();
+  const cajaSesionId = await getOpenCashSessionId(supabase);
 
   const { data: venta, error: ventaError } = await supabase
     .from('venta')
@@ -292,6 +306,7 @@ export async function createComercialKioscoPosVenta(
       activo: true,
       comprobante_codigo: comprobanteCodigo,
       registrado_por: user?.id ?? null,
+      ...(cajaSesionId ? { caja_sesion_id: cajaSesionId } : {}),
     })
     .select('*')
     .single();
