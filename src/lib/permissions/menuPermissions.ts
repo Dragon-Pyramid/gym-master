@@ -238,6 +238,13 @@ export const MENU_PERMISSION_GROUPS: Array<{
         roles: ["admin", "usuario"],
       },
       {
+        key: "POS / Kiosco",
+        label: "POS / Kiosco",
+        path: "/dashboard/comercial/kiosco",
+        group: "Comercial y Stock",
+        roles: ["admin", "usuario"],
+      },
+      {
         key: "Ventas",
         label: "Ventas",
         path: "/dashboard/ventas",
@@ -441,6 +448,7 @@ export const DEFAULT_MENU_PERMISSIONS_BY_ROLE: Record<AppRole, string[]> = {
     "Salida / Aforo",
     "Pagos",
     "Comercial / Kiosco",
+    "POS / Kiosco",
     "Ventas",
     "Notificaciones",
     "Mensajes Socios",

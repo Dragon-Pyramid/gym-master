@@ -286,6 +286,12 @@ export default function ComercialKioscoPage() {
                 icon={Package}
               />
               <ActionCard
+                title='POS / Kiosco'
+                description='Venta rápida con carrito, búsqueda por código de barras, validación de stock y ticket imprimible básico.'
+                href='/dashboard/comercial/kiosco'
+                icon={Store}
+              />
+              <ActionCard
                 title='Stock ledger'
                 description='Stock por ubicación, movimientos auditables, conteo físico, mermas, transferencias y reposición base.'
                 href='/dashboard/comercial/stock-ledger'
