@@ -1647,6 +1647,21 @@ const endpointDefinitions: EndpointDefinition[] = [
   },
 
 
+
+  {
+    path: "/api/comercial/servicios-promociones",
+    methods: ["GET", "POST"],
+    tag: "Comercial / Servicios",
+    summary: "Servicios, packs, promociones y cupones",
+    description:
+      "Devuelve dashboard comercial de productos, servicios, packs, promociones, cupones, canales de venta y grupos de cliente. Permite crear packs comerciales, promociones y cupones.",
+    auth: true,
+    admin: true,
+    notImplemented: false,
+    statuses: [200, 201, 400, 401, 500],
+    queryParams: [],
+    source: "src/app/api/comercial/servicios-promociones/route.ts",
+  },
   {
     path: "/api/comercial/compras-reposicion",
     methods: ["GET", "POST"],

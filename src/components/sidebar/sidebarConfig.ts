@@ -182,6 +182,7 @@ export const sections: SidebarSectionType[] = [
       { title: "Stock Ledger", link: "/dashboard/comercial/stock-ledger", level: 2 },
       { title: "Proveedores", link: "/dashboard/proveedores", level: 2 },
       { title: "Servicios", link: "/dashboard/servicios", level: 2 },
+      { title: "Servicios / Packs / Promos", link: "/dashboard/comercial/servicios-promociones", level: 2 },
     ],
   },
   {

@@ -336,8 +336,8 @@ export default function ComercialKioscoPage() {
               />
               <ActionCard
                 title='Servicios adicionales'
-                description='Servicios parametrizables como masajes, cama solar o sesiones especiales para socios y no socios.'
-                href='/dashboard/servicios'
+                description='Servicios vendibles, packs de clases, promociones, cupones, canales y grupos de cliente.'
+                href='/dashboard/comercial/servicios-promociones'
                 icon={Store}
               />
 
