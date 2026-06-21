@@ -300,6 +300,13 @@ export const MENU_PERMISSION_GROUPS: Array<{
         group: "Comercial y Stock",
         roles: ["admin", "usuario"],
       },
+      {
+        key: "Servicios / Packs / Promos",
+        label: "Servicios / Packs / Promos",
+        path: "/dashboard/comercial/servicios-promociones",
+        group: "Comercial y Stock",
+        roles: ["admin", "usuario"],
+      },
     ],
   },
   {
