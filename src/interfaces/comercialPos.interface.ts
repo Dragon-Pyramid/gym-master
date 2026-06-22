@@ -42,6 +42,7 @@ export interface ComercialPosVentaDetalle {
   subtotal?: number | null;
   total_linea?: number | null;
   producto?: { id: string; nombre: string } | null;
+  servicio?: { id: string; nombre: string } | null;
 }
 
 export interface ComercialPosVentaResumen {
@@ -75,7 +76,9 @@ export interface ComercialPosDashboard {
 }
 
 export interface CreateComercialPosVentaItemDTO {
-  producto_id: string;
+  item_tipo?: 'producto' | 'servicio';
+  producto_id?: string | null;
+  servicio_id?: string | null;
   cantidad: number;
   precio_unitario?: number | null;
   descuento?: number | null;

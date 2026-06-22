@@ -1649,6 +1649,35 @@ const endpointDefinitions: EndpointDefinition[] = [
 
 
   {
+    path: "/api/comercial/mobile-scanner",
+    methods: ["GET", "POST"],
+    tag: "Comercial / POS",
+    summary: "Scanner móvil para POS/Kiosco",
+    description:
+      "Crea/cierra sesiones temporales de scanner móvil y consulta eventos pendientes para conectar celular y PC sin hardware lector dedicado.",
+    auth: true,
+    admin: true,
+    notImplemented: false,
+    statuses: [200, 201, 400, 401, 500],
+    queryParams: ["session_id"],
+    source: "src/app/api/comercial/mobile-scanner/route.ts",
+  },
+  {
+    path: "/api/comercial/mobile-scanner/public/{token}",
+    methods: ["GET", "POST"],
+    tag: "Comercial / POS",
+    summary: "Endpoint público por token para scanner móvil",
+    description:
+      "Permite que el celular conectado por QR consulte la sesión y envíe códigos QR/barra al POS. El token temporal controla la sesión.",
+    auth: false,
+    admin: false,
+    notImplemented: false,
+    statuses: [200, 201, 400, 404, 500],
+    queryParams: [],
+    source: "src/app/api/comercial/mobile-scanner/public/[token]/route.ts",
+  },
+
+  {
     path: "/api/comercial/servicios-promociones",
     methods: ["GET", "POST"],
     tag: "Comercial / Servicios",
