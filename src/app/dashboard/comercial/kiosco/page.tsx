@@ -10,6 +10,7 @@ import {
   PackagePlus,
   Printer,
   RefreshCw,
+  Smartphone,
   Search,
   ShoppingCart,
   Store,
@@ -36,6 +37,13 @@ import {
 } from '@/services/comercialKioscoPosService';
 import { formatCurrencyARS } from '@/lib/comercial/productos';
 import { toast } from 'sonner';
+import type { ComercialScannerEvent, ComercialScannerSession } from '@/interfaces/comercialMobileScanner.interface';
+import {
+  closeComercialMobileScannerSession,
+  createComercialMobileScannerSession,
+  getComercialMobileScannerState,
+  markComercialMobileScannerEventProcessed,
+} from '@/services/comercialMobileScannerService';
 
 const initialDashboard: ComercialPosDashboard = {
   productos: [],
@@ -53,7 +61,10 @@ const initialDashboard: ComercialPosDashboard = {
 };
 
 type CartItem = {
-  producto_id: string;
+  key: string;
+  item_tipo: 'producto' | 'servicio';
+  producto_id?: string | null;
+  servicio_id?: string | null;
   nombre: string;
   sku?: string | null;
   codigo_barras?: string | null;
@@ -95,7 +106,7 @@ function buildTicketHtml(sale: ComercialPosVentaResumen) {
   const detalles = sale.venta_detalle ?? sale.detalles ?? [];
   const rows = detalles
     .map((detalle) => {
-      const nombre = detalle.producto?.nombre || 'Producto';
+      const nombre = detalle.producto?.nombre || detalle.servicio?.nombre || (detalle.item_tipo === 'servicio' ? 'Servicio' : 'Producto');
       const lineTotal = Number(detalle.total_linea ?? (Number(detalle.cantidad) * Number(detalle.precio_unitario) - Number(detalle.descuento ?? 0)));
       return `<tr><td>${detalle.cantidad} x ${nombre}</td><td style="text-align:right">${formatCurrencyARS(lineTotal)}</td></tr>`;
     })
@@ -139,6 +150,9 @@ export default function ComercialKioscoPosPage() {
   const [clienteDocumento, setClienteDocumento] = useState('');
   const [metodoPago, setMetodoPago] = useState('efectivo');
   const [lastSale, setLastSale] = useState<ComercialPosVentaResumen | null>(null);
+  const [scannerSession, setScannerSession] = useState<ComercialScannerSession | null>(null);
+  const [scannerLoading, setScannerLoading] = useState(false);
+  const [scannerEvents, setScannerEvents] = useState<ComercialScannerEvent[]>([]);
 
   useEffect(() => {
     initializeAuth();
@@ -206,21 +220,25 @@ export default function ComercialKioscoPosPage() {
     }
 
     setCart((current) => {
-      const existing = current.find((item) => item.producto_id === product.producto_id);
+      const key = `producto:${product.producto_id}`;
+      const existing = current.find((item) => item.key === key);
       if (existing) {
         if (existing.cantidad + 1 > existing.stockDisponible) {
           toast.error('No hay stock suficiente en la ubicación seleccionada');
           return current;
         }
         return current.map((item) =>
-          item.producto_id === product.producto_id ? { ...item, cantidad: item.cantidad + 1 } : item
+          item.key === key ? { ...item, cantidad: item.cantidad + 1 } : item
         );
       }
 
       return [
         ...current,
         {
+          key,
+          item_tipo: 'producto',
           producto_id: product.producto_id,
+          servicio_id: null,
           nombre: product.producto_nombre,
           sku: product.sku,
           codigo_barras: product.codigo_barras,
@@ -233,18 +251,46 @@ export default function ComercialKioscoPosPage() {
     });
   }
 
-  function updateCartQuantity(productId: string, quantity: number) {
+  function addServiceToCart(event: ComercialScannerEvent) {
+    if (!event.servicio_id) return;
+    const key = `servicio:${event.servicio_id}`;
+    const servicePayload = (event.payload?.servicio || {}) as any;
+    const precio = Number(servicePayload.precio ?? 0);
+
+    setCart((current) => {
+      const existing = current.find((item) => item.key === key);
+      if (existing) {
+        return current.map((item) => item.key === key ? { ...item, cantidad: item.cantidad + 1 } : item);
+      }
+      return [
+        ...current,
+        {
+          key,
+          item_tipo: 'servicio',
+          producto_id: null,
+          servicio_id: event.servicio_id,
+          nombre: event.item_nombre || 'Servicio',
+          precio_unitario: precio,
+          cantidad: 1,
+          descuento: 0,
+          stockDisponible: 999999,
+        },
+      ];
+    });
+  }
+
+  function updateCartQuantity(key: string, quantity: number) {
     setCart((current) =>
       current.map((item) => {
-        if (item.producto_id !== productId) return item;
+        if (item.key !== key) return item;
         const cantidad = Math.max(1, Math.min(Number(quantity) || 1, item.stockDisponible));
         return { ...item, cantidad };
       })
     );
   }
 
-  function removeFromCart(productId: string) {
-    setCart((current) => current.filter((item) => item.producto_id !== productId));
+  function removeFromCart(key: string) {
+    setCart((current) => current.filter((item) => item.key !== key));
   }
 
   function handleBarcodeSubmit(event: FormEvent<HTMLFormElement>) {
@@ -290,7 +336,9 @@ export default function ComercialKioscoPosPage() {
         ubicacion_stock_id: ubicacionId,
         observaciones: 'Venta rápida POS/Kiosco',
         items: cart.map((item) => ({
-          producto_id: item.producto_id,
+          item_tipo: item.item_tipo,
+          producto_id: item.producto_id ?? null,
+          servicio_id: item.servicio_id ?? null,
           cantidad: item.cantidad,
           precio_unitario: item.precio_unitario,
           descuento: item.descuento,
@@ -320,6 +368,98 @@ export default function ComercialKioscoPosPage() {
     ticket.document.close();
   }
 
+  const scannerUrl = useMemo(() => {
+    if (!scannerSession?.token) return '';
+    if (typeof window === 'undefined') return '';
+    return `${window.location.origin}/mobile-scanner/${scannerSession.token}`;
+  }, [scannerSession?.token]);
+
+  function buildQrImage(value: string, size = 220) {
+    return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=10&data=${encodeURIComponent(value)}`;
+  }
+
+  async function handleCreateScannerSession() {
+    setScannerLoading(true);
+    try {
+      const session = await createComercialMobileScannerSession();
+      setScannerSession(session);
+      setScannerEvents([]);
+      toast.success('Scanner móvil creado. Escaneá el QR con el celular.');
+    } catch (error: any) {
+      toast.error(error?.message || 'No se pudo crear scanner móvil');
+    } finally {
+      setScannerLoading(false);
+    }
+  }
+
+  async function handleCloseScannerSession() {
+    if (!scannerSession) return;
+    setScannerLoading(true);
+    try {
+      const session = await closeComercialMobileScannerSession(scannerSession.id);
+      setScannerSession(session);
+      toast.success('Scanner móvil cerrado');
+    } catch (error: any) {
+      toast.error(error?.message || 'No se pudo cerrar scanner móvil');
+    } finally {
+      setScannerLoading(false);
+    }
+  }
+
+  async function processScannerEvent(event: ComercialScannerEvent) {
+    try {
+      if (event.item_tipo === 'producto' && event.producto_id) {
+        const product = dashboard.productos.find((item) => item.producto_id === event.producto_id);
+        if (!product) {
+          toast.error(`Producto escaneado no disponible en el POS: ${event.item_nombre || event.codigo}`);
+        } else {
+          addToCart({
+            ...product,
+            stock_ubicacion: ubicacionId ? getStockForLocation(product.producto_id, ubicacionId, dashboard) : product.stock_total,
+          });
+          toast.success(`Agregado al carrito: ${product.producto_nombre}`);
+        }
+      } else if (event.item_tipo === 'servicio' && event.servicio_id) {
+        addServiceToCart(event);
+        toast.success(`Servicio agregado al carrito: ${event.item_nombre || event.codigo}`);
+      } else if (event.item_tipo === 'pack') {
+        toast.info(`Pack detectado: ${event.item_nombre || event.codigo}. La venta directa de packs queda para la integración POS avanzada.`);
+      } else if (event.tipo_resuelto === 'infraestructura') {
+        toast.info(`Código recibido pero no es vendible en POS: ${event.item_nombre || event.codigo}`);
+      } else {
+        toast.error(`Código no encontrado: ${event.codigo}`);
+      }
+
+      await markComercialMobileScannerEventProcessed(event.id);
+    } catch (error: any) {
+      toast.error(error?.message || 'No se pudo procesar evento del scanner');
+    }
+  }
+
+  async function pollScannerEvents() {
+    if (!scannerSession?.id || scannerSession.estado !== 'activa') return;
+    try {
+      const state = await getComercialMobileScannerState(scannerSession.id);
+      if (state.session) setScannerSession(state.session);
+      setScannerEvents(state.recentEvents ?? []);
+      for (const event of state.pendingEvents ?? []) {
+        await processScannerEvent(event);
+      }
+    } catch (error: any) {
+      toast.error(error?.message || 'No se pudo consultar el scanner móvil');
+    }
+  }
+
+  useEffect(() => {
+    if (!scannerSession?.id || scannerSession.estado !== 'activa') return;
+    const interval = window.setInterval(() => {
+      pollScannerEvents();
+    }, 1800);
+    return () => window.clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scannerSession?.id, scannerSession?.estado, dashboard, ubicacionId]);
+
+
   if (!isInitialized) return <div>Cargando...</div>;
   if (!isAuthenticated) return null;
 
@@ -347,6 +487,10 @@ export default function ComercialKioscoPosPage() {
                     {loading ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <RefreshCw className='mr-2 h-4 w-4' />}
                     Actualizar
                   </Button>
+                  <Button variant='outline' onClick={handleCreateScannerSession} disabled={scannerLoading}>
+                    {scannerLoading ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <Smartphone className='mr-2 h-4 w-4' />}
+                    Conectar scanner móvil
+                  </Button>
                   <Button asChild variant='outline'>
                     <Link href='/dashboard/comercial/stock-ledger'>Stock Ledger</Link>
                   </Button>
@@ -356,6 +500,51 @@ export default function ComercialKioscoPosPage() {
                 </div>
               </div>
             </section>
+
+
+
+            {scannerSession && (
+              <section className='rounded-2xl border bg-white p-5 shadow-sm'>
+                <div className='grid grid-cols-1 gap-5 lg:grid-cols-[260px_1fr]'>
+                  <div className='flex flex-col items-center rounded-2xl border border-dashed p-4'>
+                    {scannerUrl ? <img src={buildQrImage(scannerUrl, 220)} alt='QR scanner móvil POS' className='h-52 w-52 rounded-xl' /> : <div className='h-52 w-52 rounded-xl bg-slate-100' />}
+                    <p className='mt-3 text-center text-xs text-muted-foreground'>Escaneá este QR con el celular para usarlo como lector del POS.</p>
+                  </div>
+                  <div className='space-y-4'>
+                    <div className='flex flex-col justify-between gap-3 md:flex-row md:items-start'>
+                      <div>
+                        <p className='text-xs font-semibold uppercase tracking-[0.24em] text-emerald-600'>Scanner móvil</p>
+                        <h2 className='text-xl font-bold'>Celular conectado al POS</h2>
+                        <p className='mt-1 text-sm text-muted-foreground'>El celular envía códigos al carrito en tiempo casi real. Funciona con productos por SKU/barcode y QR internos de producto o servicio.</p>
+                      </div>
+                      <div className='flex flex-wrap gap-2'>
+                        <Button variant='outline' onClick={pollScannerEvents}>Verificar ahora</Button>
+                        <Button variant='outline' onClick={handleCloseScannerSession} disabled={scannerLoading || scannerSession.estado !== 'activa'}>Cerrar sesión</Button>
+                      </div>
+                    </div>
+                    <div className='rounded-xl bg-slate-50 p-3 text-xs text-muted-foreground break-all'>
+                      {scannerUrl}
+                    </div>
+                    <div className='grid grid-cols-1 gap-3 md:grid-cols-3'>
+                      <div className='rounded-xl border p-3 text-sm'><span className='text-muted-foreground'>Estado</span><p className='font-semibold'>{scannerSession.estado}</p></div>
+                      <div className='rounded-xl border p-3 text-sm'><span className='text-muted-foreground'>Eventos</span><p className='font-semibold'>{scannerEvents.length}</p></div>
+                      <div className='rounded-xl border p-3 text-sm'><span className='text-muted-foreground'>Expira</span><p className='font-semibold'>{new Date(scannerSession.expira_en).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</p></div>
+                    </div>
+                    {scannerEvents.length > 0 && (
+                      <div className='space-y-2'>
+                        <p className='text-sm font-semibold'>Últimos escaneos</p>
+                        {scannerEvents.slice(0, 5).map((event) => (
+                          <div key={event.id} className='flex items-center justify-between rounded-lg border p-2 text-sm'>
+                            <span>{event.item_nombre || event.codigo}</span>
+                            <span className='text-xs text-muted-foreground'>{event.estado}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
+            )}
 
             <section className='grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5'>
               <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>Ventas hoy</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.ventasHoy}</p></div><Store className='h-6 w-6 text-sky-600' /></CardContent></Card>
@@ -460,15 +649,15 @@ export default function ComercialKioscoPosPage() {
 
                   <div className='space-y-3'>
                     {cart.map((item) => (
-                      <div key={item.producto_id} className='rounded-lg border p-3'>
+                      <div key={item.key} className='rounded-lg border p-3'>
                         <div className='flex items-start justify-between gap-2'>
-                          <div><p className='font-medium'>{item.nombre}</p><p className='text-xs text-muted-foreground'>Disponible: {item.stockDisponible}</p></div>
-                          <Button size='icon' variant='ghost' onClick={() => removeFromCart(item.producto_id)}><Trash2 className='h-4 w-4' /></Button>
+                          <div><p className='font-medium'>{item.nombre}</p><p className='text-xs text-muted-foreground'>{item.item_tipo === 'servicio' ? 'Servicio escaneado' : `Disponible: ${item.stockDisponible}`}</p></div>
+                          <Button size='icon' variant='ghost' onClick={() => removeFromCart(item.key)}><Trash2 className='h-4 w-4' /></Button>
                         </div>
                         <div className='mt-3 grid grid-cols-3 gap-2'>
-                          <Input type='number' min={1} max={item.stockDisponible} value={item.cantidad} onChange={(event) => updateCartQuantity(item.producto_id, Number(event.target.value))} />
-                          <Input type='number' min={0} value={item.precio_unitario} onChange={(event) => setCart((current) => current.map((cartItem) => cartItem.producto_id === item.producto_id ? { ...cartItem, precio_unitario: Number(event.target.value) } : cartItem))} />
-                          <Input type='number' min={0} value={item.descuento} onChange={(event) => setCart((current) => current.map((cartItem) => cartItem.producto_id === item.producto_id ? { ...cartItem, descuento: Number(event.target.value) } : cartItem))} />
+                          <Input type='number' min={1} max={item.stockDisponible} value={item.cantidad} onChange={(event) => updateCartQuantity(item.key, Number(event.target.value))} />
+                          <Input type='number' min={0} value={item.precio_unitario} onChange={(event) => setCart((current) => current.map((cartItem) => cartItem.key === item.key ? { ...cartItem, precio_unitario: Number(event.target.value) } : cartItem))} />
+                          <Input type='number' min={0} value={item.descuento} onChange={(event) => setCart((current) => current.map((cartItem) => cartItem.key === item.key ? { ...cartItem, descuento: Number(event.target.value) } : cartItem))} />
                         </div>
                         <p className='mt-2 text-right text-sm font-semibold'>{formatCurrencyARS(item.cantidad * item.precio_unitario - item.descuento)}</p>
                       </div>

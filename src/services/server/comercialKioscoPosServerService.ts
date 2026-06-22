@@ -57,6 +57,10 @@ function normalizeMetodoPago(value: unknown) {
   return allowed.includes(String(value)) ? String(value) : 'efectivo';
 }
 
+function normalizeItemTipo(value: unknown) {
+  return value === 'servicio' ? 'servicio' : 'producto';
+}
+
 function buildComprobanteCodigo() {
   return `GM-POS-${Date.now().toString(36).toUpperCase()}`;
 }
@@ -188,7 +192,8 @@ export async function getComercialKioscoPosDashboard(): Promise<ComercialPosDash
           descuento,
           subtotal,
           total_linea,
-          producto:producto_id(id, nombre)
+          producto:producto_id(id, nombre),
+          servicio:servicio_id(id, nombre)
         )
       `
       )
@@ -240,50 +245,92 @@ export async function createComercialKioscoPosVenta(
   const metodoPago = normalizeMetodoPago(payload.metodo_pago);
   const items = Array.isArray(payload.items) ? payload.items : [];
 
-  if (!items.length) throw new Error('La venta debe tener al menos un producto');
+  if (!items.length) throw new Error('La venta debe tener al menos un ítem');
   if (clienteTipo === 'socio') throw new Error('La venta POS v1 opera consumidor final o visitante. La venta a socio queda para la etapa de POS avanzado.');
 
   const ubicacion = await getDefaultLocation(supabase, payload.ubicacion_stock_id ?? null);
-  const productoIds = Array.from(new Set(items.map((item) => String(item.producto_id ?? '').trim()).filter(Boolean)));
-  if (!productoIds.length) throw new Error('Debe seleccionar productos válidos');
+  const productoIds = Array.from(new Set(items.map((item) => normalizeItemTipo(item.item_tipo) === 'producto' ? String(item.producto_id ?? '').trim() : '').filter(Boolean)));
+  const servicioIds = Array.from(new Set(items.map((item) => normalizeItemTipo(item.item_tipo) === 'servicio' ? String(item.servicio_id ?? '').trim() : '').filter(Boolean)));
+  if (!productoIds.length && !servicioIds.length) throw new Error('Debe seleccionar productos o servicios válidos');
 
-  const { data: productosData, error: productosError } = await supabase
-    .from('producto')
-    .select('id, nombre, precio, costo, activo')
-    .in('id', productoIds);
+  const [productosResult, serviciosResult] = await Promise.all([
+    productoIds.length
+      ? supabase.from('producto').select('id, nombre, precio, costo, activo').in('id', productoIds)
+      : Promise.resolve({ data: [], error: null } as any),
+    servicioIds.length
+      ? supabase.from('servicio').select('id, nombre, precio, activo').in('id', servicioIds)
+      : Promise.resolve({ data: [], error: null } as any),
+  ]);
 
-  if (productosError) throw new Error(productosError.message);
+  if (productosResult.error) throw new Error(productosResult.error.message);
+  if (serviciosResult.error) throw new Error(serviciosResult.error.message);
 
-  const productosById = new Map((productosData ?? []).map((producto: any) => [producto.id, producto]));
-  const normalizedItems: Array<CreateComercialPosVentaItemDTO & { precio_final: number; total_linea: number; producto_nombre: string; costo: number }> = [];
+  const productosById = new Map<string, any>((productosResult.data ?? []).map((producto: any) => [String(producto.id), producto]));
+  const serviciosById = new Map<string, any>((serviciosResult.data ?? []).map((servicio: any) => [String(servicio.id), servicio]));
+  const normalizedItems: Array<CreateComercialPosVentaItemDTO & {
+    item_tipo: 'producto' | 'servicio';
+    precio_final: number;
+    total_linea: number;
+    item_nombre: string;
+    costo: number;
+  }> = [];
 
   for (const item of items) {
-    const productoId = String(item.producto_id ?? '').trim();
-    const producto = productosById.get(productoId);
-    if (!producto || producto.activo === false) throw new Error('Uno de los productos no existe o está inactivo');
+    const itemTipo = normalizeItemTipo(item.item_tipo);
+    const cantidad = parsePositiveInteger(item.cantidad, 'Cantidad del ítem');
 
-    const cantidad = parsePositiveInteger(item.cantidad, `Cantidad de ${producto.nombre}`);
-    const precio = parseMoney(item.precio_unitario ?? producto.precio, `Precio de ${producto.nombre}`);
-    const descuento = parseMoney(item.descuento ?? 0, `Descuento de ${producto.nombre}`);
-    const subtotal = cantidad * precio;
-    if (descuento > subtotal) throw new Error(`El descuento no puede superar el subtotal de ${producto.nombre}`);
+    if (itemTipo === 'producto') {
+      const productoId = String(item.producto_id ?? '').trim();
+      const producto = productosById.get(productoId);
+      if (!producto || producto.activo === false) throw new Error('Uno de los productos no existe o está inactivo');
 
-    const stockRow = await getLocationStockRow(supabase, productoId, ubicacion.id);
-    const stockUbicacion = Number(stockRow?.cantidad ?? 0);
-    if (!stockRow || stockUbicacion < cantidad) {
-      throw new Error(`Stock insuficiente para ${producto.nombre} en ${ubicacion.nombre}. Disponible: ${stockUbicacion}`);
+      const precio = parseMoney(item.precio_unitario ?? producto.precio, `Precio de ${producto.nombre}`);
+      const descuento = parseMoney(item.descuento ?? 0, `Descuento de ${producto.nombre}`);
+      const subtotal = cantidad * precio;
+      if (descuento > subtotal) throw new Error(`El descuento no puede superar el subtotal de ${producto.nombre}`);
+
+      const stockRow = await getLocationStockRow(supabase, productoId, ubicacion.id);
+      const stockUbicacion = Number(stockRow?.cantidad ?? 0);
+      if (!stockRow || stockUbicacion < cantidad) {
+        throw new Error(`Stock insuficiente para ${producto.nombre} en ${ubicacion.nombre}. Disponible: ${stockUbicacion}`);
+      }
+
+      normalizedItems.push({
+        ...item,
+        item_tipo: 'producto',
+        producto_id: productoId,
+        servicio_id: null,
+        cantidad,
+        precio_unitario: precio,
+        descuento,
+        precio_final: precio,
+        total_linea: subtotal - descuento,
+        item_nombre: producto.nombre,
+        costo: asNumber(producto.costo, 0),
+      });
+      continue;
     }
+
+    const servicioId = String(item.servicio_id ?? '').trim();
+    const servicio = serviciosById.get(servicioId);
+    if (!servicio || servicio.activo === false) throw new Error('Uno de los servicios no existe o está inactivo');
+    const precio = parseMoney(item.precio_unitario ?? servicio.precio, `Precio de ${servicio.nombre}`);
+    const descuento = parseMoney(item.descuento ?? 0, `Descuento de ${servicio.nombre}`);
+    const subtotal = cantidad * precio;
+    if (descuento > subtotal) throw new Error(`El descuento no puede superar el subtotal de ${servicio.nombre}`);
 
     normalizedItems.push({
       ...item,
-      producto_id: productoId,
+      item_tipo: 'servicio',
+      producto_id: null,
+      servicio_id: servicioId,
       cantidad,
       precio_unitario: precio,
       descuento,
       precio_final: precio,
       total_linea: subtotal - descuento,
-      producto_nombre: producto.nombre,
-      costo: asNumber(producto.costo, 0),
+      item_nombre: servicio.nombre,
+      costo: 0,
     });
   }
 
@@ -320,28 +367,32 @@ export async function createComercialKioscoPosVenta(
       .from('venta_detalle')
       .insert({
         venta_id: venta.id,
-        item_tipo: 'producto',
-        producto_id: item.producto_id,
-        servicio_id: null,
+        item_tipo: item.item_tipo,
+        producto_id: item.item_tipo === 'producto' ? item.producto_id : null,
+        servicio_id: item.item_tipo === 'servicio' ? item.servicio_id : null,
         cantidad: item.cantidad,
         precio_unitario: item.precio_final,
         descuento: item.descuento ?? 0,
       })
-      .select('*, producto:producto_id(id, nombre)')
+      .select('*, producto:producto_id(id, nombre), servicio:servicio_id(id, nombre)')
       .single();
 
     if (detalleError) throw new Error(detalleError.message);
     detallesCreados.push(detalle);
 
+    if (item.item_tipo !== 'producto' || !item.producto_id) {
+      continue;
+    }
+
     const stockRow = await getLocationStockRow(supabase, item.producto_id, ubicacion.id);
-    if (!stockRow) throw new Error(`No se encontró stock de ${item.producto_nombre} en ${ubicacion.nombre}`);
+    if (!stockRow) throw new Error(`No se encontró stock de ${item.item_nombre} en ${ubicacion.nombre}`);
 
     const stockAnteriorTotal = await getProductTotalStock(supabase, item.producto_id);
     const stockUbicacionAnterior = Number(stockRow.cantidad ?? 0);
     const stockUbicacionNuevo = stockUbicacionAnterior - item.cantidad;
 
     if (stockUbicacionNuevo < 0) {
-      throw new Error(`Stock insuficiente para ${item.producto_nombre} al confirmar venta`);
+      throw new Error(`Stock insuficiente para ${item.item_nombre} al confirmar venta`);
     }
 
     const { error: stockUpdateError } = await supabase
