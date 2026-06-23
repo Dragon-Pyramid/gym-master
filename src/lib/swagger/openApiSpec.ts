@@ -19,6 +19,35 @@ type OpenApiPathItem = Record<string, OpenApiOperation>;
 const endpointDefinitions: EndpointDefinition[] = [
 
   {
+    path: "/api/comercial/codigos/labels",
+    methods: ["GET"],
+    tag: "Comercial",
+    summary: "Dashboard de códigos y etiquetas comerciales",
+    description:
+      "Devuelve productos, servicios, packs y códigos QR asociados para imprimir etiquetas y validar cobertura del scanner móvil/POS.",
+    auth: true,
+    admin: false,
+    notImplemented: false,
+    statuses: [200, 401, 500],
+    queryParams: [],
+    source: "src/app/api/comercial/codigos/labels/route.ts",
+  },
+  {
+    path: "/api/comercial/codigos/qr",
+    methods: ["POST"],
+    tag: "Comercial",
+    summary: "Generar QR comercial",
+    description:
+      "Genera o actualiza un código QR interno para productos o servicios, reutilizable por el scanner móvil/POS y la impresión de etiquetas.",
+    auth: true,
+    admin: false,
+    notImplemented: false,
+    statuses: [201, 400, 401, 500],
+    queryParams: [],
+    source: "src/app/api/comercial/codigos/qr/route.ts",
+  },
+
+  {
     path: "/api/equipamientos/preventivos",
     methods: ["GET"],
     tag: "Equipamientos",

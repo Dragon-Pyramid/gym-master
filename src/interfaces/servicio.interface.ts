@@ -15,6 +15,7 @@ export interface Servicio {
   nombre: string;
   descripcion: string;
   precio: number;
+  codigo?: string | null;
   activo: boolean;
   categoria?: ServicioCategoria | string | null;
   duracion_minutos?: number | null;
@@ -31,6 +32,7 @@ export interface CreateServicioDto {
   nombre: string;
   descripcion: string;
   precio: number;
+  codigo?: string | null;
   activo?: boolean;
   categoria?: ServicioCategoria | string | null;
   duracion_minutos?: number | null;
@@ -45,6 +47,7 @@ export interface UpdateServicioDto {
   nombre?: string;
   descripcion?: string;
   precio?: number;
+  codigo?: string | null;
   activo?: boolean;
   categoria?: ServicioCategoria | string | null;
   duracion_minutos?: number | null;

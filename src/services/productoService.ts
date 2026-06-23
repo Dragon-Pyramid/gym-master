@@ -34,6 +34,22 @@ function calculateMargin(price: unknown, cost: unknown): {
   return { margen, porcentaje };
 }
 
+
+function normalizeCommercialCode(value: unknown, mode: "sku" | "barcode") {
+  const text = String(value ?? '').trim();
+  if (!text) return null;
+  if (mode === "barcode") {
+    return text.replace(/\s+/g, '').toUpperCase().slice(0, 80);
+  }
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+}
+
 function sanitizeProductPayload<T extends Record<string, any>>(payload: T) {
   const {
     motivo_cambio_precio,
@@ -43,8 +59,16 @@ function sanitizeProductPayload<T extends Record<string, any>>(payload: T) {
     ...productoPayload
   } = payload;
 
+  const normalizedProductoPayload: Record<string, any> = { ...productoPayload };
+  if (Object.prototype.hasOwnProperty.call(productoPayload, "sku")) {
+    normalizedProductoPayload.sku = normalizeCommercialCode(productoPayload.sku, "sku");
+  }
+  if (Object.prototype.hasOwnProperty.call(productoPayload, "codigo_barras")) {
+    normalizedProductoPayload.codigo_barras = normalizeCommercialCode(productoPayload.codigo_barras, "barcode");
+  }
+
   return {
-    productoPayload,
+    productoPayload: normalizedProductoPayload,
     historialInput: {
       motivo_cambio_precio,
       moneda_historial,
@@ -133,7 +157,12 @@ export const createProducto = async (payload: CreateProductoDto): Promise<Produc
     .insert(productoToInsert)
     .select()
     .single();
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (error.message?.includes('producto_sku_unique') || error.message?.includes('producto_codigo_barras_unique')) {
+      throw new Error('El SKU o código de barras ya está asociado a otro producto.');
+    }
+    throw new Error(error.message);
+  }
 
   const producto = data as Producto;
   await insertPrecioCostoHistorial({
@@ -172,7 +201,12 @@ export const updateProducto = async (id: string, updateData: UpdateProductoDto):
     .select()
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (error.message?.includes('producto_sku_unique') || error.message?.includes('producto_codigo_barras_unique')) {
+      throw new Error('El SKU o código de barras ya está asociado a otro producto.');
+    }
+    throw new Error(error.message);
+  }
   if (!data) throw new Error("No se encontró producto con ese id");
 
   const producto = data as Producto;

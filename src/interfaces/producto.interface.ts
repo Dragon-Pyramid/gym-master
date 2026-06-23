@@ -50,6 +50,8 @@ export interface CreateProductoDto {
   id_categoria_producto?: string | null;
   costo?: number | null;
   stock_minimo?: number | null;
+  sku?: string | null;
+  codigo_barras?: string | null;
   motivo_cambio_precio?: string | null;
   moneda_historial?: 'ARS' | 'USD';
   cotizacion_usada?: number | null;
@@ -67,6 +69,8 @@ export interface UpdateProductoDto {
   activo?: boolean;
   costo?: number | null;
   stock_minimo?: number | null;
+  sku?: string | null;
+  codigo_barras?: string | null;
   motivo_cambio_precio?: string | null;
   moneda_historial?: 'ARS' | 'USD';
   cotizacion_usada?: number | null;
