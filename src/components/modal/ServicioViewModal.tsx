@@ -65,6 +65,12 @@ export default function ServicioViewModal({
               </div>
             </div>
             <div className="space-y-2">
+              <label className="text-sm font-medium">Código comercial / QR</label>
+              <div className="p-2 border rounded-md bg-muted font-mono text-foreground">
+                {servicio.codigo || "-"}
+              </div>
+            </div>
+            <div className="space-y-2">
               <label className="text-sm font-medium">Observaciones internas</label>
               <div className="p-2 border rounded-md bg-muted text-foreground whitespace-pre-line">
                 {servicio.observaciones || "-"}

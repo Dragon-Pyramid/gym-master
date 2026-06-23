@@ -97,6 +97,16 @@ export default function ProductoViewModal({
                 {producto.descripcion || "-"}
               </div>
             </div>
+            <div className="grid grid-cols-1 gap-3 rounded-lg border bg-muted/30 p-3 text-sm md:grid-cols-2">
+              <div>
+                <p className="text-xs text-muted-foreground">SKU / código interno</p>
+                <p className="font-mono font-semibold">{producto.sku || "-"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Código de barras</p>
+                <p className="font-mono font-semibold">{producto.codigo_barras || "-"}</p>
+              </div>
+            </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Precio de venta</label>
               <div className="p-2 border rounded-md bg-muted text-foreground">

@@ -62,6 +62,7 @@ export default function ServicioTable({
       <TableHeader>
         <TableRow className="bg-muted/50 text-muted-foreground">
           <TableHead>Nombre</TableHead>
+          <TableHead>Código</TableHead>
           <TableHead>Categoría</TableHead>
           <TableHead>Precio</TableHead>
           <TableHead>Duración</TableHead>
@@ -82,6 +83,7 @@ export default function ServicioTable({
                 {s.descripcion}
               </div>
             </TableCell>
+            <TableCell><span className="font-mono text-xs">{s.codigo || "-"}</span></TableCell>
             <TableCell>{CATEGORIA_LABELS[String(s.categoria ?? "otro")] ?? "Otro"}</TableCell>
             <TableCell>${Number(s.precio || 0).toLocaleString("es-AR")}</TableCell>
             <TableCell>{s.duracion_minutos ? `${s.duracion_minutos} min` : "-"}</TableCell>
@@ -121,7 +123,7 @@ export default function ServicioTable({
       </TableBody>
       <TableFooter>
         <TableRow>
-          <TableCell colSpan={6}>Total de servicios</TableCell>
+          <TableCell colSpan={7}>Total de servicios</TableCell>
           <TableCell className="text-right">{servicios.length}</TableCell>
         </TableRow>
       </TableFooter>

@@ -36,6 +36,7 @@ const emptyForm = {
   nombre: "",
   descripcion: "",
   precio: "",
+  codigo: "",
   categoria: "otro",
   duracion_minutos: "",
   requiere_reserva: false,
@@ -58,6 +59,7 @@ export default function ServicioForm({
         nombre: servicio.nombre ?? "",
         descripcion: servicio.descripcion ?? "",
         precio: servicio.precio !== undefined ? String(servicio.precio) : "",
+        codigo: servicio.codigo ?? "",
         categoria: servicio.categoria ?? "otro",
         duracion_minutos: servicio.duracion_minutos ? String(servicio.duracion_minutos) : "",
         requiere_reserva: Boolean(servicio.requiere_reserva),
@@ -75,6 +77,17 @@ export default function ServicioForm({
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
+    if (name === "codigo") {
+      const normalized = value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toUpperCase()
+        .replace(/[^A-Z0-9_-]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 80);
+      setForm((prev) => ({ ...prev, codigo: normalized }));
+      return;
+    }
     setForm((prev) => ({
       ...prev,
       [name]: value,
@@ -103,6 +116,7 @@ export default function ServicioForm({
 
       const payload = {
         nombre: form.nombre,
+        codigo: form.codigo || null,
         descripcion: form.descripcion,
         precio,
         categoria: form.categoria,
@@ -135,6 +149,17 @@ export default function ServicioForm({
     }
   };
 
+  function generarCodigoServicio() {
+    const base = (form.nombre || "SERV")
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 30);
+    setForm((prev) => ({ ...prev, codigo: `${base || 'SERV'}-${String(Date.now()).slice(-5)}` }));
+  }
+
   return (
     <form
       onSubmit={handleSubmit}
@@ -166,6 +191,22 @@ export default function ServicioForm({
           min={0}
           step="0.01"
         />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor="codigo">Código comercial / QR</Label>
+          <Button type="button" size="sm" variant="outline" onClick={generarCodigoServicio}>
+            Generar
+          </Button>
+        </div>
+        <Input
+          id="codigo"
+          name="codigo"
+          placeholder="Ej: SERV-EVALUACION-001"
+          value={form.codigo}
+          onChange={handleChange}
+        />
+        <p className="text-xs text-muted-foreground">El scanner móvil/POS puede resolver servicios por este código.</p>
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="categoria">Categoría</Label>

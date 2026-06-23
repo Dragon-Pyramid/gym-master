@@ -273,6 +273,24 @@ async function resolveScannedCode(supabase: ReturnType<typeof getComercialDbClie
     };
   }
 
+  const { data: service, error: serviceError } = await supabase
+    .from('servicio')
+    .select('id, nombre, precio, categoria, codigo, activo')
+    .eq('codigo', upper)
+    .eq('activo', true)
+    .limit(1)
+    .maybeSingle();
+
+  if (!serviceError && service) {
+    return {
+      tipo_resuelto: 'servicio',
+      item_tipo: 'servicio',
+      servicio_id: service.id,
+      item_nombre: service.nombre,
+      payload: { origen: 'servicio_codigo', servicio: service },
+    };
+  }
+
   const { data: pack, error: packError } = await supabase
     .from('comercial_pack')
     .select('id, codigo, nombre, precio, activo')

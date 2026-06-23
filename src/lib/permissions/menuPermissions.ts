@@ -287,6 +287,13 @@ export const MENU_PERMISSION_GROUPS: Array<{
         roles: ["admin", "usuario"],
       },
       {
+        key: "Códigos / Etiquetas",
+        label: "Códigos / Etiquetas",
+        path: "/dashboard/comercial/codigos-etiquetas",
+        group: "Comercial y Stock",
+        roles: ["admin", "usuario"],
+      },
+      {
         key: "Proveedores",
         label: "Proveedores",
         path: "/dashboard/proveedores",
@@ -471,6 +478,7 @@ export const DEFAULT_MENU_PERMISSIONS_BY_ROLE: Record<AppRole, string[]> = {
     "Comercial / Kiosco",
     "POS / Kiosco",
     "Caja / Cashup",
+    "Códigos / Etiquetas",
     "Ventas",
     "Notificaciones",
     "Mensajes Socios",

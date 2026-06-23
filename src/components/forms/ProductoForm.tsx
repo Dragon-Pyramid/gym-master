@@ -23,6 +23,8 @@ export interface ProductoFormProps {
     id_categoria_producto?: string | null;
     costo?: number | null;
     stock_minimo?: number | null;
+    sku?: string | null;
+    codigo_barras?: string | null;
   } | null;
   onCreated: () => void;
 }
@@ -45,6 +47,8 @@ const emptyForm = {
   costo: "",
   stock: "",
   stock_minimo: "5",
+  sku: "",
+  codigo_barras: "",
   proveedor_id: "",
   id_categoria_producto: "",
   motivo_cambio_precio: "",
@@ -87,6 +91,8 @@ export default function ProductoForm({
         costo: producto.costo != null ? String(Math.trunc(Number(producto.costo))) : "",
         stock: producto.stock != null ? String(Math.trunc(Number(producto.stock))) : "",
         stock_minimo: producto.stock_minimo != null ? String(Math.trunc(Number(producto.stock_minimo))) : "5",
+        sku: producto.sku ?? "",
+        codigo_barras: producto.codigo_barras ?? "",
         proveedor_id: producto.proveedor_id ?? "",
         id_categoria_producto: producto.id_categoria_producto ?? "",
         motivo_cambio_precio: "",
@@ -103,6 +109,26 @@ export default function ProductoForm({
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
+
+    if (name === "sku") {
+      const normalized = value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toUpperCase()
+        .replace(/[^A-Z0-9_-]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 80);
+      setForm((prev) => ({ ...prev, sku: normalized }));
+      return;
+    }
+
+    if (name === "codigo_barras") {
+      setForm((prev) => ({
+        ...prev,
+        codigo_barras: value.replace(/\s+/g, "").toUpperCase().slice(0, 80),
+      }));
+      return;
+    }
 
     if (name === "precio" || name === "costo" || name === "stock" || name === "stock_minimo") {
       const normalized = value.replace(/\D/g, "").replace(/^0+(?=\d)/, "");
@@ -186,6 +212,18 @@ export default function ProductoForm({
     );
   }, [form.precio, form.costo, producto]);
 
+  function generarSku() {
+    const base = (form.nombre || "PROD")
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 30);
+    const suffix = String(Date.now()).slice(-5);
+    setForm((prev) => ({ ...prev, sku: `${base || 'PROD'}-${suffix}` }));
+  }
+
   return (
     <form
       onSubmit={handleSubmit}
@@ -268,6 +306,33 @@ export default function ProductoForm({
             required
           />
         )}
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor="sku">SKU / código interno</Label>
+          <Button type="button" size="sm" variant="outline" onClick={generarSku}>
+            Generar
+          </Button>
+        </div>
+        <Input
+          id="sku"
+          name="sku"
+          placeholder="Ej: PROT-WHEY-001"
+          value={form.sku}
+          onChange={handleChange}
+        />
+        <p className="text-xs text-muted-foreground">El POS y el scanner móvil pueden resolver productos por SKU.</p>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="codigo_barras">Código de barras / QR externo</Label>
+        <Input
+          id="codigo_barras"
+          name="codigo_barras"
+          placeholder="Ej: 7791234567890"
+          value={form.codigo_barras}
+          onChange={handleChange}
+        />
+        <p className="text-xs text-muted-foreground">Puede cargarse manualmente o escaneando el envase con el móvil.</p>
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="precio">Precio de venta</Label>

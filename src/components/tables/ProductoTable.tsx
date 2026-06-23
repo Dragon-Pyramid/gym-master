@@ -81,6 +81,7 @@ export default function ProductoTable({
       <TableHeader>
         <TableRow className="bg-muted/50 text-muted-foreground">
           <TableHead>Producto</TableHead>
+          <TableHead>Códigos</TableHead>
           <TableHead>Precio</TableHead>
           <TableHead>Costo</TableHead>
           <TableHead>Margen</TableHead>
@@ -102,6 +103,12 @@ export default function ProductoTable({
                 <p className="max-w-[320px] truncate text-xs text-muted-foreground">
                   {p.descripcion || "Sin descripción"}
                 </p>
+              </div>
+            </TableCell>
+            <TableCell>
+              <div className="space-y-1 text-xs">
+                <p><span className="text-muted-foreground">SKU:</span> {p.sku || "-"}</p>
+                <p><span className="text-muted-foreground">Barra:</span> {p.codigo_barras || "-"}</p>
               </div>
             </TableCell>
             <TableCell>{formatCurrencyARS(p.precio)}</TableCell>
@@ -156,7 +163,7 @@ export default function ProductoTable({
       </TableBody>
       <TableFooter>
         <TableRow>
-          <TableCell colSpan={7}>Total de productos</TableCell>
+          <TableCell colSpan={8}>Total de productos</TableCell>
           <TableCell className="text-right">{productos.length}</TableCell>
         </TableRow>
       </TableFooter>
