@@ -1666,7 +1666,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     tag: "Comercial / POS",
     summary: "POS/Kiosco venta rápida",
     description:
-      "Devuelve productos, ubicaciones, stock por ubicación y ventas recientes para POS/Kiosco. También registra ventas rápidas, crea cabecera/detalle, descuenta stock desde la ubicación seleccionada, actualiza producto.stock, registra stock ledger y deja ticket imprimible.",
+      "Devuelve productos, packs, promociones, cupones, ubicaciones, stock por ubicación y ventas recientes para POS/Kiosco. También registra ventas rápidas, crea cabecera/detalle, permite packs escaneables que se expanden a productos/servicios, aplica cupones de descuento, descuenta stock desde la ubicación seleccionada, actualiza producto.stock, registra stock ledger y deja ticket imprimible.",
     auth: true,
     admin: true,
     notImplemented: false,
