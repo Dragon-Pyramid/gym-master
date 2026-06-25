@@ -8,6 +8,7 @@ import {
   CreditCard,
   Loader2,
   PackagePlus,
+  Percent,
   Printer,
   RefreshCw,
   Smartphone,
@@ -47,6 +48,9 @@ import {
 
 const initialDashboard: ComercialPosDashboard = {
   productos: [],
+  packs: [],
+  promociones: [],
+  cupones: [],
   stockPorUbicacion: [],
   ubicaciones: [],
   ventasRecientes: [],
@@ -57,17 +61,21 @@ const initialDashboard: ComercialPosDashboard = {
     itemsHoy: 0,
     productosDisponibles: 0,
     productosCriticos: 0,
+    packsDisponibles: 0,
+    promocionesActivas: 0,
   },
 };
 
 type CartItem = {
   key: string;
-  item_tipo: 'producto' | 'servicio';
+  item_tipo: 'producto' | 'servicio' | 'pack';
   producto_id?: string | null;
   servicio_id?: string | null;
+  pack_id?: string | null;
   nombre: string;
   sku?: string | null;
   codigo_barras?: string | null;
+  codigo?: string | null;
   precio_unitario: number;
   cantidad: number;
   descuento: number;
@@ -149,6 +157,7 @@ export default function ComercialKioscoPosPage() {
   const [clienteNombre, setClienteNombre] = useState('');
   const [clienteDocumento, setClienteDocumento] = useState('');
   const [metodoPago, setMetodoPago] = useState('efectivo');
+  const [cuponCodigo, setCuponCodigo] = useState('');
   const [lastSale, setLastSale] = useState<ComercialPosVentaResumen | null>(null);
   const [scannerSession, setScannerSession] = useState<ComercialScannerSession | null>(null);
   const [scannerLoading, setScannerLoading] = useState(false);
@@ -200,6 +209,15 @@ export default function ComercialKioscoPosPage() {
       )
       .slice(0, 80);
   }, [dashboard, searchTerm, ubicacionId]);
+
+  const filteredPacks = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    const packs = dashboard.packs.filter((pack) => pack.activo !== false && pack.disponible_pos !== false);
+    if (!query) return packs.slice(0, 30);
+    return packs
+      .filter((pack) => [pack.nombre, pack.codigo, pack.descripcion].filter(Boolean).some((value) => String(value).toLowerCase().includes(query)))
+      .slice(0, 30);
+  }, [dashboard.packs, searchTerm]);
 
   const cartTotals = useMemo(() => {
     const subtotal = cart.reduce((sum, item) => sum + item.cantidad * item.precio_unitario, 0);
@@ -279,6 +297,35 @@ export default function ComercialKioscoPosPage() {
     });
   }
 
+  function addPackToCart(pack: NonNullable<ComercialPosDashboard['packs']>[number]) {
+    if (!pack?.id) return;
+    if (pack.activo === false || pack.disponible_pos === false) {
+      toast.error('El pack no está disponible para POS');
+      return;
+    }
+    const key = `pack:${pack.id}`;
+    setCart((current) => {
+      const existing = current.find((item) => item.key === key);
+      if (existing) return current.map((item) => item.key === key ? { ...item, cantidad: item.cantidad + 1 } : item);
+      return [
+        ...current,
+        {
+          key,
+          item_tipo: 'pack',
+          producto_id: null,
+          servicio_id: null,
+          pack_id: pack.id,
+          nombre: pack.nombre,
+          codigo: pack.codigo,
+          precio_unitario: Number(pack.precio ?? 0),
+          cantidad: 1,
+          descuento: 0,
+          stockDisponible: 999999,
+        },
+      ];
+    });
+  }
+
   function updateCartQuantity(key: string, quantity: number) {
     setCart((current) =>
       current.map((item) => {
@@ -304,16 +351,23 @@ export default function ComercialKioscoPosPage() {
         .some((value) => String(value).toLowerCase() === query)
     );
 
-    if (!match) {
-      toast.error('No se encontró producto por código/SKU');
+    if (match) {
+      addToCart({
+        ...match,
+        stock_ubicacion: ubicacionId ? getStockForLocation(match.producto_id, ubicacionId, dashboard) : match.stock_total,
+      });
+      setBarcodeTerm('');
       return;
     }
 
-    addToCart({
-      ...match,
-      stock_ubicacion: ubicacionId ? getStockForLocation(match.producto_id, ubicacionId, dashboard) : match.stock_total,
-    });
-    setBarcodeTerm('');
+    const packMatch = dashboard.packs.find((pack) => String(pack.codigo ?? '').toLowerCase() === query && pack.disponible_pos !== false && pack.activo !== false);
+    if (packMatch) {
+      addPackToCart(packMatch);
+      setBarcodeTerm('');
+      return;
+    }
+
+    toast.error('No se encontró producto o pack por código/SKU');
   }
 
   async function handleSubmitSale() {
@@ -335,10 +389,12 @@ export default function ComercialKioscoPosPage() {
         metodo_pago: metodoPago as any,
         ubicacion_stock_id: ubicacionId,
         observaciones: 'Venta rápida POS/Kiosco',
+        cupon_codigo: cuponCodigo.trim() || null,
         items: cart.map((item) => ({
           item_tipo: item.item_tipo,
           producto_id: item.producto_id ?? null,
           servicio_id: item.servicio_id ?? null,
+          pack_id: item.pack_id ?? null,
           cantidad: item.cantidad,
           precio_unitario: item.precio_unitario,
           descuento: item.descuento,
@@ -348,6 +404,7 @@ export default function ComercialKioscoPosPage() {
       setCart([]);
       setClienteNombre('');
       setClienteDocumento('');
+      setCuponCodigo('');
       toast.success('Venta POS/Kiosco registrada');
       await loadDashboard();
     } catch (error: any) {
@@ -422,8 +479,14 @@ export default function ComercialKioscoPosPage() {
       } else if (event.item_tipo === 'servicio' && event.servicio_id) {
         addServiceToCart(event);
         toast.success(`Servicio agregado al carrito: ${event.item_nombre || event.codigo}`);
-      } else if (event.item_tipo === 'pack') {
-        toast.info(`Pack detectado: ${event.item_nombre || event.codigo}. La venta directa de packs queda para la integración POS avanzada.`);
+      } else if (event.item_tipo === 'pack' && event.pack_id) {
+        const pack = dashboard.packs.find((item) => item.id === event.pack_id);
+        if (!pack) {
+          toast.error(`Pack escaneado no disponible en el POS: ${event.item_nombre || event.codigo}`);
+        } else {
+          addPackToCart(pack);
+          toast.success(`Pack agregado al carrito: ${pack.nombre}`);
+        }
       } else if (event.tipo_resuelto === 'infraestructura') {
         toast.info(`Código recibido pero no es vendible en POS: ${event.item_nombre || event.codigo}`);
       } else {
@@ -515,7 +578,7 @@ export default function ComercialKioscoPosPage() {
                       <div>
                         <p className='text-xs font-semibold uppercase tracking-[0.24em] text-emerald-600'>Scanner móvil</p>
                         <h2 className='text-xl font-bold'>Celular conectado al POS</h2>
-                        <p className='mt-1 text-sm text-muted-foreground'>El celular envía códigos al carrito en tiempo casi real. Funciona con productos por SKU/barcode y QR internos de producto o servicio.</p>
+                        <p className='mt-1 text-sm text-muted-foreground'>El celular envía códigos al carrito en tiempo casi real. Funciona con productos por SKU/barcode, QR internos de producto/servicio y códigos de packs.</p>
                       </div>
                       <div className='flex flex-wrap gap-2'>
                         <Button variant='outline' onClick={pollScannerEvents}>Verificar ahora</Button>
@@ -546,11 +609,13 @@ export default function ComercialKioscoPosPage() {
               </section>
             )}
 
-            <section className='grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5'>
+            <section className='grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-7'>
               <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>Ventas hoy</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.ventasHoy}</p></div><Store className='h-6 w-6 text-sky-600' /></CardContent></Card>
               <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>Total hoy</p><p className='text-xl font-bold'>{loading ? '...' : formatCurrencyARS(dashboard.metricas.totalHoy)}</p></div><CreditCard className='h-6 w-6 text-emerald-600' /></CardContent></Card>
               <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>Ítems hoy</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.itemsHoy}</p></div><ShoppingCart className='h-6 w-6 text-indigo-600' /></CardContent></Card>
-              <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>Productos disp.</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.productosDisponibles}</p></div><PackagePlus className='h-6 w-6 text-violet-600' /></CardContent></Card>
+              <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>Productos</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.productosDisponibles}</p></div><PackagePlus className='h-6 w-6 text-violet-600' /></CardContent></Card>
+              <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>Packs POS</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.packsDisponibles}</p></div><PackagePlus className='h-6 w-6 text-fuchsia-600' /></CardContent></Card>
+              <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>Promos</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.promocionesActivas}</p></div><Percent className='h-6 w-6 text-rose-600' /></CardContent></Card>
               <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>Críticos</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.productosCriticos}</p></div><Warehouse className='h-6 w-6 text-orange-600' /></CardContent></Card>
             </section>
 
@@ -560,10 +625,10 @@ export default function ComercialKioscoPosPage() {
                   <CardHeader>
                     <div className='grid grid-cols-1 gap-3 md:grid-cols-[1fr_220px] md:items-end'>
                       <div className='space-y-2'>
-                        <Label>Buscar producto</Label>
+                        <Label>Buscar producto o pack</Label>
                         <div className='relative'>
                           <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                          <Input className='pl-9' value={searchTerm} placeholder='Nombre, SKU o código de barras...' onChange={(event) => setSearchTerm(event.target.value)} />
+                          <Input className='pl-9' value={searchTerm} placeholder='Nombre, SKU, código de barras o pack...' onChange={(event) => setSearchTerm(event.target.value)} />
                         </div>
                       </div>
                       <div className='space-y-2'>
@@ -578,7 +643,7 @@ export default function ComercialKioscoPosPage() {
                     <form className='mb-4 flex gap-2' onSubmit={handleBarcodeSubmit}>
                       <div className='relative flex-1'>
                         <Barcode className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                        <Input className='pl-9' value={barcodeTerm} placeholder='Escanear o pegar código/SKU y presionar Enter' onChange={(event) => setBarcodeTerm(event.target.value)} />
+                        <Input className='pl-9' value={barcodeTerm} placeholder='Escanear o pegar código/SKU/pack y presionar Enter' onChange={(event) => setBarcodeTerm(event.target.value)} />
                       </div>
                       <Button type='submit' variant='outline'>Agregar</Button>
                     </form>
@@ -601,6 +666,32 @@ export default function ComercialKioscoPosPage() {
                       ))}
                       {!loading && filteredProducts.length === 0 && <p className='text-sm text-muted-foreground'>No hay productos para mostrar.</p>}
                     </div>
+
+                    {filteredPacks.length > 0 && (
+                      <div className='mt-6 space-y-3'>
+                        <div className='flex items-center justify-between'>
+                          <h3 className='text-sm font-semibold uppercase tracking-[0.18em] text-fuchsia-700'>Packs / promociones vendibles</h3>
+                          <span className='text-xs text-muted-foreground'>Se expanden en productos/servicios al vender</span>
+                        </div>
+                        <div className='grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3'>
+                          {filteredPacks.map((pack) => (
+                            <button key={pack.id} type='button' className='rounded-xl border border-fuchsia-100 bg-fuchsia-50/40 p-4 text-left shadow-sm transition hover:border-fuchsia-300 hover:shadow-md' onClick={() => addPackToCart(pack)}>
+                              <div className='flex items-start justify-between gap-2'>
+                                <div>
+                                  <p className='font-semibold'>{pack.nombre}</p>
+                                  <p className='text-xs text-muted-foreground'>{pack.codigo} · {(pack.items ?? []).length} ítems</p>
+                                </div>
+                                <span className='rounded-full bg-fuchsia-100 px-2 py-1 text-xs text-fuchsia-700'>Pack</span>
+                              </div>
+                              <div className='mt-3 flex items-center justify-between'>
+                                <span className='text-lg font-bold'>{formatCurrencyARS(pack.precio)}</span>
+                                <span className='text-xs text-muted-foreground'>POS</span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -645,13 +736,17 @@ export default function ComercialKioscoPosPage() {
                         {metodoPagoOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                       </select>
                     </div>
+                    <div className='space-y-2'>
+                      <Label>Cupón / promo opcional</Label>
+                      <Input value={cuponCodigo} onChange={(event) => setCuponCodigo(event.target.value.toUpperCase())} placeholder='Ej: PROMO10' />
+                    </div>
                   </div>
 
                   <div className='space-y-3'>
                     {cart.map((item) => (
                       <div key={item.key} className='rounded-lg border p-3'>
                         <div className='flex items-start justify-between gap-2'>
-                          <div><p className='font-medium'>{item.nombre}</p><p className='text-xs text-muted-foreground'>{item.item_tipo === 'servicio' ? 'Servicio escaneado' : `Disponible: ${item.stockDisponible}`}</p></div>
+                          <div><p className='font-medium'>{item.nombre}</p><p className='text-xs text-muted-foreground'>{item.item_tipo === 'pack' ? 'Pack comercial' : item.item_tipo === 'servicio' ? 'Servicio escaneado' : `Disponible: ${item.stockDisponible}`}</p></div>
                           <Button size='icon' variant='ghost' onClick={() => removeFromCart(item.key)}><Trash2 className='h-4 w-4' /></Button>
                         </div>
                         <div className='mt-3 grid grid-cols-3 gap-2'>
@@ -662,7 +757,7 @@ export default function ComercialKioscoPosPage() {
                         <p className='mt-2 text-right text-sm font-semibold'>{formatCurrencyARS(item.cantidad * item.precio_unitario - item.descuento)}</p>
                       </div>
                     ))}
-                    {cart.length === 0 && <p className='rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground'>Agregá productos para iniciar la venta.</p>}
+                    {cart.length === 0 && <p className='rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground'>Agregá productos, servicios o packs para iniciar la venta.</p>}
                   </div>
 
                   <div className='rounded-lg bg-slate-50 p-4 text-sm'>
