@@ -9,6 +9,7 @@ import {
   Banknote,
   Boxes,
   DollarSign,
+  Gift,
   ClipboardList,
   Package,
   ReceiptText,
@@ -339,6 +340,12 @@ export default function ComercialKioscoPage() {
                 description='Servicios vendibles, packs de clases, promociones, cupones, canales y grupos de cliente.'
                 href='/dashboard/comercial/servicios-promociones'
                 icon={Store}
+              />
+              <ActionCard
+                title='BI Packs / Promos'
+                description='Trazabilidad de packs vendidos, cupones usados, ingreso generado y ranking comercial por promoción.'
+                href='/dashboard/comercial/pack-analytics'
+                icon={Gift}
               />
 
               <ActionCard

@@ -19,6 +19,21 @@ type OpenApiPathItem = Record<string, OpenApiOperation>;
 const endpointDefinitions: EndpointDefinition[] = [
 
   {
+    path: "/api/comercial/pack-analytics",
+    methods: ["GET"],
+    tag: "Comercial",
+    summary: "Analítica comercial de packs y promociones",
+    description:
+      "Devuelve trazabilidad y BI de packs vendidos desde POS/Kiosco: ranking de packs, uso de cupones, ingresos, descuentos estimados, evolución mensual y últimas ventas con packs.",
+    auth: true,
+    admin: false,
+    notImplemented: false,
+    statuses: [200, 401, 500],
+    queryParams: ["desde", "hasta"],
+    source: "src/app/api/comercial/pack-analytics/route.ts",
+  },
+
+  {
     path: "/api/comercial/codigos/labels",
     methods: ["GET"],
     tag: "Comercial",

@@ -301,6 +301,25 @@ type NormalizedVentaItem = CreateComercialPosVentaItemDTO & {
   pack_nombre?: string | null;
 };
 
+type PackVentaDraft = {
+  pack_id: string;
+  pack_codigo: string;
+  pack_nombre: string;
+  cantidad: number;
+  precio_unitario: number;
+  descuento_pack: number;
+  total_pack: number;
+  descuento_cupon_estimado: number;
+  componentes: Array<{
+    item_tipo: 'producto' | 'servicio';
+    producto_id?: string | null;
+    servicio_id?: string | null;
+    nombre: string;
+    cantidad: number;
+    precio_referencia: number;
+  }>;
+};
+
 function getPackReferenceLine(item: any, cantidadPack: number) {
   const cantidad = Number(item.cantidad ?? 1) * cantidadPack;
   const precioReferencia = Number(item.precio_referencia ?? 0) > 0
@@ -438,6 +457,7 @@ export async function createComercialKioscoPosVenta(
   const productosById = new Map<string, any>((productosResult.data ?? []).map((producto: any) => [String(producto.id), producto]));
   const serviciosById = new Map<string, any>((serviciosResult.data ?? []).map((servicio: any) => [String(servicio.id), servicio]));
   const normalizedItems: NormalizedVentaItem[] = [];
+  const packVentaDrafts: PackVentaDraft[] = [];
   const packNotes: string[] = [];
 
   for (const item of items) {
@@ -515,6 +535,15 @@ export async function createComercialKioscoPosVenta(
     if (referenceTotal <= 0) throw new Error(`El pack ${pack.nombre} no tiene precios de referencia válidos`);
 
     let accumulated = 0;
+    const componentesSnapshot = componentLines.map((line: any) => ({
+      item_tipo: line.item_tipo,
+      producto_id: line.item_tipo === 'producto' ? String(line.producto_id) : null,
+      servicio_id: line.item_tipo === 'servicio' ? String(line.servicio_id) : null,
+      nombre: line.nombre,
+      cantidad: line.cantidad,
+      precio_referencia: line.precioReferencia,
+    }));
+
     componentLines.forEach((line: any, index: number) => {
       const referenceLineTotal = line.cantidad * line.precioReferencia;
       const targetLineTotal = index === componentLines.length - 1
@@ -540,6 +569,18 @@ export async function createComercialKioscoPosVenta(
         costo: line.item_tipo === 'producto' ? asNumber(source.costo, 0) : 0,
       });
     });
+
+    packVentaDrafts.push({
+      pack_id: pack.id,
+      pack_codigo: pack.codigo,
+      pack_nombre: pack.nombre,
+      cantidad,
+      precio_unitario: packUnitPrice,
+      descuento_pack: packDiscount,
+      total_pack: packTargetTotal,
+      descuento_cupon_estimado: 0,
+      componentes: componentesSnapshot,
+    });
     packNotes.push(`${cantidad} x ${pack.nombre} (${pack.codigo})`);
   }
 
@@ -552,6 +593,17 @@ export async function createComercialKioscoPosVenta(
       ? roundMoney(subtotalBeforeCoupon * (Number(promo.valor ?? 0) / 100))
       : Math.min(roundMoney(Number(promo.valor ?? 0)), subtotalBeforeCoupon);
     const applied = applyDistributedDiscount(normalizedItems, discount, `Cupón ${coupon.codigo}`);
+    if (applied > 0 && packVentaDrafts.length) {
+      const totalPackBeforeCoupon = packVentaDrafts.reduce((sum, row) => sum + row.total_pack, 0);
+      let accumulatedPackCoupon = 0;
+      packVentaDrafts.forEach((row, index) => {
+        const estimated = index === packVentaDrafts.length - 1
+          ? roundMoney(applied - accumulatedPackCoupon)
+          : roundMoney(applied * (row.total_pack / Math.max(totalPackBeforeCoupon, 1)));
+        row.descuento_cupon_estimado = Math.max(estimated, 0);
+        accumulatedPackCoupon = roundMoney(accumulatedPackCoupon + estimated);
+      });
+    }
     couponNote = `Cupón ${coupon.codigo} / ${promo.nombre}: -${applied}`;
   }
 
@@ -662,6 +714,31 @@ export async function createComercialKioscoPosVenta(
       motivo: item.pack_nombre ? `Venta POS/Kiosco ${comprobanteCodigo} / Pack ${item.pack_nombre}` : `Venta POS/Kiosco ${comprobanteCodigo}`,
       creado_por: user?.id ?? null,
     });
+  }
+
+  if (packVentaDrafts.length) {
+    const promo = coupon?.promocion as any;
+    const { error: packVentaError } = await supabase.from('comercial_pack_venta').insert(
+      packVentaDrafts.map((row) => ({
+        venta_id: venta.id,
+        pack_id: row.pack_id,
+        pack_codigo: row.pack_codigo,
+        pack_nombre: row.pack_nombre,
+        cantidad: row.cantidad,
+        precio_unitario: row.precio_unitario,
+        descuento_pack: row.descuento_pack,
+        total_pack: row.total_pack,
+        cupon_id: coupon?.id ?? null,
+        cupon_codigo: coupon?.codigo ?? null,
+        promocion_id: promo?.id ?? null,
+        promocion_nombre: promo?.nombre ?? null,
+        descuento_cupon_estimado: row.descuento_cupon_estimado,
+        componentes: row.componentes,
+        creado_por: user?.id ?? null,
+      }))
+    );
+
+    if (packVentaError) throw new Error(packVentaError.message);
   }
 
   if (coupon) {
