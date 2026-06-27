@@ -294,6 +294,13 @@ export const MENU_PERMISSION_GROUPS: Array<{
         roles: ["admin", "usuario"],
       },
       {
+        key: "BI Packs / Promos",
+        label: "BI Packs / Promos",
+        path: "/dashboard/comercial/pack-analytics",
+        group: "Comercial y Stock",
+        roles: ["admin", "usuario"],
+      },
+      {
         key: "Proveedores",
         label: "Proveedores",
         path: "/dashboard/proveedores",
