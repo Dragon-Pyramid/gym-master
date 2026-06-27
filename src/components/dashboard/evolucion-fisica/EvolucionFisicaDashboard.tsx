@@ -23,7 +23,7 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { EvolucionSocio } from "@/interfaces/evolucionSocio.interface";
-import EvolucionFisicaHumanSilhouette from "./EvolucionFisicaHumanSilhouette";
+import EvolucionFisicaBeforeAfterStudio from "./EvolucionFisicaBeforeAfterStudio";
 import { formatFrontendDate, formatFrontendShortDate } from '@/utils/dateFormat';
 
 
@@ -402,7 +402,8 @@ export default function EvolucionFisicaDashboard({
         />
       </section>
 
-      <EvolucionFisicaHumanSilhouette initial={initial} current={current} />
+      <EvolucionFisicaBeforeAfterStudio rows={orderedRows} socioNombre={socioNombre} />
+
 
       <section className="grid gap-6 xl:grid-cols-2">
         <ChartCard
