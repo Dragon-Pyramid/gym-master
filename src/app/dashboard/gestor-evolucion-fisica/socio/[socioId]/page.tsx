@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Search, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Download, Search, ShieldCheck } from "lucide-react";
 import { AppFooter } from "@/components/footer/AppFooter";
 import { AppHeader } from "@/components/header/AppHeader";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
@@ -25,6 +25,8 @@ import {
 } from "@/interfaces/evolucionSocio.interface";
 import { getEvolucionFisicaAdminResumen } from "@/services/evolucionSocioClient";
 import { useAuthStore } from "@/stores/authStore";
+import { descargarEvolucionFisicaPdf } from "@/utils/evolucionFisicaPdf";
+import { toast } from "sonner";
 
 const isAdminRole = (rol?: string | null) => {
   const normalized = rol?.trim().toLowerCase();
@@ -41,6 +43,7 @@ export default function GestorEvolucionFisicaDetallePage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEvolucion, setSelectedEvolucion] = useState<EvolucionSocio | null>(null);
   const [sociosResumen, setSociosResumen] = useState<EvolucionFisicaAdminResumen[]>([]);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
 
   useEffect(() => {
     initializeAuth();
@@ -86,6 +89,34 @@ export default function GestorEvolucionFisicaDetallePage() {
     return socio?.nombre_completo || "Socio";
   }, [socioId, sociosResumen]);
 
+  const handleDownloadPdf = async () => {
+    if (!dashboardRows.length) {
+      toast.warning("No hay registros para descargar");
+      return;
+    }
+
+    setGeneratingPdf(true);
+
+    try {
+      await descargarEvolucionFisicaPdf({
+        rows: dashboardRows,
+        socioNombre,
+        logoUrl: "/gm_logo.svg",
+      });
+
+      toast.success("PDF de evolución física generado");
+    } catch (error) {
+      console.error("Error al generar PDF de evolución física:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "No se pudo generar el PDF de evolución física"
+      );
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
   if (!isInitialized) {
     return <div className="flex h-screen items-center justify-center">Cargando...</div>;
   }
@@ -113,13 +144,23 @@ export default function GestorEvolucionFisicaDetallePage() {
                       Vista administrativa solo lectura. Los valores no se editan desde este gestor.
                     </CardDescription>
                   </div>
-                  <Button
-                    variant="outline"
-                    onClick={() => router.push("/dashboard/gestor-evolucion-fisica")}
-                  >
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Volver al gestor
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={handleDownloadPdf}
+                      disabled={!dashboardRows.length || generatingPdf}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      {generatingPdf ? "Generando PDF..." : "Descargar PDF"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => router.push("/dashboard/gestor-evolucion-fisica")}
+                    >
+                      <ArrowLeft className="mr-2 h-4 w-4" />
+                      Volver al gestor
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="p-4 text-sm text-muted-foreground">

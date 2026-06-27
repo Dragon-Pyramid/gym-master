@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useSidebar } from '../ui/sidebar';
-import { Lock, Moon, Search, Settings, SlidersHorizontal, Sun, User } from 'lucide-react';
+import { Lock, Menu, Moon, Search, Settings, SlidersHorizontal, Sun, User } from 'lucide-react';
 import ProfileImage from '@/components/perfil/ProfileImage';
 import { HeaderNotificationsBell } from '@/components/header/HeaderNotificationsBell';
 import { Button } from '@/components/ui/button';
@@ -55,12 +55,21 @@ interface AppHeaderProps {
 export const AppHeader = ({ title }: AppHeaderProps) => {
   const router = useRouter();
   const { user, logout } = useAuthStore();
-  const { isMobile } = useSidebar();
+  const { isMobile, setOpenMobile } = useSidebar();
   const { dark, toggle } = useDarkMode();
 
   const handleLogout = () => {
     logout();
     router.push('/auth/login');
+  };
+
+  const handlePrimaryNavigation = () => {
+    if (isMobile) {
+      setOpenMobile(true);
+      return;
+    }
+
+    router.push('/dashboard');
   };
 
   const userEmail = user?.email ?? '';
@@ -108,12 +117,13 @@ export const AppHeader = ({ title }: AppHeaderProps) => {
                 variant='ghost'
                 size='icon'
                 className='text-muted-foreground hover:text-foreground'
-                onClick={() => router.push('/dashboard')}
+                onClick={handlePrimaryNavigation}
+                aria-label={isMobile ? 'Abrir menú del dashboard' : 'Buscar'}
               >
-                <Search className='h-5 w-5' />
+                {isMobile ? <Menu className='h-5 w-5' /> : <Search className='h-5 w-5' />}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Buscar</TooltipContent>
+            <TooltipContent>{isMobile ? 'Abrir menú' : 'Buscar'}</TooltipContent>
           </Tooltip>
         </TooltipProvider>
 
