@@ -183,11 +183,17 @@ export async function getComercialKioscoPosDashboard(): Promise<ComercialPosDash
   const supabase = getComercialDbClient();
   const today = new Date().toISOString().slice(0, 10);
 
-  const [productosResult, stockResult, ubicacionesResult, ventasResult, packsResult, promocionesResult, cuponesResult] = await Promise.all([
+  const [productosResult, serviciosResultDashboard, stockResult, ubicacionesResult, ventasResult, packsResult, promocionesResult, cuponesResult] = await Promise.all([
     supabase
       .from('vw_comercial_stock_resumen')
       .select('*')
       .order('producto_nombre', { ascending: true }),
+    supabase
+      .from('servicio')
+      .select('id, nombre, codigo, descripcion, precio, categoria, duracion_minutos, requiere_reserva, activo')
+      .eq('activo', true)
+      .order('nombre', { ascending: true })
+      .limit(120),
     supabase
       .from('comercial_producto_stock_ubicacion')
       .select('*, ubicacion:ubicacion_id(*)'),
@@ -243,6 +249,7 @@ export async function getComercialKioscoPosDashboard(): Promise<ComercialPosDash
   ]);
 
   if (productosResult.error) throw new Error(productosResult.error.message);
+  if (serviciosResultDashboard.error) throw new Error(serviciosResultDashboard.error.message);
   if (stockResult.error) throw new Error(stockResult.error.message);
   if (ubicacionesResult.error) throw new Error(ubicacionesResult.error.message);
   if (ventasResult.error) throw new Error(ventasResult.error.message);
@@ -251,6 +258,10 @@ export async function getComercialKioscoPosDashboard(): Promise<ComercialPosDash
   if (cuponesResult.error) throw new Error(cuponesResult.error.message);
 
   const productos = (productosResult.data ?? []) as ComercialPosProducto[];
+  const servicios = (serviciosResultDashboard.data ?? []).map((servicio: any) => ({
+    ...servicio,
+    precio: asNumber(servicio.precio, 0),
+  }));
   const stockPorUbicacion = (stockResult.data ?? []) as ComercialPosStockUbicacion[];
   const ubicaciones = (ubicacionesResult.data ?? []) as ComercialPosUbicacion[];
   const ventasRecientes = (ventasResult.data ?? []).map(mapVenta);
@@ -272,6 +283,7 @@ export async function getComercialKioscoPosDashboard(): Promise<ComercialPosDash
 
   return {
     productos,
+    servicios,
     packs,
     promociones,
     cupones,
@@ -284,6 +296,7 @@ export async function getComercialKioscoPosDashboard(): Promise<ComercialPosDash
       totalHoy: ventasHoy.reduce((total, venta) => total + Number(venta.total ?? 0), 0),
       itemsHoy,
       productosDisponibles: productos.filter((producto) => Number(producto.stock_total ?? 0) > 0).length,
+      serviciosDisponibles: servicios.length,
       productosCriticos: productos.filter((producto) => producto.estado_stock === 'critico' || producto.estado_stock === 'bajo_minimo' || producto.estado_stock === 'sin_stock').length,
       packsDisponibles: packs.length,
       promocionesActivas: promociones.length,

@@ -24,6 +24,19 @@ export interface ComercialPosProducto {
   estado_stock: 'sin_stock' | 'critico' | 'bajo_minimo' | 'ok';
 }
 
+
+export interface ComercialPosServicio {
+  id: string;
+  nombre: string;
+  codigo?: string | null;
+  descripcion?: string | null;
+  precio: number;
+  categoria?: string | null;
+  duracion_minutos?: number | null;
+  requiere_reserva?: boolean | null;
+  activo?: boolean | null;
+}
+
 export interface ComercialPosStockUbicacion {
   id: string;
   producto_id: string;
@@ -66,6 +79,7 @@ export interface ComercialPosVentaResumen {
 
 export interface ComercialPosDashboard {
   productos: ComercialPosProducto[];
+  servicios: ComercialPosServicio[];
   packs: ComercialPack[];
   promociones: ComercialPromocion[];
   cupones: ComercialCupon[];
@@ -78,6 +92,7 @@ export interface ComercialPosDashboard {
     totalHoy: number;
     itemsHoy: number;
     productosDisponibles: number;
+    serviciosDisponibles: number;
     productosCriticos: number;
     packsDisponibles: number;
     promocionesActivas: number;

@@ -30,6 +30,7 @@ import { useAuthStore } from '@/stores/authStore';
 import type {
   ComercialPosDashboard,
   ComercialPosProducto,
+  ComercialPosServicio,
   ComercialPosVentaResumen,
 } from '@/interfaces/comercialPos.interface';
 import {
@@ -48,6 +49,7 @@ import {
 
 const initialDashboard: ComercialPosDashboard = {
   productos: [],
+  servicios: [],
   packs: [],
   promociones: [],
   cupones: [],
@@ -60,6 +62,7 @@ const initialDashboard: ComercialPosDashboard = {
     totalHoy: 0,
     itemsHoy: 0,
     productosDisponibles: 0,
+    serviciosDisponibles: 0,
     productosCriticos: 0,
     packsDisponibles: 0,
     promocionesActivas: 0,
@@ -110,11 +113,21 @@ function getClientLabel(sale: ComercialPosVentaResumen) {
   return 'Consumidor Final';
 }
 
+
+function escapeHtml(value: unknown) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function buildTicketHtml(sale: ComercialPosVentaResumen) {
   const detalles = sale.venta_detalle ?? sale.detalles ?? [];
   const rows = detalles
     .map((detalle) => {
-      const nombre = detalle.producto?.nombre || detalle.servicio?.nombre || (detalle.item_tipo === 'servicio' ? 'Servicio' : 'Producto');
+      const nombre = escapeHtml(detalle.producto?.nombre || detalle.servicio?.nombre || (detalle.item_tipo === 'servicio' ? 'Servicio' : 'Producto'));
       const lineTotal = Number(detalle.total_linea ?? (Number(detalle.cantidad) * Number(detalle.precio_unitario) - Number(detalle.descuento ?? 0)));
       return `<tr><td>${detalle.cantidad} x ${nombre}</td><td style="text-align:right">${formatCurrencyARS(lineTotal)}</td></tr>`;
     })
@@ -122,7 +135,7 @@ function buildTicketHtml(sale: ComercialPosVentaResumen) {
 
   return `<!doctype html>
   <html><head><meta charset="utf-8" />
-  <title>Ticket ${sale.comprobante_codigo || ''}</title>
+  <title>Ticket ${escapeHtml(sale.comprobante_codigo || '')}</title>
   <style>
     body { font-family: Arial, sans-serif; width: 280px; margin: 0 auto; padding: 16px; color: #111; }
     h1 { font-size: 18px; text-align: center; margin: 0 0 4px; }
@@ -134,8 +147,8 @@ function buildTicketHtml(sale: ComercialPosVentaResumen) {
   </style></head>
   <body>
     <h1>Gym Master</h1>
-    <div class="sub">POS / Kiosco<br/>${sale.comprobante_codigo || ''}<br/>${sale.fecha || ''}</div>
-    <div style="font-size:11px;margin-bottom:8px">Cliente: ${getClientLabel(sale)}<br/>Pago: ${sale.metodo_pago}</div>
+    <div class="sub">POS / Kiosco<br/>${escapeHtml(sale.comprobante_codigo || '')}<br/>${escapeHtml(sale.fecha || '')}</div>
+    <div style="font-size:11px;margin-bottom:8px">Cliente: ${escapeHtml(getClientLabel(sale))}<br/>Pago: ${escapeHtml(sale.metodo_pago)}</div>
     <table>${rows}</table>
     <div class="total">Total: ${formatCurrencyARS(sale.total)}</div>
     <div class="footer">Gracias por tu compra</div>
@@ -210,6 +223,21 @@ export default function ComercialKioscoPosPage() {
       .slice(0, 80);
   }, [dashboard, searchTerm, ubicacionId]);
 
+  const filteredServices = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    const services = dashboard.servicios.filter((service) => service.activo !== false);
+
+    if (!query) return services.slice(0, 40);
+
+    return services
+      .filter((service) =>
+        [service.nombre, service.codigo, service.categoria, service.descripcion]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(query))
+      )
+      .slice(0, 40);
+  }, [dashboard.servicios, searchTerm]);
+
   const filteredPacks = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
     const packs = dashboard.packs.filter((pack) => pack.activo !== false && pack.disponible_pos !== false);
@@ -269,12 +297,14 @@ export default function ComercialKioscoPosPage() {
     });
   }
 
-  function addServiceToCart(event: ComercialScannerEvent) {
-    if (!event.servicio_id) return;
-    const key = `servicio:${event.servicio_id}`;
-    const servicePayload = (event.payload?.servicio || {}) as any;
-    const precio = Number(servicePayload.precio ?? 0);
+  function addServiceToCart(service: ComercialPosServicio) {
+    if (!service?.id) return;
+    if (service.activo === false) {
+      toast.error('El servicio no está activo');
+      return;
+    }
 
+    const key = `servicio:${service.id}`;
     setCart((current) => {
       const existing = current.find((item) => item.key === key);
       if (existing) {
@@ -286,14 +316,34 @@ export default function ComercialKioscoPosPage() {
           key,
           item_tipo: 'servicio',
           producto_id: null,
-          servicio_id: event.servicio_id,
-          nombre: event.item_nombre || 'Servicio',
-          precio_unitario: precio,
+          servicio_id: service.id,
+          nombre: service.nombre,
+          codigo: service.codigo,
+          precio_unitario: Number(service.precio ?? 0),
           cantidad: 1,
           descuento: 0,
           stockDisponible: 999999,
         },
       ];
+    });
+  }
+
+  function addScannedServiceToCart(event: ComercialScannerEvent) {
+    if (!event.servicio_id) return;
+    const service = dashboard.servicios.find((item) => item.id === event.servicio_id);
+    if (service) {
+      addServiceToCart(service);
+      return;
+    }
+
+    const servicePayload = (event.payload?.servicio || {}) as any;
+    addServiceToCart({
+      id: event.servicio_id,
+      nombre: event.item_nombre || servicePayload.nombre || 'Servicio',
+      codigo: event.codigo ?? servicePayload.codigo ?? null,
+      precio: Number(servicePayload.precio ?? 0),
+      categoria: servicePayload.categoria ?? null,
+      activo: true,
     });
   }
 
@@ -360,6 +410,13 @@ export default function ComercialKioscoPosPage() {
       return;
     }
 
+    const serviceMatch = dashboard.servicios.find((service) => String(service.codigo ?? '').toLowerCase() === query && service.activo !== false);
+    if (serviceMatch) {
+      addServiceToCart(serviceMatch);
+      setBarcodeTerm('');
+      return;
+    }
+
     const packMatch = dashboard.packs.find((pack) => String(pack.codigo ?? '').toLowerCase() === query && pack.disponible_pos !== false && pack.activo !== false);
     if (packMatch) {
       addPackToCart(packMatch);
@@ -367,7 +424,7 @@ export default function ComercialKioscoPosPage() {
       return;
     }
 
-    toast.error('No se encontró producto o pack por código/SKU');
+    toast.error('No se encontró producto, servicio o pack por código/SKU');
   }
 
   async function handleSubmitSale() {
@@ -376,7 +433,7 @@ export default function ComercialKioscoPosPage() {
       return;
     }
     if (!cart.length) {
-      toast.error('Agregá al menos un producto al carrito');
+      toast.error('Agregá al menos un producto, servicio o pack al carrito');
       return;
     }
 
@@ -477,7 +534,7 @@ export default function ComercialKioscoPosPage() {
           toast.success(`Agregado al carrito: ${product.producto_nombre}`);
         }
       } else if (event.item_tipo === 'servicio' && event.servicio_id) {
-        addServiceToCart(event);
+        addScannedServiceToCart(event);
         toast.success(`Servicio agregado al carrito: ${event.item_nombre || event.codigo}`);
       } else if (event.item_tipo === 'pack' && event.pack_id) {
         const pack = dashboard.packs.find((item) => item.id === event.pack_id);
@@ -541,8 +598,8 @@ export default function ComercialKioscoPosPage() {
                   </p>
                   <h1 className='text-2xl font-bold'>Punto de Venta / Kiosco</h1>
                   <p className='max-w-4xl text-sm leading-relaxed text-muted-foreground'>
-                    Venta rápida con carrito, búsqueda por producto/SKU/barcode, validación de stock por ubicación,
-                    descuento por stock ledger y ticket imprimible básico.
+                    Venta rápida con carrito, búsqueda por producto/servicio/pack, scanner móvil, cupones, validación de stock por ubicación,
+                    descuento por stock ledger, ticket imprimible y trazabilidad BI de packs/promos.
                   </p>
                 </div>
                 <div className='flex flex-wrap gap-2'>
@@ -609,11 +666,12 @@ export default function ComercialKioscoPosPage() {
               </section>
             )}
 
-            <section className='grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-7'>
+            <section className='grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-8'>
               <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>Ventas hoy</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.ventasHoy}</p></div><Store className='h-6 w-6 text-sky-600' /></CardContent></Card>
               <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>Total hoy</p><p className='text-xl font-bold'>{loading ? '...' : formatCurrencyARS(dashboard.metricas.totalHoy)}</p></div><CreditCard className='h-6 w-6 text-emerald-600' /></CardContent></Card>
               <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>Ítems hoy</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.itemsHoy}</p></div><ShoppingCart className='h-6 w-6 text-indigo-600' /></CardContent></Card>
               <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>Productos</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.productosDisponibles}</p></div><PackagePlus className='h-6 w-6 text-violet-600' /></CardContent></Card>
+              <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>Servicios</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.serviciosDisponibles}</p></div><Store className='h-6 w-6 text-cyan-600' /></CardContent></Card>
               <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>Packs POS</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.packsDisponibles}</p></div><PackagePlus className='h-6 w-6 text-fuchsia-600' /></CardContent></Card>
               <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>Promos</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.promocionesActivas}</p></div><Percent className='h-6 w-6 text-rose-600' /></CardContent></Card>
               <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>Críticos</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.productosCriticos}</p></div><Warehouse className='h-6 w-6 text-orange-600' /></CardContent></Card>
@@ -625,10 +683,10 @@ export default function ComercialKioscoPosPage() {
                   <CardHeader>
                     <div className='grid grid-cols-1 gap-3 md:grid-cols-[1fr_220px] md:items-end'>
                       <div className='space-y-2'>
-                        <Label>Buscar producto o pack</Label>
+                        <Label>Buscar producto, servicio o pack</Label>
                         <div className='relative'>
                           <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                          <Input className='pl-9' value={searchTerm} placeholder='Nombre, SKU, código de barras o pack...' onChange={(event) => setSearchTerm(event.target.value)} />
+                          <Input className='pl-9' value={searchTerm} placeholder='Nombre, SKU, código de barras, servicio o pack...' onChange={(event) => setSearchTerm(event.target.value)} />
                         </div>
                       </div>
                       <div className='space-y-2'>
@@ -643,7 +701,7 @@ export default function ComercialKioscoPosPage() {
                     <form className='mb-4 flex gap-2' onSubmit={handleBarcodeSubmit}>
                       <div className='relative flex-1'>
                         <Barcode className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                        <Input className='pl-9' value={barcodeTerm} placeholder='Escanear o pegar código/SKU/pack y presionar Enter' onChange={(event) => setBarcodeTerm(event.target.value)} />
+                        <Input className='pl-9' value={barcodeTerm} placeholder='Escanear o pegar código/SKU/servicio/pack y presionar Enter' onChange={(event) => setBarcodeTerm(event.target.value)} />
                       </div>
                       <Button type='submit' variant='outline'>Agregar</Button>
                     </form>
@@ -666,6 +724,32 @@ export default function ComercialKioscoPosPage() {
                       ))}
                       {!loading && filteredProducts.length === 0 && <p className='text-sm text-muted-foreground'>No hay productos para mostrar.</p>}
                     </div>
+
+                    {filteredServices.length > 0 && (
+                      <div className='mt-6 space-y-3'>
+                        <div className='flex items-center justify-between'>
+                          <h3 className='text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700'>Servicios vendibles</h3>
+                          <span className='text-xs text-muted-foreground'>No descuentan stock y quedan registrados en venta_detalle</span>
+                        </div>
+                        <div className='grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3'>
+                          {filteredServices.map((service) => (
+                            <button key={service.id} type='button' className='rounded-xl border border-cyan-100 bg-cyan-50/40 p-4 text-left shadow-sm transition hover:border-cyan-300 hover:shadow-md' onClick={() => addServiceToCart(service)}>
+                              <div className='flex items-start justify-between gap-2'>
+                                <div>
+                                  <p className='font-semibold'>{service.nombre}</p>
+                                  <p className='text-xs text-muted-foreground'>{service.codigo || 'Sin código'} {service.categoria ? `· ${service.categoria}` : ''}</p>
+                                </div>
+                                <span className='rounded-full bg-cyan-100 px-2 py-1 text-xs text-cyan-700'>Servicio</span>
+                              </div>
+                              <div className='mt-3 flex items-center justify-between'>
+                                <span className='text-lg font-bold'>{formatCurrencyARS(service.precio)}</span>
+                                <span className='text-xs text-muted-foreground'>{service.duracion_minutos ? `${service.duracion_minutos} min` : 'POS'}</span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {filteredPacks.length > 0 && (
                       <div className='mt-6 space-y-3'>
@@ -746,7 +830,7 @@ export default function ComercialKioscoPosPage() {
                     {cart.map((item) => (
                       <div key={item.key} className='rounded-lg border p-3'>
                         <div className='flex items-start justify-between gap-2'>
-                          <div><p className='font-medium'>{item.nombre}</p><p className='text-xs text-muted-foreground'>{item.item_tipo === 'pack' ? 'Pack comercial' : item.item_tipo === 'servicio' ? 'Servicio escaneado' : `Disponible: ${item.stockDisponible}`}</p></div>
+                          <div><p className='font-medium'>{item.nombre}</p><p className='text-xs text-muted-foreground'>{item.item_tipo === 'pack' ? 'Pack comercial' : item.item_tipo === 'servicio' ? 'Servicio POS' : `Disponible: ${item.stockDisponible}`}</p></div>
                           <Button size='icon' variant='ghost' onClick={() => removeFromCart(item.key)}><Trash2 className='h-4 w-4' /></Button>
                         </div>
                         <div className='mt-3 grid grid-cols-3 gap-2'>
