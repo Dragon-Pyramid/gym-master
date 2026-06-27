@@ -17,11 +17,25 @@ interface DashboardChartSnapshot {
   legends?: DashboardChartLegendItem[];
 }
 
+interface BeforeAfterStudioSnapshot {
+  title: string;
+  description?: string;
+  dataUrl: string;
+  width?: number;
+  height?: number;
+  view?: "front" | "back";
+  mode?: "slider" | "overlay" | "heatmap";
+  beforeLabel?: string;
+  afterLabel?: string;
+  scoreLabel?: string;
+}
+
 interface DescargarEvolucionFisicaPdfParams {
   rows: EvolucionSocio[];
   socioNombre?: string;
   logoUrl?: string;
   dashboardCharts?: DashboardChartSnapshot[];
+  beforeAfterVisuals?: BeforeAfterStudioSnapshot[];
 }
 
 const PAGE_MARGIN = 14;
@@ -687,6 +701,109 @@ const addDashboardCharts = (
 };
 
 
+const formatBeforeAfterViewLabel = (snapshot: BeforeAfterStudioSnapshot): string => {
+  const view = snapshot.view === "back" ? "Espalda" : "Frente";
+  const mode =
+    snapshot.mode === "overlay"
+      ? "superpuesto"
+      : snapshot.mode === "heatmap"
+        ? "heatmap"
+        : "slider";
+
+  return `${view} · ${mode}`;
+};
+
+const addBeforeAfterVisualSection = (
+  doc: jsPDF,
+  visuals: BeforeAfterStudioSnapshot[],
+  startY: number
+): number => {
+  if (!visuals.length) return startY;
+
+  let y = ensureSpace(doc, startY, 35);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.setTextColor(17, 24, 39);
+  doc.text("Estudio visual antes/después", PAGE_MARGIN, y);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(90, 90, 90);
+  doc.text(
+    "Captura del mapa corporal interactivo validado en pantalla, incluyendo vista, modo de comparación y lectura.",
+    PAGE_MARGIN,
+    y + 6,
+    { maxWidth: CONTENT_WIDTH }
+  );
+
+  y += 15;
+
+  visuals.forEach((snapshot) => {
+    const sourceWidth = snapshot.width && snapshot.width > 0 ? snapshot.width : 900;
+    const sourceHeight = snapshot.height && snapshot.height > 0 ? snapshot.height : 1280;
+    const imageHeight = Math.min(138, sourceHeight * (CONTENT_WIDTH / sourceWidth));
+    const imageWidth = Math.min(CONTENT_WIDTH - 10, imageHeight * (sourceWidth / sourceHeight));
+    const blockHeight = imageHeight + 31;
+
+    y = ensureSpace(doc, y, blockHeight + 8);
+
+    doc.setDrawColor(226, 232, 240);
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(PAGE_MARGIN, y, CONTENT_WIDTH, blockHeight, 3, 3, "FD");
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10.2);
+    doc.setTextColor(15, 23, 42);
+    doc.text(snapshot.title || "Mapa corporal antes/después", PAGE_MARGIN + 4, y + 7);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(100, 116, 139);
+    doc.text(formatBeforeAfterViewLabel(snapshot), PAGE_MARGIN + 4, y + 12);
+
+    if (snapshot.scoreLabel) {
+      doc.setFillColor(230, 247, 253);
+      doc.setDrawColor(186, 230, 253);
+      doc.roundedRect(PAGE_WIDTH - PAGE_MARGIN - 45, y + 4, 41, 9, 2, 2, "FD");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(6.7);
+      doc.setTextColor(2, 132, 199);
+      doc.text(snapshot.scoreLabel, PAGE_WIDTH - PAGE_MARGIN - 24.5, y + 10, {
+        align: "center",
+        maxWidth: 36,
+      });
+    }
+
+    const imageX = PAGE_MARGIN + (CONTENT_WIDTH - imageWidth) / 2;
+
+    doc.addImage(
+      snapshot.dataUrl,
+      "PNG",
+      imageX,
+      y + 18,
+      imageWidth,
+      imageHeight
+    );
+
+    const labels = [snapshot.beforeLabel, snapshot.afterLabel].filter(Boolean).join("   |   ");
+
+    if (labels) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(6.4);
+      doc.setTextColor(100, 116, 139);
+      doc.text(labels, PAGE_MARGIN + 4, y + blockHeight - 5, {
+        maxWidth: CONTENT_WIDTH - 8,
+      });
+    }
+
+    y += blockHeight + 8;
+  });
+
+  return y;
+};
+
+
 type BiometricSex = "masculino" | "femenino";
 
 interface BiometricMetrics {
@@ -952,8 +1069,6 @@ const addBiometricSilhouettePanel = (
 const addBiometricCard = (
   doc: jsPDF,
   row: EvolucionSocio,
-  image: PdfImageAsset | null,
-  model: BiometricVisualModel,
   label: string,
   title: string,
   x: number,
@@ -977,27 +1092,11 @@ const addBiometricCard = (
 
   addPdfIcon(doc, "activity", x + width - 12, y + 3.5, 7);
 
-  const sexLabel = model.sex === "femenino" ? "femenina" : "masculina";
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(5.8);
-  doc.setTextColor(2, 132, 199);
-  doc.text(`Silueta ${sexLabel} biométrica según medición.`, x + 4, y + 17, {
-    maxWidth: width - 8,
-  });
-
-  const panelX = x + 4;
-  const panelY = y + 22;
-  // Panel más ancho para que la silueta soft/robusta no se comprima horizontalmente.
-  const panelWidth = 38;
-  const panelHeight = height - 27;
-
-  addBiometricSilhouettePanel(doc, image, model, panelX, panelY, panelWidth, panelHeight);
-
   const metrics = getBiometricMetricRows(row);
   const metricGap = 2;
-  const metricX = panelX + panelWidth + 3;
-  const metricWidth = (width - (metricX - x) - 4 - metricGap) / 2;
+  const metricX = x + 4;
+  const panelY = y + 20;
+  const metricWidth = (width - 8 - metricGap) / 2;
   const metricHeight = 21.2;
 
   metrics.forEach((metric, index) => {
@@ -1107,27 +1206,19 @@ const addBiometricVisualizationSection = async (
 ): Promise<number> => {
   let y = ensureSpace(doc, startY, 168);
 
-  const initialModel = buildBiometricVisualModel(initial);
-  const currentModel = buildBiometricVisualModel(current);
-
-  const [initialImage, currentImage] = await Promise.all([
-    loadTransparentImageAsset(initialModel.dominantSrc),
-    loadTransparentImageAsset(currentModel.dominantSrc),
-  ]);
-
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13.2);
   doc.setTextColor(15, 23, 42);
-  doc.text("Visualización biométrica", PAGE_MARGIN, y);
+  doc.text("Informe biométrico", PAGE_MARGIN, y);
 
-  const titleIconX = PAGE_MARGIN + doc.getTextWidth("Visualización biométrica") + 5;
+  const titleIconX = PAGE_MARGIN + doc.getTextWidth("Informe biométrico") + 5;
   addPdfIcon(doc, "activity", titleIconX, y - 5.2, 7);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.setTextColor(100, 116, 139);
   doc.text(
-    "Comparativa visual y métricas de composición corporal basada en registros reales del socio.",
+    "Comparativa de métricas de composición corporal basada en registros reales del socio.",
     PAGE_MARGIN,
     y + 6,
     { maxWidth: CONTENT_WIDTH }
@@ -1143,8 +1234,6 @@ const addBiometricVisualizationSection = async (
   addBiometricCard(
     doc,
     initial,
-    initialImage,
-    initialModel,
     "Antes",
     "Registro inicial",
     PAGE_MARGIN,
@@ -1156,8 +1245,6 @@ const addBiometricVisualizationSection = async (
   addBiometricCard(
     doc,
     current,
-    currentImage,
-    currentModel,
     "Ahora",
     "Última medición",
     PAGE_MARGIN + cardWidth + gap,
@@ -1187,6 +1274,7 @@ export const descargarEvolucionFisicaPdf = async ({
   socioNombre = "Socio",
   logoUrl = "/gm_logo.svg",
   dashboardCharts = [],
+  beforeAfterVisuals = [],
 }: DescargarEvolucionFisicaPdfParams): Promise<void> => {
   if (!rows.length) {
     throw new Error("No hay registros de evolución física para exportar");

@@ -1075,10 +1075,19 @@ export default function EvolucionFisicaBeforeAfterStudio({
               <span>Después · {formatShortDate(afterRow.fecha)}</span>
             </div>
 
-            <div className="relative mx-auto h-[560px] w-full max-w-[360px] overflow-hidden rounded-[28px] border border-cyan-300/20 bg-[radial-gradient(circle_at_50%_40%,rgba(34,211,238,0.20),rgba(2,6,23,0.96)_58%)]">
+            <div
+              data-evolucion-before-after-panel="true"
+              data-body-view={bodyView}
+              data-view-mode={mode}
+              data-slider={slider}
+              data-before-label={`Antes · ${formatShortDate(beforeRow.fecha)}`}
+              data-after-label={`Después · ${formatShortDate(afterRow.fecha)}`}
+              data-score-label={scoreLabel}
+              className="relative mx-auto h-[560px] w-full max-w-[360px] overflow-hidden rounded-[28px] border border-cyan-300/20 bg-[radial-gradient(circle_at_50%_40%,rgba(34,211,238,0.20),rgba(2,6,23,0.96)_58%)]"
+            >
               {mode === "slider" ? (
                 <>
-                  <div className="absolute inset-0 p-4 opacity-75">
+                  <div data-evolucion-map-layer="before" className="absolute inset-0 p-4 opacity-75">
                     <BodyMapSvg
                       metrics={beforeMetrics}
                       states={groupMap}
@@ -1089,6 +1098,7 @@ export default function EvolucionFisicaBeforeAfterStudio({
                     />
                   </div>
                   <div
+                    data-evolucion-map-layer="after"
                     className="absolute inset-0 p-4"
                     style={{ clipPath: `inset(0 ${100 - slider}% 0 0)` }}
                   >
@@ -1107,7 +1117,7 @@ export default function EvolucionFisicaBeforeAfterStudio({
                 </>
               ) : mode === "overlay" ? (
                 <>
-                  <div className="absolute inset-0 p-4 opacity-45 blur-[0.2px]">
+                  <div data-evolucion-map-layer="before" className="absolute inset-0 p-4 opacity-45 blur-[0.2px]">
                     <BodyMapSvg
                       metrics={beforeMetrics}
                       states={groupMap}
@@ -1118,7 +1128,7 @@ export default function EvolucionFisicaBeforeAfterStudio({
                       heatmap={false}
                     />
                   </div>
-                  <div className="absolute inset-0 p-4 mix-blend-screen">
+                  <div data-evolucion-map-layer="after" className="absolute inset-0 p-4 mix-blend-screen">
                     <BodyMapSvg
                       metrics={afterMetrics}
                       states={groupMap}
@@ -1129,7 +1139,7 @@ export default function EvolucionFisicaBeforeAfterStudio({
                   </div>
                 </>
               ) : (
-                <div className="absolute inset-0 p-4">
+                <div data-evolucion-map-layer="heatmap" className="absolute inset-0 p-4">
                   <BodyMapSvg
                     metrics={afterMetrics}
                     states={groupMap}
