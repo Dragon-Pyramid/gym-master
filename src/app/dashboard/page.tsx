@@ -486,7 +486,7 @@ export default function DashboardPage() {
 
   return (
     <SidebarProvider>
-      <div className='relative flex w-full min-h-screen'>
+      <div className='relative flex min-h-[100dvh] w-full items-stretch overflow-x-hidden'>
         {showQr && (
           <div
             className='fixed inset-0 z-50 transition-opacity duration-300 bg-black'
@@ -494,7 +494,7 @@ export default function DashboardPage() {
           />
         )}
         <AppSidebar />
-        <div className='flex min-w-0 flex-1 flex-col w-full'>
+        <div className='flex min-h-[100dvh] min-w-0 flex-1 flex-col w-full'>
           <AppHeader title='Dashboard' />
 
           {showQr && (

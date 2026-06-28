@@ -56,7 +56,7 @@ export const AppSidebar = () => {
             ? `fixed inset-y-0 left-0 h-[100dvh] max-h-[100dvh] w-[20rem] max-w-[88vw] overflow-y-auto overscroll-contain pb-[calc(6rem+env(safe-area-inset-bottom))] text-sidebar-foreground z-[60] ${
                 isOpen ? "translate-x-0" : "-translate-x-full"
               } bg-[var(--color-sidebar)] rounded-br-[27px] shadow-2xl`
-            : `w-64 min-w-[16rem] max-w-[16rem] h-auto border-r border-br z-40 overflow-y-auto bg-[var(--color-sidebar)] text-[var(--color-sidebar-foreground)] rounded-br-[27px]`
+            : `sticky top-0 h-[100dvh] max-h-[100dvh] w-64 min-w-[16rem] max-w-[16rem] border-r border-br z-40 overflow-y-auto overscroll-contain bg-[var(--color-sidebar)] text-[var(--color-sidebar-foreground)] rounded-br-[27px]`
         } sidebar-scrollbar`}
       >
         {isMobile && (
