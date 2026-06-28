@@ -28,13 +28,13 @@ export function PwaConnectionUpdateBanner() {
   const { user, isAuthenticated } = useAuthStore();
 
   const [isOnline, setIsOnline] = useState(true);
-  const [wasOffline, setWasOffline] = useState(false);
   const [showOnlineRestored, setShowOnlineRestored] = useState(false);
   const [updateReady, setUpdateReady] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
 
   const onlineRestoredTimerRef = useRef<number | null>(null);
+  const wasOfflineRef = useRef(false);
 
   const isSocio = user?.rol?.trim().toLowerCase() === 'socio';
   const shouldTargetSocioPwa = isAuthenticated && isSocio && (isMobile || isStandalone);
@@ -42,7 +42,10 @@ export function PwaConnectionUpdateBanner() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    setIsOnline(window.navigator.onLine);
+    const initialOnline = window.navigator.onLine;
+
+    wasOfflineRef.current = !initialOnline;
+    setIsOnline(initialOnline);
     setIsStandalone(isStandaloneMode());
 
     const handleDisplayModeChange = () => {
@@ -50,15 +53,15 @@ export function PwaConnectionUpdateBanner() {
     };
 
     const handleOffline = () => {
+      wasOfflineRef.current = true;
       setIsOnline(false);
-      setWasOffline(true);
       setShowOnlineRestored(false);
     };
 
     const handleOnline = () => {
       setIsOnline(true);
 
-      if (wasOffline) {
+      if (wasOfflineRef.current) {
         setShowOnlineRestored(true);
 
         if (onlineRestoredTimerRef.current) {
@@ -66,8 +69,8 @@ export function PwaConnectionUpdateBanner() {
         }
 
         onlineRestoredTimerRef.current = window.setTimeout(() => {
+          wasOfflineRef.current = false;
           setShowOnlineRestored(false);
-          setWasOffline(false);
         }, ONLINE_RESTORED_VISIBLE_MS);
       }
     };
@@ -87,7 +90,7 @@ export function PwaConnectionUpdateBanner() {
         window.clearTimeout(onlineRestoredTimerRef.current);
       }
     };
-  }, [wasOffline]);
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
@@ -212,7 +215,7 @@ export function PwaConnectionUpdateBanner() {
 
   return (
     <aside
-      className='fixed inset-x-3 bottom-[calc(10.2rem+env(safe-area-inset-bottom))] z-[76] mx-auto max-w-md rounded-3xl border border-slate-200 bg-white/95 p-3 shadow-[0_18px_48px_rgba(15,23,42,0.18)] backdrop-blur md:hidden dark:border-slate-800 dark:bg-slate-950/95'
+      className='fixed inset-x-3 bottom-[calc(10.2rem+env(safe-area-inset-bottom))] z-[76] mx-auto max-w-md rounded-3xl border border-slate-200 bg-white/95 p-3 shadow-[0_18px_48px_rgba(15,23,42,0.18)] backdrop-blur md:hidden dark:border-slate-800 dark:bg-slate-950/95 gm-pwa-floating-card'
       role='status'
       aria-live='polite'
     >

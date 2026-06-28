@@ -81,7 +81,7 @@ export function SocioMobileBottomNavigation() {
   return (
     <nav
       aria-label='Navegación principal del socio'
-      className='fixed inset-x-0 bottom-0 z-[80] border-t border-slate-200/80 bg-white/95 px-2 pb-[calc(0.55rem+env(safe-area-inset-bottom))] pt-2 shadow-[0_-12px_32px_rgba(15,23,42,0.14)] backdrop-blur md:hidden dark:border-slate-800 dark:bg-slate-950/95'
+      className='gm-pwa-bottom-nav fixed inset-x-0 bottom-0 z-[80] border-t border-slate-200/80 bg-white/95 px-2 pb-[calc(0.55rem+env(safe-area-inset-bottom))] pt-2 shadow-[0_-12px_32px_rgba(15,23,42,0.14)] backdrop-blur md:hidden dark:border-slate-800 dark:bg-slate-950/95'
     >
       <div className='mx-auto grid max-w-md grid-cols-5 gap-1'>
         {socioBottomNavItems.map((item) => {

@@ -160,3 +160,28 @@
     background: var(--background);
   }
 }
+/* PWA instalada en Android/iOS: evita saltos de alto y flashes blancos al abrir desde el ícono. */
+body.gm-pwa-standalone {
+  min-height: calc(var(--gm-vh, 1vh) * 100);
+  overscroll-behavior-y: contain;
+  touch-action: manipulation;
+  background: var(--background);
+}
+
+body.gm-pwa-standalone .gm-pwa-bottom-nav {
+  padding-bottom: calc(0.65rem + env(safe-area-inset-bottom));
+}
+
+body.gm-pwa-standalone .gm-pwa-floating-card {
+  bottom: calc(10.65rem + env(safe-area-inset-bottom));
+}
+
+body.gm-pwa-android {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 1023px) {
+  body.gm-pwa-standalone.gm-socio-bottom-nav main:not([data-slot="sidebar-inset"]) {
+    padding-bottom: calc(7.25rem + env(safe-area-inset-bottom)) !important;
+  }
+}

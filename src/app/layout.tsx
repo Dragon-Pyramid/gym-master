@@ -30,6 +30,12 @@ export const metadata: Metadata = {
     title: 'Gym Master',
     statusBarStyle: 'black-translucent',
   },
+  other: {
+    'mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-capable': 'yes',
+    'apple-mobile-web-app-title': 'Gym Master',
+    'msapplication-TileColor': '#0f172a',
+  },
   formatDetection: {
     telephone: false,
   },
