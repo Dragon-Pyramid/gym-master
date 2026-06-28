@@ -7,6 +7,7 @@ import ProfileImage from '@/components/perfil/ProfileImage';
 import { HeaderNotificationsBell } from '@/components/header/HeaderNotificationsBell';
 import { SocioMobileBottomNavigation } from '@/components/navigation/SocioMobileBottomNavigation';
 import { SocioPwaInstallPrompt } from '@/components/pwa/SocioPwaInstallPrompt';
+import { PwaConnectionUpdateBanner } from '@/components/pwa/PwaConnectionUpdateBanner';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -218,6 +219,7 @@ export const AppHeader = ({ title }: AppHeaderProps) => {
 
       <SocioMobileBottomNavigation />
       <SocioPwaInstallPrompt />
+      <PwaConnectionUpdateBanner />
     </>
   );
 };
