@@ -5,6 +5,7 @@ import { useSidebar } from '../ui/sidebar';
 import { Lock, Menu, Moon, Search, Settings, SlidersHorizontal, Sun, User } from 'lucide-react';
 import ProfileImage from '@/components/perfil/ProfileImage';
 import { HeaderNotificationsBell } from '@/components/header/HeaderNotificationsBell';
+import { SocioMobileBottomNavigation } from '@/components/navigation/SocioMobileBottomNavigation';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -76,7 +77,8 @@ export const AppHeader = ({ title }: AppHeaderProps) => {
   const isAdmin = user?.rol === 'admin';
 
   return (
-    <header className='sticky top-0 z-40 flex min-h-16 w-full flex-nowrap items-center justify-between gap-2 border-b border-border bg-background/95 px-2 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:px-3 md:px-4 md:py-3'>
+    <>
+      <header className='sticky top-0 z-40 flex min-h-16 w-full flex-nowrap items-center justify-between gap-2 border-b border-border bg-background/95 px-2 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:px-3 md:px-4 md:py-3'>
       <div className='flex min-w-0 items-center gap-2 md:gap-3'>
         <Image
           src='/gm_logo.svg'
@@ -200,6 +202,8 @@ export const AppHeader = ({ title }: AppHeaderProps) => {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    </header>
+      </header>
+      <SocioMobileBottomNavigation />
+    </>
   );
 };
