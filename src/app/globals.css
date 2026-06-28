@@ -141,7 +141,18 @@
 
 
 @media (max-width: 1023px) {
-  body.gm-socio-bottom-nav main {
+  /*
+   * La barra inferior del socio necesita aire al final del contenido,
+   * pero no debe agregar padding al shell/SidebarInset que contiene el footer.
+   * Si el padding cae sobre el contenedor externo, aparece una franja blanca
+   * después de "Desarrollado por DRAGONPYRAMID".
+   */
+  body.gm-socio-bottom-nav main:not([data-slot="sidebar-inset"]) {
     padding-bottom: calc(6.75rem + env(safe-area-inset-bottom)) !important;
   }
+
+  body.gm-socio-bottom-nav main[data-slot="sidebar-inset"] {
+    padding-bottom: 0 !important;
+  }
+
 }
