@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { Toaster } from 'sonner';
@@ -11,8 +11,34 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Gym Master',
-  description: 'ERP inteligente para la gestion integral de gimnasios',
+  title: {
+    default: 'Gym Master',
+    template: '%s | Gym Master',
+  },
+  description: 'ERP inteligente para la gestión integral de gimnasios.',
+  applicationName: 'Gym Master',
+  manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
+  appleWebApp: {
+    capable: true,
+    title: 'Gym Master',
+    statusBarStyle: 'black-translucent',
+  },
+  formatDetection: {
+    telephone: false,
+  },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: '#0f172a',
 };
 
 export default function RootLayout({
