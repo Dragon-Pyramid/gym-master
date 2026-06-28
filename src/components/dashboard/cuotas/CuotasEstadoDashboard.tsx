@@ -133,7 +133,7 @@ export default function CuotasEstadoDashboard() {
 
   if (loading) {
     return (
-      <Card className='col-span-12'>
+      <Card className='md:col-span-2 xl:col-span-3'>
         <CardHeader>
           <CardTitle>Estado de cuotas</CardTitle>
         </CardHeader>
@@ -146,13 +146,13 @@ export default function CuotasEstadoDashboard() {
 
   if (error) {
     return (
-      <Card className='col-span-12 border-red-200 dark:border-red-900'>
+      <Card className='md:col-span-2 xl:col-span-3 border-red-200 dark:border-red-900'>
         <CardHeader className='flex flex-row items-center justify-between gap-4'>
           <CardTitle className='flex items-center gap-2'>
             <AlertTriangle className='h-5 w-5 text-red-500' />
             Estado de cuotas
           </CardTitle>
-          <Button variant='outline' size='sm' onClick={fetchData}>
+          <Button variant='outline' size='sm' className='w-full md:w-auto' onClick={fetchData}>
             Reintentar
           </Button>
         </CardHeader>
@@ -166,10 +166,10 @@ export default function CuotasEstadoDashboard() {
   if (!data) return null;
 
   return (
-    <section className='col-span-12 space-y-4'>
+    <section className='min-w-0 space-y-4 md:col-span-2 xl:col-span-3'>
       <div className='flex flex-col gap-2 md:flex-row md:items-end md:justify-between'>
         <div>
-          <h2 className='text-2xl font-bold'>Estado de cuotas</h2>
+          <h2 className='text-xl font-bold sm:text-2xl'>Estado de cuotas</h2>
           <p className='text-sm text-muted-foreground'>
             Control operativo de socios al día, vencidos y sin pagos.
           </p>
@@ -265,7 +265,7 @@ export default function CuotasEstadoDashboard() {
               data.pagos_por_metodo.map((item) => (
                 <div
                   key={`${item.metodo_pago}-${item.estado}`}
-                  className='flex items-center justify-between rounded-xl border p-3'
+                  className='flex items-center justify-between gap-3 rounded-xl border p-3'
                 >
                   <div>
                     <p className='font-semibold capitalize'>{item.metodo_pago}</p>

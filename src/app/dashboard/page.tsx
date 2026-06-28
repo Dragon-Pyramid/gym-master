@@ -494,7 +494,7 @@ export default function DashboardPage() {
           />
         )}
         <AppSidebar />
-        <div className='flex flex-col flex-1 w-full'>
+        <div className='flex min-w-0 flex-1 flex-col w-full'>
           <AppHeader title='Dashboard' />
 
           {showQr && (
@@ -535,7 +535,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          <main className='flex-1 w-full max-w-full px-4 py-6 space-y-6 md:px-8'>
+          <main className='flex-1 w-full min-w-0 max-w-full overflow-x-hidden px-3 py-4 space-y-5 sm:px-4 md:px-8 md:py-6 md:space-y-6'>
             {(userType === 'socio' || userType === 'usuario') && (
               <DashboardInitialContent />
             )}
@@ -544,7 +544,7 @@ export default function DashboardPage() {
               <>
                 {gimnasioParametrizacionStatus && !gimnasioParametrizacionStatus.completa && (
                   <Card className='border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-50'>
-                    <CardContent className='flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between'>
+                    <CardContent className='flex flex-col gap-4 p-4 sm:p-5 md:flex-row md:items-center md:justify-between'>
                       <div className='flex gap-3'>
                         <AlertTriangle className='mt-1 h-5 w-5 shrink-0 text-amber-600' />
                         <div>
@@ -563,7 +563,7 @@ export default function DashboardPage() {
                       <Button
                         type='button'
                         variant='outline'
-                        className='border-amber-300 bg-white text-amber-900 hover:bg-amber-100'
+                        className='w-full border-amber-300 bg-white text-amber-900 hover:bg-amber-100 sm:w-auto'
                         onClick={() => router.push('/dashboard/gimnasio-parametrizacion')}
                       >
                         Completar datos
@@ -572,20 +572,20 @@ export default function DashboardPage() {
                   </Card>
                 )}
 
-                <section className='rounded-2xl border bg-gradient-to-r from-slate-950 via-slate-900 to-sky-900 p-6 text-white shadow-sm'>
+                <section className='rounded-2xl border bg-gradient-to-r from-slate-950 via-slate-900 to-sky-900 p-4 text-white shadow-sm sm:p-6'>
                   <div className='flex flex-col justify-between gap-5 xl:flex-row xl:items-center'>
                     <div className='space-y-2'>
                       <p className='text-xs font-semibold uppercase tracking-[0.24em] text-sky-200'>
                         Panel ejecutivo
                       </p>
-                      <h1 className='text-3xl font-bold'>Visión general del gimnasio</h1>
+                      <h1 className='text-2xl font-bold leading-tight sm:text-3xl'>Visión general del gimnasio</h1>
                       <p className='max-w-3xl text-sm leading-6 text-slate-200'>
                         Resumen operativo para decidir rápido: cuotas, mensajes, equipamiento, mantenimiento, comercial y BI.
                       </p>
                     </div>
-                    <div className='flex flex-wrap gap-2'>
+                    <div className='grid grid-cols-1 gap-2 sm:flex sm:flex-wrap'>
                       <Button
-                        className='bg-[#02a8e1] text-white hover:bg-[#0288b1]'
+                        className='w-full bg-[#02a8e1] text-white hover:bg-[#0288b1] sm:w-auto'
                         onClick={() => {
                           setShowQr(true);
                           const url = new URL(window.location.href);
@@ -597,23 +597,24 @@ export default function DashboardPage() {
                       </Button>
                       <Button
                         variant='secondary'
+                        className='w-full sm:w-auto'
                         onClick={() => window.open('/dashboard/asistencias/terminal', '_blank', 'noopener,noreferrer')}
                       >
                         Terminal
                       </Button>
-                      <Button variant='secondary' onClick={() => router.push('/dashboard/finanzas')}>
+                      <Button variant='secondary' className='w-full sm:w-auto' onClick={() => router.push('/dashboard/finanzas')}>
                         Finanzas / BI
                       </Button>
-                      <Button variant='secondary' onClick={() => router.push('/dashboard/comercial')}>
+                      <Button variant='secondary' className='w-full sm:w-auto' onClick={() => router.push('/dashboard/comercial')}>
                         Comercial
                       </Button>
-                      <Button variant='secondary' onClick={() => router.push('/dashboard/bi-socios-demografia-promociones')}>
+                      <Button variant='secondary' className='w-full sm:w-auto' onClick={() => router.push('/dashboard/bi-socios-demografia-promociones')}>
                         BI Socios
                       </Button>
                     </div>
                   </div>
 
-                  <div className='mt-6 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4'>
+                  <div className='mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4'>
                     <div className='rounded-xl border border-white/10 bg-white/10 p-4'>
                       <div className='flex items-center gap-2 text-sky-100'>
                         <Megaphone className='h-4 w-4' />
@@ -645,7 +646,7 @@ export default function DashboardPage() {
                   </div>
                 </section>
 
-                <div className='grid grid-cols-1 gap-4 mt-6 md:grid-cols-2 xl:grid-cols-3'>
+                <div className='grid min-w-0 grid-cols-1 gap-4 mt-6 md:grid-cols-2 xl:grid-cols-3'>
                   <CuotasEstadoDashboard />
 
                   <Card
@@ -680,7 +681,7 @@ export default function DashboardPage() {
                       <Button
                         type='button'
                         variant='outline'
-                        className='mt-4'
+                        className='mt-4 w-full sm:w-auto'
                         onClick={(event) => {
                           event.stopPropagation();
                           router.push('/dashboard/mensajes-admin');
@@ -735,8 +736,8 @@ export default function DashboardPage() {
                     <CardHeader>
                       <CardTitle>Estado de Equipamiento</CardTitle>
                     </CardHeader>
-                    <CardContent className='lg:h-[300px] md:h-[600px] overflow-y-auto'>
-                      <div className='lg:h-[500px] md:h-[500px]'>
+                    <CardContent className='h-[260px] overflow-y-auto sm:h-[300px] md:h-[420px] lg:h-[300px]'>
+                      <div className='h-full min-h-[240px]'>
                         <Pie
                           data={{
                             labels: estadoEquipamiento.map(
@@ -775,11 +776,11 @@ export default function DashboardPage() {
                     </CardContent>
                   </Card>
 
-                  <Card className='col-span-12 lg:col-span-6'>
+                  <Card className='md:col-span-2 xl:col-span-3'>
                     <CardHeader>
                       <CardTitle>Top Fallos de Equipamiento</CardTitle>
                     </CardHeader>
-                    <CardContent className='h-[300px]'>
+                    <CardContent className='h-[260px] sm:h-[300px]'>
                       <Bar
                         data={{
                           labels: topFallos.map((item) => item.nombre),
@@ -803,11 +804,11 @@ export default function DashboardPage() {
                     </CardContent>
                   </Card>
 
-                  <Card className='col-span-12 lg:col-span-6'>
+                  <Card className='md:col-span-2 xl:col-span-3'>
                     <CardHeader>
                       <CardTitle>Segmentación de Pagos</CardTitle>
                     </CardHeader>
-                    <CardContent className='h-[300px]'>
+                    <CardContent className='h-[260px] sm:h-[300px]'>
                       <Pie
                         data={{
                           labels: segmentacionPagos.map((item) => item.anio_mes),
@@ -838,11 +839,11 @@ export default function DashboardPage() {
                     </CardContent>
                   </Card>
 
-                  <Card className='col-span-12'>
+                  <Card className='md:col-span-2 xl:col-span-3'>
                     <CardHeader>
                       <CardTitle>Histograma de Pagos</CardTitle>
                     </CardHeader>
-                    <CardContent className='h-[300px]'>
+                    <CardContent className='h-[260px] sm:h-[300px]'>
                       <Bar
                         data={{
                           labels: histogramaPagos.map((item) => item.anio_mes),

@@ -42,22 +42,25 @@ export const AppSidebar = () => {
 
       {isMobile && isOpen && (
         <div
-          className="fixed inset-0 z-50 bg-black/40"
+          className="fixed inset-0 z-50 bg-black/45 backdrop-blur-[1px]"
           onClick={() => setOpenMobile(false)}
         />
       )}
 
       <Sidebar
+        role={isMobile ? "dialog" : undefined}
+        aria-modal={isMobile ? true : undefined}
+        aria-label="Menú del dashboard"
         className={`transition-transform duration-300 transform ${
           isMobile
-            ? `fixed inset-y-0 left-0 h-[100dvh] max-h-[100dvh] w-[20rem] max-w-[86vw] overflow-y-auto overscroll-contain pb-24 text-sidebar-foreground z-[60] ${
+            ? `fixed inset-y-0 left-0 h-[100dvh] max-h-[100dvh] w-[20rem] max-w-[88vw] overflow-y-auto overscroll-contain pb-[calc(6rem+env(safe-area-inset-bottom))] text-sidebar-foreground z-[60] ${
                 isOpen ? "translate-x-0" : "-translate-x-full"
               } bg-[var(--color-sidebar)] rounded-br-[27px] shadow-2xl`
             : `w-64 min-w-[16rem] max-w-[16rem] h-auto border-r border-br z-40 overflow-y-auto bg-[var(--color-sidebar)] text-[var(--color-sidebar-foreground)] rounded-br-[27px]`
         } sidebar-scrollbar`}
       >
         {isMobile && (
-          <div className="sticky top-4 z-[70] flex justify-end pr-4">
+          <div className="sticky top-0 z-[70] flex justify-end bg-[var(--color-sidebar)] px-4 py-3">
             <button
               type="button"
               aria-label="Cerrar menú del dashboard"
@@ -68,7 +71,7 @@ export const AppSidebar = () => {
             </button>
           </div>
         )}
-        <div className="mt-5 text-xl font-semibold tracking-tight text-center">
+        <div className="mt-2 text-xl font-semibold tracking-tight text-center">
           Gym Master
         </div>
 

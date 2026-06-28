@@ -634,7 +634,7 @@ export default function ActividadesPage() {
         <AppSidebar />
         <SidebarInset>
           <AppHeader title="Actividades" />
-          <main className="flex-1 space-y-6 p-6">
+          <main className="min-w-0 flex-1 space-y-5 overflow-x-hidden p-3 sm:p-4 md:space-y-6 md:p-6">
             <QaFileNameBadge file="src/app/dashboard/actividades/page.tsx" />
 
             {dashboard?.warnings?.length ? (
@@ -645,7 +645,7 @@ export default function ActividadesPage() {
               </Card>
             ) : null}
 
-            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+            <section className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
               <MetricCard title="Actividades" value={kpis?.total_actividades ?? actividades.length} icon={Layers} />
               <MetricCard title="Turnos" value={kpis?.total_turnos ?? 0} icon={CalendarDays} helper={`${kpis?.turnos_activos ?? 0} activos`} />
               <MetricCard title="Cupos totales" value={kpis?.cupos_totales ?? 0} icon={Users} />
@@ -654,7 +654,7 @@ export default function ActividadesPage() {
               <MetricCard title="Ocupación" value={percentLabel(kpis?.ocupacion_promedio)} icon={CheckCircle2} />
             </section>
 
-            <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+            <section className="grid min-w-0 gap-4 xl:grid-cols-[1.1fr_0.9fr]">
               <Card>
                 <CardHeader className="border-b p-4">
                   <h2 className="text-xl font-bold">BI de turnos y cupos</h2>
@@ -662,8 +662,8 @@ export default function ActividadesPage() {
                     Ocupación por actividad, distribución semanal y estado de inscripciones.
                   </p>
                 </CardHeader>
-                <CardContent className="grid gap-4 p-4 lg:grid-cols-2">
-                  <div className="rounded-xl border p-4">
+                <CardContent className="grid min-w-0 gap-4 p-3 sm:p-4 lg:grid-cols-2">
+                  <div className="min-w-0 rounded-xl border p-3 sm:p-4">
                     <div className="mb-3 flex items-center gap-2 font-semibold">
                       <CalendarDays className="h-4 w-4" /> Turnos por día
                     </div>
@@ -682,7 +682,7 @@ export default function ActividadesPage() {
                     )}
                   </div>
 
-                  <div className="rounded-xl border p-4">
+                  <div className="min-w-0 rounded-xl border p-3 sm:p-4">
                     <div className="mb-3 flex items-center gap-2 font-semibold">
                       <Users className="h-4 w-4" /> Estado de inscripciones
                     </div>
@@ -702,16 +702,16 @@ export default function ActividadesPage() {
                     )}
                   </div>
 
-                  <div className="rounded-xl border p-4 lg:col-span-2">
+                  <div className="min-w-0 rounded-xl border p-3 sm:p-4 lg:col-span-2">
                     <div className="mb-3 flex items-center gap-2 font-semibold">
                       <Layers className="h-4 w-4" /> Inscriptos por actividad
                     </div>
                     {dashboard?.por_actividad?.length ? (
                       <ResponsiveContainer width="100%" height={260}>
-                        <BarChart data={dashboard.por_actividad} layout="vertical" margin={{ left: 90 }}>
+                        <BarChart data={dashboard.por_actividad} layout="vertical" margin={{ left: 24, right: 12 }}>
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis type="number" allowDecimals={false} />
-                          <YAxis type="category" dataKey="label" />
+                          <YAxis type="category" dataKey="label" width={110} tick={{ fontSize: 11 }} />
                           <Tooltip />
                           <Bar dataKey="total" name="Inscriptos" fill="#22c55e" />
                         </BarChart>
@@ -736,7 +736,7 @@ export default function ActividadesPage() {
                       <div className="space-y-1.5 md:col-span-2">
                         <Label>Actividad</Label>
                         <select
-                          className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                           value={turnoForm.actividad_id}
                           onChange={(event) => setTurnoForm((prev) => ({ ...prev, actividad_id: event.target.value }))}
                           required
@@ -860,13 +860,13 @@ export default function ActividadesPage() {
                         <Input value={turnoForm.observaciones} onChange={(event) => setTurnoForm((prev) => ({ ...prev, observaciones: event.target.value }))} placeholder="Requisitos, nivel, material necesario..." />
                       </div>
                     </div>
-                    <div className="flex flex-wrap justify-end gap-2">
+                    <div className="grid gap-2 sm:flex sm:flex-wrap sm:justify-end">
                       {turnoForm.id ? (
-                        <Button type="button" variant="outline" onClick={resetTurnoForm}>
+                        <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={resetTurnoForm}>
                           Cancelar edición
                         </Button>
                       ) : null}
-                      <Button type="submit" disabled={submittingTurno || dashboard?.schema_ready === false} className="bg-[#02a8e1] hover:bg-[#0288b1]">
+                      <Button type="submit" disabled={submittingTurno || dashboard?.schema_ready === false} className="w-full bg-[#02a8e1] hover:bg-[#0288b1] sm:w-auto">
                         <PlusCircle className="mr-2 h-4 w-4" />
                         {submittingTurno ? "Guardando..." : turnoForm.id ? "Actualizar turno" : "Crear turno"}
                       </Button>
@@ -877,37 +877,37 @@ export default function ActividadesPage() {
             </section>
 
             <Card>
-              <CardHeader className="flex flex-wrap items-center justify-between gap-4 border-b p-4 md:flex-nowrap">
+              <CardHeader className="flex flex-col gap-4 border-b p-3 sm:p-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <h2 className="text-xl font-bold">Turnos, cupos e inscripciones</h2>
                   <p className="text-sm text-muted-foreground">
                     Control de clases por día, cupos disponibles, ocupación y lista de espera.
                   </p>
                 </div>
-                <div className="flex w-full flex-wrap items-center gap-2 md:w-auto">
-                  <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={diaFilter} onChange={(event) => setDiaFilter(event.target.value)}>
+                <div className="grid w-full gap-2 sm:grid-cols-2 lg:flex lg:w-auto lg:flex-row lg:items-center">
+                  <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm lg:w-auto" value={diaFilter} onChange={(event) => setDiaFilter(event.target.value)}>
                     <option value="todos">Todos los días</option>
                     {DIAS_SEMANA.map((dia) => (
                       <option key={dia.value} value={dia.value}>{dia.label}</option>
                     ))}
                   </select>
-                  <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={estadoFilter} onChange={(event) => setEstadoFilter(event.target.value)}>
+                  <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm lg:w-auto" value={estadoFilter} onChange={(event) => setEstadoFilter(event.target.value)}>
                     <option value="todos">Todos los estados</option>
                     {ESTADOS_TURNO.map((estado) => (
                       <option key={estado.value} value={estado.value}>{estado.label}</option>
                     ))}
                   </select>
-                  <div className="relative flex-grow md:flex-grow-0">
+                  <div className="relative min-w-0 flex-grow lg:flex-grow-0">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input className="w-full pl-8 md:w-[280px]" value={turnoSearchTerm} onChange={(event) => setTurnoSearchTerm(event.target.value)} placeholder="Buscar turno, actividad, zona..." />
+                    <Input className="w-full pl-8 lg:w-[280px]" value={turnoSearchTerm} onChange={(event) => setTurnoSearchTerm(event.target.value)} placeholder="Buscar turno, actividad, zona..." />
                   </div>
-                  <Button variant="outline" onClick={handleDownloadPdf} className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]">
+                  <Button variant="outline" onClick={handleDownloadPdf} className="flex w-full items-center justify-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd] lg:w-auto">
                     <FileText className="h-4 w-4" /> PDF
                   </Button>
-                  <Button variant="outline" onClick={handleExportExcel} className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]">
+                  <Button variant="outline" onClick={handleExportExcel} className="flex w-full items-center justify-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd] lg:w-auto">
                     <FileSpreadsheet className="h-4 w-4" /> Excel
                   </Button>
-                  <Button variant="outline" onClick={loadDashboard} disabled={loadingDashboard}>
+                  <Button variant="outline" onClick={loadDashboard} disabled={loadingDashboard} className="w-full lg:w-auto">
                     <RefreshCw className={`mr-2 h-4 w-4 ${loadingDashboard ? "animate-spin" : ""}`} /> Actualizar
                   </Button>
                 </div>
@@ -918,55 +918,103 @@ export default function ActividadesPage() {
                 ) : filteredTurnos.length === 0 ? (
                   <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">No hay turnos cargados para los filtros actuales.</div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <Table className="min-w-[1050px] overflow-hidden rounded-md border border-border text-sm">
-                      <TableHeader>
-                        <TableRow className="bg-muted/50">
-                          <TableHead>Actividad / turno</TableHead>
-                          <TableHead>Día y horario</TableHead>
-                          <TableHead>Instructor</TableHead>
-                          <TableHead>Ubicación</TableHead>
-                          <TableHead>Cupos</TableHead>
-                          <TableHead>Estado</TableHead>
-                          <TableHead>Acciones</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredTurnos.map((turno) => (
-                          <TableRow key={turno.id} className="odd:bg-muted/30">
-                            <TableCell>
-                              <div className="font-semibold">{turno.actividad_nombre}</div>
-                              <div className="text-xs text-muted-foreground">{turno.nombre_turno}</div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-[#02a8e1]" /> {diaLabel(turno.dia_semana)}</div>
-                              <div className="text-xs text-muted-foreground">{timeRange(turno)}</div>
-                            </TableCell>
-                            <TableCell>{turno.instructor_nombre || "Sin instructor"}</TableCell>
-                            <TableCell>{turno.ubicacion || "Sin ubicación"}</TableCell>
-                            <TableCell>
-                              <div className="font-semibold">{turno.inscriptos}/{turno.cupo_maximo}</div>
-                              <div className="text-xs text-muted-foreground">Disponibles: {turno.cupos_disponibles} · Espera: {turno.lista_espera}</div>
-                              <div className="mt-1 h-2 w-28 rounded-full bg-slate-100">
+                  <>
+                    <div className="grid gap-3 md:hidden">
+                      {filteredTurnos.map((turno) => (
+                        <div key={turno.id} className="rounded-xl border bg-white p-3 shadow-sm">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="truncate font-semibold text-slate-950">{turno.actividad_nombre}</p>
+                              <p className="truncate text-xs text-muted-foreground">{turno.nombre_turno}</p>
+                            </div>
+                            <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${turno.estado === "activo" ? "bg-emerald-100 text-emerald-700" : turno.estado === "pausado" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>
+                              {estadoLabel(turno.estado)}
+                            </span>
+                          </div>
+
+                          <div className="mt-3 grid gap-2 text-sm">
+                            <div className="flex items-center gap-2 text-slate-700">
+                              <Clock className="h-4 w-4 shrink-0 text-[#02a8e1]" />
+                              <span>{diaLabel(turno.dia_semana)} · {timeRange(turno)}</span>
+                            </div>
+                            <div className="text-muted-foreground">
+                              Instructor: <span className="text-slate-900">{turno.instructor_nombre || "Sin instructor"}</span>
+                            </div>
+                            <div className="text-muted-foreground">
+                              Ubicación: <span className="text-slate-900">{turno.ubicacion || "Sin ubicación"}</span>
+                            </div>
+                            <div>
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="font-semibold">{turno.inscriptos}/{turno.cupo_maximo} inscriptos</span>
+                                <span className="text-xs text-muted-foreground">{Math.min(100, turno.ocupacion_porcentaje)}%</span>
+                              </div>
+                              <div className="mt-1 h-2 rounded-full bg-slate-100">
                                 <div className="h-2 rounded-full bg-[#02a8e1]" style={{ width: `${Math.min(100, turno.ocupacion_porcentaje)}%` }} />
                               </div>
-                            </TableCell>
-                            <TableCell>
-                              <span className={`rounded-full px-2 py-1 text-xs font-semibold ${turno.estado === "activo" ? "bg-emerald-100 text-emerald-700" : turno.estado === "pausado" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>
-                                {estadoLabel(turno.estado)}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-wrap gap-2">
-                                <Button size="sm" variant="outline" onClick={() => handleEditTurno(turno)}>Editar</Button>
-                                <Button size="sm" className="bg-red-500 text-white hover:bg-red-600" onClick={() => handleDeleteTurno(turno)}>Eliminar</Button>
-                              </div>
-                            </TableCell>
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                Disponibles: {turno.cupos_disponibles} · Espera: {turno.lista_espera}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="mt-3 grid grid-cols-2 gap-2">
+                            <Button size="sm" variant="outline" onClick={() => handleEditTurno(turno)}>Editar</Button>
+                            <Button size="sm" className="bg-red-500 text-white hover:bg-red-600" onClick={() => handleDeleteTurno(turno)}>Eliminar</Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="hidden overflow-x-auto rounded-md border md:block">
+                      <Table className="min-w-[1050px] overflow-hidden text-sm">
+                        <TableHeader>
+                          <TableRow className="bg-muted/50">
+                            <TableHead>Actividad / turno</TableHead>
+                            <TableHead>Día y horario</TableHead>
+                            <TableHead>Instructor</TableHead>
+                            <TableHead>Ubicación</TableHead>
+                            <TableHead>Cupos</TableHead>
+                            <TableHead>Estado</TableHead>
+                            <TableHead>Acciones</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredTurnos.map((turno) => (
+                            <TableRow key={turno.id} className="odd:bg-muted/30">
+                              <TableCell>
+                                <div className="font-semibold">{turno.actividad_nombre}</div>
+                                <div className="text-xs text-muted-foreground">{turno.nombre_turno}</div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-[#02a8e1]" /> {diaLabel(turno.dia_semana)}</div>
+                                <div className="text-xs text-muted-foreground">{timeRange(turno)}</div>
+                              </TableCell>
+                              <TableCell>{turno.instructor_nombre || "Sin instructor"}</TableCell>
+                              <TableCell>{turno.ubicacion || "Sin ubicación"}</TableCell>
+                              <TableCell>
+                                <div className="font-semibold">{turno.inscriptos}/{turno.cupo_maximo}</div>
+                                <div className="text-xs text-muted-foreground">Disponibles: {turno.cupos_disponibles} · Espera: {turno.lista_espera}</div>
+                                <div className="mt-1 h-2 w-28 rounded-full bg-slate-100">
+                                  <div className="h-2 rounded-full bg-[#02a8e1]" style={{ width: `${Math.min(100, turno.ocupacion_porcentaje)}%` }} />
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${turno.estado === "activo" ? "bg-emerald-100 text-emerald-700" : turno.estado === "pausado" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>
+                                  {estadoLabel(turno.estado)}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex flex-wrap gap-2">
+                                  <Button size="sm" variant="outline" onClick={() => handleEditTurno(turno)}>Editar</Button>
+                                  <Button size="sm" className="bg-red-500 text-white hover:bg-red-600" onClick={() => handleDeleteTurno(turno)}>Eliminar</Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -1093,8 +1141,39 @@ export default function ActividadesPage() {
                   <p className="text-sm text-muted-foreground">Marcá asistencia, ausencia, cancelación o lista de espera.</p>
                 </CardHeader>
                 <CardContent className="p-4">
-                  <div className="max-h-[430px] overflow-auto rounded-md border">
-                    <Table className="min-w-[780px] text-sm">
+                  <div className="max-h-[430px] overflow-auto rounded-md border p-2 md:p-0">
+                    <div className="grid gap-3 md:hidden">
+                      {inscripciones.length === 0 ? (
+                        <div className="py-8 text-center text-sm text-muted-foreground">Sin inscripciones registradas.</div>
+                      ) : inscripciones.slice(0, 40).map((inscripcion) => (
+                        <div key={inscripcion.id} className="rounded-xl border bg-white p-3 shadow-sm">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="truncate font-semibold text-slate-950">{inscripcion.socio_nombre}</p>
+                              <p className="text-xs text-muted-foreground">{inscripcion.socio_dni || "Sin DNI"}</p>
+                            </div>
+                            <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">
+                              {estadoLabel(inscripcion.estado)}
+                            </span>
+                          </div>
+                          <div className="mt-2 text-sm text-slate-700">
+                            <p>{inscripcion.actividad_nombre}</p>
+                            <p className="text-xs text-muted-foreground">{inscripcion.turno_nombre}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">{formatFrontendDate(inscripcion.fecha_inscripcion ?? "")}</p>
+                          </div>
+                          <div className="mt-3 grid gap-2">
+                            <div className="grid grid-cols-2 gap-2">
+                              {ESTADOS_INSCRIPCION.map((estado) => (
+                                <Button key={estado.value} size="sm" variant="outline" onClick={() => handleUpdateInscripcionEstado(inscripcion.id, estado.value)}>{estado.label}</Button>
+                              ))}
+                            </div>
+                            <Button size="sm" className="w-full bg-red-500 text-white hover:bg-red-600" onClick={() => handleDeleteInscripcion(inscripcion.id)}>Eliminar</Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <Table className="hidden min-w-[780px] text-sm md:table">
                       <TableHeader>
                         <TableRow className="bg-muted/50">
                           <TableHead>Socio</TableHead>
@@ -1137,23 +1216,23 @@ export default function ActividadesPage() {
             </section>
 
             <Card className="w-full">
-              <CardHeader className="flex flex-wrap items-center justify-between gap-4 border-b p-4 md:flex-nowrap">
-                <div>
+              <CardHeader className="flex flex-col gap-4 border-b p-3 sm:p-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="min-w-0">
                   <h2 className="text-xl font-bold">Catálogo de actividades</h2>
                   <p className="text-sm text-muted-foreground">Base de actividades usada para crear turnos y cupos.</p>
                 </div>
-                <div className="flex w-full flex-wrap items-center gap-2 md:w-auto">
-                  <div className="relative flex-grow md:flex-grow-0">
+                <div className="grid w-full gap-2 sm:grid-cols-[1fr_auto] lg:w-auto">
+                  <div className="relative min-w-0">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input type="search" placeholder="Buscar actividad..." className="w-full pl-8 sm:w-[300px]" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} />
+                    <Input type="search" placeholder="Buscar actividad..." className="w-full pl-8 lg:w-[300px]" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} />
                   </div>
-                  <Button onClick={() => setOpenModal(true)} className="bg-[#02a8e1] hover:bg-[#0288b1]">
+                  <Button onClick={() => setOpenModal(true)} className="w-full bg-[#02a8e1] hover:bg-[#0288b1] sm:w-auto">
                     Añadir Actividad
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4 p-4">
-                <div className="overflow-x-auto">
+              <CardContent className="space-y-4 p-3 sm:p-4">
+                <div className="max-w-full overflow-hidden">
                   <ActividadTable
                     actividades={paginatedActividades}
                     loading={loadingActividades}
