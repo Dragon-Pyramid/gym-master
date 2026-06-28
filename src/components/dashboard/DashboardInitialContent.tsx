@@ -10,6 +10,7 @@ import { Activity, AlertCircle, CheckCircle2, ChevronRight, Clock, CreditCard, D
 import ProfileImage from '@/components/perfil/ProfileImage';
 import { formatFrontendDate, formatFrontendTime } from '@/utils/dateFormat';
 import SocioEvolucionProgressInsights from '@/components/dashboard/evolucion-fisica/SocioEvolucionProgressInsights';
+import SocioMobileTodayPlan from '@/components/dashboard/socio/SocioMobileTodayPlan';
 
 const DashboardInitialContent = () => {
   const { user } = useAuthStore();
@@ -446,53 +447,7 @@ const DashboardInitialContent = () => {
               </div>
             </Card>
 
-            <Card className='border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm dark:from-slate-950 dark:to-slate-900'>
-              <div className='mb-3 flex items-center justify-between'>
-                <div>
-                  <p className='text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground'>
-                    Hoy
-                  </p>
-                  <h2 className='text-lg font-bold'>Tu plan de acción</h2>
-                </div>
-                <Dumbbell className='h-5 w-5 text-[#02a8e1]' />
-              </div>
-
-              <div className='space-y-2'>
-                <button
-                  type='button'
-                  onClick={() => router.push('/dashboard/rutinas/asistente')}
-                  className='flex w-full items-center justify-between rounded-2xl border bg-white px-4 py-3 text-left shadow-sm active:scale-[0.98] dark:bg-slate-950'
-                >
-                  <span>
-                    <span className='block font-semibold'>Entrenamiento</span>
-                    <span className='text-xs text-muted-foreground'>Ver o generar rutina</span>
-                  </span>
-                  <ChevronRight className='h-4 w-4 text-muted-foreground' />
-                </button>
-                <button
-                  type='button'
-                  onClick={() => router.push('/dashboard/dietas')}
-                  className='flex w-full items-center justify-between rounded-2xl border bg-white px-4 py-3 text-left shadow-sm active:scale-[0.98] dark:bg-slate-950'
-                >
-                  <span>
-                    <span className='block font-semibold'>Nutrición</span>
-                    <span className='text-xs text-muted-foreground'>Consultar plan alimentario</span>
-                  </span>
-                  <ChevronRight className='h-4 w-4 text-muted-foreground' />
-                </button>
-                <button
-                  type='button'
-                  onClick={() => router.push('/dashboard/evolucion-fisica')}
-                  className='flex w-full items-center justify-between rounded-2xl border bg-white px-4 py-3 text-left shadow-sm active:scale-[0.98] dark:bg-slate-950'
-                >
-                  <span>
-                    <span className='block font-semibold'>Progreso físico</span>
-                    <span className='text-xs text-muted-foreground'>Mediciones y evolución</span>
-                  </span>
-                  <ChevronRight className='h-4 w-4 text-muted-foreground' />
-                </button>
-              </div>
-            </Card>
+            <SocioMobileTodayPlan />
 
             <Card className='border-primary/20 bg-primary/5 p-4'>
               <div className='flex items-start gap-3'>
