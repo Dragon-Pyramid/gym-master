@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Activity, AlertCircle, CheckCircle2, ChevronRight, Clock, CreditCard, Dumbbell, FileWarning, HeartPulse, MessageCircle, QrCode, Star, ClipboardCheck, Utensils } from 'lucide-react';
 import ProfileImage from '@/components/perfil/ProfileImage';
 import { formatFrontendDate, formatFrontendTime } from '@/utils/dateFormat';
+import SocioEvolucionProgressInsights from '@/components/dashboard/evolucion-fisica/SocioEvolucionProgressInsights';
 
 const DashboardInitialContent = () => {
   const { user } = useAuthStore();
@@ -384,6 +385,8 @@ const DashboardInitialContent = () => {
                 </button>
               </div>
             </div>
+
+            <SocioEvolucionProgressInsights />
 
             {tieneFichaMedica === false ? (
               <Card className='border-amber-200 bg-amber-50 p-4 shadow-sm'>

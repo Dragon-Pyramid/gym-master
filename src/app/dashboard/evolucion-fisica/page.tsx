@@ -419,10 +419,10 @@ export default function EvolucionFisicaPage() {
         <AppSidebar />
         <SidebarInset>
           <AppHeader title="Evolución física" />
-          <main className="flex-1 space-y-8 p-6">
+          <main className="flex-1 space-y-6 p-4 md:space-y-8 md:p-6">
             <Card className="w-full">
               <CardHeader className="space-y-2 border-b p-4">
-                <h1 className="text-2xl font-bold">Evolución física</h1>
+                <h1 className="text-xl font-bold md:text-2xl">Evolución física</h1>
                 <p className="text-sm text-muted-foreground">
                   Registro profesional de medidas corporales, composición física e historial comparativo del socio.
                 </p>
