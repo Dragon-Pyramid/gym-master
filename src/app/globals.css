@@ -139,7 +139,6 @@
   }
 }
 
-
 @media (max-width: 1023px) {
   /*
    * La barra inferior del socio necesita aire al final del contenido,
@@ -154,5 +153,10 @@
   body.gm-socio-bottom-nav main[data-slot="sidebar-inset"] {
     padding-bottom: 0 !important;
   }
+}
 
+@media (display-mode: standalone) {
+  html {
+    background: var(--background);
+  }
 }
