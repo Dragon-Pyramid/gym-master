@@ -138,3 +138,10 @@
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
 }
+
+
+@media (max-width: 1023px) {
+  body.gm-socio-bottom-nav main {
+    padding-bottom: calc(6.75rem + env(safe-area-inset-bottom)) !important;
+  }
+}
