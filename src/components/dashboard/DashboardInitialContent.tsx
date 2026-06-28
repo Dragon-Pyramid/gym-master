@@ -308,7 +308,213 @@ const DashboardInitialContent = () => {
   return (
     <div className='p-4 bg-gradient-to-br from-background via-background to-muted/20 md:p-8'>
       <div className='mx-auto max-w-7xl'>
-        <div className='grid items-center gap-8 lg:grid-cols-2 lg:gap-12'>
+        {isSocio && (
+          <section className='space-y-4 md:hidden'>
+            <div className='overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-slate-900 to-sky-900 p-5 text-white shadow-xl'>
+              <div className='flex items-start justify-between gap-3'>
+                <div className='flex min-w-0 items-center gap-3'>
+                  <div className='shrink-0 rounded-2xl bg-white/10 p-1'>
+                    <ProfileImage
+                      foto={userImage}
+                      alt={userName}
+                      size={76}
+                      showButton={false}
+                    />
+                  </div>
+                  <div className='min-w-0'>
+                    <p className='text-xs font-semibold uppercase tracking-[0.22em] text-sky-200'>
+                      {timeOfDay}
+                    </p>
+                    <h1 className='truncate text-2xl font-black leading-tight'>
+                      {userName}
+                    </h1>
+                    <p className='mt-1 text-sm text-slate-300'>
+                      Tu gimnasio, rutina y progreso en un solo lugar.
+                    </p>
+                  </div>
+                </div>
+                <div className='shrink-0 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-sky-100'>
+                  {formatFrontendTime(currentTime)}
+                </div>
+              </div>
+
+              <div className='mt-5 rounded-2xl border border-white/10 bg-white/10 p-4'>
+                <div className='flex items-start justify-between gap-3'>
+                  <div>
+                    <p className='text-xs uppercase tracking-[0.18em] text-sky-200'>
+                      Estado de cuota
+                    </p>
+                    <div className='mt-1 flex items-center gap-2 text-lg font-bold'>
+                      {cuotaAlDia ? (
+                        <CheckCircle2 className='h-5 w-5 text-emerald-300' />
+                      ) : (
+                        <AlertCircle className='h-5 w-5 text-amber-300' />
+                      )}
+                      {loadingEstadoCuota ? 'Consultando...' : cuotaEstadoLabel}
+                    </div>
+                    <p className='mt-1 text-xs text-slate-300'>
+                      {cuotaFechaTitulo}: {cuotaFechaLabel}
+                    </p>
+                  </div>
+                  <div className='text-right'>
+                    <p className='text-xs text-sky-200'>
+                      {cuotaAlDia ? 'Debe' : 'A regularizar'}
+                    </p>
+                    <p className='text-lg font-black'>
+                      {cuotaAlDia ? '$ 0' : formatMoney(cuotaMontoAdeudado)}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type='button'
+                  onClick={() => {
+                    if (cuotaAlDia) {
+                      router.push('/dashboard/mi-cuenta/historial-pagos');
+                      return;
+                    }
+
+                    handlePagarStripe();
+                  }}
+                  disabled={!cuotaAlDia && loadingPago}
+                  className='mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#02a8e1] px-4 py-3 text-sm font-bold text-white shadow-lg shadow-sky-950/20 transition active:scale-[0.98] disabled:opacity-60'
+                >
+                  <CreditCard className='h-4 w-4' />
+                  {cuotaAlDia ? 'Ver historial de pagos' : loadingPago ? 'Redirigiendo...' : 'Pagar cuota'}
+                </button>
+              </div>
+            </div>
+
+            {tieneFichaMedica === false ? (
+              <Card className='border-amber-200 bg-amber-50 p-4 shadow-sm'>
+                <div className='flex items-start gap-3'>
+                  <FileWarning className='mt-0.5 h-5 w-5 shrink-0 text-amber-700' />
+                  <div className='min-w-0 flex-1'>
+                    <p className='font-semibold text-amber-900'>Ficha médica pendiente</p>
+                    <p className='mt-1 text-sm leading-5 text-amber-800'>
+                      Completala para que el gimnasio conozca antecedentes y contactos preventivos.
+                    </p>
+                    <button
+                      type='button'
+                      onClick={() => router.push('/dashboard/ficha-medica')}
+                      className='mt-3 w-full rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white active:scale-[0.98]'
+                    >
+                      Cargar ficha médica
+                    </button>
+                  </div>
+                </div>
+              </Card>
+            ) : null}
+
+            <Card className='border-sky-100 bg-white/95 p-4 shadow-sm dark:border-sky-900/60 dark:bg-slate-950/70'>
+              <div className='mb-4 flex items-center justify-between gap-3'>
+                <div>
+                  <p className='text-xs font-semibold uppercase tracking-[0.22em] text-sky-600 dark:text-sky-300'>
+                    Accesos rápidos
+                  </p>
+                  <h2 className='text-lg font-bold'>Modo app del socio</h2>
+                </div>
+                <span className='rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 dark:bg-sky-950 dark:text-sky-200'>
+                  Mobile
+                </span>
+              </div>
+
+              <div className='grid grid-cols-2 gap-3'>
+                {socioMobileActions.slice(0, 6).map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.title}
+                      type='button'
+                      onClick={() => router.push(item.href)}
+                      className={`flex min-h-[96px] flex-col justify-between rounded-2xl border p-3 text-left shadow-sm transition active:scale-[0.98] ${item.className}`}
+                    >
+                      <div className='flex items-center justify-between gap-2'>
+                        <Icon className='h-5 w-5' />
+                        <ChevronRight className='h-4 w-4 opacity-60' />
+                      </div>
+                      <div>
+                        <p className='text-sm font-bold'>{item.title}</p>
+                        <p className='text-xs opacity-75'>{item.description}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </Card>
+
+            <Card className='border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm dark:from-slate-950 dark:to-slate-900'>
+              <div className='mb-3 flex items-center justify-between'>
+                <div>
+                  <p className='text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground'>
+                    Hoy
+                  </p>
+                  <h2 className='text-lg font-bold'>Tu plan de acción</h2>
+                </div>
+                <Dumbbell className='h-5 w-5 text-[#02a8e1]' />
+              </div>
+
+              <div className='space-y-2'>
+                <button
+                  type='button'
+                  onClick={() => router.push('/dashboard/rutinas/asistente')}
+                  className='flex w-full items-center justify-between rounded-2xl border bg-white px-4 py-3 text-left shadow-sm active:scale-[0.98] dark:bg-slate-950'
+                >
+                  <span>
+                    <span className='block font-semibold'>Entrenamiento</span>
+                    <span className='text-xs text-muted-foreground'>Ver o generar rutina</span>
+                  </span>
+                  <ChevronRight className='h-4 w-4 text-muted-foreground' />
+                </button>
+                <button
+                  type='button'
+                  onClick={() => router.push('/dashboard/dietas')}
+                  className='flex w-full items-center justify-between rounded-2xl border bg-white px-4 py-3 text-left shadow-sm active:scale-[0.98] dark:bg-slate-950'
+                >
+                  <span>
+                    <span className='block font-semibold'>Nutrición</span>
+                    <span className='text-xs text-muted-foreground'>Consultar plan alimentario</span>
+                  </span>
+                  <ChevronRight className='h-4 w-4 text-muted-foreground' />
+                </button>
+                <button
+                  type='button'
+                  onClick={() => router.push('/dashboard/evolucion-fisica')}
+                  className='flex w-full items-center justify-between rounded-2xl border bg-white px-4 py-3 text-left shadow-sm active:scale-[0.98] dark:bg-slate-950'
+                >
+                  <span>
+                    <span className='block font-semibold'>Progreso físico</span>
+                    <span className='text-xs text-muted-foreground'>Mediciones y evolución</span>
+                  </span>
+                  <ChevronRight className='h-4 w-4 text-muted-foreground' />
+                </button>
+              </div>
+            </Card>
+
+            <Card className='border-primary/20 bg-primary/5 p-4'>
+              <div className='flex items-start gap-3'>
+                <div className='mt-2 h-2 w-2 rounded-full bg-primary' />
+                <blockquote
+                  className={`text-base font-medium leading-relaxed text-foreground transition-all duration-300 ${
+                    isFading
+                      ? 'opacity-0 translate-y-2'
+                      : 'opacity-100 translate-y-0'
+                  }`}
+                >
+                  &ldquo;{randomMotivation}&rdquo;
+                </blockquote>
+              </div>
+            </Card>
+          </section>
+        )}
+
+        <div
+          className={
+            isSocio
+              ? 'hidden items-center gap-8 md:grid lg:grid-cols-2 lg:gap-12'
+              : 'grid items-center gap-8 lg:grid-cols-2 lg:gap-12'
+          }
+        >
           <div className='order-2 space-y-8 lg:order-1'>
             <div className='space-y-4'>
               <div className='flex flex-wrap items-center gap-3'>
