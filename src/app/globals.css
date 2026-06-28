@@ -160,11 +160,8 @@
     background: var(--background);
   }
 }
-/* PWA instalada en Android/iOS: evita saltos de alto y flashes blancos al abrir desde el ícono. */
+/* PWA instalada: ajustes livianos, sin intervenir el gesto nativo de scroll. */
 body.gm-pwa-standalone {
-  min-height: calc(var(--gm-vh, 1vh) * 100);
-  overscroll-behavior-y: contain;
-  touch-action: manipulation;
   background: var(--background);
 }
 
@@ -173,15 +170,9 @@ body.gm-pwa-standalone .gm-pwa-bottom-nav {
 }
 
 body.gm-pwa-standalone .gm-pwa-floating-card {
-  bottom: calc(10.65rem + env(safe-area-inset-bottom));
+  bottom: calc(10.35rem + env(safe-area-inset-bottom));
 }
 
 body.gm-pwa-android {
   -webkit-tap-highlight-color: transparent;
-}
-
-@media (max-width: 1023px) {
-  body.gm-pwa-standalone.gm-socio-bottom-nav main:not([data-slot="sidebar-inset"]) {
-    padding-bottom: calc(7.25rem + env(safe-area-inset-bottom)) !important;
-  }
 }
