@@ -89,18 +89,30 @@ export function SocioPwaInstallPrompt() {
   }, [canInstallWithPrompt, isIos]);
 
   useEffect(() => {
-    setIsStandalone(isStandaloneMode());
-    setIsIos(isIosDevice());
+    const syncInstalledState = () => {
+      const standalone = isStandaloneMode();
 
-    const handleDisplayModeChange = () => {
-      setIsStandalone(isStandaloneMode());
+      setIsStandalone(standalone);
+      setIsIos(isIosDevice());
+
+      if (standalone) {
+        setShowPrompt(false);
+        setInstallEvent(null);
+      }
     };
 
+    syncInstalledState();
+
     const mediaQuery = window.matchMedia('(display-mode: standalone)');
-    mediaQuery.addEventListener('change', handleDisplayModeChange);
+
+    window.addEventListener('pageshow', syncInstalledState);
+    document.addEventListener('visibilitychange', syncInstalledState);
+    mediaQuery.addEventListener('change', syncInstalledState);
 
     return () => {
-      mediaQuery.removeEventListener('change', handleDisplayModeChange);
+      window.removeEventListener('pageshow', syncInstalledState);
+      document.removeEventListener('visibilitychange', syncInstalledState);
+      mediaQuery.removeEventListener('change', syncInstalledState);
     };
   }, []);
 
