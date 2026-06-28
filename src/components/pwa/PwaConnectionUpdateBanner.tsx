@@ -215,7 +215,7 @@ export function PwaConnectionUpdateBanner() {
 
   return (
     <aside
-      className='fixed inset-x-3 bottom-[calc(10.2rem+env(safe-area-inset-bottom))] z-[76] mx-auto max-w-md rounded-3xl border border-slate-200 bg-white/95 p-3 shadow-[0_18px_48px_rgba(15,23,42,0.18)] backdrop-blur md:hidden dark:border-slate-800 dark:bg-slate-950/95 gm-pwa-floating-card'
+      className='fixed inset-x-3 bottom-[calc(10.2rem+env(safe-area-inset-bottom))] z-[76] mx-auto max-w-md rounded-3xl border border-slate-200 bg-white p-3 shadow-lg md:hidden dark:border-slate-800 dark:bg-slate-950 gm-pwa-floating-card'
       role='status'
       aria-live='polite'
     >

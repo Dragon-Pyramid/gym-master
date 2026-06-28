@@ -32,17 +32,9 @@ function isIosDevice() {
   );
 }
 
-function updateViewportHeightVariable() {
-  if (typeof window === 'undefined') return;
-
-  document.documentElement.style.setProperty('--gm-vh', `${window.innerHeight * 0.01}px`);
-}
-
 export function PwaAndroidInstalledAppPolish() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
-
-    const mediaQuery = window.matchMedia('(display-mode: standalone)');
 
     const syncInstalledModeClasses = () => {
       const standalone = isStandaloneMode();
@@ -52,25 +44,15 @@ export function PwaAndroidInstalledAppPolish() {
       document.body.classList.toggle('gm-pwa-standalone', standalone);
       document.body.classList.toggle('gm-pwa-android', standalone && android);
       document.body.classList.toggle('gm-pwa-ios', standalone && ios);
-
-      updateViewportHeightVariable();
     };
 
     syncInstalledModeClasses();
 
-    window.addEventListener('resize', syncInstalledModeClasses);
-    window.addEventListener('orientationchange', syncInstalledModeClasses);
-    window.addEventListener('pageshow', syncInstalledModeClasses);
-    document.addEventListener('visibilitychange', syncInstalledModeClasses);
+    const mediaQuery = window.matchMedia('(display-mode: standalone)');
     mediaQuery.addEventListener('change', syncInstalledModeClasses);
 
     return () => {
-      window.removeEventListener('resize', syncInstalledModeClasses);
-      window.removeEventListener('orientationchange', syncInstalledModeClasses);
-      window.removeEventListener('pageshow', syncInstalledModeClasses);
-      document.removeEventListener('visibilitychange', syncInstalledModeClasses);
       mediaQuery.removeEventListener('change', syncInstalledModeClasses);
-
       document.body.classList.remove('gm-pwa-standalone', 'gm-pwa-android', 'gm-pwa-ios');
     };
   }, []);
