@@ -94,7 +94,7 @@ export default function ActividadForm({
 
       <Button
         type="submit"
-        className="col-span-full justify-self-end"
+        className="col-span-full w-full justify-self-end sm:w-auto"
         disabled={loading}
       >
         {loading
@@ -107,7 +107,7 @@ export default function ActividadForm({
       <Button
         type="button"
         onClick={onCancel}
-        className="col-span-full justify-self-end text-gray-800 bg-gray-200 hover:bg-gray-300"
+        className="col-span-full w-full justify-self-end bg-gray-200 text-gray-800 hover:bg-gray-300 sm:w-auto"
         disabled={loading}
       >
         Cancelar

@@ -116,7 +116,25 @@
   * {
     @apply border-border outline-ring/50;
   }
+
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .gm-mobile-scroll-x {
+    -webkit-overflow-scrolling: touch;
+    overflow-x: auto;
+  }
+
+  .gm-safe-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
 }

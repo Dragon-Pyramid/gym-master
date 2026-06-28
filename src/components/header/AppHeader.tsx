@@ -76,19 +76,19 @@ export const AppHeader = ({ title }: AppHeaderProps) => {
   const isAdmin = user?.rol === 'admin';
 
   return (
-    <header className='sticky top-0 z-40 flex w-full flex-wrap items-center justify-between gap-3 border-b border-border bg-background/95 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:px-4 md:py-3'>
+    <header className='sticky top-0 z-40 flex min-h-16 w-full flex-nowrap items-center justify-between gap-2 border-b border-border bg-background/95 px-2 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:px-3 md:px-4 md:py-3'>
       <div className='flex min-w-0 items-center gap-2 md:gap-3'>
         <Image
           src='/gm_logo.svg'
           alt='Gym Master Logo'
-          width={isMobile ? 44 : 120}
-          height={isMobile ? 44 : 120}
-          className='rounded-sm dark:invert'
+          width={isMobile ? 38 : 120}
+          height={isMobile ? 38 : 120}
+          className='shrink-0 rounded-sm dark:invert'
         />
-        <h1 className='max-w-[46vw] truncate text-base font-semibold tracking-tight md:max-w-none md:text-xl'>{title}</h1>
+        <h1 className='max-w-[34vw] truncate text-sm font-semibold tracking-tight sm:max-w-[46vw] sm:text-base md:max-w-none md:text-xl'>{title}</h1>
       </div>
 
-      <div className='flex items-center gap-1 sm:gap-2 md:gap-4'>
+      <div className='flex shrink-0 items-center gap-0.5 sm:gap-1 md:gap-4'>
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>

@@ -23,13 +23,13 @@ export default function ActividadViewModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-lg p-6 sm:max-w-md bg-background text-foreground">
+      <DialogContent className="max-h-[90dvh] w-[calc(100vw-1rem)] overflow-y-auto bg-background p-4 text-foreground sm:max-w-md sm:p-6">
         <QaFileNameBadge file="src/components/modal/ActividadViewModal.tsx" />
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-foreground">
             Detalles de Actividad
           </DialogTitle>
-          <div className="text-sm text-right text-muted-foreground">
+          <div className="text-left text-sm text-muted-foreground sm:text-right">
             {formatFrontendDateTime(new Date())}
           </div>
         </DialogHeader>

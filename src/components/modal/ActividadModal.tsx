@@ -24,10 +24,10 @@ export default function ActividadModal({
 }) {
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-5xl sm:max-w-4xl">
+      <DialogContent className="max-h-[90dvh] w-[calc(100vw-1rem)] overflow-y-auto sm:max-w-4xl lg:max-w-5xl">
         <QaFileNameBadge file="src/components/modal/ActividadModal.tsx" />
         <DialogHeader>
-          <div className="flex gap-4 justify-between items-center w-full">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <DialogTitle>
               {actividad ? "Editar Actividad" : "Nueva Actividad"}
             </DialogTitle>

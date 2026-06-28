@@ -35,15 +35,17 @@ export const SidebarSection: React.FC<Props> = ({
           {items.map((item, idx) => (
             <SidebarMenuItem key={idx}>
               <SidebarMenuButton
-                onClick={() => isMobile && closeSidebar()}
-                className={`flex items-center gap-2 text-sm pl-2 ${
-                  item.level === 2 ? "pl-4" : item.level === 3 ? "pl-8" : ""
+                asChild
+                className={`min-h-10 touch-manipulation gap-2 text-sm ${
+                  item.level === 2 ? "pl-4" : item.level === 3 ? "pl-8" : "pl-2"
                 }`}
               >
-                <span className="text-muted-foreground">
-                  {item.level === 2 ? "●" : item.level === 3 ? "○" : ""}
-                </span>
-                <Link href={item.link}>{item.title}</Link>
+                <Link href={item.link} onClick={() => isMobile && closeSidebar()}>
+                  <span className="shrink-0 text-muted-foreground">
+                    {item.level === 2 ? "●" : item.level === 3 ? "○" : ""}
+                  </span>
+                  <span className="truncate">{item.title}</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
