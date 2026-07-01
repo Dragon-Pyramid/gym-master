@@ -11,6 +11,7 @@ import ProfileImage from '@/components/perfil/ProfileImage';
 import { formatFrontendDate, formatFrontendTime } from '@/utils/dateFormat';
 import SocioEvolucionProgressInsights from '@/components/dashboard/evolucion-fisica/SocioEvolucionProgressInsights';
 import SocioMobileTodayPlan from '@/components/dashboard/socio/SocioMobileTodayPlan';
+import SocioMobileAsistenciaQrCard from '@/components/dashboard/socio/SocioMobileAsistenciaQrCard';
 
 const DashboardInitialContent = () => {
   const { user } = useAuthStore();
@@ -386,6 +387,15 @@ const DashboardInitialContent = () => {
                 </button>
               </div>
             </div>
+
+            <SocioMobileAsistenciaQrCard
+              cuotaAlDia={cuotaAlDia}
+              cuotaEstadoLabel={cuotaEstadoLabel}
+              cuotaFechaTitulo={cuotaFechaTitulo}
+              cuotaFechaLabel={cuotaFechaLabel}
+              loadingEstadoCuota={loadingEstadoCuota}
+              montoAdeudadoLabel={formatMoney(cuotaMontoAdeudado)}
+            />
 
             <SocioEvolucionProgressInsights />
 
