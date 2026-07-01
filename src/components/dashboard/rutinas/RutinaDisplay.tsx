@@ -5,7 +5,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { getHistorialRutinas } from "@/services/apiClient";
 import { Rutina } from "@/interfaces/rutina.interface";
 import Image from "next/image";
-import { ArrowLeft, Download, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Download, Eye, EyeOff, Info, X } from "lucide-react";
 import { toast } from "sonner";
 import { descargarRutinaPdf } from "@/utils/rutinaPdf";
 import { formatFrontendDate } from '@/utils/dateFormat';
@@ -176,6 +176,117 @@ const obtenerTituloRutina = (rutina: Rutina): string => {
   return `Rutina #${rutina.id_rutina}`;
 };
 
+const normalizarValorRutina = (value: string | number | null | undefined): string => {
+  if (value === null || value === undefined) return "-";
+
+  return String(value)
+    .replace(/×/g, "x")
+    .replace(/[–—]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim();
+};
+
+const extraerNumerosEnteros = (value: string): number[] => {
+  return Array.from(value.matchAll(/\d+/g))
+    .map((match) => Number(match[0]))
+    .filter((number) => Number.isFinite(number));
+};
+
+const formatearCantidad = (cantidad: number, singular: string, plural: string): string => {
+  return `${cantidad} ${cantidad === 1 ? singular : plural}`;
+};
+
+const construirFraseSeries = (seriesText: string, seriesNumbers: number[]): string => {
+  if (seriesNumbers.length >= 2 && seriesText.includes("-")) {
+    return `entre ${seriesNumbers[0]} a ${seriesNumbers[1]} series`;
+  }
+
+  if (seriesNumbers.length >= 1) {
+    return formatearCantidad(seriesNumbers[0], "serie", "series");
+  }
+
+  if (seriesText && seriesText !== "-") {
+    return `${seriesText} series`;
+  }
+
+  return "las series indicadas";
+};
+
+const contieneIndicacionDeTiempo = (value: string): boolean => {
+  return /\b(seg|segundo|segundos|s|min|minuto|minutos)\b/i.test(value);
+};
+
+const contieneIndicacionPorLado = (value: string): boolean => {
+  return /por\s+lado/i.test(value);
+};
+
+const construirUnidadRepeticiones = (repeticionesText: string): string => {
+  if (contieneIndicacionPorLado(repeticionesText)) {
+    return "repeticiones por lado";
+  }
+
+  return "repeticiones";
+};
+
+const construirAyudaSeriesRepeticiones = (
+  series: string | number,
+  repeticiones: string | number
+): string => {
+  const seriesText = normalizarValorRutina(series);
+  const repeticionesText = normalizarValorRutina(repeticiones);
+  const seriesNumbers = extraerNumerosEnteros(seriesText);
+  const repeticionesNumbers = extraerNumerosEnteros(repeticionesText);
+  const seriesPhrase = construirFraseSeries(seriesText, seriesNumbers);
+  const esPorTiempo = contieneIndicacionDeTiempo(repeticionesText);
+  const unidadRepeticiones = construirUnidadRepeticiones(repeticionesText);
+
+  if (esPorTiempo && repeticionesNumbers.length >= 2 && repeticionesText.includes("-")) {
+    return `Debes hacer ${seriesPhrase}, manteniendo el ejercicio entre ${repeticionesNumbers[0]} a ${repeticionesNumbers[1]} segundos por serie. Controlá la postura y no sacrifiques técnica por sostener más tiempo.`;
+  }
+
+  if (esPorTiempo && repeticionesNumbers.length >= 1) {
+    return `Debes hacer ${seriesPhrase}, manteniendo el ejercicio durante ${repeticionesNumbers[0]} segundos por serie. Controlá la postura durante todo el tiempo indicado.`;
+  }
+
+  if (repeticionesNumbers.length >= 3 && seriesNumbers.length >= 1) {
+    const repeticionesPorSerie = repeticionesNumbers
+      .map((rep, index) => {
+        const ordinales = ["primera", "segunda", "tercera", "cuarta", "quinta", "sexta"];
+        const serieLabel = ordinales[index] ?? `serie ${index + 1}`;
+        return `${serieLabel}: ${rep} ${unidadRepeticiones}`;
+      })
+      .join(", ");
+
+    const esPiramidalDescendente = repeticionesNumbers.every(
+      (rep, index, reps) => index === 0 || rep < reps[index - 1]
+    );
+
+    return `Debes hacer ${seriesPhrase}. Distribuí las repeticiones así: ${repeticionesPorSerie}.${
+      esPiramidalDescendente
+        ? " Como las repeticiones bajan en cada serie, subí el peso de forma progresiva manteniendo buena técnica."
+        : " Mantené buena técnica en todas las series."
+    }`;
+  }
+
+  if (repeticionesNumbers.length >= 2 && repeticionesText.includes("-")) {
+    return `Debes hacer ${seriesPhrase} de entre ${repeticionesNumbers[0]} a ${repeticionesNumbers[1]} ${unidadRepeticiones} por serie.`;
+  }
+
+  if (repeticionesNumbers.length >= 1) {
+    return `Debes hacer ${seriesPhrase} de ${formatearCantidad(
+      repeticionesNumbers[0],
+      "repetición",
+      "repeticiones"
+    )}${contieneIndicacionPorLado(repeticionesText) ? " por lado" : ""} por serie.`;
+  }
+
+  if (repeticionesText && repeticionesText !== "-") {
+    return `Debes hacer ${seriesPhrase}. La indicación de repeticiones es: ${repeticionesText}.`;
+  }
+
+  return `Debes hacer ${seriesPhrase}. Si tenés dudas, consultá al entrenador antes de comenzar el ejercicio.`;
+};
+
 export default function RutinaEjercicios({
   refreshKey = 0,
   onView,
@@ -209,6 +320,11 @@ export default function RutinaEjercicios({
   const [imagenVisible, setImagenVisible] = useState<{
     [key: string]: boolean;
   }>({});
+  const [ayudaSeries, setAyudaSeries] = useState<{
+    titulo: string;
+    badge: string;
+    descripcion: string;
+  } | null>(null);
 
   const fetchRutinas = useCallback(async () => {
     if (!user || !token) return;
@@ -359,8 +475,9 @@ export default function RutinaEjercicios({
     const diasDisponibles = Object.keys(ejerciciosPorDia);
 
     return (
-      <div className="min-h-screen">
-        <div className="mx-auto overflow-hidden bg-white shadow-xl max-w-7xl rounded-2xl sm:rounded-3xl">
+      <>
+        <div className="min-h-screen">
+          <div className="mx-auto overflow-hidden bg-white shadow-xl max-w-7xl rounded-2xl sm:rounded-3xl">
           <div className="flex flex-col gap-4 px-4 py-6 text-white bg-gray-900 sm:flex-row sm:items-center sm:justify-between sm:px-10 sm:py-8">
             <div className="flex-1">
               <h1 className="mb-2 text-xl font-light tracking-wide sm:text-2xl lg:text-3xl sm:tracking-widest">
@@ -492,8 +609,30 @@ export default function RutinaEjercicios({
                                       )}
                                     </div>
 
-                                    <div className="inline-block px-3 py-1 mb-3 text-xs font-semibold tracking-wide text-white bg-gray-900 rounded-full sm:px-4 sm:py-2 sm:mb-4 sm:text-sm">
-                                      {series} × {repeticiones}
+                                    <div className="flex flex-wrap items-center gap-2 mb-3 sm:mb-4">
+                                      <div className="inline-block px-3 py-1 text-xs font-semibold tracking-wide text-white bg-gray-900 rounded-full sm:px-4 sm:py-2 sm:text-sm">
+                                        {series} × {repeticiones}
+                                      </div>
+
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setAyudaSeries({
+                                            titulo: nombreEjercicio,
+                                            badge: `${series} × ${repeticiones}`,
+                                            descripcion:
+                                              construirAyudaSeriesRepeticiones(
+                                                series,
+                                                repeticiones
+                                              ),
+                                          })
+                                        }
+                                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/20"
+                                        title="Explicar series y repeticiones"
+                                        aria-label={`Explicar series y repeticiones de ${nombreEjercicio}`}
+                                      >
+                                        <Info className="h-4 w-4" />
+                                      </button>
                                     </div>
 
                                     <p className="m-0 text-sm font-light tracking-wide text-gray-600 sm:text-base">
@@ -542,8 +681,64 @@ export default function RutinaEjercicios({
               ))
             )}
           </div>
+          </div>
         </div>
-      </div>
+
+        {ayudaSeries && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 px-4 py-6 backdrop-blur-sm"
+            role="presentation"
+            onClick={() => setAyudaSeries(null)}
+          >
+            <div
+              className="w-full max-w-md rounded-2xl bg-white p-5 text-gray-900 shadow-2xl sm:p-6"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="series-reps-help-title"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="mb-4 flex items-start justify-between gap-4">
+                <div>
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">
+                    Ayuda para principiantes
+                  </p>
+                  <h2
+                    id="series-reps-help-title"
+                    className="text-lg font-semibold tracking-wide text-gray-950"
+                  >
+                    Series y repeticiones
+                  </h2>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setAyudaSeries(null)}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
+                  aria-label="Cerrar ayuda"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <p className="mb-3 text-sm font-medium text-gray-800">
+                {ayudaSeries.titulo}
+              </p>
+
+              <div className="mb-4 inline-flex rounded-full bg-gray-900 px-4 py-2 text-sm font-semibold tracking-wide text-white">
+                {ayudaSeries.badge}
+              </div>
+
+              <p className="text-sm leading-6 text-gray-700 sm:text-base">
+                {ayudaSeries.descripcion}
+              </p>
+
+              <p className="mt-4 rounded-xl bg-gray-50 p-3 text-xs leading-5 text-gray-500">
+                Consejo: priorizá la técnica. Si no podés completar el rango indicado, bajá un poco el peso y consultá al entrenador.
+              </p>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 
