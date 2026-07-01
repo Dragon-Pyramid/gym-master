@@ -15,9 +15,22 @@ export function getAdminCredentials() {
   };
 }
 
+export function getSocioCredentials() {
+  return {
+    email: process.env.E2E_SOCIO_EMAIL,
+    password: process.env.E2E_SOCIO_PASSWORD,
+    role: 'socio' as const,
+  };
+}
+
 export function skipIfMissingAdminCredentials() {
   const { email, password } = getAdminCredentials();
   test.skip(!email || !password, 'Definir E2E_ADMIN_EMAIL y E2E_ADMIN_PASSWORD para ejecutar pruebas autenticadas.');
+}
+
+export function skipIfMissingSocioCredentials() {
+  const { email, password } = getSocioCredentials();
+  test.skip(!email || !password, 'Definir E2E_SOCIO_EMAIL y E2E_SOCIO_PASSWORD para ejecutar pruebas socio mobile.');
 }
 
 export async function loginAsAdmin(page: Page, options: LoginOptions = {}) {
@@ -47,4 +60,15 @@ export async function loginAsAdmin(page: Page, options: LoginOptions = {}) {
 
   await expect(page).toHaveURL(/\/dashboard(\/.*)?$/);
   await waitForAppReady(page);
+}
+
+export async function loginAsSocio(page: Page, options: LoginOptions = {}) {
+  const defaults = getSocioCredentials();
+
+  return loginAsAdmin(page, {
+    ...options,
+    email: options.email ?? defaults.email,
+    password: options.password ?? defaults.password,
+    role: 'socio',
+  });
 }
