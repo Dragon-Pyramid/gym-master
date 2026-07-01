@@ -14,6 +14,7 @@ import SocioMobileTodayPlan from '@/components/dashboard/socio/SocioMobileTodayP
 import SocioMobileAsistenciaQrCard from '@/components/dashboard/socio/SocioMobileAsistenciaQrCard';
 import SocioMobileMensajeriaSoporteCard from '@/components/dashboard/socio/SocioMobileMensajeriaSoporteCard';
 import SocioMobileSaludFichaMedicaCard from '@/components/dashboard/socio/SocioMobileSaludFichaMedicaCard';
+import SocioMobilePagosRecibosCard from '@/components/dashboard/socio/SocioMobilePagosRecibosCard';
 
 const DashboardInitialContent = () => {
   const { user } = useAuthStore();
@@ -391,6 +392,15 @@ const DashboardInitialContent = () => {
             </div>
 
             <SocioMobileAsistenciaQrCard
+              cuotaAlDia={cuotaAlDia}
+              cuotaEstadoLabel={cuotaEstadoLabel}
+              cuotaFechaTitulo={cuotaFechaTitulo}
+              cuotaFechaLabel={cuotaFechaLabel}
+              loadingEstadoCuota={loadingEstadoCuota}
+              montoAdeudadoLabel={formatMoney(cuotaMontoAdeudado)}
+            />
+
+            <SocioMobilePagosRecibosCard
               cuotaAlDia={cuotaAlDia}
               cuotaEstadoLabel={cuotaEstadoLabel}
               cuotaFechaTitulo={cuotaFechaTitulo}
