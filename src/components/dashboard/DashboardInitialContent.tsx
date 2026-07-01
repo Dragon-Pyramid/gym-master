@@ -13,6 +13,7 @@ import SocioEvolucionProgressInsights from '@/components/dashboard/evolucion-fis
 import SocioMobileTodayPlan from '@/components/dashboard/socio/SocioMobileTodayPlan';
 import SocioMobileAsistenciaQrCard from '@/components/dashboard/socio/SocioMobileAsistenciaQrCard';
 import SocioMobileMensajeriaSoporteCard from '@/components/dashboard/socio/SocioMobileMensajeriaSoporteCard';
+import SocioMobileSaludFichaMedicaCard from '@/components/dashboard/socio/SocioMobileSaludFichaMedicaCard';
 
 const DashboardInitialContent = () => {
   const { user } = useAuthStore();
@@ -400,28 +401,9 @@ const DashboardInitialContent = () => {
 
             <SocioMobileMensajeriaSoporteCard />
 
-            <SocioEvolucionProgressInsights />
+            <SocioMobileSaludFichaMedicaCard />
 
-            {tieneFichaMedica === false ? (
-              <Card className='border-amber-200 bg-amber-50 p-4 shadow-sm'>
-                <div className='flex items-start gap-3'>
-                  <FileWarning className='mt-0.5 h-5 w-5 shrink-0 text-amber-700' />
-                  <div className='min-w-0 flex-1'>
-                    <p className='font-semibold text-amber-900'>Ficha médica pendiente</p>
-                    <p className='mt-1 text-sm leading-5 text-amber-800'>
-                      Completala para que el gimnasio conozca antecedentes y contactos preventivos.
-                    </p>
-                    <button
-                      type='button'
-                      onClick={() => router.push('/dashboard/ficha-medica')}
-                      className='mt-3 w-full rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white active:scale-[0.98]'
-                    >
-                      Cargar ficha médica
-                    </button>
-                  </div>
-                </div>
-              </Card>
-            ) : null}
+            <SocioEvolucionProgressInsights />
 
             <Card className='border-sky-100 bg-white/95 p-4 shadow-sm dark:border-sky-900/60 dark:bg-slate-950/70'>
               <div className='mb-4 flex items-center justify-between gap-3'>
