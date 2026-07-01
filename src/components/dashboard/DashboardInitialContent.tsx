@@ -27,6 +27,14 @@ type SocioMobileFeedSectionProps = {
   accentClassName?: string;
 };
 
+type SocioMobileQuickAction = {
+  title: string;
+  description: string;
+  href: string;
+  icon: ComponentType<{ className?: string }>;
+  className: string;
+};
+
 const SocioMobileFeedSection = ({
   eyebrow,
   title,
@@ -62,6 +70,50 @@ const SocioMobileFeedSection = ({
     </div>
     <div className='space-y-3'>{children}</div>
   </section>
+);
+
+
+const SocioMobileQuickActionRail = ({
+  actions,
+  onNavigate,
+}: {
+  actions: SocioMobileQuickAction[];
+  onNavigate: (href: string) => void;
+}) => (
+  <Card className='overflow-hidden border-sky-100 bg-white/95 p-3 shadow-sm dark:border-sky-900/60 dark:bg-slate-950/70'>
+    <div className='mb-3 flex items-center justify-between gap-3 px-1'>
+      <div>
+        <p className='text-[0.65rem] font-black uppercase tracking-[0.22em] text-sky-600 dark:text-sky-300'>
+          Accesos rápidos
+        </p>
+        <h2 className='text-base font-black leading-tight'>Abrí lo que necesitás</h2>
+      </div>
+      <span className='rounded-full bg-sky-50 px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.12em] text-sky-700 dark:bg-sky-950 dark:text-sky-200'>
+        App
+      </span>
+    </div>
+
+    <div className='gm-mobile-scroll-x -mx-3 flex gap-3 px-3 pb-1'>
+      {actions.map((item) => {
+        const Icon = item.icon;
+        return (
+          <button
+            key={item.title}
+            type='button'
+            onClick={() => onNavigate(item.href)}
+            className={`min-w-[8.4rem] rounded-2xl border p-3 text-left shadow-sm transition active:scale-[0.98] ${item.className}`}
+          >
+            <div className='mb-3 flex items-center justify-between gap-2'>
+              <Icon className='h-5 w-5' />
+              <ChevronRight className='h-4 w-4 opacity-60' />
+            </div>
+            <p className='text-sm font-black leading-tight'>{item.title}</p>
+            <p className='mt-1 text-[0.7rem] leading-4 opacity-75'>{item.description}</p>
+          </button>
+        );
+      })}
+    </div>
+  </Card>
 );
 
 
@@ -368,7 +420,7 @@ const DashboardInitialContent = () => {
     <div className='bg-gradient-to-br from-background via-background to-muted/20 p-4 md:flex md:min-h-[calc(100dvh-10.5rem)] md:items-center md:p-8'>
       <div className='mx-auto max-w-7xl'>
         {isSocio && (
-          <section className='space-y-4 md:hidden'>
+          <section className='space-y-5 pb-4 md:hidden'>
             <div className='overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-slate-900 to-sky-900 p-5 text-white shadow-xl'>
               <div className='flex items-start justify-between gap-3'>
                 <div className='flex min-w-0 items-center gap-3'>
@@ -444,10 +496,15 @@ const DashboardInitialContent = () => {
               </div>
             </div>
 
+            <SocioMobileQuickActionRail
+              actions={socioMobileSecondaryActions}
+              onNavigate={(href) => router.push(href)}
+            />
+
             <SocioMobileFeedSection
               eyebrow='Prioridad'
               title='Acceso y estado'
-              description='Lo primero que necesita el socio para ingresar, cuidar su salud y mantener la cuota clara.'
+              description='Ingreso, cuota y salud siempre visibles antes de entrenar.'
               icon={QrCode}
               badge='Ahora'
               accentClassName='bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-200'
@@ -476,7 +533,7 @@ const DashboardInitialContent = () => {
             <SocioMobileFeedSection
               eyebrow='Hoy'
               title='Entrenamiento y agenda'
-              description='Rutina, dieta, coach IA y actividades disponibles para organizar el día.'
+              description='Entrenamiento, dieta y clases disponibles para hoy.'
               icon={Dumbbell}
               badge='Diario'
               accentClassName='bg-orange-50 text-orange-700 dark:bg-orange-950/60 dark:text-orange-200'
@@ -488,7 +545,7 @@ const DashboardInitialContent = () => {
             <SocioMobileFeedSection
               eyebrow='Progreso'
               title='Evolución física'
-              description='Compará tu punto inicial con la última medición y seguí tu transformación.'
+              description='Tu evolución física resumida en pocos indicadores.'
               icon={Activity}
               accentClassName='bg-violet-50 text-violet-700 dark:bg-violet-950/60 dark:text-violet-200'
             >
@@ -498,49 +555,12 @@ const DashboardInitialContent = () => {
             <SocioMobileFeedSection
               eyebrow='Comunicación'
               title='Soporte del gimnasio'
-              description='Consultas, respuestas y contacto con administración desde la app.'
+              description='Mensajes y contacto directo con administración.'
               icon={MessageCircle}
               accentClassName='bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-200'
             >
               <SocioMobileMensajeriaSoporteCard />
             </SocioMobileFeedSection>
-
-            <Card className='border-sky-100 bg-white/95 p-4 shadow-sm dark:border-sky-900/60 dark:bg-slate-950/70'>
-              <div className='mb-4 flex items-center justify-between gap-3'>
-                <div>
-                  <p className='text-xs font-semibold uppercase tracking-[0.22em] text-sky-600 dark:text-sky-300'>
-                    Atajos secundarios
-                  </p>
-                  <h2 className='text-lg font-bold'>Más acciones</h2>
-                </div>
-                <span className='rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 dark:bg-sky-950 dark:text-sky-200'>
-                  App
-                </span>
-              </div>
-
-              <div className='grid grid-cols-2 gap-3'>
-                {socioMobileSecondaryActions.slice(0, 6).map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <button
-                      key={item.title}
-                      type='button'
-                      onClick={() => router.push(item.href)}
-                      className={`flex min-h-[96px] flex-col justify-between rounded-2xl border p-3 text-left shadow-sm transition active:scale-[0.98] ${item.className}`}
-                    >
-                      <div className='flex items-center justify-between gap-2'>
-                        <Icon className='h-5 w-5' />
-                        <ChevronRight className='h-4 w-4 opacity-60' />
-                      </div>
-                      <div>
-                        <p className='text-sm font-bold'>{item.title}</p>
-                        <p className='text-xs opacity-75'>{item.description}</p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </Card>
 
             <Card className='border-primary/20 bg-primary/5 p-4'>
               <div className='flex items-start gap-3'>
