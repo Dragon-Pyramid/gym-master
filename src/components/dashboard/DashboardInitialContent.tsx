@@ -15,6 +15,7 @@ import SocioMobileAsistenciaQrCard from '@/components/dashboard/socio/SocioMobil
 import SocioMobileMensajeriaSoporteCard from '@/components/dashboard/socio/SocioMobileMensajeriaSoporteCard';
 import SocioMobileSaludFichaMedicaCard from '@/components/dashboard/socio/SocioMobileSaludFichaMedicaCard';
 import SocioMobilePagosRecibosCard from '@/components/dashboard/socio/SocioMobilePagosRecibosCard';
+import SocioMobileActividadesAgendaCard from '@/components/dashboard/socio/SocioMobileActividadesAgendaCard';
 
 const DashboardInitialContent = () => {
   const { user } = useAuthStore();
@@ -453,6 +454,8 @@ const DashboardInitialContent = () => {
             </Card>
 
             <SocioMobileTodayPlan />
+
+            <SocioMobileActividadesAgendaCard />
 
             <Card className='border-primary/20 bg-primary/5 p-4'>
               <div className='flex items-start gap-3'>
