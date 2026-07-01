@@ -12,6 +12,7 @@ import { formatFrontendDate, formatFrontendTime } from '@/utils/dateFormat';
 import SocioEvolucionProgressInsights from '@/components/dashboard/evolucion-fisica/SocioEvolucionProgressInsights';
 import SocioMobileTodayPlan from '@/components/dashboard/socio/SocioMobileTodayPlan';
 import SocioMobileAsistenciaQrCard from '@/components/dashboard/socio/SocioMobileAsistenciaQrCard';
+import SocioMobileMensajeriaSoporteCard from '@/components/dashboard/socio/SocioMobileMensajeriaSoporteCard';
 
 const DashboardInitialContent = () => {
   const { user } = useAuthStore();
@@ -309,7 +310,7 @@ const DashboardInitialContent = () => {
   ];
 
   return (
-    <div className='p-4 bg-gradient-to-br from-background via-background to-muted/20 md:p-8'>
+    <div className='bg-gradient-to-br from-background via-background to-muted/20 p-4 md:flex md:min-h-[calc(100dvh-10.5rem)] md:items-center md:p-8'>
       <div className='mx-auto max-w-7xl'>
         {isSocio && (
           <section className='space-y-4 md:hidden'>
@@ -396,6 +397,8 @@ const DashboardInitialContent = () => {
               loadingEstadoCuota={loadingEstadoCuota}
               montoAdeudadoLabel={formatMoney(cuotaMontoAdeudado)}
             />
+
+            <SocioMobileMensajeriaSoporteCard />
 
             <SocioEvolucionProgressInsights />
 
