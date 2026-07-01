@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, type ComponentType, type ReactNode } from 'react';
 import { getCuotaEstado, getFichaMedicaActual, pagarCuotaConStripe } from '@/services/apiClient';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
@@ -16,6 +16,54 @@ import SocioMobileMensajeriaSoporteCard from '@/components/dashboard/socio/Socio
 import SocioMobileSaludFichaMedicaCard from '@/components/dashboard/socio/SocioMobileSaludFichaMedicaCard';
 import SocioMobilePagosRecibosCard from '@/components/dashboard/socio/SocioMobilePagosRecibosCard';
 import SocioMobileActividadesAgendaCard from '@/components/dashboard/socio/SocioMobileActividadesAgendaCard';
+
+type SocioMobileFeedSectionProps = {
+  eyebrow: string;
+  title: string;
+  description: string;
+  icon: ComponentType<{ className?: string }>;
+  children: ReactNode;
+  badge?: string;
+  accentClassName?: string;
+};
+
+const SocioMobileFeedSection = ({
+  eyebrow,
+  title,
+  description,
+  icon: Icon,
+  children,
+  badge,
+  accentClassName = 'bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-200',
+}: SocioMobileFeedSectionProps) => (
+  <section className='space-y-3'>
+    <div className='flex items-start justify-between gap-3 px-1'>
+      <div className='flex min-w-0 items-start gap-3'>
+        <div className={`mt-0.5 rounded-2xl p-2 ${accentClassName}`}>
+          <Icon className='h-4 w-4' />
+        </div>
+        <div className='min-w-0'>
+          <p className='text-[0.65rem] font-black uppercase tracking-[0.22em] text-muted-foreground'>
+            {eyebrow}
+          </p>
+          <h2 className='text-lg font-black leading-tight text-foreground'>
+            {title}
+          </h2>
+          <p className='mt-1 text-xs leading-relaxed text-muted-foreground'>
+            {description}
+          </p>
+        </div>
+      </div>
+      {badge ? (
+        <span className='shrink-0 rounded-full border border-border bg-background px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.12em] text-muted-foreground'>
+          {badge}
+        </span>
+      ) : null}
+    </div>
+    <div className='space-y-3'>{children}</div>
+  </section>
+);
+
 
 const DashboardInitialContent = () => {
   const { user } = useAuthStore();
@@ -312,6 +360,10 @@ const DashboardInitialContent = () => {
     },
   ];
 
+  const socioMobileSecondaryActions = socioMobileActions.filter(
+    (item) => item.title !== 'Mi cuota' && item.title !== 'Pagar cuota' && item.title !== 'QR / asistencia'
+  );
+
   return (
     <div className='bg-gradient-to-br from-background via-background to-muted/20 p-4 md:flex md:min-h-[calc(100dvh-10.5rem)] md:items-center md:p-8'>
       <div className='mx-auto max-w-7xl'>
@@ -392,45 +444,82 @@ const DashboardInitialContent = () => {
               </div>
             </div>
 
-            <SocioMobileAsistenciaQrCard
-              cuotaAlDia={cuotaAlDia}
-              cuotaEstadoLabel={cuotaEstadoLabel}
-              cuotaFechaTitulo={cuotaFechaTitulo}
-              cuotaFechaLabel={cuotaFechaLabel}
-              loadingEstadoCuota={loadingEstadoCuota}
-              montoAdeudadoLabel={formatMoney(cuotaMontoAdeudado)}
-            />
+            <SocioMobileFeedSection
+              eyebrow='Prioridad'
+              title='Acceso y estado'
+              description='Lo primero que necesita el socio para ingresar, cuidar su salud y mantener la cuota clara.'
+              icon={QrCode}
+              badge='Ahora'
+              accentClassName='bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-200'
+            >
+              <SocioMobileAsistenciaQrCard
+                cuotaAlDia={cuotaAlDia}
+                cuotaEstadoLabel={cuotaEstadoLabel}
+                cuotaFechaTitulo={cuotaFechaTitulo}
+                cuotaFechaLabel={cuotaFechaLabel}
+                loadingEstadoCuota={loadingEstadoCuota}
+                montoAdeudadoLabel={formatMoney(cuotaMontoAdeudado)}
+              />
 
-            <SocioMobilePagosRecibosCard
-              cuotaAlDia={cuotaAlDia}
-              cuotaEstadoLabel={cuotaEstadoLabel}
-              cuotaFechaTitulo={cuotaFechaTitulo}
-              cuotaFechaLabel={cuotaFechaLabel}
-              loadingEstadoCuota={loadingEstadoCuota}
-              montoAdeudadoLabel={formatMoney(cuotaMontoAdeudado)}
-            />
+              <SocioMobilePagosRecibosCard
+                cuotaAlDia={cuotaAlDia}
+                cuotaEstadoLabel={cuotaEstadoLabel}
+                cuotaFechaTitulo={cuotaFechaTitulo}
+                cuotaFechaLabel={cuotaFechaLabel}
+                loadingEstadoCuota={loadingEstadoCuota}
+                montoAdeudadoLabel={formatMoney(cuotaMontoAdeudado)}
+              />
 
-            <SocioMobileMensajeriaSoporteCard />
+              <SocioMobileSaludFichaMedicaCard />
+            </SocioMobileFeedSection>
 
-            <SocioMobileSaludFichaMedicaCard />
+            <SocioMobileFeedSection
+              eyebrow='Hoy'
+              title='Entrenamiento y agenda'
+              description='Rutina, dieta, coach IA y actividades disponibles para organizar el día.'
+              icon={Dumbbell}
+              badge='Diario'
+              accentClassName='bg-orange-50 text-orange-700 dark:bg-orange-950/60 dark:text-orange-200'
+            >
+              <SocioMobileTodayPlan />
+              <SocioMobileActividadesAgendaCard />
+            </SocioMobileFeedSection>
 
-            <SocioEvolucionProgressInsights />
+            <SocioMobileFeedSection
+              eyebrow='Progreso'
+              title='Evolución física'
+              description='Compará tu punto inicial con la última medición y seguí tu transformación.'
+              icon={Activity}
+              accentClassName='bg-violet-50 text-violet-700 dark:bg-violet-950/60 dark:text-violet-200'
+            >
+              <SocioEvolucionProgressInsights />
+            </SocioMobileFeedSection>
+
+            <SocioMobileFeedSection
+              eyebrow='Comunicación'
+              title='Soporte del gimnasio'
+              description='Consultas, respuestas y contacto con administración desde la app.'
+              icon={MessageCircle}
+              accentClassName='bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-200'
+            >
+              <SocioMobileMensajeriaSoporteCard />
+            </SocioMobileFeedSection>
 
             <Card className='border-sky-100 bg-white/95 p-4 shadow-sm dark:border-sky-900/60 dark:bg-slate-950/70'>
               <div className='mb-4 flex items-center justify-between gap-3'>
                 <div>
                   <p className='text-xs font-semibold uppercase tracking-[0.22em] text-sky-600 dark:text-sky-300'>
-                    Accesos rápidos
+                    Atajos secundarios
                   </p>
-                  <h2 className='text-lg font-bold'>Modo app del socio</h2>
+                  <h2 className='text-lg font-bold'>Más acciones</h2>
                 </div>
                 <span className='rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 dark:bg-sky-950 dark:text-sky-200'>
-                  Mobile
+                  App
                 </span>
               </div>
 
               <div className='grid grid-cols-2 gap-3'>
-                {socioMobileActions.slice(0, 6).map((item) => {
+                {socioMobileSecondaryActions.slice(0, 6).map((item) => {
                   const Icon = item.icon;
                   return (
                     <button
@@ -452,10 +541,6 @@ const DashboardInitialContent = () => {
                 })}
               </div>
             </Card>
-
-            <SocioMobileTodayPlan />
-
-            <SocioMobileActividadesAgendaCard />
 
             <Card className='border-primary/20 bg-primary/5 p-4'>
               <div className='flex items-start gap-3'>
