@@ -5,7 +5,19 @@ import { useAuthStore } from "@/stores/authStore";
 import { getHistorialRutinas } from "@/services/apiClient";
 import { Rutina } from "@/interfaces/rutina.interface";
 import Image from "next/image";
-import { ArrowLeft, Download, Eye, EyeOff, Info, X } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  CheckCircle2,
+  Download,
+  Dumbbell,
+  Eye,
+  EyeOff,
+  Info,
+  PlayCircle,
+  Timer,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { descargarRutinaPdf } from "@/utils/rutinaPdf";
 import { formatFrontendDate } from '@/utils/dateFormat';
@@ -287,6 +299,72 @@ const construirAyudaSeriesRepeticiones = (
   return `Debes hacer ${seriesPhrase}. Si tenés dudas, consultá al entrenador antes de comenzar el ejercicio.`;
 };
 
+const DIAS_DESDE_JS = [
+  "domingo",
+  "lunes",
+  "martes",
+  "miércoles",
+  "jueves",
+  "viernes",
+  "sábado",
+];
+
+const capitalizarTexto = (value: string): string => {
+  if (!value) return "-";
+
+  return value.charAt(0).toUpperCase() + value.slice(1);
+};
+
+const normalizarDiaKey = (value: string): string =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
+const esDiaActual = (dia: string): boolean => {
+  const hoy = DIAS_DESDE_JS[new Date().getDay()];
+  return normalizarDiaKey(dia) === normalizarDiaKey(hoy);
+};
+
+const contarEjercicios = (ejercicios?: any[]): number =>
+  Array.isArray(ejercicios) ? ejercicios.length : 0;
+
+const obtenerTotalEjercicios = (ejerciciosPorDia: EjerciciosPorDia): number =>
+  Object.values(ejerciciosPorDia).reduce(
+    (total, ejercicios) => total + contarEjercicios(ejercicios),
+    0
+  );
+
+const obtenerDiaSugerido = (ejerciciosPorDia: EjerciciosPorDia): string | null => {
+  const dias = Object.keys(ejerciciosPorDia);
+  if (dias.length === 0) return null;
+
+  return dias.find((dia) => esDiaActual(dia)) ?? dias[0];
+};
+
+const obtenerGrupoMuscular = (ejercicio: any): string | null => {
+  return (
+    ejercicio?.grupo_muscular ||
+    ejercicio?.musculo ||
+    ejercicio?.zona ||
+    ejercicio?.categoria ||
+    null
+  );
+};
+
+const obtenerIndicacionTecnica = (ejercicio: any): string | null => {
+  return (
+    ejercicio?.indicaciones ||
+    ejercicio?.indicacion ||
+    ejercicio?.observaciones ||
+    ejercicio?.descripcion ||
+    ejercicio?.detalle ||
+    null
+  );
+};
+
+
 export default function RutinaEjercicios({
   refreshKey = 0,
   onView,
@@ -308,6 +386,7 @@ export default function RutinaEjercicios({
 }) {
   const { user, token } = useAuthStore();
   const usuarioEsAdmin = isAdmin(user?.rol);
+  const puedeGestionarRutinas = usuarioEsAdmin;
 
   const [viendoRutina, setViendoRutina] = useState<number | null>(null);
   const [diasExpandidos, setDiasExpandidos] = useState<{
@@ -377,8 +456,12 @@ export default function RutinaEjercicios({
   };
 
   const verRutina = (id: number) => {
+    const rutina = rutinas.find((item) => item.id_rutina === id);
+    const ejerciciosPorDia = rutina ? normalizarRutinaPorDia(rutina) : {};
+    const diaSugerido = obtenerDiaSugerido(ejerciciosPorDia);
+
     setViendoRutina(id);
-    setDiasExpandidos({});
+    setDiasExpandidos(diaSugerido ? { [diaSugerido]: true } : {});
   };
 
   const volverALista = () => {
@@ -473,14 +556,20 @@ export default function RutinaEjercicios({
 
     const ejerciciosPorDia = normalizarRutinaPorDia(rutina);
     const diasDisponibles = Object.keys(ejerciciosPorDia);
+    const totalEjercicios = obtenerTotalEjercicios(ejerciciosPorDia);
+    const diaSugerido = obtenerDiaSugerido(ejerciciosPorDia);
 
     return (
       <>
-        <div className="min-h-screen">
-          <div className="mx-auto overflow-hidden bg-white shadow-xl max-w-7xl rounded-2xl sm:rounded-3xl">
-          <div className="flex flex-col gap-4 px-4 py-6 text-white bg-gray-900 sm:flex-row sm:items-center sm:justify-between sm:px-10 sm:py-8">
-            <div className="flex-1">
-              <h1 className="mb-2 text-xl font-light tracking-wide sm:text-2xl lg:text-3xl sm:tracking-widest">
+        <div className="min-h-screen bg-slate-50/70 px-0 py-0 sm:px-4 sm:py-6">
+          <div className="mx-auto overflow-hidden bg-white shadow-xl max-w-7xl rounded-none sm:rounded-3xl">
+          <div className="flex flex-col gap-4 px-4 py-5 text-white bg-gradient-to-br from-gray-950 via-gray-900 to-gray-800 sm:flex-row sm:items-center sm:justify-between sm:px-10 sm:py-8">
+            <div className="flex-1 min-w-0">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/80">
+                <Dumbbell className="h-3.5 w-3.5" />
+                Detalle de rutina
+              </div>
+              <h1 className="mb-2 text-2xl font-semibold leading-tight tracking-tight sm:text-3xl lg:text-4xl sm:tracking-wide">
                 {obtenerTituloRutina(rutina)}
               </h1>
 
@@ -491,7 +580,7 @@ export default function RutinaEjercicios({
                 </p>
               )}
 
-              <div className="flex flex-col gap-2 text-xs font-light sm:flex-row sm:gap-5 sm:text-sm opacity-70">
+              <div className="flex flex-col gap-2 text-xs font-light sm:flex-row sm:gap-5 sm:text-sm text-white/70">
                 <span>
                   CREADO{" "}
                   {rutina.creado_en
@@ -512,15 +601,15 @@ export default function RutinaEjercicios({
               <button
                 onClick={() => handleDescargarPdf(rutina, ejerciciosPorDia)}
                 disabled={exportingPdf}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-medium tracking-wide text-gray-900 transition-colors bg-white border border-white rounded-full cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 sm:px-6 sm:py-3 sm:text-sm sm:tracking-wider hover:bg-gray-100"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white bg-white px-4 py-2 text-xs font-semibold tracking-wide text-gray-950 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 sm:px-6 sm:py-3 sm:text-sm hover:bg-gray-100"
               >
                 <Download className="w-4 h-4" />
-                {exportingPdf ? "GENERANDO..." : "DESCARGAR RUTINA"}
+                {exportingPdf ? "Generando..." : "Descargar PDF"}
               </button>
 
               <button
                 onClick={volverALista}
-                className="inline-flex items-center self-start gap-2 px-4 py-2 text-xs font-light tracking-wide text-white transition-colors bg-transparent border rounded-full cursor-pointer sm:px-6 sm:py-3 sm:text-sm sm:tracking-wider border-white/30 hover:bg-white/10 sm:self-auto"
+                className="inline-flex min-h-11 items-center justify-center self-start gap-2 rounded-full border border-white/30 bg-transparent px-4 py-2 text-xs font-medium tracking-wide text-white transition-colors cursor-pointer sm:px-6 sm:py-3 sm:text-sm hover:bg-white/10 sm:self-auto"
               >
                 <ArrowLeft className="w-4 h-4" />
                 {backLabel}
@@ -528,7 +617,80 @@ export default function RutinaEjercicios({
             </div>
           </div>
 
-          <div className="p-4 sm:p-6 lg:p-10">
+          <div className="border-b border-gray-100 bg-white px-4 py-4 sm:px-8 sm:py-6">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3 sm:p-4">
+                <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
+                  <CalendarDays className="h-4 w-4" />
+                  Días
+                </div>
+                <p className="text-2xl font-semibold text-gray-950">{diasDisponibles.length}</p>
+              </div>
+              <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3 sm:p-4">
+                <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
+                  <Dumbbell className="h-4 w-4" />
+                  Ejercicios
+                </div>
+                <p className="text-2xl font-semibold text-gray-950">{totalEjercicios}</p>
+              </div>
+              <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3 sm:p-4">
+                <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Hoy
+                </div>
+                <p className="truncate text-lg font-semibold text-gray-950">
+                  {diaSugerido ? capitalizarTexto(diaSugerido) : "Sin día"}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3 sm:p-4">
+                <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
+                  <Timer className="h-4 w-4" />
+                  Modo
+                </div>
+                <p className="text-lg font-semibold text-gray-950">Mobile</p>
+              </div>
+            </div>
+
+            {diasDisponibles.length > 0 && (
+              <div className="mt-4 flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible">
+                {diasDisponibles.map((dia) => (
+                  <button
+                    key={`chip-${dia}`}
+                    type="button"
+                    onClick={() =>
+                      setDiasExpandidos((prev) => ({
+                        ...prev,
+                        [dia]: true,
+                      }))
+                    }
+                    className={`flex min-w-max items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition-colors ${
+                      diasExpandidos[dia]
+                        ? "border-gray-900 bg-gray-900 text-white"
+                        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    {capitalizarTexto(dia)}
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[11px] ${
+                        diasExpandidos[dia]
+                          ? "bg-white/15 text-white"
+                          : "bg-gray-100 text-gray-600"
+                      }`}
+                    >
+                      {contarEjercicios(ejerciciosPorDia[dia])}
+                    </span>
+                    {esDiaActual(dia) && (
+                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] uppercase tracking-wide text-emerald-700">
+                        Hoy
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="p-3 sm:p-6 lg:p-10">
             {diasDisponibles.length === 0 ? (
               <div className="p-6 text-sm italic font-light text-center text-gray-400 sm:p-8 lg:p-10 sm:text-base">
                 Esta rutina no tiene ejercicios cargados o usa un formato no reconocido.
@@ -537,19 +699,29 @@ export default function RutinaEjercicios({
               diasDisponibles.map((dia) => (
                 <div
                   key={dia}
-                  className="mb-3 overflow-hidden bg-white border border-gray-200 sm:mb-4 rounded-xl sm:rounded-2xl"
+                  className="mb-3 overflow-hidden border border-gray-200 bg-white shadow-sm sm:mb-4 rounded-2xl"
                 >
                   <button
                     onClick={() => toggleDia(dia)}
-                    className={`w-full px-4 py-4 sm:px-8 sm:py-6 border-none cursor-pointer text-sm sm:text-base font-medium tracking-wide sm:tracking-widest text-left flex justify-between items-center text-gray-700 transition-colors ${
+                    className={`w-full px-4 py-4 sm:px-8 sm:py-6 border-none cursor-pointer text-left flex justify-between items-center text-gray-800 transition-colors ${
                       diasExpandidos[dia] ? "bg-gray-50" : "bg-white"
                     }`}
                   >
-                    <span className="text-sm sm:text-base">
-                      {dia.toUpperCase()}
+                    <span className="flex min-w-0 flex-col gap-1">
+                      <span className="flex items-center gap-2 text-sm font-semibold sm:text-base">
+                        {capitalizarTexto(dia)}
+                        {esDiaActual(dia) && (
+                          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
+                            Hoy
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-xs font-normal text-gray-500">
+                        {contarEjercicios(ejerciciosPorDia[dia])} ejercicios programados
+                      </span>
                     </span>
                     <div
-                      className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+                      className={`ml-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all duration-300 sm:h-9 sm:w-9 ${
                         diasExpandidos[dia]
                           ? "bg-gray-700 rotate-180"
                           : "bg-gray-200 rotate-0"
@@ -566,7 +738,7 @@ export default function RutinaEjercicios({
                   </button>
 
                   {diasExpandidos[dia] && (
-                    <div className="px-4 pb-4 sm:px-8 sm:pb-8 bg-gray-50">
+                    <div className="px-3 pb-4 sm:px-8 sm:pb-8 bg-gray-50">
                       {ejerciciosPorDia[dia]?.length > 0 ? (
                         ejerciciosPorDia[dia].map(
                           (ejercicio: any, idx: number) => {
@@ -583,30 +755,39 @@ export default function RutinaEjercicios({
                             return (
                               <div
                                 key={idx}
-                                className="p-4 mt-4 bg-white border border-gray-200 sm:p-6 lg:p-8 sm:mt-6 rounded-xl sm:rounded-2xl"
+                                className="mt-3 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm sm:mt-5"
                               >
-                                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-8">
+                                <div className="flex flex-col gap-4 p-4 sm:p-6 lg:flex-row lg:items-start lg:gap-8">
                                   <div className="flex-1 min-w-0">
-                                    <div className="flex flex-col gap-2 mb-3 sm:flex-row sm:items-center sm:gap-3">
-                                      <h3 className="m-0 text-lg font-semibold tracking-wide text-gray-900 break-words sm:text-xl lg:text-2xl">
-                                        {nombreEjercicio}
-                                      </h3>
+                                    <div className="mb-3 flex items-start gap-3">
+                                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-900 text-sm font-semibold text-white">
+                                        {idx + 1}
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <h3 className="m-0 text-base font-semibold leading-snug tracking-tight text-gray-950 break-words sm:text-xl lg:text-2xl">
+                                          {nombreEjercicio}
+                                        </h3>
+                                        {obtenerGrupoMuscular(ejercicio) && (
+                                          <p className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-gray-500">
+                                            {obtenerGrupoMuscular(ejercicio)}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
 
-                                      {imagen && (
-                                        <button
-                                          onClick={() =>
-                                            toggleImagen(ejercicioKey)
-                                          }
-                                          className="self-start p-2 text-gray-600 transition-colors rounded-full hover:bg-gray-100 hover:text-gray-900 sm:self-auto"
-                                          title="Mostrar/ocultar imagen del ejercicio"
-                                        >
-                                          {imagenVisible[ejercicioKey] ? (
-                                            <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" />
-                                          ) : (
-                                            <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
-                                          )}
-                                        </button>
-                                      )}
+                                    <div className="mb-3 grid grid-cols-3 gap-2 sm:mb-4 sm:max-w-xl">
+                                      <div className="rounded-2xl bg-gray-50 p-3 text-center">
+                                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-500">Series</p>
+                                        <p className="mt-1 text-sm font-semibold text-gray-950 sm:text-base">{series}</p>
+                                      </div>
+                                      <div className="rounded-2xl bg-gray-50 p-3 text-center">
+                                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-500">Reps</p>
+                                        <p className="mt-1 text-sm font-semibold text-gray-950 sm:text-base">{repeticiones}</p>
+                                      </div>
+                                      <div className="rounded-2xl bg-gray-50 p-3 text-center">
+                                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-500">Descanso</p>
+                                        <p className="mt-1 text-sm font-semibold text-gray-950 sm:text-base">{descanso}</p>
+                                      </div>
                                     </div>
 
                                     <div className="flex flex-wrap items-center gap-2 mb-3 sm:mb-4">
@@ -635,31 +816,50 @@ export default function RutinaEjercicios({
                                       </button>
                                     </div>
 
-                                    <p className="m-0 text-sm font-light tracking-wide text-gray-600 sm:text-base">
-                                      Descanso: {descanso}
-                                    </p>
-
-                                    {videoYoutube && (
-                                      <a
-                                        href={videoYoutube}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="inline-flex items-center gap-2 px-3 py-2 mt-3 text-xs font-semibold tracking-wide text-gray-900 transition-colors border border-gray-300 rounded-full hover:bg-gray-100"
-                                      >
-                                        ▶ Ver video
-                                      </a>
+                                    {obtenerIndicacionTecnica(ejercicio) && (
+                                      <p className="mb-3 rounded-2xl bg-blue-50 p-3 text-sm leading-6 text-blue-950">
+                                        {obtenerIndicacionTecnica(ejercicio)}
+                                      </p>
                                     )}
+
+                                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                                      {videoYoutube && (
+                                        <a
+                                          href={videoYoutube}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-gray-300 px-4 py-2 text-xs font-semibold tracking-wide text-gray-900 transition-colors hover:bg-gray-100"
+                                        >
+                                          <PlayCircle className="h-4 w-4" />
+                                          Ver video
+                                        </a>
+                                      )}
+                                      {imagen && (
+                                        <button
+                                          type="button"
+                                          onClick={() => toggleImagen(ejercicioKey)}
+                                          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-gray-300 px-4 py-2 text-xs font-semibold tracking-wide text-gray-900 transition-colors hover:bg-gray-100"
+                                        >
+                                          {imagenVisible[ejercicioKey] ? (
+                                            <EyeOff className="h-4 w-4" />
+                                          ) : (
+                                            <Eye className="h-4 w-4" />
+                                          )}
+                                          {imagenVisible[ejercicioKey] ? "Ocultar imagen" : "Ver imagen"}
+                                        </button>
+                                      )}
+                                    </div>
                                   </div>
 
                                   {imagenVisible[ejercicioKey] && imagen && (
                                     <div className="w-full lg:w-64 xl:w-80">
-                                      <div className="overflow-hidden rounded-lg bg-gray-50">
+                                      <div className="overflow-hidden rounded-2xl bg-gray-50">
                                         <Image
                                           src={imagen}
                                           alt={`Demostración de ${nombreEjercicio}`}
                                           width={320}
                                           height={500}
-                                          className="object-cover w-full h-80 sm:h-72 lg:h-80 xl:h-72"
+                                          className="object-cover w-full h-64 sm:h-72 lg:h-80 xl:h-72"
                                           unoptimized
                                         />
                                       </div>
@@ -752,10 +952,10 @@ export default function RutinaEjercicios({
 
   return (
     <>
-      <div className="min-h-screen px-2 py-4 sm:px-5 sm:py-10">
+      <div className="min-h-screen bg-slate-50/60 px-2 py-4 sm:px-5 sm:py-10">
         <div className="mx-auto max-w-7xl">
           <div className="mb-8 text-center sm:mb-12 lg:mb-15">
-            <h1 className="mb-3 text-3xl font-thin tracking-wide text-gray-900 sm:mb-4 sm:text-4xl lg:text-5xl sm:tracking-widest">
+            <h1 className="mb-3 text-3xl font-semibold tracking-tight text-gray-900 sm:mb-4 sm:text-4xl lg:text-5xl sm:tracking-wide">
               {usuarioEsAdmin ? "RUTINAS ASIGNADAS" : "RUTINAS"}
             </h1>
             <p className="text-base font-light tracking-wide text-gray-600 sm:text-lg sm:tracking-widest">
@@ -769,10 +969,10 @@ export default function RutinaEjercicios({
             {rutinas.map((rutina) => (
               <div
                 key={rutina.id_rutina}
-                className="p-6 bg-white border border-gray-200 sm:p-8 lg:p-10 rounded-2xl sm:rounded-3xl"
+                className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm"
               >
-                <div className="mb-6 sm:mb-8">
-                  <h2 className="mb-2 text-xl font-semibold tracking-wide text-gray-900 break-words sm:mb-3 sm:text-2xl lg:text-3xl sm:tracking-widest">
+                <div className="p-5 sm:p-8 lg:p-10">
+                  <h2 className="mb-2 text-xl font-semibold tracking-tight text-gray-950 break-words sm:mb-3 sm:text-2xl lg:text-3xl sm:tracking-wide">
                     {obtenerTituloRutina(rutina)}
                   </h2>
 
@@ -802,31 +1002,35 @@ export default function RutinaEjercicios({
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
+                <div className="flex flex-col gap-3 border-t border-gray-100 bg-gray-50 p-4 sm:flex-row sm:flex-wrap sm:gap-4 sm:p-5">
                   <button
                     onClick={() => {
                       onView?.(rutina);
                       verRutina(rutina.id_rutina);
                     }}
-                    className="px-6 py-2 text-xs font-medium tracking-wide text-white transition-colors bg-gray-900 border-none rounded-full cursor-pointer sm:px-8 sm:py-3 sm:text-sm sm:tracking-widest hover:bg-gray-800"
+                    className="min-h-11 rounded-full border-none bg-gray-900 px-6 py-2 text-xs font-semibold tracking-wide text-white transition-colors cursor-pointer sm:px-8 sm:py-3 sm:text-sm hover:bg-gray-800"
                   >
-                    VER
+                    Ver rutina
                   </button>
 
-                  <button
-                    onClick={() => onEdit?.(rutina)}
-                    className="px-6 py-2 text-xs font-medium tracking-wide text-yellow-700 transition-colors bg-transparent border border-yellow-500 rounded-full cursor-pointer sm:px-8 sm:py-3 sm:text-sm sm:tracking-widest hover:bg-yellow-50"
-                  >
-                    EDITAR
-                  </button>
+                  {puedeGestionarRutinas && onEdit && (
+                    <button
+                      onClick={() => onEdit(rutina)}
+                      className="min-h-11 rounded-full border border-yellow-500 bg-transparent px-6 py-2 text-xs font-semibold tracking-wide text-yellow-700 transition-colors cursor-pointer sm:px-8 sm:py-3 sm:text-sm hover:bg-yellow-50"
+                    >
+                      Editar
+                    </button>
+                  )}
 
-                  <button
-                    onClick={() => handleDelete(rutina)}
-                    disabled={deletingId === rutina.id_rutina}
-                    className="px-6 py-2 text-xs font-medium tracking-wide text-red-600 transition-colors bg-transparent border border-red-600 rounded-full cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 sm:px-8 sm:py-3 sm:text-sm sm:tracking-widest hover:bg-red-50"
-                  >
-                    {deletingId === rutina.id_rutina ? "ELIMINANDO..." : "ELIMINAR"}
-                  </button>
+                  {puedeGestionarRutinas && onDelete && (
+                    <button
+                      onClick={() => handleDelete(rutina)}
+                      disabled={deletingId === rutina.id_rutina}
+                      className="min-h-11 rounded-full border border-red-600 bg-transparent px-6 py-2 text-xs font-semibold tracking-wide text-red-600 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 sm:px-8 sm:py-3 sm:text-sm hover:bg-red-50"
+                    >
+                      {deletingId === rutina.id_rutina ? "Eliminando..." : "Eliminar"}
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

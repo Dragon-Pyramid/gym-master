@@ -312,10 +312,10 @@ export default function RutinasPage() {
                   <Button
                     onClick={handlePrint}
                     variant="outline"
-                    className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
+                    className="hidden items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd] sm:flex"
                   >
                     <Printer className="w-4 h-4" />
-                    <span className="hidden sm:inline">Imprimir</span>
+                    <span>Imprimir listado</span>
                   </Button>
                   <Button
                     onClick={() => setOpenModal(true)}
@@ -329,11 +329,15 @@ export default function RutinasPage() {
               <CardContent className="p-4">
                 <RutinaDisplay
                   refreshKey={rutinasRefreshKey}
-                  onEdit={(rutina) => {
-                    setSelectedRutina(rutina);
-                    setOpenModal(true);
-                  }}
-                  onDelete={handleDeleteRutina}
+                  onEdit={
+                    usuarioEsAdmin
+                      ? (rutina: Rutina) => {
+                          setSelectedRutina(rutina);
+                          setOpenModal(true);
+                        }
+                      : undefined
+                  }
+                  onDelete={usuarioEsAdmin ? handleDeleteRutina : undefined}
                 />
               </CardContent>
             </Card>
