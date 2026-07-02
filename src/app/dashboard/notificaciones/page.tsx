@@ -291,13 +291,31 @@ export default function NotificacionesPage() {
 
   return (
     <SidebarProvider>
-      <div className='flex min-h-screen w-full'>
+      <div className='flex h-[100dvh] w-full overflow-hidden'>
         <AppSidebar />
-        <SidebarInset>
+        <SidebarInset className='grid min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden'>
           <AppHeader title='Notificaciones' />
-          <main className='flex-1 space-y-6 p-6'>
-            <section className='grid gap-4 md:grid-cols-4'>
-              <Card>
+          <section className='min-h-0 overflow-y-auto bg-gradient-to-b from-sky-50/70 via-background to-background px-4 py-4 sm:px-6 md:p-6 dark:from-sky-950/10'>
+            <div className='mx-auto w-full max-w-7xl space-y-5 md:space-y-6'>
+              <section className='rounded-[2rem] border border-sky-100 bg-white p-4 shadow-sm dark:border-sky-900/60 dark:bg-slate-950/80 sm:p-5'>
+                <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
+                  <div className='min-w-0'>
+                    <p className='inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-sky-700 ring-1 ring-sky-100 dark:bg-sky-950/40 dark:text-sky-200 dark:ring-sky-900/70'>
+                      <BellRing className='h-3.5 w-3.5' />
+                      Centro de avisos
+                    </p>
+                    <h1 className='mt-3 text-2xl font-black leading-tight text-slate-950 sm:text-3xl dark:text-white'>
+                      Notificaciones
+                    </h1>
+                    <p className='mt-2 max-w-3xl text-sm leading-6 text-muted-foreground'>
+                      Gestioná emails, avisos programados, feriados, promociones, alertas de sistema y mensajes visibles en Terminal.
+                    </p>
+                  </div>
+                </div>
+              </section>
+
+              <section className='grid gap-3 sm:grid-cols-2 lg:grid-cols-4'>
+              <Card className='overflow-hidden rounded-[1.5rem] border-sky-100 bg-white shadow-sm dark:border-sky-900/60 dark:bg-slate-950/80'>
                 <CardContent className='flex items-center gap-3 p-4'>
                   <BellRing className='h-8 w-8 text-sky-600' />
                   <div>
@@ -306,7 +324,7 @@ export default function NotificacionesPage() {
                   </div>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className='overflow-hidden rounded-[1.5rem] border-emerald-100 bg-white shadow-sm dark:border-emerald-900/60 dark:bg-slate-950/80'>
                 <CardContent className='flex items-center gap-3 p-4'>
                   <Send className='h-8 w-8 text-emerald-600' />
                   <div>
@@ -315,7 +333,7 @@ export default function NotificacionesPage() {
                   </div>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className='overflow-hidden rounded-[1.5rem] border-amber-100 bg-white shadow-sm dark:border-amber-900/60 dark:bg-slate-950/80'>
                 <CardContent className='flex items-center gap-3 p-4'>
                   <CalendarClock className='h-8 w-8 text-amber-600' />
                   <div>
@@ -324,7 +342,7 @@ export default function NotificacionesPage() {
                   </div>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className='overflow-hidden rounded-[1.5rem] border-violet-100 bg-white shadow-sm dark:border-violet-900/60 dark:bg-slate-950/80'>
                 <CardContent className='flex items-center gap-3 p-4'>
                   <Mail className='h-8 w-8 text-violet-600' />
                   <div>
@@ -335,15 +353,15 @@ export default function NotificacionesPage() {
               </Card>
             </section>
 
-            <Card>
-              <CardHeader className='flex flex-wrap items-center justify-between gap-4 border-b p-4'>
+              <Card className='overflow-hidden rounded-[2rem] border-border bg-white shadow-sm dark:bg-slate-950/80'>
+                <CardHeader className='flex flex-col items-start justify-between gap-4 border-b p-4 sm:flex-row sm:items-center'>
                 <div>
                   <h2 className='text-xl font-bold'>Centro de notificaciones</h2>
                   <p className='text-sm text-muted-foreground'>
                     Base para emails, avisos programados, feriados y futuras promociones en Terminal.
                   </p>
                 </div>
-                <div className='flex flex-wrap gap-2'>
+                <div className='grid w-full grid-cols-1 gap-2 sm:w-auto sm:grid-cols-3'>
                   <Button type='button' variant='outline' onClick={exportExcel}>
                     <FileSpreadsheet className='mr-2 h-4 w-4' /> Excel
                   </Button>
@@ -361,8 +379,8 @@ export default function NotificacionesPage() {
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent className='space-y-4 p-4'>
-                <div className='grid gap-3 md:grid-cols-5'>
+                <CardContent className='space-y-4 p-4'>
+                  <div className='grid gap-3 md:grid-cols-5'>
                   <div className='relative md:col-span-2'>
                     <Search className='absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground' />
                     <Input
@@ -401,7 +419,7 @@ export default function NotificacionesPage() {
                   </div>
                 </div>
 
-                {loading ? (
+                  {loading ? (
                   <div className='py-10 text-center text-muted-foreground'>Cargando notificaciones...</div>
                 ) : (
                   <NotificacionTable
@@ -416,16 +434,17 @@ export default function NotificacionesPage() {
                   />
                 )}
 
-                <PaginationControls
+                  <PaginationControls
                   currentPage={Math.min(currentPage, totalPages)}
                   totalItems={filteredNotificaciones.length}
                   pageSize={PAGE_SIZE}
                   onPageChange={setCurrentPage}
                   itemLabel='notificaciones'
                 />
-              </CardContent>
-            </Card>
-          </main>
+                </CardContent>
+              </Card>
+            </div>
+          </section>
           <AppFooter />
         </SidebarInset>
       </div>
