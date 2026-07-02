@@ -118,7 +118,7 @@ export function HeaderNotificationsBell() {
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align='end' className='w-[360px] max-w-[92vw] p-0'>
+      <DropdownMenuContent align='end' sideOffset={8} className='w-[calc(100vw-1rem)] max-w-[360px] overflow-hidden rounded-2xl p-0'>
         <DropdownMenuLabel className='flex items-center justify-between gap-3 px-4 py-3'>
           <span>Notificaciones</span>
           {loading ? <Loader2 className='h-4 w-4 animate-spin text-muted-foreground' /> : null}
@@ -134,7 +134,7 @@ export function HeaderNotificationsBell() {
             </div>
           </div>
         ) : (
-          <div className='max-h-[420px] overflow-y-auto py-1'>
+          <div className='max-h-[min(420px,70dvh)] overflow-y-auto py-1'>
             {items.map((item) => (
               <DropdownMenuItem
                 key={item.id}
