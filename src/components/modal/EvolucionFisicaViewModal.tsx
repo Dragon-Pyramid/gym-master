@@ -68,7 +68,7 @@ const DetailSection = ({
       </span>
       <h3 className="text-sm font-bold text-foreground">{title}</h3>
     </div>
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{children}</div>
+    <div className="grid gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3">{children}</div>
   </section>
 );
 
@@ -87,10 +87,10 @@ export default function EvolucionFisicaViewModal({
 
   return (
     <Dialog open={open} onOpenChange={(value) => !value && onClose()}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto bg-background text-foreground sm:max-w-[980px]">
+      <DialogContent className="max-h-[92vh] max-w-[95vw] overflow-y-auto bg-background p-4 text-foreground sm:max-w-[980px] sm:p-6">
         <QaFileNameBadge file="src/components/modal/EvolucionFisicaViewModal.tsx" />
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold">
+          <DialogTitle className="text-lg font-bold sm:text-xl">
             Detalle de evolución física
           </DialogTitle>
           <DialogDescription>

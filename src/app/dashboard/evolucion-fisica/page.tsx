@@ -419,9 +419,12 @@ export default function EvolucionFisicaPage() {
         <AppSidebar />
         <SidebarInset>
           <AppHeader title="Evolución física" />
-          <main className="flex-1 space-y-6 p-4 md:space-y-8 md:p-6">
-            <Card className="w-full">
-              <CardHeader className="space-y-2 border-b p-4">
+          <section className="flex-1 space-y-4 p-3 sm:p-4 md:space-y-8 md:p-6">
+            <Card className="w-full overflow-hidden rounded-2xl">
+              <CardHeader className="space-y-2 border-b bg-gradient-to-r from-[#f0fbff] to-white p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#02a8e1]">
+                  Progreso del socio
+                </p>
                 <h1 className="text-xl font-bold md:text-2xl">Evolución física</h1>
                 <p className="text-sm text-muted-foreground">
                   Registro profesional de medidas corporales, composición física e historial comparativo del socio.
@@ -522,7 +525,12 @@ export default function EvolucionFisicaPage() {
             {canRenderEvolutionData && (
               <Card className="w-full">
               <CardHeader className="flex flex-wrap items-center justify-between gap-4 border-b p-4 md:flex-nowrap">
-                <h2 className="text-xl font-bold">Historial de medidas</h2>
+                <div>
+                  <h2 className="text-lg font-bold sm:text-xl">Historial de medidas</h2>
+                  <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
+                    Revisá las mediciones cargadas y abrí cada registro para ver el detalle completo.
+                  </p>
+                </div>
                 <div className="flex w-full flex-wrap items-center gap-2 md:w-auto">
                   <div className="relative flex-grow md:flex-grow-0">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -548,15 +556,17 @@ export default function EvolucionFisicaPage() {
                       {generatingPdf ? "Generando..." : "PDF"}
                     </span>
                   </Button>
-                  <Button
-                    onClick={handleExportExcel}
-                    variant="outline"
-                    disabled={!exportRows.length}
-                    className="flex items-center gap-2 border-[#02a8e1] bg-white text-[#02a8e1] hover:bg-[#e6f7fd]"
-                  >
-                    <FileSpreadsheet className="h-4 w-4" />
-                    <span className="hidden sm:inline">Exportar</span>
-                  </Button>
+                  {isAdmin && (
+                    <Button
+                      onClick={handleExportExcel}
+                      variant="outline"
+                      disabled={!exportRows.length}
+                      className="hidden items-center gap-2 border-[#02a8e1] bg-white text-[#02a8e1] hover:bg-[#e6f7fd] sm:flex"
+                    >
+                      <FileSpreadsheet className="h-4 w-4" />
+                      <span>Exportar</span>
+                    </Button>
+                  )}
                 </div>
               </CardHeader>
               <CardContent className="p-4">
@@ -571,7 +581,7 @@ export default function EvolucionFisicaPage() {
               </CardContent>
             </Card>
             )}
-          </main>
+          </section>
           <AppFooter />
         </SidebarInset>
         <EvolucionFisicaViewModal

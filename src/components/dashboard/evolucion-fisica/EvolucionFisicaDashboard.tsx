@@ -217,7 +217,7 @@ function ChartCard({
           <h3 className="text-lg font-semibold text-gray-950">{title}</h3>
           <p className="text-sm text-gray-500">{description}</p>
         </CardHeader>
-        <CardContent className="h-[320px] p-4">{children}</CardContent>
+        <CardContent className="h-[260px] p-3 sm:h-[320px] sm:p-4">{children}</CardContent>
       </Card>
     </div>
   );
@@ -303,6 +303,16 @@ export default function EvolucionFisicaDashboard({
   const piernaInicial = getAverage(initial?.muslo_izquierdo, initial?.muslo_derecho);
   const piernaActual = getAverage(current?.muslo_izquierdo, current?.muslo_derecho);
 
+  const comparisonRows = [
+    ["Peso", formatNumber(initial?.peso, " kg"), formatNumber(current?.peso, " kg"), signed(diffPeso, " kg")],
+    ["IMC", formatNumber(initial?.imc), formatNumber(current?.imc), signed(diffImc)],
+    ["Cintura", formatNumber(initial?.cintura, " cm"), formatNumber(current?.cintura, " cm"), signed(diffCintura, " cm")],
+    ["% grasa", formatNumber(initial?.porcentaje_grasa, "%"), formatNumber(current?.porcentaje_grasa, "%"), signed(diffGrasa, "%")],
+    ["Masa muscular", formatNumber(initial?.masa_muscular, " kg"), formatNumber(current?.masa_muscular, " kg"), signed(diffMasa, " kg")],
+    ["Brazo promedio", formatNumber(brazoInicial, " cm"), formatNumber(brazoActual, " cm"), signed(delta(brazoActual, brazoInicial), " cm")],
+    ["Muslo promedio", formatNumber(piernaInicial, " cm"), formatNumber(piernaActual, " cm"), signed(delta(piernaActual, piernaInicial), " cm")],
+  ] as Array<[string, string, string, string]>;
+
   const insight = buildInsight({
     records: orderedRows.length,
     diffPeso,
@@ -323,13 +333,13 @@ export default function EvolucionFisicaDashboard({
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border bg-white p-6 shadow-sm">
+      <section className="rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
         <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-xs uppercase tracking-wide text-[#02a8e1]">
               Dashboard de evolución física
             </p>
-            <h2 className="mt-1 text-2xl font-bold text-gray-950">
+            <h2 className="mt-1 text-xl font-bold text-gray-950 sm:text-2xl">
               Progreso corporal de {socioNombre}
             </h2>
             <p className="mt-2 max-w-3xl text-sm text-gray-500">{insight}</p>
@@ -466,7 +476,28 @@ export default function EvolucionFisicaDashboard({
             </p>
           </CardHeader>
           <CardContent className="p-4">
-            <div className="overflow-hidden rounded-xl border">
+            <div className="space-y-3 md:hidden">
+              {comparisonRows.map(([label, initialValue, currentValue, change]) => (
+                <div key={`mobile-${label}`} className="rounded-2xl border bg-slate-50 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="font-semibold text-gray-950">{label}</p>
+                    <p className="text-sm font-bold text-[#02a8e1]">{change}</p>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-gray-600">
+                    <div className="rounded-xl bg-white p-2">
+                      <p className="uppercase text-gray-400">Inicial</p>
+                      <p className="mt-1 font-semibold text-gray-800">{initialValue}</p>
+                    </div>
+                    <div className="rounded-xl bg-white p-2">
+                      <p className="uppercase text-gray-400">Actual</p>
+                      <p className="mt-1 font-semibold text-gray-800">{currentValue}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden overflow-hidden rounded-xl border md:block">
               <table className="w-full text-left text-sm">
                 <thead className="bg-muted/50 text-xs uppercase text-gray-500">
                   <tr>
@@ -477,15 +508,7 @@ export default function EvolucionFisicaDashboard({
                   </tr>
                 </thead>
                 <tbody>
-                  {([
-                    ["Peso", formatNumber(initial?.peso, " kg"), formatNumber(current?.peso, " kg"), signed(diffPeso, " kg")],
-                    ["IMC", formatNumber(initial?.imc), formatNumber(current?.imc), signed(diffImc)],
-                    ["Cintura", formatNumber(initial?.cintura, " cm"), formatNumber(current?.cintura, " cm"), signed(diffCintura, " cm")],
-                    ["% grasa", formatNumber(initial?.porcentaje_grasa, "%"), formatNumber(current?.porcentaje_grasa, "%"), signed(diffGrasa, "%")],
-                    ["Masa muscular", formatNumber(initial?.masa_muscular, " kg"), formatNumber(current?.masa_muscular, " kg"), signed(diffMasa, " kg")],
-                    ["Brazo promedio", formatNumber(brazoInicial, " cm"), formatNumber(brazoActual, " cm"), signed(delta(brazoActual, brazoInicial), " cm")],
-                    ["Muslo promedio", formatNumber(piernaInicial, " cm"), formatNumber(piernaActual, " cm"), signed(delta(piernaActual, piernaInicial), " cm")],
-                  ] as Array<[string, string, string, string]>).map(([label, initialValue, currentValue, change]) => (
+                  {comparisonRows.map(([label, initialValue, currentValue, change]) => (
                     <tr key={label} className="border-b last:border-0">
                       <td className="px-4 py-3 font-medium text-gray-950">{label}</td>
                       <td className="px-4 py-3 text-gray-600">{initialValue}</td>
