@@ -16,6 +16,7 @@ export default function ProfileImage({
   onUpload,
   showButton = true,
   onClick,
+  tone = 'default',
 }: {
   foto?: string | null;
   src?: string | null;
@@ -24,6 +25,7 @@ export default function ProfileImage({
   onUpload?: (data: any) => void;
   showButton?: boolean;
   onClick?: () => void;
+  tone?: 'default' | 'onDark';
 }) {
   const [currentSrc, setCurrentSrc] = useState<string | null>(
     foto ?? src ?? null
@@ -270,6 +272,14 @@ export default function ProfileImage({
     ? DEFAULT_PROFILE_IMAGE
     : previewSrc || currentSrc || DEFAULT_PROFILE_IMAGE;
 
+  const helperTextClass =
+    tone === 'onDark' ? 'text-slate-200/85' : 'text-muted-foreground';
+
+  const successTextClass =
+    tone === 'onDark' ? 'text-emerald-300' : 'text-green-600';
+
+  const errorTextClass = tone === 'onDark' ? 'text-rose-300' : 'text-red-500';
+
   return (
     <div className='flex flex-col items-center gap-3' onClick={onClick}>
       <div
@@ -373,7 +383,7 @@ export default function ProfileImage({
             </div>
           )}
 
-          <p className='max-w-xs text-xs text-center text-muted-foreground'>
+          <p className={`max-w-xs text-center text-xs ${helperTextClass}`}>
             Desde el celular podés subir una imagen desde la galería o abrir la cámara para sacar una foto nueva.
             Revisá la vista previa antes de guardar.
           </p>
@@ -382,8 +392,8 @@ export default function ProfileImage({
 
       {message && (
         <div
-          className={`max-w-xs text-xs text-center ${
-            message.type === 'error' ? 'text-red-500' : 'text-green-600'
+          className={`max-w-xs text-center text-xs ${
+            message.type === 'error' ? errorTextClass : successTextClass
           }`}
         >
           {message.text}
