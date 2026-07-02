@@ -170,65 +170,136 @@ export default function EvolucionSocioTable({
   }
 
   return (
-    <Table className="w-full overflow-hidden rounded-md border border-border text-sm">
-      <TableHeader>
-        <TableRow className="bg-muted/50 text-muted-foreground">
-          <TableHead>Fecha</TableHead>
-          <TableHead>Peso</TableHead>
-          <TableHead>Altura</TableHead>
-          <TableHead>IMC</TableHead>
-          <TableHead>Cintura</TableHead>
-          <TableHead>Pecho</TableHead>
-          <TableHead>Cadera</TableHead>
-          <TableHead>% Grasa</TableHead>
-          <TableHead>Masa muscular</TableHead>
-          <TableHead>Tipo</TableHead>
-          <TableHead>Inicial</TableHead>
-          <TableHead>Observaciones</TableHead>
-          <TableHead>Acciones</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
+    <div className="space-y-4">
+      <div className="space-y-3 md:hidden">
         {filtered.map((e, i) => (
-          <TableRow
-            key={getRowKey(e, i)}
-            className="odd:bg-muted/40 transition-colors hover:bg-[#a8d9f9]"
+          <article
+            key={`mobile-${getRowKey(e, i)}`}
+            className="rounded-2xl border bg-white p-4 shadow-sm"
           >
-            <TableCell>{formatDate(e.fecha)}</TableCell>
-            <TableCell>{formatNumber(e.peso, " kg")}</TableCell>
-            <TableCell>{formatNumber(e.altura, " cm")}</TableCell>
-            <TableCell>{formatNumber(e.imc)}</TableCell>
-            <TableCell>{formatNumber(e.cintura, " cm")}</TableCell>
-            <TableCell>{formatNumber(e.pecho, " cm")}</TableCell>
-            <TableCell>{formatNumber(e.cadera, " cm")}</TableCell>
-            <TableCell>{formatNumber(e.porcentaje_grasa, "%")}</TableCell>
-            <TableCell>{formatNumber(e.masa_muscular, " kg")}</TableCell>
-            <TableCell className="capitalize">{e.tipo_corporal || "-"}</TableCell>
-            <TableCell>{e.es_registro_inicial ? "Sí" : "No"}</TableCell>
-            <TableCell className="max-w-[220px] truncate" title={e.observaciones || ""}>
-              {e.observaciones || "-"}
-            </TableCell>
-            <TableCell>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-[#02a8e1]">
+                  {e.es_registro_inicial ? "Registro inicial" : "Medición"}
+                </p>
+                <h3 className="mt-1 text-lg font-bold text-gray-950">
+                  {formatDate(e.fecha)}
+                </h3>
+              </div>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => onView?.(e)}
-                className="flex items-center gap-1"
+                className="shrink-0 border-[#02a8e1] text-[#02a8e1]"
               >
-                <Eye className="h-4 w-4" />
+                <Eye className="mr-1 h-4 w-4" />
                 Ver
               </Button>
-            </TableCell>
-          </TableRow>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+              <div className="rounded-xl bg-slate-50 p-3">
+                <p className="text-[11px] uppercase text-gray-500">Peso</p>
+                <p className="font-bold text-gray-950">{formatNumber(e.peso, " kg")}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-3">
+                <p className="text-[11px] uppercase text-gray-500">IMC</p>
+                <p className="font-bold text-gray-950">{formatNumber(e.imc)}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-3">
+                <p className="text-[11px] uppercase text-gray-500">Cintura</p>
+                <p className="font-bold text-gray-950">{formatNumber(e.cintura, " cm")}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-3">
+                <p className="text-[11px] uppercase text-gray-500">Masa muscular</p>
+                <p className="font-bold text-gray-950">{formatNumber(e.masa_muscular, " kg")}</p>
+              </div>
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-600">
+              <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                Grasa: {formatNumber(e.porcentaje_grasa, "%")}
+              </span>
+              <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                Tipo: {e.tipo_corporal || "-"}
+              </span>
+            </div>
+
+            {e.observaciones ? (
+              <p className="mt-3 rounded-xl border bg-slate-50 p-3 text-xs leading-relaxed text-gray-600">
+                {e.observaciones}
+              </p>
+            ) : null}
+          </article>
         ))}
-      </TableBody>
-      <TableFooter>
-        <TableRow>
-          <TableCell colSpan={12}>Total de registros</TableCell>
-          <TableCell className="text-right">{filtered.length}</TableCell>
-        </TableRow>
-      </TableFooter>
-      <TableCaption>Historial de evolución física del socio.</TableCaption>
-    </Table>
+
+        <p className="text-center text-xs text-muted-foreground">
+          {filtered.length} registro{filtered.length === 1 ? "" : "s"} de evolución física.
+        </p>
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-md border md:block">
+        <Table className="w-full min-w-[1120px] overflow-hidden text-sm">
+          <TableHeader>
+            <TableRow className="bg-muted/50 text-muted-foreground">
+              <TableHead>Fecha</TableHead>
+              <TableHead>Peso</TableHead>
+              <TableHead>Altura</TableHead>
+              <TableHead>IMC</TableHead>
+              <TableHead>Cintura</TableHead>
+              <TableHead>Pecho</TableHead>
+              <TableHead>Cadera</TableHead>
+              <TableHead>% Grasa</TableHead>
+              <TableHead>Masa muscular</TableHead>
+              <TableHead>Tipo</TableHead>
+              <TableHead>Inicial</TableHead>
+              <TableHead>Observaciones</TableHead>
+              <TableHead>Acciones</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filtered.map((e, i) => (
+              <TableRow
+                key={getRowKey(e, i)}
+                className="odd:bg-muted/40 transition-colors hover:bg-[#a8d9f9]"
+              >
+                <TableCell>{formatDate(e.fecha)}</TableCell>
+                <TableCell>{formatNumber(e.peso, " kg")}</TableCell>
+                <TableCell>{formatNumber(e.altura, " cm")}</TableCell>
+                <TableCell>{formatNumber(e.imc)}</TableCell>
+                <TableCell>{formatNumber(e.cintura, " cm")}</TableCell>
+                <TableCell>{formatNumber(e.pecho, " cm")}</TableCell>
+                <TableCell>{formatNumber(e.cadera, " cm")}</TableCell>
+                <TableCell>{formatNumber(e.porcentaje_grasa, "%")}</TableCell>
+                <TableCell>{formatNumber(e.masa_muscular, " kg")}</TableCell>
+                <TableCell className="capitalize">{e.tipo_corporal || "-"}</TableCell>
+                <TableCell>{e.es_registro_inicial ? "Sí" : "No"}</TableCell>
+                <TableCell className="max-w-[220px] truncate" title={e.observaciones || ""}>
+                  {e.observaciones || "-"}
+                </TableCell>
+                <TableCell>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onView?.(e)}
+                    className="flex items-center gap-1"
+                  >
+                    <Eye className="h-4 w-4" />
+                    Ver
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+          <TableFooter>
+            <TableRow>
+              <TableCell colSpan={12}>Total de registros</TableCell>
+              <TableCell className="text-right">{filtered.length}</TableCell>
+            </TableRow>
+          </TableFooter>
+          <TableCaption>Historial de evolución física del socio.</TableCaption>
+        </Table>
+      </div>
+    </div>
   );
 }
