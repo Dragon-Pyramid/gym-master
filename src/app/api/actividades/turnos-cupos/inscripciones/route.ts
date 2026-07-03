@@ -34,17 +34,32 @@ async function resolveEstadoByCupo(supabase: ReturnType<typeof getSupabaseServer
 
 export async function POST(req: Request) {
   try {
-    await authMiddleware(req);
+    const { user } = await authMiddleware(req);
     const body = await req.json();
     const turnoId = cleanString(body.turno_id);
-    const socioId = cleanString(body.socio_id);
-    const requestedEstado = cleanString(body.estado) ?? "inscripto";
+    const isSocioRole = user.rol === "socio";
+    const socioId = isSocioRole ? cleanString(user.id_socio) : cleanString(body.socio_id);
+    const requestedEstado = isSocioRole ? "lista_espera" : cleanString(body.estado) ?? "inscripto";
 
     if (!turnoId) throw new Error("El turno es obligatorio");
     if (!socioId) throw new Error("El socio es obligatorio");
     if (!VALID_ESTADOS.has(requestedEstado)) throw new Error("Estado de inscripción inválido");
 
     const supabase = getSupabaseServerClient();
+
+    const duplicateResult = await supabase
+      .from("actividad_turno_inscripcion")
+      .select("id, estado")
+      .eq("turno_id", turnoId)
+      .eq("socio_id", socioId)
+      .neq("estado", "cancelado")
+      .limit(1);
+
+    if (duplicateResult.error) throw new Error(duplicateResult.error.message);
+    if ((duplicateResult.data ?? []).length > 0) {
+      throw new Error("Ya existe una inscripción o solicitud activa para este turno");
+    }
+
     const estado = await resolveEstadoByCupo(supabase, turnoId, requestedEstado);
 
     const { data, error } = await supabase
@@ -60,9 +75,15 @@ export async function POST(req: Request) {
 
     if (error) throw new Error(error.message);
 
-    return NextResponse.json({ message: estado === "lista_espera" ? "Socio agregado a lista de espera" : "Socio inscripto correctamente", data }, { status: 201 });
+    return NextResponse.json({ message: estado === "lista_espera" ? "Solicitud registrada para revisión administrativa" : "Socio inscripto correctamente", data }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Error al inscribir socio";
-    return NextResponse.json({ error: message }, { status: message.includes("oblig") || message.includes("invál") ? 400 : 500 });
+    const status = message.includes("oblig") || message.includes("invál")
+      ? 400
+      : message.includes("Ya existe")
+        ? 409
+        : 500;
+
+    return NextResponse.json({ error: message }, { status });
   }
 }

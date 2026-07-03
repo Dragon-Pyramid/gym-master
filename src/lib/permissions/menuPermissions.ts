@@ -122,7 +122,7 @@ export const MENU_PERMISSION_GROUPS: Array<{
         label: "Actividades",
         path: "/dashboard/actividades",
         group: "Personal y Operaciones",
-        roles: ["admin", "usuario"],
+        roles: ["admin", "usuario", "socio"],
       },
       {
         key: "Empleados",
@@ -497,6 +497,7 @@ export const DEFAULT_MENU_PERMISSIONS_BY_ROLE: Record<AppRole, string[]> = {
   socio: [
     "Inicio",
     "Control de Asistencia",
+    "Actividades",
     "Ficha Médica",
     "Asistente de Rutinas",
     "Asistente de Dietas",
@@ -601,6 +602,14 @@ function withImplicitCoachPermission(role: AppRole, permissions: string[]) {
       merged.includes("Evolución Física"))
   ) {
     merged.push("Coach IA");
+  }
+
+  // Compatibilidad hacia atrás: los socios creados antes del módulo de
+  // inscripción a actividades pueden tener permisos_menu persistido sin
+  // "Actividades". Se habilita implícitamente porque es una capacidad
+  // personal del socio, no una operación administrativa.
+  if (role === "socio" && !merged.includes("Actividades")) {
+    merged.push("Actividades");
   }
 
   return merged;
