@@ -7,6 +7,7 @@ import {
 import { useAuthStore } from '../../stores/authStore';
 import HistorialViewModal from '../modal/HistorialViewModal';
 import { formatFrontendDate } from '@/utils/dateFormat';
+import { ExternalLink, FileText, History } from 'lucide-react';
 
 type HistItem = {
   fecha_ultimo_control?: string;
@@ -25,9 +26,13 @@ type HistItem = {
 export default function TabHistorial({
   socioId,
   active,
+  socioLabel,
+  isAdminReview = false,
 }: {
   socioId?: number | string;
   active: boolean;
+  socioLabel?: string;
+  isAdminReview?: boolean;
 }) {
   const authUser = useAuthStore((s) => s.user);
   const [historial, setHistorial] = useState<HistItem[]>([]);
@@ -102,21 +107,31 @@ export default function TabHistorial({
   };
 
   return (
-    <div className='w-full p-4 rounded-lg page-bg'>
-      <h3 className='text-lg font-semibold'>Historial</h3>
-      <p className='mt-2 text-sm'>Registros anteriores ordenados por fecha.</p>
+    <div className='w-full rounded-2xl border bg-background p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/80 md:p-6'>
+      <div className='flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between'>
+        <div>
+          <div className='inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-blue-700 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200'>
+            <History className='h-3.5 w-3.5' />
+            {isAdminReview ? 'Auditoría admin' : 'Historial personal'}
+          </div>
+          <h3 className='mt-3 text-xl font-black'>Historial de fichas</h3>
+          <p className='mt-1 text-sm text-muted-foreground'>
+            Registros anteriores ordenados por fecha{socioLabel ? ` para ${socioLabel}` : ''}.
+          </p>
+        </div>
+      </div>
       {histLoading ? (
-        <div className='mt-4 text-sm'>Cargando historial...</div>
+        <div className='mt-4 rounded-xl border bg-muted/30 p-4 text-sm text-muted-foreground'>Cargando historial...</div>
       ) : histError ? (
-        <div className='mt-4 text-sm'>{histError}</div>
+        <div className='mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/20 dark:text-red-300'>{histError}</div>
       ) : historial.length === 0 ? (
-        <div className='mt-4 text-sm'>No se encontraron registros</div>
+        <div className='mt-4 rounded-xl border border-dashed bg-muted/20 p-6 text-sm text-muted-foreground dark:border-slate-700 dark:bg-slate-900/40'>No se encontraron registros anteriores para este socio.</div>
       ) : (
         <>
-          <ul className='w-full mt-4 space-y-3'>
+          <ul className='mt-4 grid w-full gap-3'>
             {historial.map((item: HistItem, idx: number) => (
-              <li key={idx} className='w-full p-3 rounded-md panel'>
-                <div className='flex items-center justify-between'>
+              <li key={idx} className='w-full rounded-2xl border bg-muted/20 p-4 dark:border-slate-800 dark:bg-slate-900/60'>
+                <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
                   <div className='text-sm'>
                     {formatDate(
                       item.fecha_ultimo_control ?? item.created_at ?? item.fecha
@@ -132,27 +147,27 @@ export default function TabHistorial({
                         setSelected(item);
                         setModalOpen(true);
                       }}
-                      className='px-3 py-1 text-sm border rounded-md'
+                      className='rounded-xl border bg-background px-3 py-2 text-sm font-semibold hover:bg-muted dark:border-slate-700 dark:bg-slate-950'
                     >
                       Ver
                     </button>
                   </div>
                 </div>
-                <div className='grid grid-cols-1 gap-2 mt-2 sm:grid-cols-3'>
+                <div className='mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3'>
                   <div>
-                    <div className='text-xs'>Peso</div>
+                    <div className='text-xs text-muted-foreground'>Peso</div>
                     <div className='text-sm'>
                       {item.peso ? `${item.peso} kg` : '—'}
                     </div>
                   </div>
                   <div>
-                    <div className='text-xs'>Altura</div>
+                    <div className='text-xs text-muted-foreground'>Altura</div>
                     <div className='text-sm'>
                       {item.altura ? `${item.altura} cm` : '—'}
                     </div>
                   </div>
                   <div>
-                    <div className='text-xs'>Presión</div>
+                    <div className='text-xs text-muted-foreground'>Presión</div>
                     <div className='text-sm'>
                       {item.presion_arterial ?? '—'}
                     </div>
@@ -175,9 +190,9 @@ export default function TabHistorial({
                           href={u}
                           target='_blank'
                           rel='noopener noreferrer'
-                          className='inline-block px-2 py-1 mt-1 mr-2 text-sm rounded-md'
+                          className='mr-2 mt-2 inline-flex items-center gap-2 rounded-xl border bg-background px-3 py-2 text-sm font-semibold hover:bg-muted dark:border-slate-700 dark:bg-slate-950'
                         >
-                          Ver archivo {i + 1}
+                          <FileText className='h-4 w-4 text-blue-600' /> Ver archivo {i + 1} <ExternalLink className='h-3.5 w-3.5' />
                         </a>
                       ));
                     }
@@ -186,9 +201,9 @@ export default function TabHistorial({
                         href={String(val)}
                         target='_blank'
                         rel='noopener noreferrer'
-                        className='inline-block px-2 py-1 mt-1 text-sm rounded-md'
+                        className='mt-2 inline-flex items-center gap-2 rounded-xl border bg-background px-3 py-2 text-sm font-semibold hover:bg-muted dark:border-slate-700 dark:bg-slate-950'
                       >
-                        Ver archivo
+                        <FileText className='h-4 w-4 text-blue-600' /> Ver archivo <ExternalLink className='h-3.5 w-3.5' />
                       </a>
                     );
                   })()}
@@ -196,7 +211,7 @@ export default function TabHistorial({
               </li>
             ))}
           </ul>
-          <div className='flex items-center justify-between w-full mt-4'>
+          <div className='mt-4 flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
             <div className='text-sm'>
               {histMeta
                 ? `Página ${histMeta.page} de ${histMeta.totalPages} — ${histMeta.total} registros`
@@ -207,7 +222,7 @@ export default function TabHistorial({
                 type='button'
                 disabled={!histMeta || histMeta.page <= 1}
                 onClick={() => setHistPage((p) => Math.max(1, p - 1))}
-                className='px-3 py-1 text-sm border rounded-md disabled:opacity-50'
+                className='rounded-xl border px-3 py-2 text-sm font-semibold disabled:opacity-50'
               >
                 Anterior
               </button>
@@ -217,7 +232,7 @@ export default function TabHistorial({
                   !histMeta || histMeta.page >= (histMeta.totalPages || 1)
                 }
                 onClick={() => setHistPage((p) => p + 1)}
-                className='px-3 py-1 text-sm border rounded-md disabled:opacity-50'
+                className='rounded-xl border px-3 py-2 text-sm font-semibold disabled:opacity-50'
               >
                 Siguiente
               </button>
