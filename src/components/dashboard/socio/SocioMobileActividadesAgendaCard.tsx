@@ -174,6 +174,10 @@ export default function SocioMobileActividadesAgendaCard() {
         ? 'Revisá horarios, cupos y ubicación antes de ir al gimnasio.'
         : 'Cuando el gimnasio cargue clases o turnos activos, aparecerán en esta tarjeta.';
 
+  const handleVerActividades = () => {
+    router.push('/dashboard/actividades');
+  };
+
   const handleContactarAdministracion = () => {
     router.push('/dashboard/mensajes');
   };
@@ -187,7 +191,7 @@ export default function SocioMobileActividadesAgendaCard() {
           </p>
           <h2 className='mt-1 text-xl font-black leading-tight'>Agenda del gimnasio</h2>
           <p className='mt-2 text-sm leading-5 text-muted-foreground'>
-            Mirá clases, horarios y cupos disponibles. Para inscribirte, consultá con administración.
+            Mirá clases, horarios y cupos disponibles. Ahora podés solicitar inscripción desde el módulo de actividades.
           </p>
         </div>
         <div className='shrink-0 rounded-2xl bg-indigo-100 p-3 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-200'>
@@ -293,17 +297,17 @@ export default function SocioMobileActividadesAgendaCard() {
       ) : null}
 
       <div className='mt-3 rounded-xl border border-indigo-200 bg-white/75 p-3 text-xs leading-5 text-indigo-950 dark:border-indigo-900 dark:bg-slate-950/60 dark:text-indigo-100'>
-        Para inscribirte, cambiar un turno o confirmar disponibilidad, escribile a administración desde mensajes.
+        Para inscribirte o entrar en lista de espera, abrí actividades y enviá la solicitud al equipo administrativo.
       </div>
 
       <div className='mt-4 grid grid-cols-2 gap-2'>
         <button
           type='button'
-          onClick={handleContactarAdministracion}
+          onClick={handleVerActividades}
           className='flex items-center justify-center gap-2 rounded-xl bg-[#02a8e1] px-3 py-3 text-sm font-bold text-white shadow-sm transition active:scale-[0.98]'
         >
           <MessageSquare className='h-4 w-4' />
-          Consultar
+          Inscribirme
         </button>
         <button
           type='button'

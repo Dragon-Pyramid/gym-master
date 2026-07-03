@@ -115,18 +115,26 @@ export async function GET(req: Request) {
 
     const supabase = getSupabaseServerClient();
     const warnings: string[] = [];
+    const isSocioRole = user.rol === "socio";
+    const ownSocioId = String(user.id_socio ?? "");
+
+    let sociosQuery = supabase
+      .from("socio")
+      .select("id_socio, nombre_completo, dni, activo")
+      .eq("activo", true)
+      .order("nombre_completo", { ascending: true })
+      .limit(isSocioRole ? 1 : 500);
+
+    if (isSocioRole) {
+      sociosQuery = sociosQuery.eq("id_socio", ownSocioId || "__sin_socio_asociado__");
+    }
 
     const [actividadesResult, sociosResult, empleadosResult] = await Promise.all([
       supabase
         .from("actividad")
         .select("id, nombre_actividad, creado_en, actualizado_en")
         .order("nombre_actividad", { ascending: true }),
-      supabase
-        .from("socio")
-        .select("id_socio, nombre_completo, dni, activo")
-        .eq("activo", true)
-        .order("nombre_completo", { ascending: true })
-        .limit(500),
+      sociosQuery,
       supabase
         .from("empleados")
         .select("id, nombre_completo, puesto, area, activo")
@@ -301,6 +309,10 @@ export async function GET(req: Request) {
       addChartItem(porEstadoInscripcionMap, String(inscripcion.estado).replaceAll("_", " "), 1);
     });
 
+    const visibleInscripciones = isSocioRole
+      ? inscripciones.filter((inscripcion) => String(inscripcion.socio_id) === ownSocioId)
+      : inscripciones;
+
     const dashboard: ActividadTurnosCuposDashboard = {
       generated_at: new Date().toISOString(),
       schema_ready: true,
@@ -310,7 +322,7 @@ export async function GET(req: Request) {
       empleados,
       ubicaciones,
       turnos,
-      inscripciones,
+      inscripciones: visibleInscripciones,
       kpis: {
         total_actividades: actividades.length,
         total_turnos: turnos.length,
