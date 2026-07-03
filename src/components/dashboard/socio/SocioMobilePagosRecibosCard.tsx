@@ -246,8 +246,8 @@ export default function SocioMobilePagosRecibosCard({
         </div>
       </div>
 
-      <div className='mt-4 grid grid-cols-2 gap-3'>
-        <div className='rounded-2xl border border-border/70 bg-background/70 p-3'>
+      <div className='mt-4 grid grid-cols-1 gap-3 min-[380px]:grid-cols-2'>
+        <div className='rounded-2xl border border-border/70 bg-background/90 p-3 dark:bg-slate-950/60'>
           <div className='mb-2 flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground'>
             <ReceiptText className='h-4 w-4' />
             Último pago
@@ -269,7 +269,7 @@ export default function SocioMobilePagosRecibosCard({
           )}
         </div>
 
-        <div className='rounded-2xl border border-border/70 bg-background/70 p-3'>
+        <div className='rounded-2xl border border-border/70 bg-background/90 p-3 dark:bg-slate-950/60'>
           <div className='mb-2 flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground'>
             <History className='h-4 w-4' />
             Historial
@@ -308,7 +308,7 @@ export default function SocioMobilePagosRecibosCard({
         </div>
       ) : null}
 
-      <div className='mt-4 grid grid-cols-2 gap-3'>
+      <div className='mt-4 grid grid-cols-1 gap-3 min-[380px]:grid-cols-2'>
         <button
           type='button'
           onClick={() => router.push('/dashboard/mi-cuenta/pagar-cuota')}
@@ -327,7 +327,7 @@ export default function SocioMobilePagosRecibosCard({
         <button
           type='button'
           onClick={() => router.push('/dashboard/mi-cuenta/historial-pagos')}
-          className='flex min-h-[78px] flex-col justify-between rounded-2xl border border-sky-200 bg-sky-50 px-3 py-3 text-left text-sky-950 transition active:scale-[0.98] dark:border-sky-900 dark:bg-sky-950/20 dark:text-sky-50'
+          className='flex min-h-[78px] flex-col justify-between rounded-2xl border border-sky-200 bg-sky-50 px-3 py-3 text-left text-sky-950 transition active:scale-[0.98] dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-50'
         >
           <div className='flex items-center justify-between gap-2'>
             <History className='h-5 w-5' />

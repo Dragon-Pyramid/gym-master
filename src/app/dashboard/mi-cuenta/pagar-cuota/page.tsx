@@ -3,12 +3,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { AlertTriangle, CreditCard, Loader2, ShieldCheck } from 'lucide-react';
+import {
+  AlertTriangle,
+  CalendarClock,
+  CheckCircle2,
+  CreditCard,
+  History,
+  Loader2,
+  ShieldCheck,
+  WalletCards,
+} from 'lucide-react';
 import { AppHeader } from '@/components/header/AppHeader';
 import { AppFooter } from '@/components/footer/AppFooter';
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getToken } from '@/services/storageService';
 import type { PagoDescuentoPreview } from '@/interfaces/pago.interface';
@@ -31,15 +40,20 @@ type EstadoCuota = {
 
 function formatDate(value?: string | null) {
   if (!value) return '-';
-  return formatFrontendDate(value);
+  try {
+    return formatFrontendDate(value);
+  } catch {
+    return value;
+  }
 }
 
 function formatMoney(value?: number | null) {
+  const amount = Number(value ?? 0);
   return new Intl.NumberFormat('es-AR', {
     style: 'currency',
     currency: 'ARS',
     maximumFractionDigits: 0,
-  }).format(Number(value ?? 0));
+  }).format(Number.isFinite(amount) ? amount : 0);
 }
 
 function estadoLabel(estado?: string | null) {
@@ -50,10 +64,16 @@ function estadoLabel(estado?: string | null) {
 }
 
 function estadoClass(estado?: string | null) {
-  if (estado === 'al_dia') return 'bg-green-100 text-green-700 border-green-200';
-  if (estado === 'vencido') return 'bg-red-100 text-red-700 border-red-200';
-  if (estado === 'sin_pagos') return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-  return 'bg-muted text-muted-foreground border-border';
+  if (estado === 'al_dia') {
+    return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/30 dark:text-emerald-200';
+  }
+  if (estado === 'vencido') {
+    return 'border-red-200 bg-red-50 text-red-700 dark:border-red-900/70 dark:bg-red-950/30 dark:text-red-200';
+  }
+  if (estado === 'sin_pagos') {
+    return 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-200';
+  }
+  return 'border-border bg-muted text-muted-foreground';
 }
 
 export default function PagarCuotaSocioPage() {
@@ -151,6 +171,13 @@ export default function PagarCuotaSocioPage() {
     return `${meses} ${suffix} de cobertura`;
   }, [meses]);
 
+  const estadoEsAlDia = estado?.estado_cuota === 'al_dia';
+  const statusDescription = loading
+    ? 'Estamos consultando el estado de tu cuota.'
+    : estadoEsAlDia
+      ? 'Tu cobertura figura al día. Podés pagar meses adicionales si el gimnasio lo permite.'
+      : 'Regularizá tu cuota para mantener el acceso y conservar el historial actualizado.';
+
   const handlePagar = async () => {
     if (stripeDisponible !== true) {
       toast.error(stripeMensaje || 'El gimnasio no tiene pagos online habilitados.');
@@ -179,84 +206,129 @@ export default function PagarCuotaSocioPage() {
   };
 
   if (!isInitialized) {
-    return <div className='flex items-center justify-center min-h-screen'>Cargando...</div>;
+    return <div className='flex min-h-screen items-center justify-center'>Cargando...</div>;
   }
 
   if (!isAuthenticated) return null;
 
   return (
     <SidebarProvider>
-      <div className='flex w-full min-h-screen bg-background text-foreground'>
+      <div className='flex h-[100dvh] min-h-0 w-full overflow-hidden bg-background text-foreground'>
         <AppSidebar />
-        <SidebarInset>
+        <SidebarInset className='!grid !h-[100dvh] !min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden'>
           <AppHeader title='Pagar cuota' />
-          <main className='flex-1 p-6 space-y-6'>
-            <Card className='w-full max-w-4xl mx-auto'>
-              <CardHeader className='p-6 border-b'>
-                <div className='flex flex-col gap-2 md:flex-row md:items-center md:justify-between'>
-                  <div>
-                    <h2 className='text-2xl font-bold'>Mi cuenta</h2>
-                    <p className='text-sm text-muted-foreground'>
-                      Consultá el estado de tu cuota y aboná online si el gimnasio tiene Stripe habilitado.
+          <section className='min-h-0 overflow-y-auto overscroll-contain px-4 py-4 pb-24 sm:px-6 lg:px-8 lg:pb-8'>
+            <div className='mx-auto flex w-full max-w-5xl flex-col gap-5'>
+              <section className='overflow-hidden rounded-[2rem] border border-sky-100 bg-gradient-to-br from-sky-50 via-white to-emerald-50 p-5 shadow-sm dark:border-sky-900/60 dark:from-slate-950 dark:via-sky-950/20 dark:to-emerald-950/20 sm:p-6'>
+                <div className='flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between'>
+                  <div className='min-w-0'>
+                    <p className='text-xs font-semibold uppercase tracking-[0.28em] text-sky-700 dark:text-sky-300'>
+                      Cuenta del socio
+                    </p>
+                    <h1 className='mt-2 text-2xl font-black tracking-tight text-slate-950 dark:text-white sm:text-3xl'>
+                      Pagar cuota
+                    </h1>
+                    <p className='mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300'>
+                      Revisá tu estado, elegí los meses de cobertura y aboná online si Stripe está habilitado.
                     </p>
                   </div>
-                  <div className='flex items-center gap-2 text-sm text-muted-foreground'>
-                    <ShieldCheck className='w-4 h-4' />
-                    {stripeDisponible ? 'Pago seguro vía Stripe' : 'Pagos online no disponibles'}
+                  <div className='rounded-3xl border border-white/70 bg-white/80 p-4 text-sm shadow-sm dark:border-slate-800 dark:bg-slate-950/70'>
+                    <div className='flex items-center gap-2 font-bold text-slate-900 dark:text-slate-100'>
+                      <ShieldCheck className='h-4 w-4 text-emerald-600 dark:text-emerald-300' />
+                      {stripeDisponible === true
+                        ? 'Pago seguro vía Stripe'
+                        : stripeDisponible === false
+                          ? 'Pagos online no disponibles'
+                          : 'Verificando pagos online'}
+                    </div>
+                    <p className='mt-1 text-xs leading-5 text-muted-foreground'>
+                      El pago aprobado actualiza tu cuenta desde el webhook configurado.
+                    </p>
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent className='p-6 space-y-6'>
-                {!puedePagar && (
-                  <div className='p-4 text-sm border rounded-md bg-yellow-50 text-yellow-700 border-yellow-200'>
-                    Este flujo está disponible para usuarios con rol socio.
-                  </div>
-                )}
+              </section>
 
+              {!puedePagar ? (
+                <div className='rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-100'>
+                  Este flujo está disponible para usuarios con rol socio.
+                </div>
+              ) : null}
+
+              <section className={`rounded-[2rem] border p-5 shadow-sm ${estadoEsAlDia ? 'border-emerald-100 bg-emerald-50/80 text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/20 dark:text-emerald-50' : 'border-amber-100 bg-amber-50/80 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-50'}`}>
                 {loading ? (
-                  <div className='flex items-center gap-2 text-muted-foreground'>
-                    <Loader2 className='w-4 h-4 animate-spin' />
+                  <div className='flex items-center gap-2 text-sm font-semibold opacity-80'>
+                    <Loader2 className='h-4 w-4 animate-spin' />
                     Consultando estado de cuota...
                   </div>
                 ) : (
-                  <div className='grid grid-cols-1 gap-4 md:grid-cols-3'>
-                    <div className='p-4 border rounded-lg'>
-                      <p className='text-xs uppercase text-muted-foreground'>Socio</p>
-                      <p className='mt-1 font-semibold'>{estado?.nombre_completo ?? user?.nombre ?? '-'}</p>
+                  <div className='flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between'>
+                    <div className='flex items-start gap-3'>
+                      <div className={`rounded-2xl p-3 ${estadoEsAlDia ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200'}`}>
+                        {estadoEsAlDia ? <CheckCircle2 className='h-5 w-5' /> : <AlertTriangle className='h-5 w-5' />}
+                      </div>
+                      <div className='min-w-0'>
+                        <p className='text-sm font-black'>{estado?.nombre_completo ?? user?.nombre ?? '-'}</p>
+                        <p className='mt-1 text-xs leading-5 opacity-80'>{statusDescription}</p>
+                        <div className='mt-3 flex flex-wrap items-center gap-2 text-xs font-bold'>
+                          <span className={`inline-flex rounded-full border px-3 py-1 ${estadoClass(estado?.estado_cuota)}`}>
+                            {estadoLabel(estado?.estado_cuota)}
+                          </span>
+                          <span className='inline-flex items-center gap-1 rounded-full border border-current/20 px-3 py-1'>
+                            <CalendarClock className='h-3.5 w-3.5' />
+                            Hasta {formatDate(estado?.periodo_hasta)}
+                          </span>
+                          {estado?.estado_cuota === 'vencido' ? (
+                            <span className='inline-flex rounded-full border border-red-200 bg-red-50 px-3 py-1 text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200'>
+                              {estado.dias_vencido} día(s) vencido
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
                     </div>
-                    <div className='p-4 border rounded-lg'>
-                      <p className='text-xs uppercase text-muted-foreground'>Estado de cuota</p>
-                      <span className={`inline-flex px-3 py-1 mt-2 text-xs font-semibold border rounded-full ${estadoClass(estado?.estado_cuota)}`}>
-                        {estadoLabel(estado?.estado_cuota)}
-                      </span>
-                    </div>
-                    <div className='p-4 border rounded-lg'>
-                      <p className='text-xs uppercase text-muted-foreground'>Cobertura vigente hasta</p>
-                      <p className='mt-1 font-semibold'>{formatDate(estado?.periodo_hasta)}</p>
-                      {estado?.estado_cuota === 'vencido' && (
-                        <p className='mt-1 text-xs text-red-600'>{estado.dias_vencido} día(s) vencido</p>
-                      )}
-                    </div>
+                    <Button
+                      variant='outline'
+                      onClick={() => router.push('/dashboard/mi-cuenta/historial-pagos')}
+                      className='h-11 rounded-2xl bg-white/80 dark:bg-slate-950/70'
+                    >
+                      <History className='mr-2 h-4 w-4' />
+                      Ver historial
+                    </Button>
                   </div>
                 )}
+              </section>
 
-                {stripeDisponible === false && (
-                  <div className='flex items-start gap-3 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800'>
-                    <AlertTriangle className='mt-0.5 h-4 w-4 flex-none' />
-                    <div>
-                      <p className='font-semibold'>Pagos online no habilitados</p>
-                      <p className='mt-1'>{stripeMensaje || 'Este gimnasio no tiene Stripe activo. Comunicate con administración para abonar por medios manuales.'}</p>
-                    </div>
+              {stripeDisponible === false ? (
+                <div className='flex items-start gap-3 rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 shadow-sm dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-100'>
+                  <AlertTriangle className='mt-0.5 h-4 w-4 flex-none' />
+                  <div>
+                    <p className='font-black'>Pagos online no habilitados</p>
+                    <p className='mt-1 leading-5'>
+                      {stripeMensaje || 'Este gimnasio no tiene Stripe activo. Comunicate con administración para abonar por medios manuales.'}
+                    </p>
                   </div>
-                )}
+                </div>
+              ) : null}
 
-                <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
-                  <div className='p-4 border rounded-lg'>
-                    <label className='block mb-2 text-sm font-medium'>Meses a pagar</label>
+              <div className='grid grid-cols-1 gap-5 lg:grid-cols-[0.85fr_1.15fr]'>
+                <Card className='rounded-[2rem] border-border/70 shadow-sm'>
+                  <CardContent className='p-5 sm:p-6'>
+                    <div className='mb-5 flex items-start gap-3'>
+                      <div className='rounded-2xl bg-sky-100 p-3 text-sky-700 dark:bg-sky-950/40 dark:text-sky-200'>
+                        <WalletCards className='h-5 w-5' />
+                      </div>
+                      <div>
+                        <h2 className='text-lg font-black'>Elegí la cobertura</h2>
+                        <p className='mt-1 text-sm leading-6 text-muted-foreground'>
+                          Seleccioná la cantidad de meses a pagar. El sistema calcula el período desde tu último vencimiento.
+                        </p>
+                      </div>
+                    </div>
+
+                    <label className='block text-sm font-bold'>Meses a pagar</label>
                     <select
                       value={meses}
                       onChange={(event) => setMeses(Number(event.target.value))}
-                      className='w-full h-10 px-3 text-sm border rounded-md bg-background'
+                      className='mt-2 h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm font-semibold outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:focus:ring-sky-950'
                     >
                       <option value={1}>1 mes</option>
                       <option value={2}>2 meses</option>
@@ -264,67 +336,84 @@ export default function PagarCuotaSocioPage() {
                       <option value={6}>6 meses</option>
                       <option value={12}>12 meses</option>
                     </select>
-                    <p className='mt-2 text-xs text-muted-foreground'>
-                      El sistema calculará automáticamente el período cubierto según tu último pago registrado.
+                    <p className='mt-3 text-xs leading-5 text-muted-foreground'>
+                      Si existe un descuento por pago adelantado, se mostrará automáticamente antes de iniciar Stripe.
                     </p>
-                  </div>
+                  </CardContent>
+                </Card>
 
-                  <div className='p-4 border rounded-lg'>
-                    <p className='text-sm font-medium'>Detalle</p>
-                    <p className='mt-2 text-sm text-muted-foreground'>{detallePago}</p>
+                <Card className='rounded-[2rem] border-border/70 shadow-sm'>
+                  <CardContent className='p-5 sm:p-6'>
+                    <div className='mb-5 flex items-start justify-between gap-3'>
+                      <div>
+                        <h2 className='text-lg font-black'>Resumen del pago</h2>
+                        <p className='mt-1 text-sm text-muted-foreground'>{detallePago}</p>
+                      </div>
+                      <CreditCard className='h-5 w-5 text-sky-600 dark:text-sky-300' />
+                    </div>
+
                     {loadingPreview ? (
-                      <p className='mt-2 text-xs text-muted-foreground'>Calculando total...</p>
+                      <div className='flex items-center gap-2 rounded-2xl border border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground'>
+                        <Loader2 className='h-4 w-4 animate-spin' />
+                        Calculando total...
+                      </div>
                     ) : preview ? (
-                      <div className='mt-3 space-y-1 text-sm'>
-                        <div className='flex justify-between gap-3'>
+                      <div className='space-y-3 text-sm'>
+                        <div className='flex justify-between gap-3 rounded-2xl border border-border/70 bg-muted/20 p-3'>
                           <span className='text-muted-foreground'>Subtotal</span>
-                          <span className='font-medium'>{formatMoney(preview.subtotal)}</span>
+                          <span className='font-bold'>{formatMoney(preview.subtotal)}</span>
                         </div>
                         {preview.config?.activo && Number(preview.config?.porcentaje ?? 0) > 0 ? (
-                          <div className='flex justify-between gap-3'>
-                            <span className='text-muted-foreground'>Descuento</span>
-                            <span className='font-medium text-emerald-700'>
-                              -{formatMoney(preview.descuento_monto)}
-                            </span>
+                          <div className='flex justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-800 dark:border-emerald-900/70 dark:bg-emerald-950/30 dark:text-emerald-100'>
+                            <span>Descuento</span>
+                            <span className='font-bold'>-{formatMoney(preview.descuento_monto)}</span>
                           </div>
                         ) : null}
-                        <div className='flex justify-between gap-3 border-t pt-2'>
-                          <span className='font-semibold'>Total a pagar</span>
-                          <span className='font-bold'>{formatMoney(preview.total)}</span>
+                        <div className='flex items-center justify-between gap-3 rounded-3xl border border-sky-200 bg-sky-50 p-4 text-sky-950 dark:border-sky-900/70 dark:bg-sky-950/30 dark:text-sky-50'>
+                          <span className='font-black'>Total a pagar</span>
+                          <span className='text-2xl font-black'>{formatMoney(preview.total)}</span>
                         </div>
                         {preview.mensaje ? (
-                          <p className={`rounded-md border p-2 text-xs ${
+                          <p className={`rounded-2xl border p-3 text-xs leading-5 ${
                             preview.descuento_aplicado
-                              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                              : 'border-cyan-200 bg-cyan-50 text-cyan-700'
+                              ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200'
+                              : 'border-cyan-200 bg-cyan-50 text-cyan-700 dark:border-cyan-900 dark:bg-cyan-950/30 dark:text-cyan-200'
                           }`}>
                             {preview.mensaje}
                           </p>
                         ) : null}
                       </div>
-                    ) : null}
-                    <p className='mt-3 text-xs text-muted-foreground'>
-                      Si Stripe está activo, al finalizar el checkout se notificará el pago al webhook y se actualizará tu estado de cuota.
-                    </p>
-                  </div>
-                </div>
+                    ) : (
+                      <div className='rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground'>
+                        {stripeDisponible === false
+                          ? 'No se puede calcular el total porque los pagos online no están habilitados.'
+                          : 'El total se mostrará cuando Stripe esté disponible.'}
+                      </div>
+                    )}
 
-                <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-end'>
-                  <Button variant='outline' onClick={() => router.push('/dashboard/mi-cuenta/historial-pagos')}>
-                    Ver historial de pagos
-                  </Button>
-                  <Button
-                    disabled={!puedePagar || paying || loadingPreview || stripeDisponible !== true}
-                    onClick={handlePagar}
-                    className='bg-[#02a8e1] hover:bg-[#0288b1] text-white'
-                  >
-                    {paying ? <Loader2 className='w-4 h-4 mr-2 animate-spin' /> : <CreditCard className='w-4 h-4 mr-2' />}
-                    Pagar con Stripe
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </main>
+                    <div className='mt-5 flex flex-col gap-3 sm:flex-row sm:justify-end'>
+                      <Button
+                        variant='outline'
+                        onClick={() => router.push('/dashboard/mi-cuenta/historial-pagos')}
+                        className='h-11 rounded-2xl'
+                      >
+                        <History className='mr-2 h-4 w-4' />
+                        Historial
+                      </Button>
+                      <Button
+                        disabled={!puedePagar || paying || loadingPreview || stripeDisponible !== true}
+                        onClick={handlePagar}
+                        className='h-11 rounded-2xl bg-[#02a8e1] text-white hover:bg-[#0288b1]'
+                      >
+                        {paying ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <CreditCard className='mr-2 h-4 w-4' />}
+                        Pagar con Stripe
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </section>
           <AppFooter />
         </SidebarInset>
       </div>
