@@ -64,7 +64,10 @@ import type {
   ActividadTurnoInscripcion,
   ActividadTurnosCuposDashboard,
 } from "@/interfaces/actividadTurnosCupos.interface";
-import { deleteActividad, fetchAllActividades } from "@/services/actividadService";
+import {
+  deleteActividad,
+  fetchAllActividades,
+} from "@/services/actividadService";
 import {
   createActividadInscripcion,
   createActividadTurno,
@@ -79,7 +82,14 @@ import { downloadCommercialReportPdf } from "@/utils/commercialReportPdf";
 import { formatFrontendDate, formatFrontendDateTime } from "@/utils/dateFormat";
 
 const ACTIVIDADES_PAGE_SIZE = 8;
-const CHART_COLORS = ["#02a8e1", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#64748b"];
+const CHART_COLORS = [
+  "#02a8e1",
+  "#22c55e",
+  "#f59e0b",
+  "#ef4444",
+  "#8b5cf6",
+  "#64748b",
+];
 
 const DIAS_SEMANA = [
   { value: 1, label: "Lunes" },
@@ -97,7 +107,10 @@ const ESTADOS_TURNO: Array<{ value: ActividadTurnoEstado; label: string }> = [
   { value: "cancelado", label: "Cancelado" },
 ];
 
-const ESTADOS_INSCRIPCION: Array<{ value: ActividadInscripcionEstado; label: string }> = [
+const ESTADOS_INSCRIPCION: Array<{
+  value: ActividadInscripcionEstado;
+  label: string;
+}> = [
   { value: "inscripto", label: "Inscripto" },
   { value: "lista_espera", label: "Lista de espera" },
   { value: "asistio", label: "Asistió" },
@@ -169,9 +182,12 @@ function socioEstadoLabel(value?: ActividadInscripcionEstado | string | null) {
 }
 
 function socioEstadoClass(value?: ActividadInscripcionEstado | string | null) {
-  if (value === "lista_espera") return "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-100";
-  if (value === "inscripto" || value === "asistio") return "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/70 dark:bg-emerald-950/30 dark:text-emerald-100";
-  if (value === "cancelado" || value === "ausente") return "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900/70 dark:bg-rose-950/30 dark:text-rose-100";
+  if (value === "lista_espera")
+    return "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-100";
+  if (value === "inscripto" || value === "asistio")
+    return "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/70 dark:bg-emerald-950/30 dark:text-emerald-100";
+  if (value === "cancelado" || value === "ausente")
+    return "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900/70 dark:bg-rose-950/30 dark:text-rose-100";
   return "border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-200";
 }
 
@@ -181,6 +197,41 @@ function timeRange(turno: Pick<ActividadTurno, "hora_inicio" | "hora_fin">) {
 
 function percentLabel(value?: number | null) {
   return `${Number(value ?? 0).toFixed(1)}%`;
+}
+
+function safeOccupancyPercent(
+  turno: Pick<ActividadTurno, "ocupacion_porcentaje">,
+) {
+  return Math.min(100, Math.max(0, Number(turno.ocupacion_porcentaje ?? 0)));
+}
+
+function cupoEstadoLabel(
+  turno: Pick<ActividadTurno, "cupo_maximo" | "cupos_disponibles">,
+) {
+  const maximo = Number(turno.cupo_maximo ?? 0);
+  const disponibles = Number(turno.cupos_disponibles ?? 0);
+
+  if (!maximo) return "Cupo a confirmar";
+  if (disponibles <= 0) return "Sin cupo libre";
+  if (disponibles === 1) return "1 cupo libre";
+  return `${disponibles} cupos libres`;
+}
+
+function cupoEstadoClass(
+  turno: Pick<ActividadTurno, "cupo_maximo" | "cupos_disponibles">,
+) {
+  const maximo = Number(turno.cupo_maximo ?? 0);
+  const disponibles = Number(turno.cupos_disponibles ?? 0);
+
+  if (!maximo)
+    return "bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-200";
+  if (disponibles <= 0)
+    return "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-100";
+  return "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-200";
+}
+
+function isSocioInscripcionActiva(inscripcion: ActividadTurnoInscripcion) {
+  return inscripcion.estado !== "cancelado";
 }
 
 function MetricCard({
@@ -199,8 +250,12 @@ function MetricCard({
       <CardContent className="flex items-center justify-between gap-3 p-4">
         <div>
           <p className="text-sm text-muted-foreground">{title}</p>
-          <p className="mt-1 text-2xl font-bold text-slate-950 dark:text-slate-50">{value}</p>
-          {helper ? <p className="mt-1 text-xs text-muted-foreground">{helper}</p> : null}
+          <p className="mt-1 text-2xl font-bold text-slate-950 dark:text-slate-50">
+            {value}
+          </p>
+          {helper ? (
+            <p className="mt-1 text-xs text-muted-foreground">{helper}</p>
+          ) : null}
         </div>
         <div className="rounded-full bg-[#e6f7fd] p-3 text-[#02a8e1] dark:bg-cyan-950/40 dark:text-cyan-200">
           <Icon className="h-5 w-5" />
@@ -217,7 +272,6 @@ function EmptyChart({ label }: { label: string }) {
     </div>
   );
 }
-
 
 function socioSearchLabel(socio: ActividadSocioOption) {
   return `${socio.nombre_completo}${socio.dni ? ` · DNI ${socio.dni}` : ""}`;
@@ -241,11 +295,15 @@ function sanitizeActivity(actividad: ActividadBaseOption): Actividad {
 }
 
 export default function ActividadesPage() {
-  const { isAuthenticated, initializeAuth, isInitialized, user } = useAuthStore();
+  const { isAuthenticated, initializeAuth, isInitialized, user } =
+    useAuthStore();
   const router = useRouter();
   const [actividades, setActividades] = useState<Actividad[]>([]);
-  const [filteredActividades, setFilteredActividades] = useState<Actividad[]>([]);
-  const [dashboard, setDashboard] = useState<ActividadTurnosCuposDashboard | null>(null);
+  const [filteredActividades, setFilteredActividades] = useState<Actividad[]>(
+    [],
+  );
+  const [dashboard, setDashboard] =
+    useState<ActividadTurnosCuposDashboard | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [turnoSearchTerm, setTurnoSearchTerm] = useState("");
   const [diaFilter, setDiaFilter] = useState("todos");
@@ -256,13 +314,21 @@ export default function ActividadesPage() {
   const [submittingTurno, setSubmittingTurno] = useState(false);
   const [submittingInscripcion, setSubmittingInscripcion] = useState(false);
   const [openModal, setOpenModal] = useState(false);
-  const [selectedActividad, setSelectedActividad] = useState<Actividad | null>(null);
+  const [selectedActividad, setSelectedActividad] = useState<Actividad | null>(
+    null,
+  );
   const [openModalVer, setOpenModalVer] = useState(false);
   const [actividadVer, setActividadVer] = useState<Actividad | null>(null);
   const [turnoForm, setTurnoForm] = useState<TurnoFormState>(emptyTurnoForm);
-  const [inscripcionForm, setInscripcionForm] = useState<InscripcionFormState>(emptyInscripcionForm);
+  const [inscripcionForm, setInscripcionForm] =
+    useState<InscripcionFormState>(emptyInscripcionForm);
   const [socioSearchTerm, setSocioSearchTerm] = useState("");
-  const [requestingTurnoId, setRequestingTurnoId] = useState<string | null>(null);
+  const [requestingTurnoId, setRequestingTurnoId] = useState<string | null>(
+    null,
+  );
+  const [cancellingInscripcionId, setCancellingInscripcionId] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     initializeAuth();
@@ -298,10 +364,15 @@ export default function ActividadesPage() {
       }
 
       if (!data.schema_ready) {
-        toast.warning("Aplicá la migración privada para habilitar turnos, cupos e inscripciones.");
+        toast.warning(
+          "Aplicá la migración privada para habilitar turnos, cupos e inscripciones.",
+        );
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : "No se pudo cargar el dashboard de actividades";
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No se pudo cargar el dashboard de actividades";
       toast.error(message);
     } finally {
       setLoadingDashboard(false);
@@ -327,7 +398,9 @@ export default function ActividadesPage() {
     }
 
     setFilteredActividades(
-      actividades.filter((actividad) => actividad.nombre_actividad.toLowerCase().includes(clean)),
+      actividades.filter((actividad) =>
+        actividad.nombre_actividad.toLowerCase().includes(clean),
+      ),
     );
   }, [searchTerm, actividades]);
 
@@ -346,7 +419,10 @@ export default function ActividadesPage() {
   const ownSocioId = String(user?.id_socio ?? user?.id ?? "");
 
   const selectedSocio = useMemo(
-    () => sociosOptions.find((socio) => socio.id_socio === inscripcionForm.socio_id) ?? null,
+    () =>
+      sociosOptions.find(
+        (socio) => socio.id_socio === inscripcionForm.socio_id,
+      ) ?? null,
     [inscripcionForm.socio_id, sociosOptions],
   );
 
@@ -360,19 +436,26 @@ export default function ActividadesPage() {
 
     return sociosOptions
       .filter((socio) => {
-        const searchable = normalizeSearch(`${socio.nombre_completo} ${socio.dni ?? ""}`);
+        const searchable = normalizeSearch(
+          `${socio.nombre_completo} ${socio.dni ?? ""}`,
+        );
         return searchable.includes(clean);
       })
       .slice(0, 20)
-      .sort((a, b) => Number(b.id_socio === selectedId) - Number(a.id_socio === selectedId));
+      .sort(
+        (a, b) =>
+          Number(b.id_socio === selectedId) - Number(a.id_socio === selectedId),
+      );
   }, [inscripcionForm.socio_id, socioSearchTerm, sociosOptions]);
 
   const filteredTurnos = useMemo(() => {
     const clean = turnoSearchTerm.trim().toLowerCase();
 
     return turnos.filter((turno) => {
-      const matchesDia = diaFilter === "todos" || String(turno.dia_semana) === diaFilter;
-      const matchesEstado = estadoFilter === "todos" || turno.estado === estadoFilter;
+      const matchesDia =
+        diaFilter === "todos" || String(turno.dia_semana) === diaFilter;
+      const matchesEstado =
+        estadoFilter === "todos" || turno.estado === estadoFilter;
       const searchable = [
         turno.nombre_turno,
         turno.actividad_nombre,
@@ -384,7 +467,9 @@ export default function ActividadesPage() {
         .join(" ")
         .toLowerCase();
 
-      return matchesDia && matchesEstado && (!clean || searchable.includes(clean));
+      return (
+        matchesDia && matchesEstado && (!clean || searchable.includes(clean))
+      );
     });
   }, [diaFilter, estadoFilter, turnoSearchTerm, turnos]);
 
@@ -393,12 +478,16 @@ export default function ActividadesPage() {
   }, [turnos]);
 
   const pendingInscripciones = useMemo(() => {
-    return inscripciones.filter((inscripcion) => inscripcion.estado === "lista_espera");
+    return inscripciones.filter(
+      (inscripcion) => inscripcion.estado === "lista_espera",
+    );
   }, [inscripciones]);
 
   const ownInscripciones = useMemo(() => {
     if (!ownSocioId) return [];
-    return inscripciones.filter((inscripcion) => String(inscripcion.socio_id) === ownSocioId);
+    return inscripciones.filter(
+      (inscripcion) => String(inscripcion.socio_id) === ownSocioId,
+    );
   }, [inscripciones, ownSocioId]);
 
   const activeOwnInscripcionByTurno = useMemo(() => {
@@ -417,12 +506,43 @@ export default function ActividadesPage() {
     return filteredTurnos.filter((turno) => turno.estado === "activo");
   }, [filteredTurnos]);
 
-  const socioPendingRequests = ownInscripciones.filter((inscripcion) => inscripcion.estado === "lista_espera").length;
-  const socioApprovedRequests = ownInscripciones.filter((inscripcion) => inscripcion.estado === "inscripto" || inscripcion.estado === "asistio").length;
-  const socioAvailableSlots = socioVisibleTurnos.reduce((total, turno) => total + Math.max(0, Number(turno.cupos_disponibles ?? 0)), 0);
+  const socioAgendaItems = useMemo(() => {
+    return ownInscripciones
+      .filter(isSocioInscripcionActiva)
+      .map((inscripcion) => ({
+        inscripcion,
+        turno: turnoById.get(inscripcion.turno_id) ?? null,
+      }))
+      .sort((a, b) => {
+        const diaA = a.turno?.dia_semana ?? 99;
+        const diaB = b.turno?.dia_semana ?? 99;
+        if (diaA !== diaB) return diaA - diaB;
+        return String(a.turno?.hora_inicio ?? "").localeCompare(
+          String(b.turno?.hora_inicio ?? ""),
+        );
+      });
+  }, [ownInscripciones, turnoById]);
+
+  const socioPendingRequests = ownInscripciones.filter(
+    (inscripcion) => inscripcion.estado === "lista_espera",
+  ).length;
+  const socioApprovedRequests = ownInscripciones.filter(
+    (inscripcion) =>
+      inscripcion.estado === "inscripto" || inscripcion.estado === "asistio",
+  ).length;
+  const socioCancelledRequests = ownInscripciones.filter(
+    (inscripcion) => inscripcion.estado === "cancelado",
+  ).length;
+  const socioAvailableSlots = socioVisibleTurnos.reduce(
+    (total, turno) => total + Math.max(0, Number(turno.cupos_disponibles ?? 0)),
+    0,
+  );
 
   const totalActividades = filteredActividades.length;
-  const totalPages = Math.max(1, Math.ceil(totalActividades / ACTIVIDADES_PAGE_SIZE));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(totalActividades / ACTIVIDADES_PAGE_SIZE),
+  );
   const safeCurrentPage = Math.min(currentPage, totalPages);
   const paginatedActividades = filteredActividades.slice(
     (safeCurrentPage - 1) * ACTIVIDADES_PAGE_SIZE,
@@ -434,7 +554,9 @@ export default function ActividadesPage() {
   }, [currentPage, totalPages]);
 
   const handleDeleteActividad = async (actividad: Actividad) => {
-    const confirmar = window.confirm(`¿Está seguro de eliminar la actividad "${actividad.nombre_actividad}"?`);
+    const confirmar = window.confirm(
+      `¿Está seguro de eliminar la actividad "${actividad.nombre_actividad}"?`,
+    );
     if (!confirmar) return;
 
     try {
@@ -480,7 +602,9 @@ export default function ActividadesPage() {
         hora_inicio: turnoForm.hora_inicio,
         hora_fin: turnoForm.hora_fin,
         cupo_maximo: Number(turnoForm.cupo_maximo),
-        cupo_minimo: turnoForm.cupo_minimo ? Number(turnoForm.cupo_minimo) : null,
+        cupo_minimo: turnoForm.cupo_minimo
+          ? Number(turnoForm.cupo_minimo)
+          : null,
         instructor_id: turnoForm.instructor_id || null,
         ubicacion: turnoForm.ubicacion || null,
         estado: turnoForm.estado,
@@ -500,7 +624,8 @@ export default function ActividadesPage() {
       resetTurnoForm();
       await loadDashboard();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Error al guardar turno";
+      const message =
+        error instanceof Error ? error.message : "Error al guardar turno";
       toast.error(message);
     } finally {
       setSubmittingTurno(false);
@@ -508,7 +633,9 @@ export default function ActividadesPage() {
   };
 
   const handleDeleteTurno = async (turno: ActividadTurno) => {
-    const confirmar = window.confirm(`¿Eliminar el turno "${turno.nombre_turno}" y sus inscripciones?`);
+    const confirmar = window.confirm(
+      `¿Eliminar el turno "${turno.nombre_turno}" y sus inscripciones?`,
+    );
     if (!confirmar) return;
 
     try {
@@ -516,7 +643,8 @@ export default function ActividadesPage() {
       toast.success("Turno eliminado correctamente");
       await loadDashboard();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Error al eliminar turno";
+      const message =
+        error instanceof Error ? error.message : "Error al eliminar turno";
       toast.error(message);
     }
   };
@@ -537,7 +665,8 @@ export default function ActividadesPage() {
       setSocioSearchTerm("");
       await loadDashboard();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Error al inscribir socio";
+      const message =
+        error instanceof Error ? error.message : "Error al inscribir socio";
       toast.error(message);
     } finally {
       setSubmittingInscripcion(false);
@@ -554,21 +683,32 @@ export default function ActividadesPage() {
       toast.success(successMessage);
       await loadDashboard();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Error al actualizar inscripción";
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Error al actualizar inscripción";
       toast.error(message);
     }
   };
 
-  const handleApproveInscripcion = async (inscripcion: ActividadTurnoInscripcion) => {
+  const handleApproveInscripcion = async (
+    inscripcion: ActividadTurnoInscripcion,
+  ) => {
     const turno = turnoById.get(inscripcion.turno_id);
     const cuposDisponibles = Number(turno?.cupos_disponibles ?? 0);
 
     if (turno && cuposDisponibles <= 0) {
-      toast.error("El turno no tiene cupo disponible. Mantené al socio en lista de espera o aumentá el cupo del turno.");
+      toast.error(
+        "El turno no tiene cupo disponible. Mantené al socio en lista de espera o aumentá el cupo del turno.",
+      );
       return;
     }
 
-    await handleUpdateInscripcionEstado(inscripcion.id, "inscripto", "Socio incorporado al turno");
+    await handleUpdateInscripcionEstado(
+      inscripcion.id,
+      "inscripto",
+      "Socio incorporado al turno",
+    );
   };
 
   const handleDeleteInscripcion = async (id: string) => {
@@ -580,20 +720,27 @@ export default function ActividadesPage() {
       toast.success("Inscripción eliminada");
       await loadDashboard();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Error al eliminar inscripción";
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Error al eliminar inscripción";
       toast.error(message);
     }
   };
 
   const handleSocioRequestInscripcion = async (turno: ActividadTurno) => {
     if (!ownSocioId) {
-      toast.error("Tu usuario socio no tiene id_socio asociado. Contactá a administración.");
+      toast.error(
+        "Tu usuario socio no tiene id_socio asociado. Contactá a administración.",
+      );
       return;
     }
 
     const current = activeOwnInscripcionByTurno.get(turno.id);
     if (current) {
-      toast.info(`Ya tenés una solicitud o inscripción para este turno: ${socioEstadoLabel(current.estado)}.`);
+      toast.info(
+        `Ya tenés una solicitud o inscripción para este turno: ${socioEstadoLabel(current.estado)}.`,
+      );
       return;
     }
 
@@ -603,15 +750,46 @@ export default function ActividadesPage() {
         turno_id: turno.id,
         socio_id: ownSocioId,
         estado: "lista_espera",
-        observaciones: "Solicitud enviada por el socio desde la app mobile. Pendiente de revisión administrativa.",
+        observaciones:
+          "Solicitud enviada por el socio desde la app mobile. Pendiente de revisión administrativa.",
       });
       toast.success("Solicitud enviada a administración");
       await loadDashboard();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "No se pudo enviar la solicitud";
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No se pudo enviar la solicitud";
       toast.error(message);
     } finally {
       setRequestingTurnoId(null);
+    }
+  };
+
+  const handleSocioCancelOwnInscripcion = async (
+    inscripcion: ActividadTurnoInscripcion,
+  ) => {
+    const confirmar = window.confirm(
+      "¿Querés cancelar esta solicitud o inscripción?",
+    );
+    if (!confirmar) return;
+
+    setCancellingInscripcionId(inscripcion.id);
+    try {
+      await updateActividadInscripcion(inscripcion.id, {
+        estado: "cancelado",
+        observaciones: "Cancelado por el socio desde el módulo de actividades.",
+      });
+      toast.success("Solicitud o inscripción cancelada correctamente");
+      await loadDashboard();
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No se pudo cancelar la inscripción";
+      toast.error(message);
+    } finally {
+      setCancellingInscripcionId(null);
     }
   };
 
@@ -619,25 +797,60 @@ export default function ActividadesPage() {
     try {
       await downloadCommercialReportPdf({
         title: "Actividades, turnos y cupos",
-        subtitle: "Reporte operativo de clases, reservas, ocupación e inscripciones.",
+        subtitle:
+          "Reporte operativo de clases, reservas, ocupación e inscripciones.",
         fileName: "actividades-turnos-cupos-gym-master",
         rows: filteredTurnos,
         metrics: [
-          { label: "Actividades", value: kpis?.total_actividades ?? actividadesOptions.length },
+          {
+            label: "Actividades",
+            value: kpis?.total_actividades ?? actividadesOptions.length,
+          },
           { label: "Turnos", value: kpis?.total_turnos ?? 0 },
           { label: "Inscriptos", value: kpis?.inscriptos ?? 0 },
           { label: "Cupos disponibles", value: kpis?.cupos_disponibles ?? 0 },
-          { label: "Ocupación promedio", value: percentLabel(kpis?.ocupacion_promedio) },
+          {
+            label: "Ocupación promedio",
+            value: percentLabel(kpis?.ocupacion_promedio),
+          },
         ],
         filtersLabel: `Día: ${diaFilter === "todos" ? "todos" : diaLabel(Number(diaFilter))}; Estado: ${estadoFilter}; Búsqueda: ${turnoSearchTerm || "sin búsqueda"}`,
         columns: [
-          { header: "Actividad", width: 36, getValue: (turno) => turno.actividad_nombre ?? "" },
-          { header: "Turno", width: 42, getValue: (turno) => turno.nombre_turno },
-          { header: "Día", width: 25, getValue: (turno) => diaLabel(turno.dia_semana) },
-          { header: "Horario", width: 28, getValue: (turno) => timeRange(turno) },
-          { header: "Cupo", width: 18, getValue: (turno) => String(turno.cupo_maximo) },
-          { header: "Inscriptos", width: 22, getValue: (turno) => String(turno.inscriptos) },
-          { header: "Ocupación", width: 24, getValue: (turno) => percentLabel(turno.ocupacion_porcentaje) },
+          {
+            header: "Actividad",
+            width: 36,
+            getValue: (turno) => turno.actividad_nombre ?? "",
+          },
+          {
+            header: "Turno",
+            width: 42,
+            getValue: (turno) => turno.nombre_turno,
+          },
+          {
+            header: "Día",
+            width: 25,
+            getValue: (turno) => diaLabel(turno.dia_semana),
+          },
+          {
+            header: "Horario",
+            width: 28,
+            getValue: (turno) => timeRange(turno),
+          },
+          {
+            header: "Cupo",
+            width: 18,
+            getValue: (turno) => String(turno.cupo_maximo),
+          },
+          {
+            header: "Inscriptos",
+            width: 22,
+            getValue: (turno) => String(turno.inscriptos),
+          },
+          {
+            header: "Ocupación",
+            width: 24,
+            getValue: (turno) => percentLabel(turno.ocupacion_porcentaje),
+          },
         ],
       });
     } catch {
@@ -719,7 +932,10 @@ export default function ActividadesPage() {
     const url = window.URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = buildTimestampedDownloadFileName("actividades-turnos-cupos", "xlsx");
+    anchor.download = buildTimestampedDownloadFileName(
+      "actividades-turnos-cupos",
+      "xlsx",
+    );
     anchor.click();
     window.URL.revokeObjectURL(url);
   };
@@ -741,25 +957,42 @@ export default function ActividadesPage() {
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                   <div className="max-w-3xl">
                     <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-black uppercase tracking-[0.22em] text-cyan-50">
-                      <CalendarDays className="h-4 w-4" /> Solicitud de inscripción
+                      <CalendarDays className="h-4 w-4" /> Solicitud de
+                      inscripción
                     </span>
-                    <h1 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">Actividades y clases</h1>
+                    <h1 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">
+                      Actividades y clases
+                    </h1>
                     <p className="mt-3 max-w-2xl text-sm leading-6 text-cyan-50/90">
-                      Consultá horarios, cupos y ubicación. Enviá tu solicitud para que administración confirme la inscripción al turno elegido.
+                      Consultá cupos, personas inscriptas y el estado de tus
+                      solicitudes. Cuando administración apruebe tu inscripción,
+                      el turno queda destacado en tu agenda.
                     </p>
                   </div>
                   <div className="grid grid-cols-3 gap-2 rounded-2xl border border-white/15 bg-white/10 p-2 text-center backdrop-blur">
                     <div className="rounded-xl bg-white/10 px-3 py-2">
-                      <p className="text-[11px] font-semibold uppercase text-cyan-50/80">Turnos</p>
-                      <p className="text-2xl font-black">{socioVisibleTurnos.length}</p>
+                      <p className="text-[11px] font-semibold uppercase text-cyan-50/80">
+                        Cupos libres
+                      </p>
+                      <p className="text-2xl font-black">
+                        {socioAvailableSlots}
+                      </p>
                     </div>
                     <div className="rounded-xl bg-white/10 px-3 py-2">
-                      <p className="text-[11px] font-semibold uppercase text-cyan-50/80">Pendientes</p>
-                      <p className="text-2xl font-black">{socioPendingRequests}</p>
+                      <p className="text-[11px] font-semibold uppercase text-cyan-50/80">
+                        Pendientes
+                      </p>
+                      <p className="text-2xl font-black">
+                        {socioPendingRequests}
+                      </p>
                     </div>
                     <div className="rounded-xl bg-white/10 px-3 py-2">
-                      <p className="text-[11px] font-semibold uppercase text-cyan-50/80">Aprobadas</p>
-                      <p className="text-2xl font-black">{socioApprovedRequests}</p>
+                      <p className="text-[11px] font-semibold uppercase text-cyan-50/80">
+                        Mis turnos
+                      </p>
+                      <p className="text-2xl font-black">
+                        {socioAgendaItems.length}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -768,17 +1001,182 @@ export default function ActividadesPage() {
               {dashboard?.warnings?.length ? (
                 <Card className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30">
                   <CardContent className="p-4 text-sm leading-6 text-amber-900 dark:text-amber-100">
-                    <strong>Configuración pendiente:</strong> {dashboard.warnings.join(" ")}
+                    <strong>Configuración pendiente:</strong>{" "}
+                    {dashboard.warnings.join(" ")}
                   </CardContent>
                 </Card>
               ) : null}
 
               <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <MetricCard title="Turnos activos" value={socioVisibleTurnos.length} icon={CalendarDays} helper="Disponibles para solicitar" />
-                <MetricCard title="Cupos libres" value={socioAvailableSlots} icon={Users} helper="Según agenda cargada" />
-                <MetricCard title="Solicitudes" value={socioPendingRequests} icon={ListChecks} helper="Pendientes de revisión" />
-                <MetricCard title="Confirmadas" value={socioApprovedRequests} icon={CheckCircle2} helper="Inscripciones aprobadas" />
+                <MetricCard
+                  title="Turnos activos"
+                  value={socioVisibleTurnos.length}
+                  icon={CalendarDays}
+                  helper="Disponibles para solicitar"
+                />
+                <MetricCard
+                  title="Cupos libres"
+                  value={socioAvailableSlots}
+                  icon={Users}
+                  helper="Según agenda cargada"
+                />
+                <MetricCard
+                  title="Pendientes"
+                  value={socioPendingRequests}
+                  icon={ListChecks}
+                  helper="En revisión admin"
+                />
+                <MetricCard
+                  title="Mis inscripciones"
+                  value={socioApprovedRequests}
+                  icon={CheckCircle2}
+                  helper={`${socioCancelledRequests} canceladas`}
+                />
               </section>
+
+              <Card className="overflow-hidden border-indigo-200 bg-indigo-50/70 dark:border-indigo-900 dark:bg-indigo-950/20">
+                <CardHeader className="pb-2">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h2 className="text-xl font-black text-indigo-950 dark:text-indigo-50">
+                        Mis cupos e inscripciones
+                      </h2>
+                      <p className="mt-1 text-sm text-indigo-900/80 dark:text-indigo-100/80">
+                        Acá ves si estás aprobado, en lista de espera o si
+                        todavía falta confirmación administrativa.
+                      </p>
+                    </div>
+                    <span className="w-fit rounded-full border border-indigo-200 bg-white px-3 py-1 text-xs font-black text-indigo-700 shadow-sm dark:border-indigo-800 dark:bg-slate-950 dark:text-indigo-200">
+                      {socioAgendaItems.length} activas
+                    </span>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4 pt-2">
+                  {loadingDashboard ? (
+                    <div className="rounded-2xl border border-dashed border-indigo-200 bg-white/70 p-5 text-center text-sm text-indigo-900 dark:border-indigo-900 dark:bg-slate-950/50 dark:text-indigo-100">
+                      Cargando tus inscripciones...
+                    </div>
+                  ) : socioAgendaItems.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-indigo-200 bg-white/70 p-5 text-center dark:border-indigo-900 dark:bg-slate-950/50">
+                      <ListChecks className="mx-auto h-8 w-8 text-indigo-400" />
+                      <p className="mt-2 text-sm font-black text-slate-950 dark:text-slate-50">
+                        Todavía no tenés solicitudes activas
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                        Elegí una actividad disponible y solicitá inscripción.
+                        El estado aparecerá acá cuando quede pendiente o
+                        aprobada.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid gap-3 lg:grid-cols-2">
+                      {socioAgendaItems.map(({ inscripcion, turno }) => {
+                        const occupancy = turno
+                          ? safeOccupancyPercent(turno)
+                          : 0;
+                        const isCancelling =
+                          cancellingInscripcionId === inscripcion.id;
+
+                        return (
+                          <div
+                            key={inscripcion.id}
+                            className="rounded-2xl border border-white/80 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/70"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <span
+                                  className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-black uppercase ${socioEstadoClass(inscripcion.estado)}`}
+                                >
+                                  {socioEstadoLabel(inscripcion.estado)}
+                                </span>
+                                <h3 className="mt-3 line-clamp-1 text-lg font-black text-slate-950 dark:text-slate-50">
+                                  {inscripcion.actividad_nombre ||
+                                    turno?.actividad_nombre ||
+                                    "Actividad"}
+                                </h3>
+                                <p className="mt-1 line-clamp-1 text-sm font-semibold text-muted-foreground">
+                                  {inscripcion.turno_nombre ||
+                                    turno?.nombre_turno ||
+                                    "Turno"}
+                                </p>
+                              </div>
+                              <div className="shrink-0 rounded-2xl bg-indigo-100 p-2 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-200">
+                                <CalendarDays className="h-5 w-5" />
+                              </div>
+                            </div>
+
+                            <div className="mt-4 grid gap-2 rounded-2xl border bg-slate-50 p-3 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-200 sm:grid-cols-2">
+                              <div className="flex items-center gap-2">
+                                <Clock className="h-4 w-4 text-[#02a8e1]" />
+                                <span>
+                                  {turno
+                                    ? `${diaLabel(turno.dia_semana)} · ${timeRange(turno)}`
+                                    : "Horario a confirmar"}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Users className="h-4 w-4 text-[#02a8e1]" />
+                                <span>
+                                  {turno
+                                    ? `${turno.inscriptos}/${turno.cupo_maximo} inscriptos`
+                                    : "Cupo a confirmar"}
+                                </span>
+                              </div>
+                              <div className="sm:col-span-2 text-muted-foreground">
+                                Instructor:{" "}
+                                <span className="font-semibold text-slate-900 dark:text-slate-100">
+                                  {turno?.instructor_nombre || "A confirmar"}
+                                </span>
+                              </div>
+                              <div className="sm:col-span-2 text-muted-foreground">
+                                Ubicación:{" "}
+                                <span className="font-semibold text-slate-900 dark:text-slate-100">
+                                  {turno?.ubicacion || "A confirmar"}
+                                </span>
+                              </div>
+                            </div>
+
+                            {turno ? (
+                              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/60">
+                                <div className="flex items-center justify-between gap-3 text-xs font-bold text-slate-700 dark:text-slate-200">
+                                  <span>Ocupación del turno</span>
+                                  <span>
+                                    {percentLabel(turno.ocupacion_porcentaje)}
+                                  </span>
+                                </div>
+                                <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+                                  <div
+                                    className="h-full rounded-full bg-[#02a8e1]"
+                                    style={{ width: `${occupancy}%` }}
+                                  />
+                                </div>
+                                <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-semibold text-muted-foreground">
+                                  <span>{cupoEstadoLabel(turno)}</span>
+                                  <span>{turno.lista_espera} en espera</span>
+                                </div>
+                              </div>
+                            ) : null}
+
+                            <Button
+                              type="button"
+                              variant="outline"
+                              disabled={isCancelling}
+                              onClick={() =>
+                                handleSocioCancelOwnInscripcion(inscripcion)
+                              }
+                              className="mt-4 w-full border-rose-200 text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-200 dark:hover:bg-rose-950/20"
+                            >
+                              {isCancelling
+                                ? "Cancelando..."
+                                : "Cancelar solicitud / inscripción"}
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
               <Card className="border-slate-200/80 dark:border-slate-800">
                 <CardContent className="grid gap-3 p-4 md:grid-cols-[1fr_180px]">
@@ -786,7 +1184,9 @@ export default function ActividadesPage() {
                     <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       value={turnoSearchTerm}
-                      onChange={(event) => setTurnoSearchTerm(event.target.value)}
+                      onChange={(event) =>
+                        setTurnoSearchTerm(event.target.value)
+                      }
                       placeholder="Buscar actividad, turno, instructor o ubicación..."
                       className="h-11 pl-9"
                     />
@@ -798,7 +1198,9 @@ export default function ActividadesPage() {
                   >
                     <option value="todos">Todos los días</option>
                     {DIAS_SEMANA.map((dia) => (
-                      <option key={dia.value} value={String(dia.value)}>{dia.label}</option>
+                      <option key={dia.value} value={String(dia.value)}>
+                        {dia.label}
+                      </option>
                     ))}
                   </select>
                 </CardContent>
@@ -807,26 +1209,42 @@ export default function ActividadesPage() {
               <section className="grid gap-3 xl:grid-cols-2">
                 {loadingDashboard ? (
                   <Card className="xl:col-span-2">
-                    <CardContent className="p-8 text-center text-sm text-muted-foreground">Cargando actividades disponibles...</CardContent>
+                    <CardContent className="p-8 text-center text-sm text-muted-foreground">
+                      Cargando actividades disponibles...
+                    </CardContent>
                   </Card>
                 ) : socioVisibleTurnos.length === 0 ? (
                   <Card className="xl:col-span-2">
                     <CardContent className="p-8 text-center">
                       <CalendarDays className="mx-auto h-10 w-10 text-indigo-400" />
-                      <p className="mt-3 text-lg font-black">No hay actividades disponibles</p>
-                      <p className="mt-1 text-sm text-muted-foreground">Cuando administración cargue turnos activos, aparecerán acá para solicitar inscripción.</p>
+                      <p className="mt-3 text-lg font-black">
+                        No hay actividades disponibles
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Cuando administración cargue turnos activos, aparecerán
+                        acá para solicitar inscripción.
+                      </p>
                     </CardContent>
                   </Card>
                 ) : (
                   socioVisibleTurnos.map((turno) => {
-                    const currentInscripcion = activeOwnInscripcionByTurno.get(turno.id);
+                    const currentInscripcion = activeOwnInscripcionByTurno.get(
+                      turno.id,
+                    );
                     const hasRequest = Boolean(currentInscripcion);
                     const hasSlots = Number(turno.cupos_disponibles ?? 0) > 0;
                     const isSubmitting = requestingTurnoId === turno.id;
-                    const disabled = isSubmitting || hasRequest || dashboard?.schema_ready === false || !ownSocioId;
+                    const disabled =
+                      isSubmitting ||
+                      hasRequest ||
+                      dashboard?.schema_ready === false ||
+                      !ownSocioId;
 
                     return (
-                      <Card key={turno.id} className="overflow-hidden border-slate-200/80 shadow-sm dark:border-slate-800 dark:bg-slate-950/70">
+                      <Card
+                        key={turno.id}
+                        className="overflow-hidden border-slate-200/80 shadow-sm dark:border-slate-800 dark:bg-slate-950/70"
+                      >
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
@@ -834,17 +1252,25 @@ export default function ActividadesPage() {
                                 <span className="rounded-full bg-indigo-100 px-2.5 py-1 text-[11px] font-black uppercase text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-200">
                                   {diaLabel(turno.dia_semana)}
                                 </span>
-                                <span className={`rounded-full px-2.5 py-1 text-[11px] font-black uppercase ${hasSlots ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-200" : "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-100"}`}>
-                                  {hasSlots ? `${turno.cupos_disponibles} cupos libres` : "Lista de espera"}
+                                <span
+                                  className={`rounded-full px-2.5 py-1 text-[11px] font-black uppercase ${hasSlots ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-200" : "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-100"}`}
+                                >
+                                  {hasSlots
+                                    ? `${turno.cupos_disponibles} cupos libres`
+                                    : "Lista de espera"}
                                 </span>
                               </div>
                               <h2 className="mt-3 line-clamp-1 text-xl font-black text-slate-950 dark:text-slate-50">
                                 {turno.actividad_nombre || "Actividad"}
                               </h2>
-                              <p className="mt-1 line-clamp-1 text-sm font-semibold text-muted-foreground">{turno.nombre_turno}</p>
+                              <p className="mt-1 line-clamp-1 text-sm font-semibold text-muted-foreground">
+                                {turno.nombre_turno}
+                              </p>
                             </div>
                             {currentInscripcion ? (
-                              <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-black ${socioEstadoClass(currentInscripcion.estado)}`}>
+                              <span
+                                className={`shrink-0 rounded-full border px-3 py-1 text-xs font-black ${socioEstadoClass(currentInscripcion.estado)}`}
+                              >
                                 {socioEstadoLabel(currentInscripcion.estado)}
                               </span>
                             ) : null}
@@ -857,15 +1283,71 @@ export default function ActividadesPage() {
                             </div>
                             <div className="flex items-center gap-2">
                               <Users className="h-4 w-4 text-[#02a8e1]" />
-                              <span>{turno.inscriptos}/{turno.cupo_maximo} inscriptos</span>
+                              <span>
+                                {turno.inscriptos}/{turno.cupo_maximo}{" "}
+                                inscriptos
+                              </span>
                             </div>
                             <div className="sm:col-span-2 text-muted-foreground">
-                              Instructor: <span className="font-semibold text-slate-900 dark:text-slate-100">{turno.instructor_nombre || "A confirmar"}</span>
+                              Instructor:{" "}
+                              <span className="font-semibold text-slate-900 dark:text-slate-100">
+                                {turno.instructor_nombre || "A confirmar"}
+                              </span>
                             </div>
                             <div className="sm:col-span-2 text-muted-foreground">
-                              Ubicación: <span className="font-semibold text-slate-900 dark:text-slate-100">{turno.ubicacion || "A confirmar"}</span>
+                              Ubicación:{" "}
+                              <span className="font-semibold text-slate-900 dark:text-slate-100">
+                                {turno.ubicacion || "A confirmar"}
+                              </span>
                             </div>
                           </div>
+
+                          <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950/60">
+                            <div className="flex items-center justify-between gap-3 text-xs font-bold text-slate-700 dark:text-slate-200">
+                              <span>Ocupación</span>
+                              <span>
+                                {percentLabel(turno.ocupacion_porcentaje)}
+                              </span>
+                            </div>
+                            <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+                              <div
+                                className="h-full rounded-full bg-[#02a8e1]"
+                                style={{
+                                  width: `${safeOccupancyPercent(turno)}%`,
+                                }}
+                              />
+                            </div>
+                            <div className="mt-3 grid grid-cols-3 gap-2 text-center text-[11px] font-bold">
+                              <div className="rounded-xl bg-slate-100 px-2 py-2 text-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                                {turno.inscriptos}
+                                <br />
+                                inscriptos
+                              </div>
+                              <div
+                                className={`rounded-xl px-2 py-2 ${cupoEstadoClass(turno)}`}
+                              >
+                                {turno.cupos_disponibles}
+                                <br />
+                                libres
+                              </div>
+                              <div className="rounded-xl bg-amber-100 px-2 py-2 text-amber-700 dark:bg-amber-950/50 dark:text-amber-100">
+                                {turno.lista_espera}
+                                <br />
+                                espera
+                              </div>
+                            </div>
+                          </div>
+
+                          {currentInscripcion ? (
+                            <div className="mt-3 rounded-xl border border-indigo-200 bg-indigo-50 p-3 text-xs leading-5 text-indigo-950 dark:border-indigo-900 dark:bg-indigo-950/20 dark:text-indigo-100">
+                              Tu estado actual para este turno es{" "}
+                              <strong>
+                                {socioEstadoLabel(currentInscripcion.estado)}
+                              </strong>
+                              . También podés verlo en el bloque “Mis cupos e
+                              inscripciones”.
+                            </div>
+                          ) : null}
 
                           {turno.observaciones ? (
                             <p className="mt-3 rounded-xl border border-cyan-200 bg-cyan-50 p-3 text-xs leading-5 text-cyan-900 dark:border-cyan-900/60 dark:bg-cyan-950/30 dark:text-cyan-100">
@@ -896,7 +1378,10 @@ export default function ActividadesPage() {
 
               <Card className="border-indigo-200 bg-indigo-50/70 dark:border-indigo-900 dark:bg-indigo-950/20">
                 <CardContent className="p-4 text-sm leading-6 text-indigo-950 dark:text-indigo-100">
-                  Las solicitudes quedan registradas para revisión administrativa. Cuando administración apruebe o cambie el estado, lo vas a ver reflejado en esta pantalla.
+                  Las solicitudes quedan registradas para revisión
+                  administrativa. El bloque “Mis cupos e inscripciones” muestra
+                  tus estados activos, cupos del turno, lista de espera y opción
+                  de cancelación.
                 </CardContent>
               </Card>
             </section>
@@ -919,18 +1404,44 @@ export default function ActividadesPage() {
             {dashboard?.warnings?.length ? (
               <Card className="border-amber-200 bg-amber-50">
                 <CardContent className="p-4 text-sm text-amber-900">
-                  <strong>Base de datos pendiente:</strong> {dashboard.warnings.join(" ")}
+                  <strong>Base de datos pendiente:</strong>{" "}
+                  {dashboard.warnings.join(" ")}
                 </CardContent>
               </Card>
             ) : null}
 
             <section className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-              <MetricCard title="Actividades" value={kpis?.total_actividades ?? actividades.length} icon={Layers} />
-              <MetricCard title="Turnos" value={kpis?.total_turnos ?? 0} icon={CalendarDays} helper={`${kpis?.turnos_activos ?? 0} activos`} />
-              <MetricCard title="Cupos totales" value={kpis?.cupos_totales ?? 0} icon={Users} />
-              <MetricCard title="Inscriptos" value={kpis?.inscriptos ?? 0} icon={UserCheck} />
-              <MetricCard title="Lista espera" value={kpis?.lista_espera ?? 0} icon={ListChecks} />
-              <MetricCard title="Ocupación" value={percentLabel(kpis?.ocupacion_promedio)} icon={CheckCircle2} />
+              <MetricCard
+                title="Actividades"
+                value={kpis?.total_actividades ?? actividades.length}
+                icon={Layers}
+              />
+              <MetricCard
+                title="Turnos"
+                value={kpis?.total_turnos ?? 0}
+                icon={CalendarDays}
+                helper={`${kpis?.turnos_activos ?? 0} activos`}
+              />
+              <MetricCard
+                title="Cupos totales"
+                value={kpis?.cupos_totales ?? 0}
+                icon={Users}
+              />
+              <MetricCard
+                title="Inscriptos"
+                value={kpis?.inscriptos ?? 0}
+                icon={UserCheck}
+              />
+              <MetricCard
+                title="Lista espera"
+                value={kpis?.lista_espera ?? 0}
+                icon={ListChecks}
+              />
+              <MetricCard
+                title="Ocupación"
+                value={percentLabel(kpis?.ocupacion_promedio)}
+                icon={CheckCircle2}
+              />
             </section>
 
             <section className="grid min-w-0 gap-4 xl:grid-cols-[1.1fr_0.9fr]">
@@ -938,7 +1449,8 @@ export default function ActividadesPage() {
                 <CardHeader className="border-b p-4">
                   <h2 className="text-xl font-bold">BI de turnos y cupos</h2>
                   <p className="text-sm text-muted-foreground">
-                    Ocupación por actividad, distribución semanal y estado de inscripciones.
+                    Ocupación por actividad, distribución semanal y estado de
+                    inscripciones.
                   </p>
                 </CardHeader>
                 <CardContent className="grid min-w-0 gap-4 p-3 sm:p-4 lg:grid-cols-2">
@@ -968,10 +1480,23 @@ export default function ActividadesPage() {
                     {dashboard?.por_estado_inscripcion?.length ? (
                       <ResponsiveContainer width="100%" height={240}>
                         <PieChart>
-                          <Pie data={dashboard.por_estado_inscripcion} dataKey="total" nameKey="label" outerRadius={85} label>
-                            {dashboard.por_estado_inscripcion.map((entry, index) => (
-                              <Cell key={entry.label} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                            ))}
+                          <Pie
+                            data={dashboard.por_estado_inscripcion}
+                            dataKey="total"
+                            nameKey="label"
+                            outerRadius={85}
+                            label
+                          >
+                            {dashboard.por_estado_inscripcion.map(
+                              (entry, index) => (
+                                <Cell
+                                  key={entry.label}
+                                  fill={
+                                    CHART_COLORS[index % CHART_COLORS.length]
+                                  }
+                                />
+                              ),
+                            )}
                           </Pie>
                           <Tooltip />
                         </PieChart>
@@ -987,12 +1512,25 @@ export default function ActividadesPage() {
                     </div>
                     {dashboard?.por_actividad?.length ? (
                       <ResponsiveContainer width="100%" height={260}>
-                        <BarChart data={dashboard.por_actividad} layout="vertical" margin={{ left: 24, right: 12 }}>
+                        <BarChart
+                          data={dashboard.por_actividad}
+                          layout="vertical"
+                          margin={{ left: 24, right: 12 }}
+                        >
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis type="number" allowDecimals={false} />
-                          <YAxis type="category" dataKey="label" width={110} tick={{ fontSize: 11 }} />
+                          <YAxis
+                            type="category"
+                            dataKey="label"
+                            width={110}
+                            tick={{ fontSize: 11 }}
+                          />
                           <Tooltip />
-                          <Bar dataKey="total" name="Inscriptos" fill="#22c55e" />
+                          <Bar
+                            dataKey="total"
+                            name="Inscriptos"
+                            fill="#22c55e"
+                          />
                         </BarChart>
                       </ResponsiveContainer>
                     ) : (
@@ -1006,7 +1544,8 @@ export default function ActividadesPage() {
                 <CardHeader className="border-b p-4">
                   <h2 className="text-xl font-bold">Crear / editar turno</h2>
                   <p className="text-sm text-muted-foreground">
-                    Definí horario, cupo, instructor, ubicación y estado operativo.
+                    Definí horario, cupo, instructor, ubicación y estado
+                    operativo.
                   </p>
                 </CardHeader>
                 <CardContent className="p-4">
@@ -1017,7 +1556,12 @@ export default function ActividadesPage() {
                         <select
                           className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                           value={turnoForm.actividad_id}
-                          onChange={(event) => setTurnoForm((prev) => ({ ...prev, actividad_id: event.target.value }))}
+                          onChange={(event) =>
+                            setTurnoForm((prev) => ({
+                              ...prev,
+                              actividad_id: event.target.value,
+                            }))
+                          }
                           required
                         >
                           <option value="">Seleccionar actividad</option>
@@ -1032,7 +1576,12 @@ export default function ActividadesPage() {
                         <Label>Nombre del turno</Label>
                         <Input
                           value={turnoForm.nombre_turno}
-                          onChange={(event) => setTurnoForm((prev) => ({ ...prev, nombre_turno: event.target.value }))}
+                          onChange={(event) =>
+                            setTurnoForm((prev) => ({
+                              ...prev,
+                              nombre_turno: event.target.value,
+                            }))
+                          }
                           placeholder="Funcional tarde / Spinning 19 hs"
                           required
                         />
@@ -1042,7 +1591,12 @@ export default function ActividadesPage() {
                         <select
                           className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                           value={turnoForm.dia_semana}
-                          onChange={(event) => setTurnoForm((prev) => ({ ...prev, dia_semana: event.target.value }))}
+                          onChange={(event) =>
+                            setTurnoForm((prev) => ({
+                              ...prev,
+                              dia_semana: event.target.value,
+                            }))
+                          }
                         >
                           {DIAS_SEMANA.map((dia) => (
                             <option key={dia.value} value={dia.value}>
@@ -1056,7 +1610,13 @@ export default function ActividadesPage() {
                         <select
                           className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                           value={turnoForm.estado}
-                          onChange={(event) => setTurnoForm((prev) => ({ ...prev, estado: event.target.value as ActividadTurnoEstado }))}
+                          onChange={(event) =>
+                            setTurnoForm((prev) => ({
+                              ...prev,
+                              estado: event.target
+                                .value as ActividadTurnoEstado,
+                            }))
+                          }
                         >
                           {ESTADOS_TURNO.map((estado) => (
                             <option key={estado.value} value={estado.value}>
@@ -1067,26 +1627,72 @@ export default function ActividadesPage() {
                       </div>
                       <div className="space-y-1.5">
                         <Label>Inicio</Label>
-                        <Input type="time" value={turnoForm.hora_inicio} onChange={(event) => setTurnoForm((prev) => ({ ...prev, hora_inicio: event.target.value }))} required />
+                        <Input
+                          type="time"
+                          value={turnoForm.hora_inicio}
+                          onChange={(event) =>
+                            setTurnoForm((prev) => ({
+                              ...prev,
+                              hora_inicio: event.target.value,
+                            }))
+                          }
+                          required
+                        />
                       </div>
                       <div className="space-y-1.5">
                         <Label>Fin</Label>
-                        <Input type="time" value={turnoForm.hora_fin} onChange={(event) => setTurnoForm((prev) => ({ ...prev, hora_fin: event.target.value }))} required />
+                        <Input
+                          type="time"
+                          value={turnoForm.hora_fin}
+                          onChange={(event) =>
+                            setTurnoForm((prev) => ({
+                              ...prev,
+                              hora_fin: event.target.value,
+                            }))
+                          }
+                          required
+                        />
                       </div>
                       <div className="space-y-1.5">
                         <Label>Cupo máximo</Label>
-                        <Input type="number" min={1} value={turnoForm.cupo_maximo} onChange={(event) => setTurnoForm((prev) => ({ ...prev, cupo_maximo: event.target.value }))} required />
+                        <Input
+                          type="number"
+                          min={1}
+                          value={turnoForm.cupo_maximo}
+                          onChange={(event) =>
+                            setTurnoForm((prev) => ({
+                              ...prev,
+                              cupo_maximo: event.target.value,
+                            }))
+                          }
+                          required
+                        />
                       </div>
                       <div className="space-y-1.5">
                         <Label>Cupo mínimo</Label>
-                        <Input type="number" min={0} value={turnoForm.cupo_minimo} onChange={(event) => setTurnoForm((prev) => ({ ...prev, cupo_minimo: event.target.value }))} />
+                        <Input
+                          type="number"
+                          min={0}
+                          value={turnoForm.cupo_minimo}
+                          onChange={(event) =>
+                            setTurnoForm((prev) => ({
+                              ...prev,
+                              cupo_minimo: event.target.value,
+                            }))
+                          }
+                        />
                       </div>
                       <div className="space-y-1.5">
                         <Label>Instructor</Label>
                         <select
                           className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                           value={turnoForm.instructor_id}
-                          onChange={(event) => setTurnoForm((prev) => ({ ...prev, instructor_id: event.target.value }))}
+                          onChange={(event) =>
+                            setTurnoForm((prev) => ({
+                              ...prev,
+                              instructor_id: event.target.value,
+                            }))
+                          }
                         >
                           <option value="">Sin instructor asignado</option>
                           {empleadosOptions.map((empleado) => (
@@ -1103,12 +1709,18 @@ export default function ActividadesPage() {
                             className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                             value={turnoForm.ubicacion}
                             onChange={(event) =>
-                              setTurnoForm((prev) => ({ ...prev, ubicacion: event.target.value }))
+                              setTurnoForm((prev) => ({
+                                ...prev,
+                                ubicacion: event.target.value,
+                              }))
                             }
                           >
                             <option value="">Seleccionar ubicación</option>
                             {ubicacionesOptions.map((ubicacion) => (
-                              <option key={ubicacion.id} value={ubicacion.nombre}>
+                              <option
+                                key={ubicacion.id}
+                                value={ubicacion.nombre}
+                              >
                                 {ubicacion.nombre}
                               </option>
                             ))}
@@ -1117,37 +1729,83 @@ export default function ActividadesPage() {
                           <Input
                             value={turnoForm.ubicacion}
                             onChange={(event) =>
-                              setTurnoForm((prev) => ({ ...prev, ubicacion: event.target.value }))
+                              setTurnoForm((prev) => ({
+                                ...prev,
+                                ubicacion: event.target.value,
+                              }))
                             }
                             placeholder="Sala 1 / Box / Spinning"
                           />
                         )}
                         <p className="text-xs text-muted-foreground">
-                          Las ubicaciones se administran desde Parametrización → Ubicaciones del gimnasio.
+                          Las ubicaciones se administran desde Parametrización →
+                          Ubicaciones del gimnasio.
                         </p>
                       </div>
                       <div className="space-y-1.5">
                         <Label>Vigencia desde</Label>
-                        <Input type="date" value={turnoForm.fecha_inicio} onChange={(event) => setTurnoForm((prev) => ({ ...prev, fecha_inicio: event.target.value }))} />
+                        <Input
+                          type="date"
+                          value={turnoForm.fecha_inicio}
+                          onChange={(event) =>
+                            setTurnoForm((prev) => ({
+                              ...prev,
+                              fecha_inicio: event.target.value,
+                            }))
+                          }
+                        />
                       </div>
                       <div className="space-y-1.5">
                         <Label>Vigencia hasta</Label>
-                        <Input type="date" value={turnoForm.fecha_fin} onChange={(event) => setTurnoForm((prev) => ({ ...prev, fecha_fin: event.target.value }))} />
+                        <Input
+                          type="date"
+                          value={turnoForm.fecha_fin}
+                          onChange={(event) =>
+                            setTurnoForm((prev) => ({
+                              ...prev,
+                              fecha_fin: event.target.value,
+                            }))
+                          }
+                        />
                       </div>
                       <div className="space-y-1.5 md:col-span-2">
                         <Label>Observaciones</Label>
-                        <Input value={turnoForm.observaciones} onChange={(event) => setTurnoForm((prev) => ({ ...prev, observaciones: event.target.value }))} placeholder="Requisitos, nivel, material necesario..." />
+                        <Input
+                          value={turnoForm.observaciones}
+                          onChange={(event) =>
+                            setTurnoForm((prev) => ({
+                              ...prev,
+                              observaciones: event.target.value,
+                            }))
+                          }
+                          placeholder="Requisitos, nivel, material necesario..."
+                        />
                       </div>
                     </div>
                     <div className="grid gap-2 sm:flex sm:flex-wrap sm:justify-end">
                       {turnoForm.id ? (
-                        <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={resetTurnoForm}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full sm:w-auto"
+                          onClick={resetTurnoForm}
+                        >
                           Cancelar edición
                         </Button>
                       ) : null}
-                      <Button type="submit" disabled={submittingTurno || dashboard?.schema_ready === false} className="w-full bg-[#02a8e1] hover:bg-[#0288b1] sm:w-auto">
+                      <Button
+                        type="submit"
+                        disabled={
+                          submittingTurno || dashboard?.schema_ready === false
+                        }
+                        className="w-full bg-[#02a8e1] hover:bg-[#0288b1] sm:w-auto"
+                      >
                         <PlusCircle className="mr-2 h-4 w-4" />
-                        {submittingTurno ? "Guardando..." : turnoForm.id ? "Actualizar turno" : "Crear turno"}
+                        {submittingTurno
+                          ? "Guardando..."
+                          : turnoForm.id
+                            ? "Actualizar turno"
+                            : "Crear turno"}
                       </Button>
                     </div>
                   </form>
@@ -1158,55 +1816,106 @@ export default function ActividadesPage() {
             <Card>
               <CardHeader className="flex flex-col gap-4 border-b p-3 sm:p-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <h2 className="text-xl font-bold">Turnos, cupos e inscripciones</h2>
+                  <h2 className="text-xl font-bold">
+                    Turnos, cupos e inscripciones
+                  </h2>
                   <p className="text-sm text-muted-foreground">
-                    Control de clases por día, cupos disponibles, ocupación y lista de espera.
+                    Control de clases por día, cupos disponibles, ocupación y
+                    lista de espera.
                   </p>
                 </div>
                 <div className="grid w-full gap-2 sm:grid-cols-2 lg:flex lg:w-auto lg:flex-row lg:items-center">
-                  <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm lg:w-auto" value={diaFilter} onChange={(event) => setDiaFilter(event.target.value)}>
+                  <select
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm lg:w-auto"
+                    value={diaFilter}
+                    onChange={(event) => setDiaFilter(event.target.value)}
+                  >
                     <option value="todos">Todos los días</option>
                     {DIAS_SEMANA.map((dia) => (
-                      <option key={dia.value} value={dia.value}>{dia.label}</option>
+                      <option key={dia.value} value={dia.value}>
+                        {dia.label}
+                      </option>
                     ))}
                   </select>
-                  <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm lg:w-auto" value={estadoFilter} onChange={(event) => setEstadoFilter(event.target.value)}>
+                  <select
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm lg:w-auto"
+                    value={estadoFilter}
+                    onChange={(event) => setEstadoFilter(event.target.value)}
+                  >
                     <option value="todos">Todos los estados</option>
                     {ESTADOS_TURNO.map((estado) => (
-                      <option key={estado.value} value={estado.value}>{estado.label}</option>
+                      <option key={estado.value} value={estado.value}>
+                        {estado.label}
+                      </option>
                     ))}
                   </select>
                   <div className="relative min-w-0 flex-grow lg:flex-grow-0">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input className="w-full pl-8 lg:w-[280px]" value={turnoSearchTerm} onChange={(event) => setTurnoSearchTerm(event.target.value)} placeholder="Buscar turno, actividad, zona..." />
+                    <Input
+                      className="w-full pl-8 lg:w-[280px]"
+                      value={turnoSearchTerm}
+                      onChange={(event) =>
+                        setTurnoSearchTerm(event.target.value)
+                      }
+                      placeholder="Buscar turno, actividad, zona..."
+                    />
                   </div>
-                  <Button variant="outline" onClick={handleDownloadPdf} className="flex w-full items-center justify-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd] lg:w-auto">
+                  <Button
+                    variant="outline"
+                    onClick={handleDownloadPdf}
+                    className="flex w-full items-center justify-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd] lg:w-auto"
+                  >
                     <FileText className="h-4 w-4" /> PDF
                   </Button>
-                  <Button variant="outline" onClick={handleExportExcel} className="flex w-full items-center justify-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd] lg:w-auto">
+                  <Button
+                    variant="outline"
+                    onClick={handleExportExcel}
+                    className="flex w-full items-center justify-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd] lg:w-auto"
+                  >
                     <FileSpreadsheet className="h-4 w-4" /> Excel
                   </Button>
-                  <Button variant="outline" onClick={loadDashboard} disabled={loadingDashboard} className="w-full lg:w-auto">
-                    <RefreshCw className={`mr-2 h-4 w-4 ${loadingDashboard ? "animate-spin" : ""}`} /> Actualizar
+                  <Button
+                    variant="outline"
+                    onClick={loadDashboard}
+                    disabled={loadingDashboard}
+                    className="w-full lg:w-auto"
+                  >
+                    <RefreshCw
+                      className={`mr-2 h-4 w-4 ${loadingDashboard ? "animate-spin" : ""}`}
+                    />{" "}
+                    Actualizar
                   </Button>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4 p-4">
                 {loadingDashboard ? (
-                  <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">Cargando turnos y cupos...</div>
+                  <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
+                    Cargando turnos y cupos...
+                  </div>
                 ) : filteredTurnos.length === 0 ? (
-                  <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">No hay turnos cargados para los filtros actuales.</div>
+                  <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
+                    No hay turnos cargados para los filtros actuales.
+                  </div>
                 ) : (
                   <>
                     <div className="grid gap-3 md:hidden">
                       {filteredTurnos.map((turno) => (
-                        <div key={turno.id} className="rounded-xl border bg-white p-3 shadow-sm">
+                        <div
+                          key={turno.id}
+                          className="rounded-xl border bg-white p-3 shadow-sm"
+                        >
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
-                              <p className="truncate font-semibold text-slate-950">{turno.actividad_nombre}</p>
-                              <p className="truncate text-xs text-muted-foreground">{turno.nombre_turno}</p>
+                              <p className="truncate font-semibold text-slate-950">
+                                {turno.actividad_nombre}
+                              </p>
+                              <p className="truncate text-xs text-muted-foreground">
+                                {turno.nombre_turno}
+                              </p>
                             </div>
-                            <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${turno.estado === "activo" ? "bg-emerald-100 text-emerald-700" : turno.estado === "pausado" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>
+                            <span
+                              className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${turno.estado === "activo" ? "bg-emerald-100 text-emerald-700" : turno.estado === "pausado" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}
+                            >
                               {estadoLabel(turno.estado)}
                             </span>
                           </div>
@@ -1214,31 +1923,63 @@ export default function ActividadesPage() {
                           <div className="mt-3 grid gap-2 text-sm">
                             <div className="flex items-center gap-2 text-slate-700">
                               <Clock className="h-4 w-4 shrink-0 text-[#02a8e1]" />
-                              <span>{diaLabel(turno.dia_semana)} · {timeRange(turno)}</span>
+                              <span>
+                                {diaLabel(turno.dia_semana)} ·{" "}
+                                {timeRange(turno)}
+                              </span>
                             </div>
                             <div className="text-muted-foreground">
-                              Instructor: <span className="text-slate-900">{turno.instructor_nombre || "Sin instructor"}</span>
+                              Instructor:{" "}
+                              <span className="text-slate-900">
+                                {turno.instructor_nombre || "Sin instructor"}
+                              </span>
                             </div>
                             <div className="text-muted-foreground">
-                              Ubicación: <span className="text-slate-900">{turno.ubicacion || "Sin ubicación"}</span>
+                              Ubicación:{" "}
+                              <span className="text-slate-900">
+                                {turno.ubicacion || "Sin ubicación"}
+                              </span>
                             </div>
                             <div>
                               <div className="flex items-center justify-between text-sm">
-                                <span className="font-semibold">{turno.inscriptos}/{turno.cupo_maximo} inscriptos</span>
-                                <span className="text-xs text-muted-foreground">{Math.min(100, turno.ocupacion_porcentaje)}%</span>
+                                <span className="font-semibold">
+                                  {turno.inscriptos}/{turno.cupo_maximo}{" "}
+                                  inscriptos
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {Math.min(100, turno.ocupacion_porcentaje)}%
+                                </span>
                               </div>
                               <div className="mt-1 h-2 rounded-full bg-slate-100">
-                                <div className="h-2 rounded-full bg-[#02a8e1]" style={{ width: `${Math.min(100, turno.ocupacion_porcentaje)}%` }} />
+                                <div
+                                  className="h-2 rounded-full bg-[#02a8e1]"
+                                  style={{
+                                    width: `${Math.min(100, turno.ocupacion_porcentaje)}%`,
+                                  }}
+                                />
                               </div>
                               <p className="mt-1 text-xs text-muted-foreground">
-                                Disponibles: {turno.cupos_disponibles} · Espera: {turno.lista_espera}
+                                Disponibles: {turno.cupos_disponibles} · Espera:{" "}
+                                {turno.lista_espera}
                               </p>
                             </div>
                           </div>
 
                           <div className="mt-3 grid grid-cols-2 gap-2">
-                            <Button size="sm" variant="outline" onClick={() => handleEditTurno(turno)}>Editar</Button>
-                            <Button size="sm" className="bg-red-500 text-white hover:bg-red-600" onClick={() => handleDeleteTurno(turno)}>Eliminar</Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleEditTurno(turno)}
+                            >
+                              Editar
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="bg-red-500 text-white hover:bg-red-600"
+                              onClick={() => handleDeleteTurno(turno)}
+                            >
+                              Eliminar
+                            </Button>
                           </div>
                         </div>
                       ))}
@@ -1259,33 +2000,73 @@ export default function ActividadesPage() {
                         </TableHeader>
                         <TableBody>
                           {filteredTurnos.map((turno) => (
-                            <TableRow key={turno.id} className="odd:bg-muted/30">
+                            <TableRow
+                              key={turno.id}
+                              className="odd:bg-muted/30"
+                            >
                               <TableCell>
-                                <div className="font-semibold">{turno.actividad_nombre}</div>
-                                <div className="text-xs text-muted-foreground">{turno.nombre_turno}</div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-[#02a8e1]" /> {diaLabel(turno.dia_semana)}</div>
-                                <div className="text-xs text-muted-foreground">{timeRange(turno)}</div>
-                              </TableCell>
-                              <TableCell>{turno.instructor_nombre || "Sin instructor"}</TableCell>
-                              <TableCell>{turno.ubicacion || "Sin ubicación"}</TableCell>
-                              <TableCell>
-                                <div className="font-semibold">{turno.inscriptos}/{turno.cupo_maximo}</div>
-                                <div className="text-xs text-muted-foreground">Disponibles: {turno.cupos_disponibles} · Espera: {turno.lista_espera}</div>
-                                <div className="mt-1 h-2 w-28 rounded-full bg-slate-100">
-                                  <div className="h-2 rounded-full bg-[#02a8e1]" style={{ width: `${Math.min(100, turno.ocupacion_porcentaje)}%` }} />
+                                <div className="font-semibold">
+                                  {turno.actividad_nombre}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {turno.nombre_turno}
                                 </div>
                               </TableCell>
                               <TableCell>
-                                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${turno.estado === "activo" ? "bg-emerald-100 text-emerald-700" : turno.estado === "pausado" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>
+                                <div className="flex items-center gap-2">
+                                  <Clock className="h-4 w-4 text-[#02a8e1]" />{" "}
+                                  {diaLabel(turno.dia_semana)}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {timeRange(turno)}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {turno.instructor_nombre || "Sin instructor"}
+                              </TableCell>
+                              <TableCell>
+                                {turno.ubicacion || "Sin ubicación"}
+                              </TableCell>
+                              <TableCell>
+                                <div className="font-semibold">
+                                  {turno.inscriptos}/{turno.cupo_maximo}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  Disponibles: {turno.cupos_disponibles} ·
+                                  Espera: {turno.lista_espera}
+                                </div>
+                                <div className="mt-1 h-2 w-28 rounded-full bg-slate-100">
+                                  <div
+                                    className="h-2 rounded-full bg-[#02a8e1]"
+                                    style={{
+                                      width: `${Math.min(100, turno.ocupacion_porcentaje)}%`,
+                                    }}
+                                  />
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <span
+                                  className={`rounded-full px-2 py-1 text-xs font-semibold ${turno.estado === "activo" ? "bg-emerald-100 text-emerald-700" : turno.estado === "pausado" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}
+                                >
                                   {estadoLabel(turno.estado)}
                                 </span>
                               </TableCell>
                               <TableCell>
                                 <div className="flex flex-wrap gap-2">
-                                  <Button size="sm" variant="outline" onClick={() => handleEditTurno(turno)}>Editar</Button>
-                                  <Button size="sm" className="bg-red-500 text-white hover:bg-red-600" onClick={() => handleDeleteTurno(turno)}>Eliminar</Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleEditTurno(turno)}
+                                  >
+                                    Editar
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    className="bg-red-500 text-white hover:bg-red-600"
+                                    onClick={() => handleDeleteTurno(turno)}
+                                  >
+                                    Eliminar
+                                  </Button>
                                 </div>
                               </TableCell>
                             </TableRow>
@@ -1302,9 +2083,12 @@ export default function ActividadesPage() {
               <CardHeader className="border-b border-amber-200/70 p-4 dark:border-amber-900/60">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <h2 className="text-xl font-bold text-amber-950 dark:text-amber-100">Solicitudes pendientes</h2>
+                    <h2 className="text-xl font-bold text-amber-950 dark:text-amber-100">
+                      Solicitudes pendientes
+                    </h2>
                     <p className="text-sm text-amber-800 dark:text-amber-200">
-                      Socios que solicitaron inscripción desde mobile y esperan aprobación administrativa.
+                      Socios que solicitaron inscripción desde mobile y esperan
+                      aprobación administrativa.
                     </p>
                   </div>
                   <span className="rounded-full border border-amber-300 bg-white px-3 py-1 text-sm font-semibold text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
@@ -1321,26 +2105,54 @@ export default function ActividadesPage() {
                   <div className="grid gap-3 lg:grid-cols-2">
                     {pendingInscripciones.slice(0, 12).map((inscripcion) => {
                       const turno = turnoById.get(inscripcion.turno_id);
-                      const cuposDisponibles = Number(turno?.cupos_disponibles ?? 0);
+                      const cuposDisponibles = Number(
+                        turno?.cupos_disponibles ?? 0,
+                      );
                       const hasCupo = !turno || cuposDisponibles > 0;
 
                       return (
-                        <div key={inscripcion.id} className="rounded-xl border border-amber-200 bg-white p-3 shadow-sm dark:border-amber-900/70 dark:bg-slate-950/60">
+                        <div
+                          key={inscripcion.id}
+                          className="rounded-xl border border-amber-200 bg-white p-3 shadow-sm dark:border-amber-900/70 dark:bg-slate-950/60"
+                        >
                           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div className="min-w-0">
-                              <p className="truncate font-semibold text-slate-950 dark:text-slate-50">{inscripcion.socio_nombre}</p>
-                              <p className="text-xs text-muted-foreground">{inscripcion.socio_dni || "Sin DNI"}</p>
-                              <p className="mt-2 text-sm font-medium text-slate-800 dark:text-slate-100">{inscripcion.actividad_nombre}</p>
-                              <p className="text-xs text-muted-foreground">{inscripcion.turno_nombre}</p>
+                              <p className="truncate font-semibold text-slate-950 dark:text-slate-50">
+                                {inscripcion.socio_nombre}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {inscripcion.socio_dni || "Sin DNI"}
+                              </p>
+                              <p className="mt-2 text-sm font-medium text-slate-800 dark:text-slate-100">
+                                {inscripcion.actividad_nombre}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {inscripcion.turno_nombre}
+                              </p>
                               <p className="mt-1 text-xs text-muted-foreground">
-                                Solicitud: {formatFrontendDate(inscripcion.fecha_inscripcion ?? "")}
+                                Solicitud:{" "}
+                                {formatFrontendDate(
+                                  inscripcion.fecha_inscripcion ?? "",
+                                )}
                               </p>
                             </div>
                             <div className="rounded-lg border bg-slate-50 px-3 py-2 text-xs text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
                               <div className="font-semibold">Cupos</div>
-                              <div>{turno ? `${turno.inscriptos}/${turno.cupo_maximo}` : "Sin dato"}</div>
-                              <div className={hasCupo ? "text-emerald-700 dark:text-emerald-300" : "text-red-700 dark:text-red-300"}>
-                                {turno ? `${cuposDisponibles} disponibles` : "Verificar turno"}
+                              <div>
+                                {turno
+                                  ? `${turno.inscriptos}/${turno.cupo_maximo}`
+                                  : "Sin dato"}
+                              </div>
+                              <div
+                                className={
+                                  hasCupo
+                                    ? "text-emerald-700 dark:text-emerald-300"
+                                    : "text-red-700 dark:text-red-300"
+                                }
+                              >
+                                {turno
+                                  ? `${cuposDisponibles} disponibles`
+                                  : "Verificar turno"}
                               </div>
                             </div>
                           </div>
@@ -1350,8 +2162,14 @@ export default function ActividadesPage() {
                               size="sm"
                               className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
                               disabled={!hasCupo}
-                              onClick={() => handleApproveInscripcion(inscripcion)}
-                              title={!hasCupo ? "El turno no tiene cupo disponible" : "Incorporar al socio al turno"}
+                              onClick={() =>
+                                handleApproveInscripcion(inscripcion)
+                              }
+                              title={
+                                !hasCupo
+                                  ? "El turno no tiene cupo disponible"
+                                  : "Incorporar al socio al turno"
+                              }
                             >
                               <UserCheck className="mr-2 h-4 w-4" />
                               Incorporar al turno
@@ -1360,7 +2178,13 @@ export default function ActividadesPage() {
                               size="sm"
                               variant="outline"
                               className="w-full border-red-200 text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/30"
-                              onClick={() => handleUpdateInscripcionEstado(inscripcion.id, "cancelado", "Solicitud cancelada")}
+                              onClick={() =>
+                                handleUpdateInscripcionEstado(
+                                  inscripcion.id,
+                                  "cancelado",
+                                  "Solicitud cancelada",
+                                )
+                              }
                             >
                               Cancelar solicitud
                             </Button>
@@ -1377,17 +2201,39 @@ export default function ActividadesPage() {
               <Card>
                 <CardHeader className="border-b p-4">
                   <h2 className="text-xl font-bold">Inscribir socio</h2>
-                  <p className="text-sm text-muted-foreground">Si el cupo está completo, el socio pasa automáticamente a lista de espera.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Si el cupo está completo, el socio pasa automáticamente a
+                    lista de espera.
+                  </p>
                 </CardHeader>
                 <CardContent className="p-4">
-                  <form onSubmit={handleSubmitInscripcion} className="grid gap-3">
+                  <form
+                    onSubmit={handleSubmitInscripcion}
+                    className="grid gap-3"
+                  >
                     <div className="space-y-1.5">
                       <Label>Turno</Label>
-                      <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={inscripcionForm.turno_id} onChange={(event) => setInscripcionForm((prev) => ({ ...prev, turno_id: event.target.value }))} required>
+                      <select
+                        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                        value={inscripcionForm.turno_id}
+                        onChange={(event) =>
+                          setInscripcionForm((prev) => ({
+                            ...prev,
+                            turno_id: event.target.value,
+                          }))
+                        }
+                        required
+                      >
                         <option value="">Seleccionar turno</option>
-                        {turnos.filter((turno) => turno.estado === "activo").map((turno) => (
-                          <option key={turno.id} value={turno.id}>{turno.actividad_nombre} · {turno.nombre_turno} · {diaLabel(turno.dia_semana)} {String(turno.hora_inicio).slice(0, 5)}</option>
-                        ))}
+                        {turnos
+                          .filter((turno) => turno.estado === "activo")
+                          .map((turno) => (
+                            <option key={turno.id} value={turno.id}>
+                              {turno.actividad_nombre} · {turno.nombre_turno} ·{" "}
+                              {diaLabel(turno.dia_semana)}{" "}
+                              {String(turno.hora_inicio).slice(0, 5)}
+                            </option>
+                          ))}
                       </select>
                     </div>
                     <div className="space-y-1.5">
@@ -1397,7 +2243,9 @@ export default function ActividadesPage() {
                           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                           <Input
                             value={socioSearchTerm}
-                            onChange={(event) => setSocioSearchTerm(event.target.value)}
+                            onChange={(event) =>
+                              setSocioSearchTerm(event.target.value)
+                            }
                             placeholder="Buscar por nombre o DNI..."
                             className="pl-8"
                           />
@@ -1406,15 +2254,24 @@ export default function ActividadesPage() {
                         {selectedSocio ? (
                           <div className="mt-2 flex items-center justify-between rounded-md border border-[#02a8e1]/30 bg-[#e6f7fd] px-3 py-2 text-sm">
                             <div>
-                              <p className="font-semibold text-slate-950">{selectedSocio.nombre_completo}</p>
-                              <p className="text-xs text-slate-500">{selectedSocio.dni ? `DNI ${selectedSocio.dni}` : "Sin DNI cargado"}</p>
+                              <p className="font-semibold text-slate-950">
+                                {selectedSocio.nombre_completo}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {selectedSocio.dni
+                                  ? `DNI ${selectedSocio.dni}`
+                                  : "Sin DNI cargado"}
+                              </p>
                             </div>
                             <Button
                               type="button"
                               variant="outline"
                               size="sm"
                               onClick={() => {
-                                setInscripcionForm((prev) => ({ ...prev, socio_id: "" }));
+                                setInscripcionForm((prev) => ({
+                                  ...prev,
+                                  socio_id: "",
+                                }));
                                 setSocioSearchTerm("");
                               }}
                             >
@@ -1430,26 +2287,38 @@ export default function ActividadesPage() {
                             </div>
                           ) : (
                             filteredSociosOptions.map((socio) => {
-                              const isSelected = socio.id_socio === inscripcionForm.socio_id;
+                              const isSelected =
+                                socio.id_socio === inscripcionForm.socio_id;
                               return (
                                 <button
                                   key={socio.id_socio}
                                   type="button"
                                   className={`flex w-full items-center justify-between border-b px-3 py-2 text-left text-sm transition last:border-b-0 ${
-                                    isSelected ? "bg-[#e6f7fd] text-slate-950" : "bg-white hover:bg-slate-50"
+                                    isSelected
+                                      ? "bg-[#e6f7fd] text-slate-950"
+                                      : "bg-white hover:bg-slate-50"
                                   }`}
                                   onClick={() => {
-                                    setInscripcionForm((prev) => ({ ...prev, socio_id: socio.id_socio }));
+                                    setInscripcionForm((prev) => ({
+                                      ...prev,
+                                      socio_id: socio.id_socio,
+                                    }));
                                     setSocioSearchTerm(socioSearchLabel(socio));
                                   }}
                                 >
                                   <span>
-                                    <span className="block font-medium">{socio.nombre_completo}</span>
+                                    <span className="block font-medium">
+                                      {socio.nombre_completo}
+                                    </span>
                                     <span className="block text-xs text-muted-foreground">
-                                      {socio.dni ? `DNI ${socio.dni}` : "Sin DNI cargado"}
+                                      {socio.dni
+                                        ? `DNI ${socio.dni}`
+                                        : "Sin DNI cargado"}
                                     </span>
                                   </span>
-                                  {isSelected ? <CheckCircle2 className="h-4 w-4 text-[#02a8e1]" /> : null}
+                                  {isSelected ? (
+                                    <CheckCircle2 className="h-4 w-4 text-[#02a8e1]" />
+                                  ) : null}
                                 </button>
                               );
                             })
@@ -1457,20 +2326,32 @@ export default function ActividadesPage() {
                         </div>
 
                         <div className="mt-2 space-y-1.5">
-                          <Label className="text-xs text-muted-foreground">Selector rápido</Label>
+                          <Label className="text-xs text-muted-foreground">
+                            Selector rápido
+                          </Label>
                           <select
                             className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                             value={inscripcionForm.socio_id}
                             onChange={(event) => {
-                              const socio = sociosOptions.find((item) => item.id_socio === event.target.value);
-                              setInscripcionForm((prev) => ({ ...prev, socio_id: event.target.value }));
-                              setSocioSearchTerm(socio ? socioSearchLabel(socio) : "");
+                              const socio = sociosOptions.find(
+                                (item) => item.id_socio === event.target.value,
+                              );
+                              setInscripcionForm((prev) => ({
+                                ...prev,
+                                socio_id: event.target.value,
+                              }));
+                              setSocioSearchTerm(
+                                socio ? socioSearchLabel(socio) : "",
+                              );
                             }}
                             required
                           >
                             <option value="">Seleccionar socio</option>
                             {sociosOptions.map((socio) => (
-                              <option key={socio.id_socio} value={socio.id_socio}>
+                              <option
+                                key={socio.id_socio}
+                                value={socio.id_socio}
+                              >
                                 {socioSearchLabel(socio)}
                               </option>
                             ))}
@@ -1480,10 +2361,28 @@ export default function ActividadesPage() {
                     </div>
                     <div className="space-y-1.5">
                       <Label>Observaciones</Label>
-                      <Input value={inscripcionForm.observaciones} onChange={(event) => setInscripcionForm((prev) => ({ ...prev, observaciones: event.target.value }))} placeholder="Aclaración opcional" />
+                      <Input
+                        value={inscripcionForm.observaciones}
+                        onChange={(event) =>
+                          setInscripcionForm((prev) => ({
+                            ...prev,
+                            observaciones: event.target.value,
+                          }))
+                        }
+                        placeholder="Aclaración opcional"
+                      />
                     </div>
-                    <Button type="submit" disabled={submittingInscripcion || dashboard?.schema_ready === false} className="bg-[#02a8e1] hover:bg-[#0288b1]">
-                      {submittingInscripcion ? "Inscribiendo..." : "Inscribir socio"}
+                    <Button
+                      type="submit"
+                      disabled={
+                        submittingInscripcion ||
+                        dashboard?.schema_ready === false
+                      }
+                      className="bg-[#02a8e1] hover:bg-[#0288b1]"
+                    >
+                      {submittingInscripcion
+                        ? "Inscribiendo..."
+                        : "Inscribir socio"}
                     </Button>
                   </form>
                 </CardContent>
@@ -1492,50 +2391,106 @@ export default function ActividadesPage() {
               <Card>
                 <CardHeader className="border-b p-4">
                   <h2 className="text-xl font-bold">Inscripciones recientes</h2>
-                  <p className="text-sm text-muted-foreground">Marcá asistencia, ausencia, cancelación o lista de espera.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Marcá asistencia, ausencia, cancelación o lista de espera.
+                  </p>
                 </CardHeader>
                 <CardContent className="p-4">
                   <div className="max-h-[430px] overflow-auto rounded-md border p-2 md:p-0">
                     <div className="grid gap-3 md:hidden">
                       {inscripciones.length === 0 ? (
-                        <div className="py-8 text-center text-sm text-muted-foreground">Sin inscripciones registradas.</div>
-                      ) : inscripciones.slice(0, 40).map((inscripcion) => (
-                        <div key={inscripcion.id} className="rounded-xl border bg-white p-3 shadow-sm">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="truncate font-semibold text-slate-950">{inscripcion.socio_nombre}</p>
-                              <p className="text-xs text-muted-foreground">{inscripcion.socio_dni || "Sin DNI"}</p>
-                            </div>
-                            <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">
-                              {estadoLabel(inscripcion.estado)}
-                            </span>
-                          </div>
-                          <div className="mt-2 text-sm text-slate-700">
-                            <p>{inscripcion.actividad_nombre}</p>
-                            <p className="text-xs text-muted-foreground">{inscripcion.turno_nombre}</p>
-                            <p className="mt-1 text-xs text-muted-foreground">{formatFrontendDate(inscripcion.fecha_inscripcion ?? "")}</p>
-                          </div>
-                          <div className="mt-3 grid gap-2">
-                            {inscripcion.estado === "lista_espera" ? (
-                              <div className="grid grid-cols-2 gap-2">
-                                <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => handleApproveInscripcion(inscripcion)}>
-                                  Incorporar
-                                </Button>
-                                <Button size="sm" variant="outline" className="border-red-200 text-red-700 hover:bg-red-50" onClick={() => handleUpdateInscripcionEstado(inscripcion.id, "cancelado", "Solicitud cancelada")}>
-                                  Cancelar
-                                </Button>
-                              </div>
-                            ) : (
-                              <div className="grid grid-cols-2 gap-2">
-                                {ESTADOS_INSCRIPCION.map((estado) => (
-                                  <Button key={estado.value} size="sm" variant="outline" onClick={() => handleUpdateInscripcionEstado(inscripcion.id, estado.value)}>{estado.label}</Button>
-                                ))}
-                              </div>
-                            )}
-                            <Button size="sm" className="w-full bg-red-500 text-white hover:bg-red-600" onClick={() => handleDeleteInscripcion(inscripcion.id)}>Eliminar</Button>
-                          </div>
+                        <div className="py-8 text-center text-sm text-muted-foreground">
+                          Sin inscripciones registradas.
                         </div>
-                      ))}
+                      ) : (
+                        inscripciones.slice(0, 40).map((inscripcion) => (
+                          <div
+                            key={inscripcion.id}
+                            className="rounded-xl border bg-white p-3 shadow-sm"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="truncate font-semibold text-slate-950">
+                                  {inscripcion.socio_nombre}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {inscripcion.socio_dni || "Sin DNI"}
+                                </p>
+                              </div>
+                              <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">
+                                {estadoLabel(inscripcion.estado)}
+                              </span>
+                            </div>
+                            <div className="mt-2 text-sm text-slate-700">
+                              <p>{inscripcion.actividad_nombre}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {inscripcion.turno_nombre}
+                              </p>
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                {formatFrontendDate(
+                                  inscripcion.fecha_inscripcion ?? "",
+                                )}
+                              </p>
+                            </div>
+                            <div className="mt-3 grid gap-2">
+                              {inscripcion.estado === "lista_espera" ? (
+                                <div className="grid grid-cols-2 gap-2">
+                                  <Button
+                                    size="sm"
+                                    className="bg-emerald-600 text-white hover:bg-emerald-700"
+                                    onClick={() =>
+                                      handleApproveInscripcion(inscripcion)
+                                    }
+                                  >
+                                    Incorporar
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-red-200 text-red-700 hover:bg-red-50"
+                                    onClick={() =>
+                                      handleUpdateInscripcionEstado(
+                                        inscripcion.id,
+                                        "cancelado",
+                                        "Solicitud cancelada",
+                                      )
+                                    }
+                                  >
+                                    Cancelar
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="grid grid-cols-2 gap-2">
+                                  {ESTADOS_INSCRIPCION.map((estado) => (
+                                    <Button
+                                      key={estado.value}
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() =>
+                                        handleUpdateInscripcionEstado(
+                                          inscripcion.id,
+                                          estado.value,
+                                        )
+                                      }
+                                    >
+                                      {estado.label}
+                                    </Button>
+                                  ))}
+                                </div>
+                              )}
+                              <Button
+                                size="sm"
+                                className="w-full bg-red-500 text-white hover:bg-red-600"
+                                onClick={() =>
+                                  handleDeleteInscripcion(inscripcion.id)
+                                }
+                              >
+                                Eliminar
+                              </Button>
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </div>
 
                     <Table className="hidden min-w-[780px] text-sm md:table">
@@ -1550,40 +2505,98 @@ export default function ActividadesPage() {
                       </TableHeader>
                       <TableBody>
                         {inscripciones.length === 0 ? (
-                          <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">Sin inscripciones registradas.</TableCell></TableRow>
-                        ) : inscripciones.slice(0, 40).map((inscripcion) => (
-                          <TableRow key={inscripcion.id}>
-                            <TableCell>
-                              <div className="font-medium">{inscripcion.socio_nombre}</div>
-                              <div className="text-xs text-muted-foreground">{inscripcion.socio_dni || "Sin DNI"}</div>
-                            </TableCell>
-                            <TableCell>
-                              <div>{inscripcion.actividad_nombre}</div>
-                              <div className="text-xs text-muted-foreground">{inscripcion.turno_nombre}</div>
-                            </TableCell>
-                            <TableCell>{estadoLabel(inscripcion.estado)}</TableCell>
-                            <TableCell>{formatFrontendDate(inscripcion.fecha_inscripcion ?? "")}</TableCell>
-                            <TableCell>
-                              <div className="flex flex-wrap gap-2">
-                                {inscripcion.estado === "lista_espera" ? (
-                                  <>
-                                    <Button size="sm" className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => handleApproveInscripcion(inscripcion)}>
-                                      Incorporar al turno
-                                    </Button>
-                                    <Button size="sm" variant="outline" className="border-red-200 text-red-700 hover:bg-red-50" onClick={() => handleUpdateInscripcionEstado(inscripcion.id, "cancelado", "Solicitud cancelada")}>
-                                      Cancelar solicitud
-                                    </Button>
-                                  </>
-                                ) : (
-                                  ESTADOS_INSCRIPCION.map((estado) => (
-                                    <Button key={estado.value} size="sm" variant="outline" onClick={() => handleUpdateInscripcionEstado(inscripcion.id, estado.value)}>{estado.label}</Button>
-                                  ))
-                                )}
-                                <Button size="sm" className="bg-red-500 text-white hover:bg-red-600" onClick={() => handleDeleteInscripcion(inscripcion.id)}>Eliminar</Button>
-                              </div>
+                          <TableRow>
+                            <TableCell
+                              colSpan={5}
+                              className="py-8 text-center text-muted-foreground"
+                            >
+                              Sin inscripciones registradas.
                             </TableCell>
                           </TableRow>
-                        ))}
+                        ) : (
+                          inscripciones.slice(0, 40).map((inscripcion) => (
+                            <TableRow key={inscripcion.id}>
+                              <TableCell>
+                                <div className="font-medium">
+                                  {inscripcion.socio_nombre}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {inscripcion.socio_dni || "Sin DNI"}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div>{inscripcion.actividad_nombre}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {inscripcion.turno_nombre}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {estadoLabel(inscripcion.estado)}
+                              </TableCell>
+                              <TableCell>
+                                {formatFrontendDate(
+                                  inscripcion.fecha_inscripcion ?? "",
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex flex-wrap gap-2">
+                                  {inscripcion.estado === "lista_espera" ? (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        className="bg-emerald-600 text-white hover:bg-emerald-700"
+                                        onClick={() =>
+                                          handleApproveInscripcion(inscripcion)
+                                        }
+                                      >
+                                        Incorporar al turno
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="border-red-200 text-red-700 hover:bg-red-50"
+                                        onClick={() =>
+                                          handleUpdateInscripcionEstado(
+                                            inscripcion.id,
+                                            "cancelado",
+                                            "Solicitud cancelada",
+                                          )
+                                        }
+                                      >
+                                        Cancelar solicitud
+                                      </Button>
+                                    </>
+                                  ) : (
+                                    ESTADOS_INSCRIPCION.map((estado) => (
+                                      <Button
+                                        key={estado.value}
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() =>
+                                          handleUpdateInscripcionEstado(
+                                            inscripcion.id,
+                                            estado.value,
+                                          )
+                                        }
+                                      >
+                                        {estado.label}
+                                      </Button>
+                                    ))
+                                  )}
+                                  <Button
+                                    size="sm"
+                                    className="bg-red-500 text-white hover:bg-red-600"
+                                    onClick={() =>
+                                      handleDeleteInscripcion(inscripcion.id)
+                                    }
+                                  >
+                                    Eliminar
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
                       </TableBody>
                     </Table>
                   </div>
@@ -1595,14 +2608,25 @@ export default function ActividadesPage() {
               <CardHeader className="flex flex-col gap-4 border-b p-3 sm:p-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="min-w-0">
                   <h2 className="text-xl font-bold">Catálogo de actividades</h2>
-                  <p className="text-sm text-muted-foreground">Base de actividades usada para crear turnos y cupos.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Base de actividades usada para crear turnos y cupos.
+                  </p>
                 </div>
                 <div className="grid w-full gap-2 sm:grid-cols-[1fr_auto] lg:w-auto">
                   <div className="relative min-w-0">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input type="search" placeholder="Buscar actividad..." className="w-full pl-8 lg:w-[300px]" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} />
+                    <Input
+                      type="search"
+                      placeholder="Buscar actividad..."
+                      className="w-full pl-8 lg:w-[300px]"
+                      value={searchTerm}
+                      onChange={(event) => setSearchTerm(event.target.value)}
+                    />
                   </div>
-                  <Button onClick={() => setOpenModal(true)} className="w-full bg-[#02a8e1] hover:bg-[#0288b1] sm:w-auto">
+                  <Button
+                    onClick={() => setOpenModal(true)}
+                    className="w-full bg-[#02a8e1] hover:bg-[#0288b1] sm:w-auto"
+                  >
                     Añadir Actividad
                   </Button>
                 </div>
@@ -1623,7 +2647,13 @@ export default function ActividadesPage() {
                     onDelete={handleDeleteActividad}
                   />
                 </div>
-                <PaginationControls currentPage={safeCurrentPage} totalItems={totalActividades} pageSize={ACTIVIDADES_PAGE_SIZE} onPageChange={setCurrentPage} itemLabel="actividades" />
+                <PaginationControls
+                  currentPage={safeCurrentPage}
+                  totalItems={totalActividades}
+                  pageSize={ACTIVIDADES_PAGE_SIZE}
+                  onPageChange={setCurrentPage}
+                  itemLabel="actividades"
+                />
               </CardContent>
             </Card>
           </section>
