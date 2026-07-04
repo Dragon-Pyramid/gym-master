@@ -32,6 +32,7 @@ import type {
   DragonPyramidLicenseControl,
   DragonPyramidLicenseStatus,
 } from '@/interfaces/dragonPyramidLicense.interface';
+import { buildDragonPyramidGraceWarning } from '@/utils/dragonPyramidLicenseWarning';
 
 const statusOptions: Array<{ value: DragonPyramidLicenseStatus; label: string; helper: string }> = [
   { value: 'active', label: 'Activa', helper: 'Cliente habilitado normalmente.' },
@@ -184,6 +185,8 @@ export default function MasterAdminLicensePage() {
     return `Vence en ${daysUntilPayment} día(s)`;
   }, [daysUntilPayment]);
 
+  const graceWarning = useMemo(() => buildDragonPyramidGraceWarning(license), [license]);
+
   const summaryCards = useMemo(
     () => [
       { label: 'Producto', value: 'Gym Master', icon: Activity },
@@ -301,6 +304,40 @@ export default function MasterAdminLicensePage() {
               </div>
             </div>
           </div>
+
+          {graceWarning.visible && (
+            <Card
+              className={`min-w-0 border shadow-xl ${
+                graceWarning.severity === 'critical'
+                  ? 'border-red-400/40 bg-red-950/30 text-red-50'
+                  : 'border-amber-400/40 bg-amber-950/30 text-amber-50'
+              }`}
+            >
+              <CardContent className='flex flex-col gap-4 p-5 md:flex-row md:items-start md:justify-between'>
+                <div className='flex min-w-0 gap-3'>
+                  <AlertTriangle className='mt-1 h-5 w-5 shrink-0' />
+                  <div className='min-w-0'>
+                    <p className='text-xs font-semibold uppercase tracking-[0.22em] opacity-80'>
+                      Advertencia previa a suspensión
+                    </p>
+                    <h3 className='mt-1 text-lg font-black'>{graceWarning.title}</h3>
+                    <p className='mt-1 text-sm leading-6'>{graceWarning.message}</p>
+                    <ul className='mt-3 list-disc space-y-1 pl-4 text-sm leading-6'>
+                      {graceWarning.details.map((detail) => (
+                        <li key={detail}>{detail}</li>
+                      ))}
+                    </ul>
+                    <p className='mt-3 text-xs opacity-80'>
+                      Esta feature solo informa al cliente. El bloqueo real se implementará en la feature de suspensión por falta de pago.
+                    </p>
+                  </div>
+                </div>
+                <div className='rounded-2xl border border-current/20 px-4 py-3 text-sm font-bold'>
+                  {graceWarning.clientName ?? form.client_name ?? 'Gym Master Cliente'}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <div className='grid w-full min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6'>
             {summaryCards.map((item) => {

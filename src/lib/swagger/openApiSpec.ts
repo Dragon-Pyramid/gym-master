@@ -33,6 +33,22 @@ const endpointDefinitions: EndpointDefinition[] = [
     source: "src/app/api/dragon-pyramid/license/route.ts",
     internal: true,
   },
+
+  {
+    path: "/api/dragon-pyramid/license/warning",
+    methods: ["GET"],
+    tag: "Dragon Pyramid",
+    summary: "Aviso de vencimiento y gracia Dragon Pyramid",
+    description:
+      "Devuelve un resumen seguro para administradores del gimnasio con advertencias de licencia, pago vencido, próximo vencimiento o período de gracia. No bloquea el sistema; solo informa antes de la futura suspensión por falta de pago.",
+    auth: true,
+    admin: true,
+    notImplemented: false,
+    statuses: [200, 401, 403, 500],
+    queryParams: [],
+    source: "src/app/api/dragon-pyramid/license/warning/route.ts",
+    internal: true,
+  },
   {
     path: "/api/internal/dragon-pyramid/license-sync",
     methods: ["POST"],

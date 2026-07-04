@@ -1192,3 +1192,14 @@ export async function updateDragonPyramidLicenseControl(payload: unknown) {
   const data = await res.json();
   return { ok: res.ok, ...data };
 }
+
+export async function getDragonPyramidLicenseWarning() {
+  const token = getToken();
+  const res = await fetch('/api/dragon-pyramid/license/warning', {
+    method: 'GET',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    cache: 'no-store',
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data };
+}
