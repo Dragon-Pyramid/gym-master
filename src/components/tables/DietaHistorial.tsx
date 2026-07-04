@@ -13,7 +13,7 @@ import {
   TableRow,
   TableCaption,
 } from "@/components/ui/table";
-import { CalendarDays, ChevronRight, Clock, Target, Utensils } from "lucide-react";
+import { Activity, CalendarDays, CheckCircle2, ChevronRight, Clock, Target, Utensils } from "lucide-react";
 import { getDietasPorSocio } from "@/services/apiClient";
 import type { Dieta } from "@/interfaces/dieta.interface";
 import { formatFrontendDate } from "@/utils/dateFormat";
@@ -26,6 +26,27 @@ function calculateDays(start?: string, end?: string) {
   const diff = endDate.getTime() - startDate.getTime();
   if (Number.isNaN(diff) || diff < 0) return 0;
   return Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1;
+}
+
+
+function getDateOnly(value?: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function getDietStatusLabel(dieta: Dieta) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const start = getDateOnly(dieta.fecha_inicio);
+  const end = getDateOnly(dieta.fecha_fin);
+
+  if (start && today < start) return "Próxima";
+  if (end && today > end) return "Finalizada";
+  if (start || end) return "Vigente";
+  return "Manual";
 }
 
 function countMeals(observaciones?: string) {
@@ -95,6 +116,15 @@ export default function DietaHistorial({
     [dietas, searchTerm]
   );
 
+  const dietaVigente = useMemo(
+    () => dietasOrdenadas.find((dieta) => getDietStatusLabel(dieta) === "Vigente") ?? dietasOrdenadas[0],
+    [dietasOrdenadas]
+  );
+  const totalComidas = useMemo(
+    () => dietasOrdenadas.reduce((total, dieta) => total + countMeals(dieta.observaciones), 0),
+    [dietasOrdenadas]
+  );
+
   if (selected) {
     return (
       <DietaDisplay
@@ -129,54 +159,99 @@ export default function DietaHistorial({
 
   return (
     <div className="w-full space-y-4">
+      <div className="grid gap-3 md:grid-cols-3">
+        <div className="rounded-3xl border border-emerald-100 bg-emerald-50 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+          <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">
+            <Activity className="h-4 w-4" /> Estado actual
+          </div>
+          <p className="mt-2 text-xl font-black text-emerald-950 dark:text-emerald-100">
+            {dietaVigente ? getDietStatusLabel(dietaVigente) : "Sin datos"}
+          </p>
+          <p className="mt-1 line-clamp-1 text-xs text-emerald-900/75 dark:text-emerald-100/70">
+            {dietaVigente?.nombre_plan || "Esperando una dieta asignada"}
+          </p>
+        </div>
+        <div className="rounded-3xl border border-sky-100 bg-sky-50 p-4 dark:border-sky-900/50 dark:bg-sky-950/20">
+          <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-sky-700 dark:text-sky-200">
+            <Utensils className="h-4 w-4" /> Planes
+          </div>
+          <p className="mt-2 text-xl font-black text-sky-950 dark:text-sky-100">
+            {dietasOrdenadas.length}
+          </p>
+          <p className="mt-1 text-xs text-sky-900/75 dark:text-sky-100/70">
+            dietas disponibles para consulta
+          </p>
+        </div>
+        <div className="rounded-3xl border border-lime-100 bg-lime-50 p-4 dark:border-lime-900/50 dark:bg-lime-950/20">
+          <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-lime-700 dark:text-lime-200">
+            <CheckCircle2 className="h-4 w-4" /> Comidas
+          </div>
+          <p className="mt-2 text-xl font-black text-lime-950 dark:text-lime-100">
+            {totalComidas || "—"}
+          </p>
+          <p className="mt-1 text-xs text-lime-900/75 dark:text-lime-100/70">
+            bloques alimentarios cargados
+          </p>
+        </div>
+      </div>
+
       <div className="grid gap-3 md:hidden">
         {dietasOrdenadas.map((dieta) => {
           const meals = countMeals(dieta.observaciones);
           const duration = calculateDays(dieta.fecha_inicio, dieta.fecha_fin);
 
           return (
-            <Card key={dieta.id} className="overflow-hidden rounded-3xl border-sky-100 shadow-sm">
+            <Card key={dieta.id} className="overflow-hidden rounded-3xl border-sky-100 shadow-sm dark:border-sky-900/50">
               <CardContent className="space-y-4 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-[11px] font-bold uppercase tracking-wide text-sky-700">
                       Dieta asignada
                     </p>
-                    <h3 className="mt-1 line-clamp-2 text-lg font-extrabold leading-tight text-slate-900">
+                    <h3 className="mt-1 line-clamp-2 text-lg font-extrabold leading-tight text-slate-900 dark:text-slate-50">
                       {dieta.nombre_plan || "Plan alimentario"}
                     </h3>
                   </div>
-                  <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-100">
+                  <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-100 dark:bg-emerald-900/50 dark:text-emerald-100 dark:ring-emerald-800">
                     {meals || "-"} comidas
                   </span>
                 </div>
 
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 font-bold text-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                    {getDietStatusLabel(dieta)}
+                  </span>
+                  <span className="rounded-full bg-sky-50 px-2.5 py-1 font-semibold text-sky-700 dark:bg-sky-950/40 dark:text-sky-100">
+                    Seguimiento mobile
+                  </span>
+                </div>
+
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="rounded-2xl bg-muted/40 p-3">
+                  <div className="rounded-2xl bg-muted/40 p-3 dark:bg-slate-900/70">
                     <div className="flex items-center gap-1.5 font-semibold text-muted-foreground">
                       <Target className="h-3.5 w-3.5" /> Objetivo
                     </div>
-                    <p className="mt-1 font-bold text-slate-900">{dieta.objetivo || "No definido"}</p>
+                    <p className="mt-1 font-bold text-slate-900 dark:text-slate-100">{dieta.objetivo || "No definido"}</p>
                   </div>
-                  <div className="rounded-2xl bg-muted/40 p-3">
+                  <div className="rounded-2xl bg-muted/40 p-3 dark:bg-slate-900/70">
                     <div className="flex items-center gap-1.5 font-semibold text-muted-foreground">
                       <Clock className="h-3.5 w-3.5" /> Duración
                     </div>
-                    <p className="mt-1 font-bold text-slate-900">
+                    <p className="mt-1 font-bold text-slate-900 dark:text-slate-100">
                       {duration > 0 ? `${duration} días` : "Manual"}
                     </p>
                   </div>
-                  <div className="rounded-2xl bg-muted/40 p-3">
+                  <div className="rounded-2xl bg-muted/40 p-3 dark:bg-slate-900/70">
                     <div className="flex items-center gap-1.5 font-semibold text-muted-foreground">
                       <CalendarDays className="h-3.5 w-3.5" /> Inicio
                     </div>
-                    <p className="mt-1 font-bold text-slate-900">{formatFrontendDate(dieta.fecha_inicio)}</p>
+                    <p className="mt-1 font-bold text-slate-900 dark:text-slate-100">{formatFrontendDate(dieta.fecha_inicio)}</p>
                   </div>
-                  <div className="rounded-2xl bg-muted/40 p-3">
+                  <div className="rounded-2xl bg-muted/40 p-3 dark:bg-slate-900/70">
                     <div className="flex items-center gap-1.5 font-semibold text-muted-foreground">
                       <CalendarDays className="h-3.5 w-3.5" /> Fin
                     </div>
-                    <p className="mt-1 font-bold text-slate-900">{formatFrontendDate(dieta.fecha_fin)}</p>
+                    <p className="mt-1 font-bold text-slate-900 dark:text-slate-100">{formatFrontendDate(dieta.fecha_fin)}</p>
                   </div>
                 </div>
 

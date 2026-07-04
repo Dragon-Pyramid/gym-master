@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Dieta } from "@/interfaces/dieta.interface";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +11,7 @@ import {
   Clock,
   Download,
   FileText,
-  Info,
+  RotateCcw,
   ShieldAlert,
   Sparkles,
   Target,
@@ -24,6 +24,11 @@ type PlanBlock = {
   key: string;
   title: string;
   items: string[];
+};
+
+type DietaFollowupState = {
+  completedMeals: string[];
+  updatedAt?: string;
 };
 
 const MEAL_ORDER = [
@@ -66,7 +71,10 @@ function normalizeMealTitle(value: string) {
     .toLowerCase();
 
   if (normalized.includes("desayuno")) return "desayuno";
-  if (normalized.includes("media manana") || normalized.includes("colacion manana")) {
+  if (
+    normalized.includes("media manana") ||
+    normalized.includes("colacion manana")
+  ) {
     return "colacion media manana";
   }
   if (normalized.includes("almuerzo")) return "almuerzo";
@@ -78,9 +86,28 @@ function normalizeMealTitle(value: string) {
   return normalized;
 }
 
+function getLocalDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getFollowupStorageKey(dietaId: string | number) {
+  return `gym-master:dieta-followup:${dietaId}:${getLocalDateKey()}`;
+}
+
+function getBlockCompletionId(block: PlanBlock, index: number) {
+  return `${block.key || normalizeMealTitle(block.title) || "comida"}-${index}`;
+}
+
 function toReadableText(value: unknown): string {
   if (value === null || value === undefined) return "";
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+  if (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
     return String(value).trim();
   }
 
@@ -180,7 +207,9 @@ function parsePlan(observaciones?: string): { blocks: PlanBlock[]; raw?: string 
       const blocks = parsed.map((item, index) => ({
         key: `comida-${index + 1}`,
         title: item?.title || item?.titulo || item?.comida || `Comida ${index + 1}`,
-        items: buildItemsFromUnknown(item?.items || item?.alimentos || item?.descripcion || item),
+        items: buildItemsFromUnknown(
+          item?.items || item?.alimentos || item?.descripcion || item
+        ),
       }));
       return { blocks: orderPlanBlocks(blocks) };
     }
@@ -226,9 +255,71 @@ export default function DietaDisplay({
   const duracion = calculateDays(dieta.fecha_inicio, dieta.fecha_fin);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [activeMealIndex, setActiveMealIndex] = useState(0);
-  const socioNombre = dieta.socio?.nombre_completo || dieta.socio_id || "Socio no disponible";
+  const [completedMeals, setCompletedMeals] = useState<string[]>([]);
+  const [followupLoaded, setFollowupLoaded] = useState(false);
+  const socioNombre =
+    dieta.socio?.nombre_completo || dieta.socio_id || "Socio no disponible";
   const activeBlock = plan.blocks[activeMealIndex] ?? plan.blocks[0];
   const progressLabel = getPlanProgressLabel(dieta.fecha_inicio, dieta.fecha_fin);
+  const mealCompletionIds = useMemo(
+    () => plan.blocks.map((block, index) => getBlockCompletionId(block, index)),
+    [plan.blocks]
+  );
+  const activeMealCompletionId = activeBlock
+    ? getBlockCompletionId(activeBlock, activeMealIndex)
+    : null;
+  const completedMealsCount = completedMeals.filter((mealId) =>
+    mealCompletionIds.includes(mealId)
+  ).length;
+  const dailyProgressPercent = plan.blocks.length
+    ? Math.round((completedMealsCount / plan.blocks.length) * 100)
+    : 0;
+  const currentMealCompleted = activeMealCompletionId
+    ? completedMeals.includes(activeMealCompletionId)
+    : false;
+  const followupStorageKey = useMemo(
+    () => getFollowupStorageKey(dieta.id),
+    [dieta.id]
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const raw = window.localStorage.getItem(followupStorageKey);
+      const parsed = raw ? (JSON.parse(raw) as DietaFollowupState) : null;
+      const validMeals = Array.isArray(parsed?.completedMeals)
+        ? parsed.completedMeals.filter((mealId) => mealCompletionIds.includes(mealId))
+        : [];
+      setCompletedMeals(validMeals);
+    } catch {
+      setCompletedMeals([]);
+    } finally {
+      setFollowupLoaded(true);
+    }
+  }, [followupStorageKey, mealCompletionIds]);
+
+  useEffect(() => {
+    if (!followupLoaded || typeof window === "undefined") return;
+
+    const payload: DietaFollowupState = {
+      completedMeals,
+      updatedAt: new Date().toISOString(),
+    };
+    window.localStorage.setItem(followupStorageKey, JSON.stringify(payload));
+  }, [completedMeals, followupLoaded, followupStorageKey]);
+
+  const toggleMealCompletion = (mealId: string) => {
+    setCompletedMeals((current) =>
+      current.includes(mealId)
+        ? current.filter((item) => item !== mealId)
+        : [...current, mealId]
+    );
+  };
+
+  const resetDailyFollowup = () => {
+    setCompletedMeals([]);
+  };
 
   const handleDescargarPdf = async () => {
     try {
@@ -241,17 +332,17 @@ export default function DietaDisplay({
 
   return (
     <div className="space-y-4 pb-24 print:p-0 md:space-y-6 md:pb-0">
-      <div className="overflow-hidden rounded-3xl border border-sky-100 bg-gradient-to-br from-sky-50 via-white to-emerald-50 p-4 shadow-sm print:hidden md:p-5">
+      <div className="overflow-hidden rounded-3xl border border-sky-100 bg-gradient-to-br from-sky-50 via-white to-emerald-50 p-4 shadow-sm print:hidden dark:border-sky-900/50 dark:from-sky-950/40 dark:via-slate-950 dark:to-emerald-950/30 md:p-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="min-w-0 space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-sky-700 ring-1 ring-sky-100">
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-sky-700 ring-1 ring-sky-100 dark:bg-sky-900/60 dark:text-sky-100 dark:ring-sky-800">
               <Utensils className="h-3.5 w-3.5" /> Mi dieta
             </div>
             <div>
-              <h1 className="text-2xl font-extrabold leading-tight text-slate-900 md:text-3xl">
+              <h1 className="text-2xl font-extrabold leading-tight text-slate-900 dark:text-slate-50 md:text-3xl">
                 {dieta.nombre_plan || "Plan alimentario"}
               </h1>
-              <p className="mt-1 text-sm leading-relaxed text-slate-600">
+              <p className="mt-1 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
                 Seguí tu plan comida por comida. Ante dudas, restricciones o malestar, consultá al entrenador o profesional responsable.
               </p>
             </div>
@@ -267,7 +358,7 @@ export default function DietaDisplay({
               variant="outline"
               onClick={handleDescargarPdf}
               disabled={pdfLoading}
-              className="w-full border-sky-200 bg-white text-sky-700 hover:bg-sky-50 sm:w-auto"
+              className="w-full border-sky-200 bg-white text-sky-700 hover:bg-sky-50 dark:border-sky-800 dark:bg-slate-950 dark:text-sky-100 dark:hover:bg-sky-950/40 sm:w-auto"
             >
               <Download className="mr-2 h-4 w-4" />
               {pdfLoading ? "Generando..." : "Descargar PDF"}
@@ -276,42 +367,46 @@ export default function DietaDisplay({
         </div>
       </div>
 
-      <Card className="overflow-hidden border-slate-200 shadow-sm">
+      <Card className="overflow-hidden border-slate-200 shadow-sm dark:border-slate-800">
         <CardContent className="p-4 md:p-5">
           <div className="mb-4 flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
+            <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100 dark:bg-emerald-900/50 dark:text-emerald-100 dark:ring-emerald-800">
               {progressLabel}
             </span>
-            <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 ring-1 ring-sky-100">
+            <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 ring-1 ring-sky-100 dark:bg-sky-900/50 dark:text-sky-100 dark:ring-sky-800">
               {plan.blocks.length} comidas registradas
             </span>
           </div>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <div className="rounded-2xl border bg-muted/30 p-3">
+            <div className="rounded-2xl border bg-muted/30 p-3 dark:bg-slate-900/70">
               <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
                 <Target className="h-4 w-4" /> Objetivo
               </div>
-              <p className="mt-1 text-sm font-semibold text-slate-900">
+              <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
                 {dieta.objetivo || "No definido"}
               </p>
             </div>
-            <div className="rounded-2xl border bg-muted/30 p-3">
+            <div className="rounded-2xl border bg-muted/30 p-3 dark:bg-slate-900/70">
               <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
                 <Calendar className="h-4 w-4" /> Inicio
               </div>
-              <p className="mt-1 text-sm font-semibold text-slate-900">{formatDate(dieta.fecha_inicio)}</p>
+              <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                {formatDate(dieta.fecha_inicio)}
+              </p>
             </div>
-            <div className="rounded-2xl border bg-muted/30 p-3">
+            <div className="rounded-2xl border bg-muted/30 p-3 dark:bg-slate-900/70">
               <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
                 <Calendar className="h-4 w-4" /> Fin
               </div>
-              <p className="mt-1 text-sm font-semibold text-slate-900">{formatDate(dieta.fecha_fin)}</p>
+              <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                {formatDate(dieta.fecha_fin)}
+              </p>
             </div>
-            <div className="rounded-2xl border bg-muted/30 p-3">
+            <div className="rounded-2xl border bg-muted/30 p-3 dark:bg-slate-900/70">
               <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
                 <Clock className="h-4 w-4" /> Duración
               </div>
-              <p className="mt-1 text-sm font-semibold text-slate-900">
+              <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
                 {duracion > 0 ? `${duracion} días` : "No calculable"}
               </p>
             </div>
@@ -320,54 +415,146 @@ export default function DietaDisplay({
       </Card>
 
       {plan.blocks.length > 0 ? (
-        <Card className="overflow-hidden border-sky-100 shadow-sm">
+        <Card className="overflow-hidden border-emerald-100 bg-gradient-to-br from-emerald-50 to-white shadow-sm dark:border-emerald-900/50 dark:from-emerald-950/30 dark:to-slate-950">
+          <CardContent className="space-y-4 p-4 md:p-5">
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-100 dark:bg-emerald-900/50 dark:text-emerald-100 dark:ring-emerald-800">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Seguimiento de hoy
+                </div>
+                <h2 className="mt-2 text-lg font-extrabold text-slate-900 dark:text-slate-50">
+                  {completedMealsCount} de {plan.blocks.length} comidas revisadas
+                </h2>
+                <p className="mt-1 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                  Marcá las comidas a medida que cumplís el plan. Este seguimiento queda guardado en este dispositivo para el día actual.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-emerald-100 bg-white px-4 py-3 text-center dark:border-emerald-900/60 dark:bg-slate-950">
+                <p className="text-2xl font-black text-emerald-700 dark:text-emerald-200">
+                  {dailyProgressPercent}%
+                </p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-800/70 dark:text-emerald-200/70">
+                  avance diario
+                </p>
+              </div>
+            </div>
+
+            <div className="h-3 overflow-hidden rounded-full bg-emerald-100 dark:bg-emerald-950">
+              <div
+                className="h-full rounded-full bg-emerald-600 transition-all dark:bg-emerald-300"
+                style={{ width: `${dailyProgressPercent}%` }}
+              />
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              {activeMealCompletionId ? (
+                <Button
+                  type="button"
+                  onClick={() => toggleMealCompletion(activeMealCompletionId)}
+                  className="w-full rounded-2xl"
+                  variant={currentMealCompleted ? "outline" : "default"}
+                >
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  {currentMealCompleted
+                    ? "Reabrir comida actual"
+                    : "Marcar comida actual"}
+                </Button>
+              ) : null}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={resetDailyFollowup}
+                className="w-full rounded-2xl"
+                disabled={completedMealsCount === 0}
+              >
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Reiniciar seguimiento
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {plan.blocks.length > 0 ? (
+        <Card className="overflow-hidden border-sky-100 shadow-sm dark:border-sky-900/50">
           <CardHeader className="space-y-3 p-4 md:p-5">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Sparkles className="h-5 w-5 text-sky-600" />
               Comidas del día
             </CardTitle>
             <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:px-0">
-              {plan.blocks.map((block, index) => (
-                <button
-                  key={`${block.key}-${index}`}
-                  type="button"
-                  onClick={() => setActiveMealIndex(index)}
-                  className={`shrink-0 rounded-full px-3 py-2 text-xs font-semibold transition ${
-                    index === activeMealIndex
-                      ? "bg-sky-600 text-white shadow-sm"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
-                >
-                  {block.title}
-                </button>
-              ))}
+              {plan.blocks.map((block, index) => {
+                const mealId = getBlockCompletionId(block, index);
+                const isCompleted = completedMeals.includes(mealId);
+
+                return (
+                  <button
+                    key={`${block.key}-${index}`}
+                    type="button"
+                    onClick={() => setActiveMealIndex(index)}
+                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition ${
+                      index === activeMealIndex
+                        ? "bg-sky-600 text-white shadow-sm"
+                        : isCompleted
+                          ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-100"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                    }`}
+                  >
+                    {isCompleted ? <CheckCircle2 className="h-3.5 w-3.5" /> : null}
+                    {block.title}
+                  </button>
+                );
+              })}
             </div>
           </CardHeader>
           {activeBlock ? (
             <CardContent className="p-4 pt-0 md:p-5 md:pt-0">
-              <div className="rounded-3xl border border-sky-100 bg-sky-50/70 p-4">
+              <div className="rounded-3xl border border-sky-100 bg-sky-50/70 p-4 dark:border-sky-900/50 dark:bg-sky-950/20">
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="text-base font-bold text-slate-900">{activeBlock.title}</h3>
-                    <p className="mt-1 text-xs text-slate-600">
-                      {MEAL_HINTS[activeBlock.key] || "Revisá esta comida y respetá las indicaciones cargadas."}
+                    <h3 className="text-base font-bold text-slate-900 dark:text-slate-50">
+                      {activeBlock.title}
+                    </h3>
+                    <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                      {MEAL_HINTS[activeBlock.key] ||
+                        "Revisá esta comida y respetá las indicaciones cargadas."}
                     </p>
                   </div>
-                  <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-sky-700 ring-1 ring-sky-100">
-                    {activeBlock.items.length} ítems
-                  </span>
+                  <div className="flex shrink-0 flex-col items-end gap-2">
+                    <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-sky-700 ring-1 ring-sky-100 dark:bg-slate-950 dark:text-sky-100 dark:ring-sky-900">
+                      {activeBlock.items.length} ítems
+                    </span>
+                    {currentMealCompleted ? (
+                      <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-bold text-emerald-800 ring-1 ring-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-100 dark:ring-emerald-800">
+                        Completada
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
                 <ul className="space-y-2">
                   {activeBlock.items.map((item, itemIndex) => (
                     <li
                       key={`${activeBlock.key}-${itemIndex}`}
-                      className="flex gap-2 rounded-2xl bg-white/85 p-3 text-sm leading-relaxed text-slate-700 ring-1 ring-slate-100"
+                      className="flex gap-2 rounded-2xl bg-white/85 p-3 text-sm leading-relaxed text-slate-700 ring-1 ring-slate-100 dark:bg-slate-950/90 dark:text-slate-200 dark:ring-slate-800"
                     >
                       <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
                       <span>{item}</span>
                     </li>
                   ))}
                 </ul>
+                {activeMealCompletionId ? (
+                  <Button
+                    type="button"
+                    variant={currentMealCompleted ? "outline" : "default"}
+                    onClick={() => toggleMealCompletion(activeMealCompletionId)}
+                    className="mt-4 w-full rounded-2xl"
+                  >
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    {currentMealCompleted
+                      ? "Reabrir esta comida"
+                      : "Marcar esta comida como cumplida"}
+                  </Button>
+                ) : null}
               </div>
             </CardContent>
           ) : null}
@@ -384,38 +571,53 @@ export default function DietaDisplay({
         <CardContent className="space-y-4 p-4 pt-0 md:p-5 md:pt-0">
           {plan.blocks.length > 0 ? (
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              {plan.blocks.map((block, index) => (
-                <div key={`${block.title}-${index}`} className="rounded-2xl border bg-white p-4 shadow-sm">
-                  <h3 className="mb-2 flex items-center gap-2 text-sm font-bold text-primary">
-                    <Utensils className="h-4 w-4" />
-                    {block.title}
-                  </h3>
-                  <ul className="space-y-2 text-sm leading-relaxed text-muted-foreground">
-                    {block.items.map((item, itemIndex) => (
-                      <li key={itemIndex} className="flex gap-2">
-                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
+              {plan.blocks.map((block, index) => {
+                const mealId = getBlockCompletionId(block, index);
+                const isCompleted = completedMeals.includes(mealId);
+
+                return (
+                  <div
+                    key={`${block.title}-${index}`}
+                    className="rounded-2xl border bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
+                  >
+                    <div className="mb-2 flex items-start justify-between gap-2">
+                      <h3 className="flex items-center gap-2 text-sm font-bold text-primary">
+                        <Utensils className="h-4 w-4" />
+                        {block.title}
+                      </h3>
+                      {isCompleted ? (
+                        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-100 dark:bg-emerald-900/50 dark:text-emerald-100 dark:ring-emerald-800">
+                          cumplida
+                        </span>
+                      ) : null}
+                    </div>
+                    <ul className="space-y-2 text-sm leading-relaxed text-muted-foreground">
+                      {block.items.map((item, itemIndex) => (
+                        <li key={itemIndex} className="flex gap-2">
+                          <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
             </div>
           ) : plan.raw ? (
-            <div className="rounded-2xl border bg-muted/30 p-4">
+            <div className="rounded-2xl border bg-muted/30 p-4 dark:border-slate-800 dark:bg-slate-900/70">
               <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
                 {plan.raw}
               </p>
             </div>
           ) : (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
               Esta dieta no tiene detalle alimentario registrado todavía.
             </div>
           )}
         </CardContent>
       </Card>
 
-      <div className="rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-amber-950 print:hidden">
+      <div className="rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-amber-950 print:hidden dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
         <div className="mb-1 flex items-center gap-2 font-bold">
           <ShieldAlert className="h-4 w-4" />
           Recordatorio importante
