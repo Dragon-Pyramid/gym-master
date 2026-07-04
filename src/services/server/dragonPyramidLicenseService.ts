@@ -2,6 +2,7 @@ import 'server-only';
 
 import type { JwtUser } from '@/interfaces/jwtUser.interface';
 import type {
+  DragonPyramidClientPaymentStatus,
   DragonPyramidLicenseControl,
   DragonPyramidLicenseStatus,
   DragonPyramidLicenseUpdateInput,
@@ -16,6 +17,15 @@ const allowedStatuses: DragonPyramidLicenseStatus[] = [
   'grace',
   'suspended',
   'cancelled',
+];
+
+const allowedPaymentStatuses: DragonPyramidClientPaymentStatus[] = [
+  'paid',
+  'pending',
+  'overdue',
+  'grace',
+  'suspended_candidate',
+  'unknown',
 ];
 
 export function assertMasterAdmin(user?: JwtUser | null) {
@@ -50,8 +60,28 @@ function normalizeStatus(value: unknown): DragonPyramidLicenseStatus | undefined
   return status;
 }
 
+function normalizePaymentStatus(value: unknown): DragonPyramidClientPaymentStatus | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  const status = String(value).trim().toLowerCase() as DragonPyramidClientPaymentStatus;
+  if (!allowedPaymentStatuses.includes(status)) {
+    throw new Error('El estado de pago del cliente no es válido');
+  }
+  return status;
+}
+
+function normalizeAmount(value: unknown): number | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null || value === '') return null;
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount < 0) {
+    throw new Error('El monto esperado no es válido');
+  }
+  return amount;
+}
+
 function buildUpdatePayload(input: DragonPyramidLicenseUpdateInput) {
   const status = normalizeStatus(input.license_status);
+  const paymentStatus = normalizePaymentStatus(input.payment_status);
   const payload: Record<string, unknown> = {
     last_checked_at: new Date().toISOString(),
   };
@@ -59,6 +89,13 @@ function buildUpdatePayload(input: DragonPyramidLicenseUpdateInput) {
   if (input.client_code !== undefined) payload.client_code = emptyToNull(input.client_code) ?? 'gym_master_client';
   if (input.client_name !== undefined) payload.client_name = emptyToNull(input.client_name) ?? 'Gym Master Cliente';
   if (status !== undefined) payload.license_status = status;
+  if (paymentStatus !== undefined) payload.payment_status = paymentStatus;
+  if (input.last_payment_at !== undefined) payload.last_payment_at = normalizeTimestamp(input.last_payment_at);
+  if (input.next_due_at !== undefined) payload.next_due_at = normalizeTimestamp(input.next_due_at);
+  if (input.expected_amount !== undefined) payload.expected_amount = normalizeAmount(input.expected_amount);
+  if (input.currency !== undefined) payload.currency = (emptyToNull(input.currency) ?? 'ARS').toUpperCase().slice(0, 8);
+  if (input.billing_plan !== undefined) payload.billing_plan = emptyToNull(input.billing_plan);
+  if (input.payment_notes !== undefined) payload.payment_notes = emptyToNull(input.payment_notes);
   if (input.activated_at !== undefined) payload.activated_at = normalizeTimestamp(input.activated_at);
   if (input.expires_at !== undefined) payload.expires_at = normalizeTimestamp(input.expires_at);
   if (input.grace_until !== undefined) payload.grace_until = normalizeTimestamp(input.grace_until);
