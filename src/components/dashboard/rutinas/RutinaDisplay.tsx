@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuthStore } from "@/stores/authStore";
 import { getHistorialRutinas } from "@/services/apiClient";
 import { Rutina } from "@/interfaces/rutina.interface";
@@ -9,13 +9,15 @@ import {
   ArrowLeft,
   CalendarDays,
   CheckCircle2,
+  Circle,
   Download,
   Dumbbell,
   Eye,
   EyeOff,
   Info,
   PlayCircle,
-  Timer,
+  RotateCcw,
+  Trophy,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -336,6 +338,38 @@ const obtenerTotalEjercicios = (ejerciciosPorDia: EjerciciosPorDia): number =>
     0
   );
 
+type EjerciciosCompletadosState = Record<string, boolean>;
+
+const construirEjercicioKey = (idRutina: number | string, dia: string, index: number): string =>
+  `${idRutina}:${normalizarDiaKey(dia)}:${index}`;
+
+const contarEjerciciosCompletados = (
+  ejerciciosPorDia: EjerciciosPorDia,
+  completados: EjerciciosCompletadosState,
+  idRutina: number | string
+): number =>
+  Object.entries(ejerciciosPorDia).reduce((total, [dia, ejercicios]) => {
+    if (!Array.isArray(ejercicios)) return total;
+
+    return (
+      total +
+      ejercicios.filter((_, index) => completados[construirEjercicioKey(idRutina, dia, index)]).length
+    );
+  }, 0);
+
+const contarCompletadosPorDia = (
+  ejercicios: any[] | undefined,
+  completados: EjerciciosCompletadosState,
+  idRutina: number | string,
+  dia: string
+): number =>
+  Array.isArray(ejercicios)
+    ? ejercicios.filter((_, index) => completados[construirEjercicioKey(idRutina, dia, index)]).length
+    : 0;
+
+const construirProgressStorageKey = (userId: string, rutinaId: number | string): string =>
+  `gym-master:rutina-progress:${userId}:${rutinaId}`;
+
 const obtenerDiaSugerido = (ejerciciosPorDia: EjerciciosPorDia): string | null => {
   const dias = Object.keys(ejerciciosPorDia);
   if (dias.length === 0) return null;
@@ -404,6 +438,13 @@ export default function RutinaEjercicios({
     badge: string;
     descripcion: string;
   } | null>(null);
+  const [ejerciciosCompletados, setEjerciciosCompletados] =
+    useState<EjerciciosCompletadosState>({});
+
+  const puedeMarcarEjercicios = !usuarioEsAdmin;
+  const progressUserId = String(
+    user?.id ?? user?.id_socio ?? user?.email ?? 'anonymous'
+  );
 
   const fetchRutinas = useCallback(async () => {
     if (!user || !token) return;
@@ -441,6 +482,27 @@ export default function RutinaEjercicios({
     setViendoRutina(parsedId);
   }, [singleRutinaId]);
 
+  const progressStorageKey = useMemo(() => {
+    if (!viendoRutina || !puedeMarcarEjercicios) return null;
+
+    return construirProgressStorageKey(progressUserId, viendoRutina);
+  }, [progressUserId, puedeMarcarEjercicios, viendoRutina]);
+
+  useEffect(() => {
+    if (!progressStorageKey || typeof window === 'undefined') {
+      setEjerciciosCompletados({});
+      return;
+    }
+
+    try {
+      const storedProgress = window.localStorage.getItem(progressStorageKey);
+      setEjerciciosCompletados(storedProgress ? JSON.parse(storedProgress) : {});
+    } catch (error) {
+      console.warn('No se pudo recuperar progreso local de rutina:', error);
+      setEjerciciosCompletados({});
+    }
+  }, [progressStorageKey]);
+
   const toggleDia = (dia: string) => {
     setDiasExpandidos((prev) => ({
       ...prev,
@@ -453,6 +515,42 @@ export default function RutinaEjercicios({
       ...prev,
       [ejercicioKey]: !prev[ejercicioKey],
     }));
+  };
+
+  const persistirProgreso = (nextProgress: EjerciciosCompletadosState) => {
+    if (!progressStorageKey || typeof window === 'undefined') return;
+
+    window.localStorage.setItem(progressStorageKey, JSON.stringify(nextProgress));
+  };
+
+  const toggleEjercicioCompletado = (ejercicioKey: string) => {
+    if (!puedeMarcarEjercicios) return;
+
+    setEjerciciosCompletados((prev) => {
+      const nextProgress = { ...prev, [ejercicioKey]: !prev[ejercicioKey] };
+
+      if (!nextProgress[ejercicioKey]) {
+        delete nextProgress[ejercicioKey];
+      }
+
+      persistirProgreso(nextProgress);
+      return nextProgress;
+    });
+  };
+
+  const resetearProgresoRutina = () => {
+    if (!puedeMarcarEjercicios) return;
+
+    const confirmar = window.confirm('¿Querés reiniciar el progreso marcado para esta rutina?');
+    if (!confirmar) return;
+
+    setEjerciciosCompletados({});
+
+    if (progressStorageKey && typeof window !== 'undefined') {
+      window.localStorage.removeItem(progressStorageKey);
+    }
+
+    toast.success('Progreso de rutina reiniciado');
   };
 
   const verRutina = (id: number) => {
@@ -557,6 +655,13 @@ export default function RutinaEjercicios({
     const ejerciciosPorDia = normalizarRutinaPorDia(rutina);
     const diasDisponibles = Object.keys(ejerciciosPorDia);
     const totalEjercicios = obtenerTotalEjercicios(ejerciciosPorDia);
+    const ejerciciosCompletadosCount = contarEjerciciosCompletados(
+      ejerciciosPorDia,
+      ejerciciosCompletados,
+      rutina.id_rutina
+    );
+    const porcentajeProgreso =
+      totalEjercicios > 0 ? Math.round((ejerciciosCompletadosCount / totalEjercicios) * 100) : 0;
     const diaSugerido = obtenerDiaSugerido(ejerciciosPorDia);
 
     return (
@@ -607,6 +712,17 @@ export default function RutinaEjercicios({
                 {exportingPdf ? "Generando..." : "Descargar PDF"}
               </button>
 
+              {puedeMarcarEjercicios && totalEjercicios > 0 && (
+                <button
+                  type="button"
+                  onClick={resetearProgresoRutina}
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/30 bg-transparent px-4 py-2 text-xs font-medium tracking-wide text-white transition-colors cursor-pointer sm:px-6 sm:py-3 sm:text-sm hover:bg-white/10"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Reiniciar progreso
+                </button>
+              )}
+
               <button
                 onClick={volverALista}
                 className="inline-flex min-h-11 items-center justify-center self-start gap-2 rounded-full border border-white/30 bg-transparent px-4 py-2 text-xs font-medium tracking-wide text-white transition-colors cursor-pointer sm:px-6 sm:py-3 sm:text-sm hover:bg-white/10 sm:self-auto"
@@ -644,12 +760,32 @@ export default function RutinaEjercicios({
               </div>
               <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3 sm:p-4">
                 <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
-                  <Timer className="h-4 w-4" />
-                  Modo
+                  <Trophy className="h-4 w-4" />
+                  Progreso
                 </div>
-                <p className="text-lg font-semibold text-gray-950">Mobile</p>
+                <p className="text-lg font-semibold text-gray-950">
+                  {puedeMarcarEjercicios ? `${porcentajeProgreso}%` : 'Solo socio'}
+                </p>
               </div>
             </div>
+
+            {puedeMarcarEjercicios && totalEjercicios > 0 && (
+              <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+                <div className="mb-2 flex items-center justify-between gap-3 text-sm font-semibold text-emerald-950">
+                  <span>Avance personal</span>
+                  <span>{ejerciciosCompletadosCount}/{totalEjercicios} ejercicios</span>
+                </div>
+                <div className="h-3 overflow-hidden rounded-full bg-white">
+                  <div
+                    className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+                    style={{ width: `${porcentajeProgreso}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-xs leading-5 text-emerald-800">
+                  Marcá cada ejercicio al terminarlo. El avance se guarda localmente en tu dispositivo para que puedas retomar el entrenamiento.
+                </p>
+              </div>
+            )}
 
             {diasDisponibles.length > 0 && (
               <div className="mt-4 flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible">
@@ -677,7 +813,9 @@ export default function RutinaEjercicios({
                           : "bg-gray-100 text-gray-600"
                       }`}
                     >
-                      {contarEjercicios(ejerciciosPorDia[dia])}
+                      {puedeMarcarEjercicios
+                        ? `${contarCompletadosPorDia(ejerciciosPorDia[dia], ejerciciosCompletados, rutina.id_rutina, dia)}/${contarEjercicios(ejerciciosPorDia[dia])}`
+                        : contarEjercicios(ejerciciosPorDia[dia])}
                     </span>
                     {esDiaActual(dia) && (
                       <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] uppercase tracking-wide text-emerald-700">
@@ -717,7 +855,9 @@ export default function RutinaEjercicios({
                         )}
                       </span>
                       <span className="text-xs font-normal text-gray-500">
-                        {contarEjercicios(ejerciciosPorDia[dia])} ejercicios programados
+                        {puedeMarcarEjercicios
+                          ? `${contarCompletadosPorDia(ejerciciosPorDia[dia], ejerciciosCompletados, rutina.id_rutina, dia)} de ${contarEjercicios(ejerciciosPorDia[dia])} ejercicios completados`
+                          : `${contarEjercicios(ejerciciosPorDia[dia])} ejercicios programados`}
                       </span>
                     </span>
                     <div
@@ -751,22 +891,44 @@ export default function RutinaEjercicios({
                             const descanso = obtenerDescanso(ejercicio);
                             const imagen = obtenerImagen(ejercicio);
                             const videoYoutube = obtenerVideoYoutube(ejercicio);
+                            const completionKey = construirEjercicioKey(rutina.id_rutina, dia, idx);
+                            const ejercicioCompletado = Boolean(ejerciciosCompletados[completionKey]);
 
                             return (
                               <div
                                 key={idx}
-                                className="mt-3 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm sm:mt-5"
+                                className={`mt-3 overflow-hidden rounded-2xl border bg-white shadow-sm transition-colors sm:mt-5 ${
+                                  ejercicioCompletado
+                                    ? 'border-emerald-300 ring-1 ring-emerald-100'
+                                    : 'border-gray-200'
+                                }`}
                               >
                                 <div className="flex flex-col gap-4 p-4 sm:p-6 lg:flex-row lg:items-start lg:gap-8">
                                   <div className="flex-1 min-w-0">
                                     <div className="mb-3 flex items-start gap-3">
-                                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-900 text-sm font-semibold text-white">
-                                        {idx + 1}
+                                      <div
+                                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
+                                          ejercicioCompletado
+                                            ? 'bg-emerald-600 text-white'
+                                            : 'bg-gray-900 text-white'
+                                        }`}
+                                      >
+                                        {ejercicioCompletado ? <CheckCircle2 className="h-5 w-5" /> : idx + 1}
                                       </div>
                                       <div className="min-w-0 flex-1">
-                                        <h3 className="m-0 text-base font-semibold leading-snug tracking-tight text-gray-950 break-words sm:text-xl lg:text-2xl">
-                                          {nombreEjercicio}
-                                        </h3>
+                                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                          <h3 className={`m-0 text-base font-semibold leading-snug tracking-tight break-words sm:text-xl lg:text-2xl ${
+                                            ejercicioCompletado ? 'text-emerald-950' : 'text-gray-950'
+                                          }`}>
+                                            {nombreEjercicio}
+                                          </h3>
+                                          {puedeMarcarEjercicios && ejercicioCompletado && (
+                                            <span className="inline-flex w-fit items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                                              <CheckCircle2 className="h-3.5 w-3.5" />
+                                              Completado
+                                            </span>
+                                          )}
+                                        </div>
                                         {obtenerGrupoMuscular(ejercicio) && (
                                           <p className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-gray-500">
                                             {obtenerGrupoMuscular(ejercicio)}
@@ -823,6 +985,24 @@ export default function RutinaEjercicios({
                                     )}
 
                                     <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                                      {puedeMarcarEjercicios && (
+                                        <button
+                                          type="button"
+                                          onClick={() => toggleEjercicioCompletado(completionKey)}
+                                          className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-full border px-4 py-2 text-xs font-semibold tracking-wide transition-colors ${
+                                            ejercicioCompletado
+                                              ? 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                                              : 'border-gray-300 text-gray-900 hover:bg-gray-100'
+                                          }`}
+                                        >
+                                          {ejercicioCompletado ? (
+                                            <CheckCircle2 className="h-4 w-4" />
+                                          ) : (
+                                            <Circle className="h-4 w-4" />
+                                          )}
+                                          {ejercicioCompletado ? 'Reabrir ejercicio' : 'Marcar completado'}
+                                        </button>
+                                      )}
                                       {videoYoutube && (
                                         <a
                                           href={videoYoutube}
