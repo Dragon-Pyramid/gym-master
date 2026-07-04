@@ -81,20 +81,20 @@ export default function DietasPage() {
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AppSidebar />
-        <SidebarInset>
+        <SidebarInset className="!grid !h-[100dvh] !min-h-[100dvh] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden">
           <AppHeader title="Dietas" />
-          <main className="flex-1 space-y-4 p-3 pb-24 md:space-y-6 md:p-6 md:pb-6">
-            <section className="overflow-hidden rounded-3xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-sky-50 p-4 shadow-sm md:p-6">
+          <section className="min-h-0 space-y-4 overflow-y-auto p-3 pb-24 md:space-y-6 md:p-6 md:pb-6">
+            <section className="overflow-hidden rounded-3xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-sky-50 p-4 shadow-sm dark:border-emerald-900/50 dark:from-emerald-950/40 dark:via-slate-950 dark:to-sky-950/30 md:p-6">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div className="min-w-0">
-                  <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-100">
+                  <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-100 dark:bg-emerald-900/50 dark:text-emerald-100 dark:ring-emerald-800">
                     <Utensils className="h-3.5 w-3.5" />
                     {usuarioEsAdmin ? "Gestión de dietas" : "Mi alimentación"}
                   </div>
-                  <h1 className="text-2xl font-extrabold leading-tight text-slate-900 md:text-3xl">
+                  <h1 className="text-2xl font-extrabold leading-tight text-slate-900 dark:text-slate-50 md:text-3xl">
                     {usuarioEsAdmin ? "Dietas de socios" : "Mis dietas"}
                   </h1>
-                  <p className="mt-1 max-w-2xl text-sm leading-relaxed text-slate-600">
+                  <p className="mt-1 max-w-2xl text-sm leading-relaxed text-slate-600 dark:text-slate-300">
                     {usuarioEsAdmin
                       ? "Consultá las dietas asignadas y generá nuevos planes alimentarios para los socios."
                       : "Tené tu plan alimentario a mano desde el celular, comida por comida, con fechas claras y descarga PDF."}
@@ -194,7 +194,7 @@ export default function DietasPage() {
                 )}
               </CardContent>
             </Card>
-          </main>
+          </section>
           <AppFooter />
         </SidebarInset>
       </div>

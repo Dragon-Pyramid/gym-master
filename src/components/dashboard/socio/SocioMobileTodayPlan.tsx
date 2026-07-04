@@ -194,6 +194,44 @@ function formatDateSafe(value?: string | null) {
   }
 }
 
+
+function countDietMeals(observaciones?: string | null) {
+  if (!observaciones?.trim()) return 0;
+
+  try {
+    const parsed = JSON.parse(observaciones);
+    if (Array.isArray(parsed)) return parsed.length;
+    if (typeof parsed === 'object' && parsed !== null) return Object.keys(parsed).length;
+  } catch {
+    return observaciones.trim() ? 1 : 0;
+  }
+
+  return 0;
+}
+
+function getTodayStorageKey(dietaId: string | number) {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `gym-master:dieta-followup:${dietaId}:${year}-${month}-${day}`;
+}
+
+function getDietFollowupLabel(dieta?: Dieta | null) {
+  if (!dieta || typeof window === 'undefined') return null;
+  const total = countDietMeals(dieta.observaciones);
+  if (!total) return null;
+
+  try {
+    const raw = window.localStorage.getItem(getTodayStorageKey(dieta.id));
+    const completedMeals = raw ? JSON.parse(raw)?.completedMeals : [];
+    const completed = Array.isArray(completedMeals) ? completedMeals.length : 0;
+    return `${Math.min(completed, total)}/${total} comidas hoy`;
+  } catch {
+    return `0/${total} comidas hoy`;
+  }
+}
+
 function buildTodayDietSummary(dietas: Dieta[]): TodayDietSummary | null {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -273,6 +311,10 @@ export default function SocioMobileTodayPlan() {
 
   const routineSummary = useMemo(() => buildTodayRoutineSummary(rutinas), [rutinas]);
   const dietSummary = useMemo(() => buildTodayDietSummary(dietas), [dietas]);
+  const dietFollowupLabel = useMemo(
+    () => getDietFollowupLabel(dietSummary?.dieta),
+    [dietSummary]
+  );
 
   return (
     <Card className='overflow-hidden border-slate-200 bg-gradient-to-br from-white to-slate-50 p-0 shadow-sm dark:from-slate-950 dark:to-slate-900'>
@@ -347,7 +389,7 @@ export default function SocioMobileTodayPlan() {
                   </span>
                   <span className='mt-0.5 block text-xs leading-5 text-lime-800/80 dark:text-lime-200/80'>
                     {dietSummary
-                      ? `${dietSummary.isActiveToday ? 'Activa' : 'Última registrada'} · ${dietSummary.objective} · ${dietSummary.periodLabel}`
+                      ? `${dietSummary.isActiveToday ? 'Activa' : 'Última registrada'} · ${dietSummary.objective} · ${dietSummary.periodLabel}${dietFollowupLabel ? ` · ${dietFollowupLabel}` : ''}`
                       : 'Consultá o generá un plan alimentario'}
                   </span>
                 </span>
