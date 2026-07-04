@@ -209,11 +209,11 @@ export default function RutinasPage() {
 
   return (
     <SidebarProvider>
-      <div className="flex w-full min-h-screen">
+      <div className="flex w-full min-h-[100dvh]">
         <AppSidebar />
-        <SidebarInset>
+        <SidebarInset className="!grid !min-h-[100dvh] grid-rows-[auto_minmax(0,1fr)_auto]">
           <AppHeader title="Rutinas" />
-          <main className="flex-1">
+          <section className="min-h-0 overflow-y-auto">
             <Card className="w-full">
               <CardHeader className="flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap">
                 <h2 className="text-xl font-bold">
@@ -341,7 +341,7 @@ export default function RutinasPage() {
                 />
               </CardContent>
             </Card>
-          </main>
+          </section>
           <AppFooter />
         </SidebarInset>
       </div>
