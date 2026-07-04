@@ -1203,3 +1203,14 @@ export async function getDragonPyramidLicenseWarning() {
   const data = await res.json();
   return { ok: res.ok, ...data };
 }
+
+export async function getDragonPyramidLicenseSuspensionStatus() {
+  const token = getToken();
+  const res = await fetch('/api/dragon-pyramid/license/suspension-status', {
+    method: 'GET',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    cache: 'no-store',
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data };
+}
