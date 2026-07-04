@@ -37,6 +37,7 @@ import {
   getEstadoActualEquipamiento,
   getSegmentacionPagos,
   getHistogramaPagos,
+  getDragonPyramidLicenseWarning,
 } from '@/services/apiClient';
 
 import { Equipamento } from '@/interfaces/equipamiento.interface';
@@ -50,6 +51,7 @@ import { getResolvedGimnasioBranding } from '@/utils/gimnasioBrandingClient';
 
 // ⬇️ IMPORTA EL TIPO QUE EMITE LA TABLA
 import type { AsistenciaReciente as AsistenciaRecienteApi } from '@/services/qrService';
+import type { DragonPyramidGraceWarning } from '@/utils/dragonPyramidLicenseWarning';
 
 type AdminAccessEventPayload = {
   event_id?: string;
@@ -160,6 +162,9 @@ export default function DashboardPage() {
     completa: boolean;
     faltantes: string[];
   } | null>(null);
+  const [dragonPyramidLicenseWarning, setDragonPyramidLicenseWarning] =
+    useState<DragonPyramidGraceWarning | null>(null);
+  const [loadingDragonPyramidWarning, setLoadingDragonPyramidWarning] = useState(false);
 
   // Overlay de bienvenida
   const [showWelcome, setShowWelcome] = useState(false);
@@ -341,6 +346,40 @@ export default function DashboardPage() {
 
     return () => {
       cancelled = true;
+    };
+  }, [user?.rol]);
+
+
+  useEffect(() => {
+    if (user?.rol !== 'admin') {
+      setDragonPyramidLicenseWarning(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function fetchDragonPyramidLicenseWarning() {
+      try {
+        setLoadingDragonPyramidWarning(true);
+        const response = await getDragonPyramidLicenseWarning();
+        if (!cancelled) {
+          setDragonPyramidLicenseWarning(response.ok ? response.data ?? null : null);
+        }
+      } catch (error) {
+        console.error('Error cargando aviso de licencia Dragon Pyramid:', error);
+        if (!cancelled) setDragonPyramidLicenseWarning(null);
+      } finally {
+        if (!cancelled) setLoadingDragonPyramidWarning(false);
+      }
+    }
+
+    fetchDragonPyramidLicenseWarning();
+
+    const interval = window.setInterval(fetchDragonPyramidLicenseWarning, 300000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
     };
   }, [user?.rol]);
 
@@ -542,6 +581,45 @@ export default function DashboardPage() {
 
             {userType === 'admin' && (
               <>
+                {dragonPyramidLicenseWarning?.visible && (
+                  <Card
+                    className={`border shadow-sm ${
+                      dragonPyramidLicenseWarning.severity === 'critical'
+                        ? 'border-red-300 bg-red-50 text-red-950 dark:border-red-900/70 dark:bg-red-950/30 dark:text-red-50'
+                        : 'border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-50'
+                    }`}
+                  >
+                    <CardContent className='flex flex-col gap-4 p-4 sm:p-5 md:flex-row md:items-start md:justify-between'>
+                      <div className='flex min-w-0 gap-3'>
+                        <AlertTriangle className='mt-1 h-5 w-5 shrink-0' />
+                        <div className='min-w-0'>
+                          <p className='text-xs font-semibold uppercase tracking-[0.22em] opacity-80'>
+                            Aviso comercial Dragon Pyramid
+                          </p>
+                          <h2 className='mt-1 text-base font-black sm:text-lg'>
+                            {dragonPyramidLicenseWarning.title}
+                          </h2>
+                          <p className='mt-1 text-sm leading-6'>
+                            {dragonPyramidLicenseWarning.message}
+                          </p>
+                          <ul className='mt-2 list-disc space-y-1 pl-4 text-xs leading-5 sm:text-sm'>
+                            {dragonPyramidLicenseWarning.details.slice(0, 4).map((detail) => (
+                              <li key={detail}>{detail}</li>
+                            ))}
+                          </ul>
+                          <p className='mt-2 text-xs opacity-80'>
+                            Este aviso no bloquea el sistema. La suspensión real queda reservada para la feature posterior de bloqueo por falta de pago.
+                          </p>
+                        </div>
+                      </div>
+                      <div className='rounded-xl border border-current/20 px-3 py-2 text-xs font-semibold md:max-w-[240px]'>
+                        Cliente: {dragonPyramidLicenseWarning.clientName ?? 'Gym Master Cliente'}
+                        {loadingDragonPyramidWarning ? ' · actualizando...' : ''}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {gimnasioParametrizacionStatus && !gimnasioParametrizacionStatus.completa && (
                   <Card className='border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-50'>
                     <CardContent className='flex flex-col gap-4 p-4 sm:p-5 md:flex-row md:items-center md:justify-between'>
