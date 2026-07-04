@@ -24,7 +24,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     tag: "Dragon Pyramid",
     summary: "Estado local de licencia SaaS",
     description:
-      "Permite al rol masteradmin consultar y actualizar el estado local de licencia y el estado de pago SaaS de esta instancia de Gym Master. Es una foundation comercial para conexión futura con Dragon Pyramid Platform y no bloquea todavía el servicio del cliente.",
+      "Permite al rol masteradmin consultar y actualizar el estado local de licencia y el estado de pago SaaS de esta instancia de Gym Master. Si la licencia queda suspendida o cancelada, el shell operativo bloquea admin, usuarios y socios, manteniendo abierto Master Admin para regularización.",
     auth: true,
     admin: true,
     notImplemented: false,
@@ -47,6 +47,21 @@ const endpointDefinitions: EndpointDefinition[] = [
     statuses: [200, 401, 403, 500],
     queryParams: [],
     source: "src/app/api/dragon-pyramid/license/warning/route.ts",
+    internal: true,
+  },
+  {
+    path: "/api/dragon-pyramid/license/suspension-status",
+    methods: ["GET"],
+    tag: "Dragon Pyramid",
+    summary: "Estado de suspensión operativa Dragon Pyramid",
+    description:
+      "Devuelve un estado seguro de suspensión para el shell del dashboard. Permite bloquear el acceso operativo cuando la licencia local está suspendida o cancelada, sin bloquear el acceso Master Admin ni la sincronización interna de Dragon Pyramid.",
+    auth: true,
+    admin: false,
+    notImplemented: false,
+    statuses: [200, 401, 500],
+    queryParams: [],
+    source: "src/app/api/dragon-pyramid/license/suspension-status/route.ts",
     internal: true,
   },
   {

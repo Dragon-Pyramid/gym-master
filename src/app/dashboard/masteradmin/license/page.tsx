@@ -38,8 +38,8 @@ const statusOptions: Array<{ value: DragonPyramidLicenseStatus; label: string; h
   { value: 'active', label: 'Activa', helper: 'Cliente habilitado normalmente.' },
   { value: 'trial', label: 'Trial', helper: 'Cliente en período de prueba.' },
   { value: 'grace', label: 'Gracia', helper: 'Vencido, pero con tolerancia operativa.' },
-  { value: 'suspended', label: 'Suspendida', helper: 'Base para bloqueo futuro por falta de pago.' },
-  { value: 'cancelled', label: 'Cancelada', helper: 'Cliente dado de baja.' },
+  { value: 'suspended', label: 'Suspendida', helper: 'Bloquea el acceso operativo de admin, usuarios y socios.' },
+  { value: 'cancelled', label: 'Cancelada', helper: 'Cliente dado de baja; bloquea el acceso operativo.' },
 ];
 
 const paymentStatusOptions: Array<{ value: DragonPyramidClientPaymentStatus; label: string; helper: string }> = [
@@ -290,7 +290,7 @@ export default function MasterAdminLicensePage() {
                   </div>
                   <h2 className='mt-4 text-2xl font-black sm:text-3xl'>Estado de pago del cliente SaaS</h2>
                   <p className='mt-2 text-sm leading-6 text-cyan-50/90 sm:text-base'>
-                    Esta etapa agrega control comercial sobre la licencia local: estado de pago, próximo vencimiento, plan y monto esperado. Todavía no bloquea el servicio; deja la base lista para gracia, suspensión y reactivación futuras.
+                    Esta etapa agrega suspensión operativa controlada: si la licencia pasa a suspendida o cancelada, admin, usuarios y socios quedan bloqueados hasta regularización o reactivación desde Dragon Pyramid.
                   </p>
                 </div>
                 <div className='flex w-full flex-col gap-2 sm:w-auto'>
@@ -577,7 +577,7 @@ export default function MasterAdminLicensePage() {
                   La plataforma madre podrá enviar también paymentStatus, lastPaymentAt, nextDueAt, expectedAmount, currency, billingPlan y paymentNotes.
                 </p>
                 <p className='rounded-2xl border border-amber-300/40 bg-amber-50 p-4 text-amber-900 dark:bg-amber-950/30 dark:text-amber-100'>
-                  En esta feature se registra estado de pago, pero no se bloquea el sistema. El bloqueo real queda para la feature de suspensión por falta de pago.
+                  Con licencia suspendida o cancelada, el acceso operativo queda bloqueado. El acceso Master Admin y la sincronización interna permanecen disponibles para regularizar o reactivar.
                 </p>
               </CardContent>
             </Card>
