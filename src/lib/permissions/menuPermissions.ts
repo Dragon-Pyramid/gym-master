@@ -1,4 +1,4 @@
-export type AppRole = "admin" | "usuario" | "socio";
+export type AppRole = "admin" | "usuario" | "socio" | "masteradmin";
 
 export type MenuPermissionOption = {
   key: string;
@@ -470,6 +470,7 @@ export const MENU_PERMISSION_GROUPS: Array<{
 ];
 
 export const DEFAULT_MENU_PERMISSIONS_BY_ROLE: Record<AppRole, string[]> = {
+  masteradmin: [],
   admin: MENU_PERMISSION_GROUPS.flatMap((group) =>
     group.items
       .filter((item) => item.roles.includes("admin"))
@@ -537,6 +538,12 @@ export const DASHBOARD_ROUTE_PERMISSIONS: DashboardRoutePermission[] = [
     exact: true,
   },
   {
+    path: "/dashboard/masteradmin/license",
+    permissionKey: "Licencia Dragon Pyramid",
+    roles: ["masteradmin"],
+    exact: false,
+  },
+  {
     path: "/dashboard/bi-cuotas-pagos",
     permissionKey: "Pagos",
     roles: ["admin", "usuario"],
@@ -579,7 +586,7 @@ function normalizeDashboardPath(pathname?: string | null) {
 }
 
 function normalizeAppRole(role?: string | null): AppRole | null {
-  if (role === "admin" || role === "usuario" || role === "socio") {
+  if (role === "admin" || role === "usuario" || role === "socio" || role === "masteradmin") {
     return role;
   }
 
@@ -665,7 +672,7 @@ export function canAccessDashboardPath(
     return false;
   }
 
-  if (normalizedRole === "admin") {
+  if (normalizedRole === "admin" || normalizedRole === "masteradmin") {
     return true;
   }
 
@@ -676,7 +683,7 @@ export function canAccessDashboardPath(
 
 export function getAvailableMenuPermissionsForRole(role?: string | null) {
   const normalizedRole = (role || "socio") as AppRole;
-  if (!["admin", "usuario", "socio"].includes(normalizedRole)) return [];
+  if (!["admin", "usuario", "socio", "masteradmin"].includes(normalizedRole)) return [];
 
   return MENU_PERMISSION_GROUPS.map((group) => ({
     ...group,
@@ -690,7 +697,7 @@ export function sanitizeMenuPermissionsForRole(
 ): string[] | null {
   const normalizedRole = (role || "socio") as AppRole;
 
-  if (normalizedRole === "admin") {
+  if (normalizedRole === "admin" || normalizedRole === "masteradmin") {
     return null;
   }
 
@@ -718,6 +725,10 @@ export function getEffectiveMenuPermissions(
   permissions?: string[] | null,
 ) {
   const normalizedRole = (role || "socio") as AppRole;
+
+  if (normalizedRole === "masteradmin") {
+    return [];
+  }
 
   if (normalizedRole === "admin") {
     return DEFAULT_MENU_PERMISSIONS_BY_ROLE.admin;

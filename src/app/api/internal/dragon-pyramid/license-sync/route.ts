@@ -1,0 +1,53 @@
+import { NextResponse } from 'next/server';
+import { upsertDragonPyramidLicense } from '@/services/server/dragonPyramidLicenseService';
+
+export const dynamic = 'force-dynamic';
+
+function getSyncSecret() {
+  return process.env.DRAGON_PYRAMID_LICENSE_SYNC_SECRET?.trim() || '';
+}
+
+function resolveStatus(message: string) {
+  if (message.includes('no configurado')) return 503;
+  if (message.includes('no autorizada')) return 401;
+  if (message.includes('válid')) return 400;
+  return 500;
+}
+
+export async function POST(req: Request) {
+  try {
+    const expectedSecret = getSyncSecret();
+    if (!expectedSecret) {
+      throw new Error('Endpoint de sincronización no configurado');
+    }
+
+    const providedSecret = req.headers.get('x-dragon-pyramid-sync-key')?.trim() || '';
+    if (!providedSecret || providedSecret !== expectedSecret) {
+      throw new Error('Sincronización no autorizada');
+    }
+
+    const body = await req.json();
+    const data = await upsertDragonPyramidLicense({
+      client_code: body?.clientCode ?? body?.client_code,
+      client_name: body?.clientName ?? body?.client_name,
+      license_status: body?.status ?? body?.license_status,
+      activated_at: body?.activatedAt ?? body?.activated_at,
+      expires_at: body?.expiresAt ?? body?.expires_at,
+      grace_until: body?.graceUntil ?? body?.grace_until,
+      suspended_at: body?.suspendedAt ?? body?.suspended_at,
+      reactivated_at: body?.reactivatedAt ?? body?.reactivated_at,
+      suspension_reason: body?.reason ?? body?.suspension_reason,
+      sync_source: 'dragon_pyramid_platform',
+      metadata: {
+        ...(body?.metadata && typeof body.metadata === 'object' ? body.metadata : {}),
+        synced_from: 'dragon_pyramid_platform',
+        received_at: new Date().toISOString(),
+      },
+    });
+
+    return NextResponse.json({ data }, { status: 200 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Error interno del servidor';
+    return NextResponse.json({ error: message }, { status: resolveStatus(message) });
+  }
+}
