@@ -24,7 +24,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     tag: "Dragon Pyramid",
     summary: "Estado local de licencia SaaS",
     description:
-      "Permite al rol masteradmin consultar y actualizar el estado local de licencia de esta instancia de Gym Master. Es una foundation para conexión futura con Dragon Pyramid Platform y no bloquea todavía el servicio del cliente.",
+      "Permite al rol masteradmin consultar y actualizar el estado local de licencia y el estado de pago SaaS de esta instancia de Gym Master. Es una foundation comercial para conexión futura con Dragon Pyramid Platform y no bloquea todavía el servicio del cliente.",
     auth: true,
     admin: true,
     notImplemented: false,
@@ -39,7 +39,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     tag: "Dragon Pyramid",
     summary: "Sincronización futura desde Dragon Pyramid Platform",
     description:
-      "Endpoint interno preparado para que la plataforma madre Dragon Pyramid sincronice estado de licencia, vencimiento, gracia, suspensión o reactivación de una instancia Gym Master mediante clave privada de sincronización.",
+      "Endpoint interno preparado para que la plataforma madre Dragon Pyramid sincronice estado de licencia, estado de pago, vencimiento, gracia, suspensión o reactivación de una instancia Gym Master mediante clave privada de sincronización.",
     auth: false,
     admin: true,
     notImplemented: false,
