@@ -219,6 +219,54 @@ export async function getHistorialRutinas() {
   return { ok: res.ok, data };
 }
 
+
+export async function getRutinaTrainingSessions(rutinaId: number | string) {
+  const token = getToken();
+  const headers: HeadersInit = {
+    'Cache-Control': 'no-cache',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+
+  const res = await fetch(
+    `/api/rutina/training-sessions?rutinaId=${encodeURIComponent(String(rutinaId))}&t=${Date.now()}`,
+    {
+      method: 'GET',
+      headers,
+      cache: 'no-store',
+    },
+  );
+  const data = await res.json();
+  return { ok: res.ok, ...data };
+}
+
+export async function startRutinaTrainingSession(payload: unknown) {
+  const token = getToken();
+  const res = await fetch('/api/rutina/training-sessions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data };
+}
+
+export async function updateRutinaTrainingSession(sessionId: string, payload: unknown) {
+  const token = getToken();
+  const res = await fetch(`/api/rutina/training-sessions/${sessionId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data };
+}
+
 export async function getObjetivos() {
   const token = getToken();
   const res = await fetch('/api/objetivos', {
