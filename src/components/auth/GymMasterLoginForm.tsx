@@ -48,12 +48,13 @@ import {
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 
-type LoginRole = 'admin' | 'socio' | 'usuario';
+type LoginRole = 'admin' | 'socio' | 'usuario' | 'masteradmin';
 
 const roleLabels: Record<LoginRole, string> = {
   admin: 'Administrador',
   socio: 'Socio',
   usuario: 'Usuario interno',
+  masteradmin: 'Master Admin Dragon Pyramid',
 };
 
 const allUserTypes: Array<{ value: LoginRole; label: string }> = [
@@ -68,6 +69,10 @@ const allUserTypes: Array<{ value: LoginRole; label: string }> = [
   {
     value: 'usuario',
     label: 'Usuario interno',
+  },
+  {
+    value: 'masteradmin',
+    label: 'Master Admin Dragon Pyramid',
   },
 ];
 
@@ -104,6 +109,7 @@ type GymMasterLoginFormProps = {
   defaultRole?: LoginRole;
   backHref?: string;
   backLabel?: string;
+  successRedirectHref?: string;
 };
 
 export default function GymMasterLoginForm({
@@ -114,6 +120,7 @@ export default function GymMasterLoginForm({
   defaultRole,
   backHref = '/auth/login',
   backLabel = 'Volver',
+  successRedirectHref = '/dashboard',
 }: GymMasterLoginFormProps) {
   const router = useRouter();
   const {
@@ -148,9 +155,9 @@ export default function GymMasterLoginForm({
     initializeAuth();
     if (isInitialized && isAuthenticated) {
       const currentUser = useAuthStore.getState().user;
-      router.push(currentUser?.must_change_password ? '/auth/change-password' : '/dashboard');
+      router.push(currentUser?.must_change_password ? '/auth/change-password' : successRedirectHref);
     }
-  }, [initializeAuth, isAuthenticated, isInitialized, router]);
+  }, [initializeAuth, isAuthenticated, isInitialized, router, successRedirectHref]);
 
   useEffect(() => {
     if (error) {
@@ -200,7 +207,7 @@ export default function GymMasterLoginForm({
       }
 
       toast.success('Inicio de sesión exitoso');
-      router.push('/dashboard');
+      router.push(successRedirectHref);
     }
   };
 

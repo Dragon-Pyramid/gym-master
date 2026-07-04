@@ -1166,3 +1166,29 @@ export async function autoDiscoverEjerciciosYoutubeVideos(payload: {
   const data = await res.json();
   return { ok: res.ok, ...data };
 }
+
+
+export async function getDragonPyramidLicenseControl() {
+  const token = getToken();
+  const res = await fetch('/api/dragon-pyramid/license', {
+    method: 'GET',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    cache: 'no-store',
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data };
+}
+
+export async function updateDragonPyramidLicenseControl(payload: unknown) {
+  const token = getToken();
+  const res = await fetch('/api/dragon-pyramid/license', {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data };
+}

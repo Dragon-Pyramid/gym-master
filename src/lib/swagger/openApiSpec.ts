@@ -19,6 +19,37 @@ type OpenApiPathItem = Record<string, OpenApiOperation>;
 const endpointDefinitions: EndpointDefinition[] = [
 
   {
+    path: "/api/dragon-pyramid/license",
+    methods: ["GET", "PATCH"],
+    tag: "Dragon Pyramid",
+    summary: "Estado local de licencia SaaS",
+    description:
+      "Permite al rol masteradmin consultar y actualizar el estado local de licencia de esta instancia de Gym Master. Es una foundation para conexión futura con Dragon Pyramid Platform y no bloquea todavía el servicio del cliente.",
+    auth: true,
+    admin: true,
+    notImplemented: false,
+    statuses: [200, 400, 401, 403, 500],
+    queryParams: [],
+    source: "src/app/api/dragon-pyramid/license/route.ts",
+    internal: true,
+  },
+  {
+    path: "/api/internal/dragon-pyramid/license-sync",
+    methods: ["POST"],
+    tag: "Dragon Pyramid",
+    summary: "Sincronización futura desde Dragon Pyramid Platform",
+    description:
+      "Endpoint interno preparado para que la plataforma madre Dragon Pyramid sincronice estado de licencia, vencimiento, gracia, suspensión o reactivación de una instancia Gym Master mediante clave privada de sincronización.",
+    auth: false,
+    admin: true,
+    notImplemented: false,
+    statuses: [200, 400, 401, 503, 500],
+    queryParams: [],
+    source: "src/app/api/internal/dragon-pyramid/license-sync/route.ts",
+    internal: true,
+  },
+
+  {
     path: "/api/comercial/pack-analytics",
     methods: ["GET"],
     tag: "Comercial",
