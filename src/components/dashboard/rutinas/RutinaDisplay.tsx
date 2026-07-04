@@ -2,8 +2,17 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuthStore } from "@/stores/authStore";
-import { getHistorialRutinas } from "@/services/apiClient";
+import {
+  getHistorialRutinas,
+  getRutinaTrainingSessions,
+  startRutinaTrainingSession,
+  updateRutinaTrainingSession,
+} from "@/services/apiClient";
 import { Rutina } from "@/interfaces/rutina.interface";
+import {
+  RutinaTrainingSession,
+  RutinaTrainingSessionExerciseInput,
+} from "@/interfaces/rutinaTrainingSession.interface";
 import Image from "next/image";
 import {
   ArrowLeft,
@@ -14,6 +23,9 @@ import {
   Dumbbell,
   Eye,
   EyeOff,
+  Clock,
+  Flag,
+  History,
   Info,
   PlayCircle,
   RotateCcw,
@@ -370,6 +382,67 @@ const contarCompletadosPorDia = (
 const construirProgressStorageKey = (userId: string, rutinaId: number | string): string =>
   `gym-master:rutina-progress:${userId}:${rutinaId}`;
 
+const construirCompletadosDesdeSesion = (
+  session?: RutinaTrainingSession | null
+): EjerciciosCompletadosState => {
+  if (!session?.exercises?.length) return {};
+
+  return session.exercises.reduce((acc: EjerciciosCompletadosState, exercise) => {
+    if (exercise.completed) {
+      acc[exercise.exercise_key] = true;
+    }
+
+    return acc;
+  }, {});
+};
+
+const obtenerSesionesFinalizadas = (
+  sessions: RutinaTrainingSession[]
+): RutinaTrainingSession[] =>
+  sessions.filter((session) => session.status !== 'in_progress');
+
+const obtenerSesionActiva = (
+  sessions: RutinaTrainingSession[]
+): RutinaTrainingSession | null =>
+  sessions.find((session) => session.status === 'in_progress') ?? null;
+
+const formatearFechaHoraSesion = (value?: string | null): string => {
+  if (!value) return '-';
+
+  try {
+    return new Intl.DateTimeFormat('es-AR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(value));
+  } catch {
+    return value;
+  }
+};
+
+const formatearDuracionSesion = (minutes?: number | null): string => {
+  if (minutes === null || minutes === undefined) return 'Sin cerrar';
+  if (minutes < 60) return `${minutes} min`;
+
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest > 0 ? `${hours} h ${rest} min` : `${hours} h`;
+};
+
+const obtenerEstadoSesionLabel = (status: RutinaTrainingSession['status']): string => {
+  if (status === 'completed') return 'Finalizada';
+  if (status === 'cancelled') return 'Cancelada';
+  return 'En curso';
+};
+
+const obtenerEstadoSesionClasses = (status: RutinaTrainingSession['status']): string => {
+  if (status === 'completed') return 'border-emerald-200 bg-emerald-50 text-emerald-800';
+  if (status === 'cancelled') return 'border-gray-200 bg-gray-50 text-gray-600';
+  return 'border-sky-200 bg-sky-50 text-sky-800';
+};
+
 const obtenerDiaSugerido = (ejerciciosPorDia: EjerciciosPorDia): string | null => {
   const dias = Object.keys(ejerciciosPorDia);
   if (dias.length === 0) return null;
@@ -397,6 +470,35 @@ const obtenerIndicacionTecnica = (ejercicio: any): string | null => {
     null
   );
 };
+
+const construirEjercicioSesionInput = (
+  rutina: Rutina,
+  dia: string,
+  ejercicio: any,
+  index: number
+): RutinaTrainingSessionExerciseInput => ({
+  exercise_key: construirEjercicioKey(rutina.id_rutina, dia, index),
+  day_name: dia,
+  exercise_index: index,
+  exercise_name: obtenerNombreEjercicio(ejercicio),
+  muscle_group: obtenerGrupoMuscular(ejercicio),
+  series: obtenerSeries(ejercicio),
+  repetitions: obtenerRepeticiones(ejercicio),
+  rest: obtenerDescanso(ejercicio),
+  payload: ejercicio && typeof ejercicio === 'object' ? ejercicio : {},
+});
+
+const construirEjerciciosSesionInputs = (
+  rutina: Rutina,
+  ejerciciosPorDia: EjerciciosPorDia
+): RutinaTrainingSessionExerciseInput[] =>
+  Object.entries(ejerciciosPorDia).flatMap(([dia, ejercicios]) =>
+    Array.isArray(ejercicios)
+      ? ejercicios.map((ejercicio, index) =>
+          construirEjercicioSesionInput(rutina, dia, ejercicio, index)
+        )
+      : []
+  );
 
 
 export default function RutinaEjercicios({
@@ -440,6 +542,9 @@ export default function RutinaEjercicios({
   } | null>(null);
   const [ejerciciosCompletados, setEjerciciosCompletados] =
     useState<EjerciciosCompletadosState>({});
+  const [trainingSessions, setTrainingSessions] = useState<RutinaTrainingSession[]>([]);
+  const [trainingSessionsLoading, setTrainingSessionsLoading] = useState(false);
+  const [sessionActionLoading, setSessionActionLoading] = useState<string | null>(null);
 
   const puedeMarcarEjercicios = !usuarioEsAdmin;
   const progressUserId = String(
@@ -488,6 +593,21 @@ export default function RutinaEjercicios({
     return construirProgressStorageKey(progressUserId, viendoRutina);
   }, [progressUserId, puedeMarcarEjercicios, viendoRutina]);
 
+  const activeTrainingSession = useMemo(
+    () => obtenerSesionActiva(trainingSessions),
+    [trainingSessions]
+  );
+
+  const completedExercisesFromSession = useMemo(
+    () => construirCompletadosDesdeSesion(activeTrainingSession),
+    [activeTrainingSession]
+  );
+
+  const finishedTrainingSessions = useMemo(
+    () => obtenerSesionesFinalizadas(trainingSessions),
+    [trainingSessions]
+  );
+
   useEffect(() => {
     if (!progressStorageKey || typeof window === 'undefined') {
       setEjerciciosCompletados({});
@@ -502,6 +622,42 @@ export default function RutinaEjercicios({
       setEjerciciosCompletados({});
     }
   }, [progressStorageKey]);
+
+  const fetchTrainingSessions = useCallback(
+    async (rutinaId: number | string) => {
+      if (!puedeMarcarEjercicios || !token) {
+        setTrainingSessions([]);
+        return;
+      }
+
+      setTrainingSessionsLoading(true);
+
+      try {
+        const response = await getRutinaTrainingSessions(rutinaId);
+
+        if (!response.ok) {
+          throw new Error(response.error || 'Error al cargar sesiones de entrenamiento');
+        }
+
+        setTrainingSessions(response.data ?? []);
+      } catch (error) {
+        console.error('Error al cargar sesiones de entrenamiento:', error);
+        setTrainingSessions([]);
+      } finally {
+        setTrainingSessionsLoading(false);
+      }
+    },
+    [puedeMarcarEjercicios, token]
+  );
+
+  useEffect(() => {
+    if (!viendoRutina || !puedeMarcarEjercicios) {
+      setTrainingSessions([]);
+      return;
+    }
+
+    void fetchTrainingSessions(viendoRutina);
+  }, [viendoRutina, puedeMarcarEjercicios, fetchTrainingSessions]);
 
   const toggleDia = (dia: string) => {
     setDiasExpandidos((prev) => ({
@@ -523,8 +679,45 @@ export default function RutinaEjercicios({
     window.localStorage.setItem(progressStorageKey, JSON.stringify(nextProgress));
   };
 
-  const toggleEjercicioCompletado = (ejercicioKey: string) => {
+  const toggleEjercicioCompletado = async (
+    ejercicioKey: string,
+    exerciseInput?: RutinaTrainingSessionExerciseInput
+  ) => {
     if (!puedeMarcarEjercicios) return;
+
+    if (activeTrainingSession) {
+      const currentCompleted = Boolean(completedExercisesFromSession[ejercicioKey]);
+      const nextCompleted = !currentCompleted;
+
+      setSessionActionLoading(ejercicioKey);
+
+      try {
+        const response = await updateRutinaTrainingSession(activeTrainingSession.id, {
+          action: 'update_exercise',
+          exercise_key: ejercicioKey,
+          completed: nextCompleted,
+          exercise: exerciseInput ?? null,
+        });
+
+        if (!response.ok) {
+          throw new Error(response.error || 'Error al actualizar ejercicio');
+        }
+
+        const updatedSession = response.data as RutinaTrainingSession;
+        setTrainingSessions((prev) =>
+          prev.map((session) =>
+            session.id === updatedSession.id ? updatedSession : session
+          )
+        );
+      } catch (error) {
+        console.error('Error al actualizar ejercicio de sesión:', error);
+        toast.error('No se pudo guardar el avance de la sesión');
+      } finally {
+        setSessionActionLoading(null);
+      }
+
+      return;
+    }
 
     setEjerciciosCompletados((prev) => {
       const nextProgress = { ...prev, [ejercicioKey]: !prev[ejercicioKey] };
@@ -550,7 +743,105 @@ export default function RutinaEjercicios({
       window.localStorage.removeItem(progressStorageKey);
     }
 
-    toast.success('Progreso de rutina reiniciado');
+    toast.success('Progreso local de rutina reiniciado');
+  };
+
+  const iniciarSesionEntrenamiento = async (
+    rutina: Rutina,
+    ejerciciosPorDia: EjerciciosPorDia
+  ) => {
+    if (!puedeMarcarEjercicios) return;
+
+    const exercises = construirEjerciciosSesionInputs(rutina, ejerciciosPorDia);
+    if (exercises.length === 0) {
+      toast.error('La rutina no tiene ejercicios para iniciar una sesión');
+      return;
+    }
+
+    setSessionActionLoading('start-session');
+
+    try {
+      const response = await startRutinaTrainingSession({
+        id_rutina: rutina.id_rutina,
+        exercises,
+      });
+
+      if (!response.ok) {
+        throw new Error(response.error || 'Error al iniciar sesión');
+      }
+
+      const session = response.data as RutinaTrainingSession;
+      setTrainingSessions((prev) => {
+        const withoutSame = prev.filter((item) => item.id !== session.id);
+        return [session, ...withoutSame];
+      });
+      toast.success('Sesión de entrenamiento iniciada');
+    } catch (error) {
+      console.error('Error al iniciar sesión de entrenamiento:', error);
+      toast.error('No se pudo iniciar la sesión de entrenamiento');
+    } finally {
+      setSessionActionLoading(null);
+    }
+  };
+
+  const finalizarSesionEntrenamiento = async () => {
+    if (!activeTrainingSession) return;
+
+    setSessionActionLoading('finish-session');
+
+    try {
+      const response = await updateRutinaTrainingSession(activeTrainingSession.id, {
+        action: 'finish',
+      });
+
+      if (!response.ok) {
+        throw new Error(response.error || 'Error al finalizar sesión');
+      }
+
+      const session = response.data as RutinaTrainingSession;
+      const completedSnapshot = construirCompletadosDesdeSesion(session);
+      setTrainingSessions((prev) =>
+        prev.map((item) => (item.id === session.id ? session : item))
+      );
+      setEjerciciosCompletados(completedSnapshot);
+      persistirProgreso(completedSnapshot);
+      toast.success('Sesión de entrenamiento finalizada');
+    } catch (error) {
+      console.error('Error al finalizar sesión:', error);
+      toast.error('No se pudo finalizar la sesión');
+    } finally {
+      setSessionActionLoading(null);
+    }
+  };
+
+  const cancelarSesionEntrenamiento = async () => {
+    if (!activeTrainingSession) return;
+
+    const confirmar = window.confirm('¿Querés cancelar esta sesión de entrenamiento?');
+    if (!confirmar) return;
+
+    setSessionActionLoading('cancel-session');
+
+    try {
+      const response = await updateRutinaTrainingSession(activeTrainingSession.id, {
+        action: 'cancel',
+      });
+
+      if (!response.ok) {
+        throw new Error(response.error || 'Error al cancelar sesión');
+      }
+
+      const session = response.data as RutinaTrainingSession;
+      setTrainingSessions((prev) =>
+        prev.map((item) => (item.id === session.id ? session : item))
+      );
+      toast.success('Sesión de entrenamiento cancelada');
+    } catch (error) {
+      console.error('Error al cancelar sesión:', error);
+      toast.error('No se pudo cancelar la sesión');
+    } finally {
+      setSessionActionLoading(null);
+    }
   };
 
   const verRutina = (id: number) => {
@@ -655,9 +946,12 @@ export default function RutinaEjercicios({
     const ejerciciosPorDia = normalizarRutinaPorDia(rutina);
     const diasDisponibles = Object.keys(ejerciciosPorDia);
     const totalEjercicios = obtenerTotalEjercicios(ejerciciosPorDia);
+    const ejerciciosCompletadosFuente = activeTrainingSession
+      ? completedExercisesFromSession
+      : ejerciciosCompletados;
     const ejerciciosCompletadosCount = contarEjerciciosCompletados(
       ejerciciosPorDia,
-      ejerciciosCompletados,
+      ejerciciosCompletadosFuente,
       rutina.id_rutina
     );
     const porcentajeProgreso =
@@ -713,14 +1007,48 @@ export default function RutinaEjercicios({
               </button>
 
               {puedeMarcarEjercicios && totalEjercicios > 0 && (
-                <button
-                  type="button"
-                  onClick={resetearProgresoRutina}
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/30 bg-transparent px-4 py-2 text-xs font-medium tracking-wide text-white transition-colors cursor-pointer sm:px-6 sm:py-3 sm:text-sm hover:bg-white/10"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  Reiniciar progreso
-                </button>
+                activeTrainingSession ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={finalizarSesionEntrenamiento}
+                      disabled={sessionActionLoading === 'finish-session'}
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-emerald-300 bg-emerald-400 px-4 py-2 text-xs font-semibold tracking-wide text-emerald-950 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 sm:px-6 sm:py-3 sm:text-sm hover:bg-emerald-300"
+                    >
+                      <Flag className="w-4 h-4" />
+                      {sessionActionLoading === 'finish-session' ? 'Finalizando...' : 'Finalizar sesión'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelarSesionEntrenamiento}
+                      disabled={sessionActionLoading === 'cancel-session'}
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/30 bg-transparent px-4 py-2 text-xs font-medium tracking-wide text-white transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 sm:px-6 sm:py-3 sm:text-sm hover:bg-white/10"
+                    >
+                      <X className="w-4 h-4" />
+                      {sessionActionLoading === 'cancel-session' ? 'Cancelando...' : 'Cancelar sesión'}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => iniciarSesionEntrenamiento(rutina, ejerciciosPorDia)}
+                      disabled={sessionActionLoading === 'start-session'}
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-emerald-300 bg-emerald-400 px-4 py-2 text-xs font-semibold tracking-wide text-emerald-950 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 sm:px-6 sm:py-3 sm:text-sm hover:bg-emerald-300"
+                    >
+                      <PlayCircle className="w-4 h-4" />
+                      {sessionActionLoading === 'start-session' ? 'Iniciando...' : 'Iniciar sesión'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={resetearProgresoRutina}
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/30 bg-transparent px-4 py-2 text-xs font-medium tracking-wide text-white transition-colors cursor-pointer sm:px-6 sm:py-3 sm:text-sm hover:bg-white/10"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      Reiniciar local
+                    </button>
+                  </>
+                )
               )}
 
               <button
@@ -770,20 +1098,100 @@ export default function RutinaEjercicios({
             </div>
 
             {puedeMarcarEjercicios && totalEjercicios > 0 && (
-              <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
-                <div className="mb-2 flex items-center justify-between gap-3 text-sm font-semibold text-emerald-950">
-                  <span>Avance personal</span>
+              <div className={`mt-4 rounded-2xl border p-4 ${
+                activeTrainingSession
+                  ? 'border-sky-100 bg-sky-50'
+                  : 'border-emerald-100 bg-emerald-50'
+              }`}>
+                <div className={`mb-2 flex items-center justify-between gap-3 text-sm font-semibold ${
+                  activeTrainingSession ? 'text-sky-950' : 'text-emerald-950'
+                }`}>
+                  <span>{activeTrainingSession ? 'Sesión activa' : 'Avance personal'}</span>
                   <span>{ejerciciosCompletadosCount}/{totalEjercicios} ejercicios</span>
                 </div>
                 <div className="h-3 overflow-hidden rounded-full bg-white">
                   <div
-                    className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+                    className={`h-full rounded-full transition-all duration-300 ${
+                      activeTrainingSession ? 'bg-sky-500' : 'bg-emerald-500'
+                    }`}
                     style={{ width: `${porcentajeProgreso}%` }}
                   />
                 </div>
-                <p className="mt-2 text-xs leading-5 text-emerald-800">
-                  Marcá cada ejercicio al terminarlo. El avance se guarda localmente en tu dispositivo para que puedas retomar el entrenamiento.
+                <p className={`mt-2 text-xs leading-5 ${
+                  activeTrainingSession ? 'text-sky-800' : 'text-emerald-800'
+                }`}>
+                  {activeTrainingSession
+                    ? 'Esta sesión se guarda en el historial formal de entrenamiento. Al finalizar, quedará disponible para seguimiento posterior.'
+                    : 'Podés marcar avance local o iniciar una sesión para guardar el entrenamiento en el historial.'}
                 </p>
+              </div>
+            )}
+
+            {puedeMarcarEjercicios && totalEjercicios > 0 && (
+              <div className="mt-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+                <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <div className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-600">
+                      <History className="h-3.5 w-3.5" />
+                      Historial de sesiones
+                    </div>
+                    <h3 className="mt-2 text-base font-semibold text-gray-950">
+                      Entrenamientos registrados
+                    </h3>
+                  </div>
+                  {trainingSessionsLoading && (
+                    <span className="text-xs font-medium text-gray-500">Cargando historial...</span>
+                  )}
+                </div>
+
+                {activeTrainingSession && (
+                  <div className="mb-3 rounded-2xl border border-sky-100 bg-sky-50 p-3 text-sm text-sky-950">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <span className="inline-flex items-center gap-2 font-semibold">
+                        <Clock className="h-4 w-4" />
+                        Sesión iniciada {formatearFechaHoraSesion(activeTrainingSession.started_at)}
+                      </span>
+                      <span className="rounded-full border border-sky-200 bg-white px-3 py-1 text-xs font-semibold text-sky-800">
+                        {activeTrainingSession.progress_percent}% completado
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {finishedTrainingSessions.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-4 text-sm leading-6 text-gray-600">
+                    Todavía no hay sesiones finalizadas para esta rutina. Iniciá una sesión, marcá ejercicios y finalizala para construir historial real.
+                  </div>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {finishedTrainingSessions.slice(0, 6).map((session) => (
+                      <div
+                        key={session.id}
+                        className="rounded-2xl border border-gray-100 bg-gray-50 p-3 text-sm"
+                      >
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${obtenerEstadoSesionClasses(session.status)}`}>
+                            {obtenerEstadoSesionLabel(session.status)}
+                          </span>
+                          <span className="text-xs font-semibold text-gray-700">
+                            {session.progress_percent}%
+                          </span>
+                        </div>
+                        <p className="font-semibold text-gray-950">
+                          {formatearFechaHoraSesion(session.started_at)}
+                        </p>
+                        <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-600">
+                          <span className="rounded-xl bg-white px-2 py-1">
+                            {session.completed_exercises}/{session.total_exercises} ejercicios
+                          </span>
+                          <span className="rounded-xl bg-white px-2 py-1">
+                            {formatearDuracionSesion(session.duration_minutes)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -814,7 +1222,7 @@ export default function RutinaEjercicios({
                       }`}
                     >
                       {puedeMarcarEjercicios
-                        ? `${contarCompletadosPorDia(ejerciciosPorDia[dia], ejerciciosCompletados, rutina.id_rutina, dia)}/${contarEjercicios(ejerciciosPorDia[dia])}`
+                        ? `${contarCompletadosPorDia(ejerciciosPorDia[dia], ejerciciosCompletadosFuente, rutina.id_rutina, dia)}/${contarEjercicios(ejerciciosPorDia[dia])}`
                         : contarEjercicios(ejerciciosPorDia[dia])}
                     </span>
                     {esDiaActual(dia) && (
@@ -856,7 +1264,7 @@ export default function RutinaEjercicios({
                       </span>
                       <span className="text-xs font-normal text-gray-500">
                         {puedeMarcarEjercicios
-                          ? `${contarCompletadosPorDia(ejerciciosPorDia[dia], ejerciciosCompletados, rutina.id_rutina, dia)} de ${contarEjercicios(ejerciciosPorDia[dia])} ejercicios completados`
+                          ? `${contarCompletadosPorDia(ejerciciosPorDia[dia], ejerciciosCompletadosFuente, rutina.id_rutina, dia)} de ${contarEjercicios(ejerciciosPorDia[dia])} ejercicios completados`
                           : `${contarEjercicios(ejerciciosPorDia[dia])} ejercicios programados`}
                       </span>
                     </span>
@@ -892,7 +1300,8 @@ export default function RutinaEjercicios({
                             const imagen = obtenerImagen(ejercicio);
                             const videoYoutube = obtenerVideoYoutube(ejercicio);
                             const completionKey = construirEjercicioKey(rutina.id_rutina, dia, idx);
-                            const ejercicioCompletado = Boolean(ejerciciosCompletados[completionKey]);
+                            const ejercicioCompletado = Boolean(ejerciciosCompletadosFuente[completionKey]);
+                            const ejercicioSessionInput = construirEjercicioSesionInput(rutina, dia, ejercicio, idx);
 
                             return (
                               <div
@@ -988,8 +1397,9 @@ export default function RutinaEjercicios({
                                       {puedeMarcarEjercicios && (
                                         <button
                                           type="button"
-                                          onClick={() => toggleEjercicioCompletado(completionKey)}
-                                          className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-full border px-4 py-2 text-xs font-semibold tracking-wide transition-colors ${
+                                          onClick={() => void toggleEjercicioCompletado(completionKey, ejercicioSessionInput)}
+                                          disabled={sessionActionLoading === completionKey}
+                                          className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-full border px-4 py-2 text-xs font-semibold tracking-wide transition-colors disabled:cursor-not-allowed disabled:opacity-70 ${
                                             ejercicioCompletado
                                               ? 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
                                               : 'border-gray-300 text-gray-900 hover:bg-gray-100'
@@ -1000,7 +1410,11 @@ export default function RutinaEjercicios({
                                           ) : (
                                             <Circle className="h-4 w-4" />
                                           )}
-                                          {ejercicioCompletado ? 'Reabrir ejercicio' : 'Marcar completado'}
+                                          {sessionActionLoading === completionKey
+                                            ? 'Guardando...'
+                                            : ejercicioCompletado
+                                              ? 'Reabrir ejercicio'
+                                              : 'Marcar completado'}
                                         </button>
                                       )}
                                       {videoYoutube && (
