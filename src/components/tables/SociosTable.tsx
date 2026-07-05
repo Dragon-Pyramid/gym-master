@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil } from "lucide-react";
+import { Eye, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -64,7 +64,7 @@ export default function SociosTable({
         {socios.map((s, i) => (
           <TableRow
             key={i}
-            className="odd:bg-muted/40 hover:bg-[#a8d9f9] transition-colors"
+            className="odd:bg-muted/40 hover:bg-sky-50 dark:hover:bg-sky-950/40 transition-colors"
           >
             <TableCell className="font-medium">{s.dni}</TableCell>
             <TableCell>{s.nombre_completo}</TableCell>
@@ -77,8 +77,11 @@ export default function SociosTable({
                 size="sm"
                 variant="outline"
                 onClick={() => onView && onView(s)}
+                className="gap-1"
+                title="Vista 360 del socio"
               >
-                Ver
+                <Eye className="w-4 h-4" />
+                <span className="hidden xl:inline">360</span>
               </Button>
               <Button
                 size="sm"
