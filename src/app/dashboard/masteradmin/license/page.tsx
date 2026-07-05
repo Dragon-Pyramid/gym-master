@@ -16,6 +16,7 @@ import {
   RefreshCcw,
   Save,
   ShieldCheck,
+  UnlockKeyhole,
 } from 'lucide-react';
 import { AppFooter } from '@/components/footer/AppFooter';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,7 @@ import { Label } from '@/components/ui/label';
 import { useAuthStore } from '@/stores/authStore';
 import {
   getDragonPyramidLicenseControl,
+  reactivateDragonPyramidLicenseControl,
   updateDragonPyramidLicenseControl,
 } from '@/services/apiClient';
 import type {
@@ -144,6 +146,7 @@ export default function MasterAdminLicensePage() {
   const [form, setForm] = useState(buildInitialForm(null));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [reactivating, setReactivating] = useState(false);
 
   useEffect(() => {
     initializeAuth();
@@ -186,6 +189,13 @@ export default function MasterAdminLicensePage() {
   }, [daysUntilPayment]);
 
   const graceWarning = useMemo(() => buildDragonPyramidGraceWarning(license), [license]);
+
+  const canShowReactivationAction =
+    currentStatus === 'suspended' ||
+    currentStatus === 'cancelled' ||
+    currentPaymentStatus === 'overdue' ||
+    currentPaymentStatus === 'grace' ||
+    currentPaymentStatus === 'suspended_candidate';
 
   const summaryCards = useMemo(
     () => [
@@ -233,6 +243,35 @@ export default function MasterAdminLicensePage() {
       toast.error(error instanceof Error ? error.message : 'Error al actualizar licencia');
     } finally {
       setSaving(false);
+    }
+  };
+
+
+  const handleReactivateAfterPayment = async () => {
+    setReactivating(true);
+    try {
+      const response = await reactivateDragonPyramidLicenseControl({
+        client_code: form.client_code,
+        client_name: form.client_name,
+        billing_plan: form.billing_plan,
+        expected_amount: form.expected_amount ? Number(form.expected_amount) : null,
+        currency: form.currency,
+        last_payment_at: form.last_payment_at ? new Date(form.last_payment_at).toISOString() : new Date().toISOString(),
+        next_due_at: form.next_due_at ? new Date(form.next_due_at).toISOString() : null,
+        expires_at: form.expires_at ? new Date(form.expires_at).toISOString() : null,
+        payment_notes: form.payment_notes || 'Pago regularizado y servicio reactivado desde Master Admin.',
+        reason: form.suspension_reason || 'Reactivación manual por pago regularizado.',
+      });
+
+      if (!response.ok) throw new Error(response.error || 'No se pudo reactivar el servicio');
+      const data = response.data as DragonPyramidLicenseControl;
+      setLicense(data);
+      setForm(buildInitialForm(data));
+      toast.success('Servicio reactivado y pago marcado al día');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al reactivar servicio');
+    } finally {
+      setReactivating(false);
     }
   };
 
@@ -288,9 +327,9 @@ export default function MasterAdminLicensePage() {
                     <LockKeyhole className='h-3.5 w-3.5' />
                     Puerta reservada /auth/login/masteradmin
                   </div>
-                  <h2 className='mt-4 text-2xl font-black sm:text-3xl'>Estado de pago del cliente SaaS</h2>
+                  <h2 className='mt-4 text-2xl font-black sm:text-3xl'>Reactivación comercial del cliente SaaS</h2>
                   <p className='mt-2 text-sm leading-6 text-cyan-50/90 sm:text-base'>
-                    Esta etapa agrega suspensión operativa controlada: si la licencia pasa a suspendida o cancelada, admin, usuarios y socios quedan bloqueados hasta regularización o reactivación desde Dragon Pyramid.
+                    Esta etapa agrega reactivación controlada después de regularizar el pago: Dragon Pyramid puede levantar la suspensión operativa desde este panel o desde la futura plataforma madre.
                   </p>
                 </div>
                 <div className='flex w-full flex-col gap-2 sm:w-auto'>
@@ -335,6 +374,33 @@ export default function MasterAdminLicensePage() {
                 <div className='rounded-2xl border border-current/20 px-4 py-3 text-sm font-bold'>
                   {graceWarning.clientName ?? form.client_name ?? 'Gym Master Cliente'}
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {canShowReactivationAction && (
+            <Card className='min-w-0 border-emerald-400/40 bg-emerald-950/25 text-emerald-50 shadow-xl'>
+              <CardContent className='flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between'>
+                <div className='flex min-w-0 gap-3'>
+                  <UnlockKeyhole className='mt-1 h-5 w-5 shrink-0 text-emerald-200' />
+                  <div className='min-w-0'>
+                    <p className='text-xs font-semibold uppercase tracking-[0.22em] text-emerald-200/90'>
+                      Reactivación después de pago
+                    </p>
+                    <h3 className='mt-1 text-lg font-black'>Pago regularizado / levantar suspensión</h3>
+                    <p className='mt-1 text-sm leading-6 text-emerald-50/85'>
+                      Esta acción marca la licencia como activa, el pago como al día, registra la fecha de reactivación y limpia el motivo de suspensión para que admin, usuarios y socios vuelvan a operar.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  className='w-full bg-emerald-500 text-emerald-950 hover:bg-emerald-400 lg:w-auto'
+                  onClick={handleReactivateAfterPayment}
+                  disabled={loading || saving || reactivating}
+                >
+                  <UnlockKeyhole className='mr-2 h-4 w-4' />
+                  {reactivating ? 'Reactivando...' : 'Reactivar servicio'}
+                </Button>
               </CardContent>
             </Card>
           )}
@@ -577,7 +643,7 @@ export default function MasterAdminLicensePage() {
                   La plataforma madre podrá enviar también paymentStatus, lastPaymentAt, nextDueAt, expectedAmount, currency, billingPlan y paymentNotes.
                 </p>
                 <p className='rounded-2xl border border-amber-300/40 bg-amber-50 p-4 text-amber-900 dark:bg-amber-950/30 dark:text-amber-100'>
-                  Con licencia suspendida o cancelada, el acceso operativo queda bloqueado. El acceso Master Admin y la sincronización interna permanecen disponibles para regularizar o reactivar.
+                  Con licencia suspendida o cancelada, el acceso operativo queda bloqueado. La reactivación vuelve a dejar licencia activa, pago al día y acceso operativo habilitado.
                 </p>
               </CardContent>
             </Card>

@@ -5,6 +5,7 @@ import type {
   DragonPyramidClientPaymentStatus,
   DragonPyramidLicenseControl,
   DragonPyramidLicenseStatus,
+  DragonPyramidLicenseReactivationInput,
   DragonPyramidLicenseUpdateInput,
 } from '@/interfaces/dragonPyramidLicense.interface';
 import { getSupabaseServerClient } from '@/services/supabaseServerClient';
@@ -113,6 +114,14 @@ function buildUpdatePayload(input: DragonPyramidLicenseUpdateInput) {
     payload.reactivated_at = new Date().toISOString();
   }
 
+  if ((status === 'active' || status === 'trial') && input.suspended_at === undefined) {
+    payload.suspended_at = null;
+  }
+
+  if ((status === 'active' || status === 'trial') && input.suspension_reason === undefined) {
+    payload.suspension_reason = null;
+  }
+
   return payload;
 }
 
@@ -154,4 +163,41 @@ export async function upsertDragonPyramidLicense(
   }
 
   return data as DragonPyramidLicenseControl;
+}
+
+
+export async function reactivateDragonPyramidLicenseAfterPayment(
+  input: DragonPyramidLicenseReactivationInput = {},
+): Promise<DragonPyramidLicenseControl> {
+  const now = new Date().toISOString();
+  const cleanReason = emptyToNull(input.reason);
+  const cleanPaymentNotes = emptyToNull(input.payment_notes);
+
+  return upsertDragonPyramidLicense({
+    client_code: input.client_code,
+    client_name: input.client_name,
+    license_status: 'active',
+    payment_status: 'paid',
+    last_payment_at: input.last_payment_at ?? now,
+    next_due_at: input.next_due_at,
+    expected_amount: input.expected_amount,
+    currency: input.currency,
+    billing_plan: input.billing_plan,
+    payment_notes:
+      cleanPaymentNotes ??
+      cleanReason ??
+      'Pago regularizado y servicio reactivado desde Dragon Pyramid.',
+    expires_at: input.expires_at,
+    grace_until: input.grace_until ?? null,
+    suspended_at: null,
+    reactivated_at: now,
+    suspension_reason: null,
+    sync_source: input.sync_source ?? 'manual_masteradmin_reactivation',
+    metadata: {
+      ...(input.metadata && typeof input.metadata === 'object' ? input.metadata : {}),
+      reactivated_from: input.sync_source ?? 'manual_masteradmin_reactivation',
+      reactivated_at: now,
+      previous_reason: cleanReason ?? null,
+    },
+  });
 }
