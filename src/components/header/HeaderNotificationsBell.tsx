@@ -118,7 +118,7 @@ export function HeaderNotificationsBell() {
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align='end' sideOffset={8} className='w-[calc(100vw-1rem)] max-w-[360px] overflow-hidden rounded-2xl p-0'>
+      <DropdownMenuContent align='end' sideOffset={8} className='w-[calc(100vw-1rem)] max-w-[400px] overflow-hidden rounded-2xl p-0'>
         <DropdownMenuLabel className='flex items-center justify-between gap-3 px-4 py-3'>
           <span>Notificaciones</span>
           {loading ? <Loader2 className='h-4 w-4 animate-spin text-muted-foreground' /> : null}
@@ -164,14 +164,24 @@ export function HeaderNotificationsBell() {
         )}
 
         <DropdownMenuSeparator />
-        <button
-          type='button'
-          className='flex w-full items-center justify-center gap-2 px-4 py-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground'
-          onClick={loadNotifications}
-        >
-          <AlertCircle className='h-3.5 w-3.5' />
-          Actualizar notificaciones
-        </button>
+        <div className='grid grid-cols-1 gap-1 p-2 sm:grid-cols-2'>
+          <button
+            type='button'
+            className='flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground'
+            onClick={loadNotifications}
+          >
+            <AlertCircle className='h-3.5 w-3.5' />
+            Actualizar
+          </button>
+          <button
+            type='button'
+            className='flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-sky-700 hover:bg-sky-50 dark:text-sky-200 dark:hover:bg-sky-950/40'
+            onClick={() => handleNavigate('/dashboard/notificaciones')}
+          >
+            Ver centro completo
+            <ChevronRight className='h-3.5 w-3.5' />
+          </button>
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   );
