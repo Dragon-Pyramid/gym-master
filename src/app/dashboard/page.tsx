@@ -26,7 +26,19 @@ import CuotasEstadoDashboard from '@/components/dashboard/cuotas/CuotasEstadoDas
 import { useEffect, useRef, useState } from 'react';
 import QrDisplayModal from '@/components/ui/qr-display';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, BarChart3, DollarSign, Megaphone, Wrench } from 'lucide-react';
+import {
+  Activity,
+  AlertTriangle,
+  ArrowRight,
+  BarChart3,
+  CheckCircle2,
+  ClipboardList,
+  DollarSign,
+  Megaphone,
+  ShieldAlert,
+  Users,
+  Wrench,
+} from 'lucide-react';
 import { getAllEquipamientos } from '@/services/equipamientoService';
 import { getAllMantenimientos } from '@/services/mantenimientoService';
 import {
@@ -73,6 +85,12 @@ const dashboardCurrencyFormatter = new Intl.NumberFormat('es-AR', {
 
 function formatDashboardCurrency(value: number) {
   return dashboardCurrencyFormatter.format(Number(value ?? 0));
+}
+
+function formatDashboardPercent(value?: number | null) {
+  const normalized = Number(value ?? 0);
+  if (!Number.isFinite(normalized)) return '0%';
+  return `${normalized.toFixed(0)}%`;
 }
 
 ChartJS.register(
@@ -408,6 +426,29 @@ export default function DashboardPage() {
 
 
   const userType = user?.rol;
+  const latestPaymentSegment =
+    segmentacionPagos.length > 0
+      ? segmentacionPagos[segmentacionPagos.length - 1]
+      : null;
+  const latestPaymentHistogram =
+    histogramaPagos.length > 0
+      ? histogramaPagos[histogramaPagos.length - 1]
+      : null;
+  const adminOperationalAlerts =
+    mensajesSinResponder +
+    equiposEnRevision +
+    equiposFueraDeServicio +
+    proximosMantenimientos +
+    (dragonPyramidLicenseWarning?.visible ? 1 : 0) +
+    (gimnasioParametrizacionStatus && !gimnasioParametrizacionStatus.completa
+      ? 1
+      : 0);
+  const adminHealthLabel =
+    adminOperationalAlerts === 0
+      ? 'Operación estable'
+      : adminOperationalAlerts <= 3
+      ? 'Atención moderada'
+      : 'Prioridad alta';
 
   const showAdminAccessFeedback = (payload: {
     event_id?: string;
@@ -533,7 +574,7 @@ export default function DashboardPage() {
           />
         )}
         <AppSidebar />
-        <div className='flex min-h-[100dvh] min-w-0 flex-1 flex-col w-full'>
+        <div className='grid h-[100dvh] max-h-[100dvh] min-w-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden w-full'>
           <AppHeader title='Dashboard' />
 
           {showQr && (
@@ -574,7 +615,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          <main className='flex-1 w-full min-w-0 max-w-full overflow-x-hidden px-3 py-4 space-y-5 sm:px-4 md:px-8 md:py-6 md:space-y-6'>
+          <main className='min-h-0 w-full min-w-0 max-w-full overflow-y-auto overflow-x-hidden px-3 py-4 pb-8 space-y-5 sm:px-4 md:px-8 md:py-6 md:pb-10 md:space-y-6'>
             {(userType === 'socio' || userType === 'usuario') && (
               <DashboardInitialContent />
             )}
@@ -724,6 +765,121 @@ export default function DashboardPage() {
                   </div>
                 </section>
 
+                <section className='grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4'>
+                  <Card className='border-sky-200/70 bg-sky-50/70 dark:border-sky-900/60 dark:bg-sky-950/30'>
+                    <CardContent className='flex items-start gap-3 p-4'>
+                      <div className='rounded-2xl bg-sky-500/10 p-2 text-sky-600 dark:text-sky-300'>
+                        <Activity className='h-5 w-5' />
+                      </div>
+                      <div className='min-w-0'>
+                        <p className='text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground'>
+                          Estado operativo
+                        </p>
+                        <h3 className='mt-1 text-xl font-black'>{adminHealthLabel}</h3>
+                        <p className='mt-1 text-sm text-muted-foreground'>
+                          {adminOperationalAlerts} señales requieren seguimiento entre mensajes, mantenimiento, licencia o configuración.
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className='border-emerald-200/70 bg-emerald-50/70 dark:border-emerald-900/60 dark:bg-emerald-950/30'>
+                    <CardContent className='flex items-start gap-3 p-4'>
+                      <div className='rounded-2xl bg-emerald-500/10 p-2 text-emerald-600 dark:text-emerald-300'>
+                        <CheckCircle2 className='h-5 w-5' />
+                      </div>
+                      <div className='min-w-0'>
+                        <p className='text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground'>
+                          Puntualidad de pagos
+                        </p>
+                        <h3 className='mt-1 text-xl font-black'>
+                          {latestPaymentSegment
+                            ? formatDashboardPercent(latestPaymentSegment.porcentaje_puntualidad)
+                            : 'Sin datos'}
+                        </h3>
+                        <p className='mt-1 text-sm text-muted-foreground'>
+                          Último corte: {latestPaymentSegment?.anio_mes ?? 'pendiente de datos'}.
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className='border-violet-200/70 bg-violet-50/70 dark:border-violet-900/60 dark:bg-violet-950/30'>
+                    <CardContent className='flex items-start gap-3 p-4'>
+                      <div className='rounded-2xl bg-violet-500/10 p-2 text-violet-600 dark:text-violet-300'>
+                        <Users className='h-5 w-5' />
+                      </div>
+                      <div className='min-w-0'>
+                        <p className='text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground'>
+                          Ingresos del período
+                        </p>
+                        <h3 className='mt-1 text-xl font-black'>
+                          {latestPaymentHistogram
+                            ? formatDashboardCurrency(latestPaymentHistogram.total_pagado)
+                            : formatDashboardCurrency(0)}
+                        </h3>
+                        <p className='mt-1 text-sm text-muted-foreground'>
+                          Base del histograma financiero más reciente.
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className='border-amber-200/70 bg-amber-50/70 dark:border-amber-900/60 dark:bg-amber-950/30'>
+                    <CardContent className='flex items-start gap-3 p-4'>
+                      <div className='rounded-2xl bg-amber-500/10 p-2 text-amber-600 dark:text-amber-300'>
+                        <ShieldAlert className='h-5 w-5' />
+                      </div>
+                      <div className='min-w-0'>
+                        <p className='text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground'>
+                          Riesgo técnico
+                        </p>
+                        <h3 className='mt-1 text-xl font-black'>{equiposFueraDeServicio}</h3>
+                        <p className='mt-1 text-sm text-muted-foreground'>
+                          Equipos fuera de servicio que pueden afectar operación.
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </section>
+
+                <section className='rounded-2xl border bg-card p-4 shadow-sm sm:p-5'>
+                  <div className='flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between'>
+                    <div className='min-w-0'>
+                      <p className='text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground'>
+                        Accesos rápidos de cierre operativo
+                      </p>
+                      <h2 className='mt-1 text-lg font-black sm:text-xl'>
+                        Ir directo a las áreas críticas del día
+                      </h2>
+                      <p className='mt-1 text-sm text-muted-foreground'>
+                        Atajos para resolver pagos, socios, mensajes, stock, equipamiento y configuración sin recorrer el menú completo.
+                      </p>
+                    </div>
+                    <div className='grid w-full grid-cols-1 gap-2 sm:grid-cols-2 lg:w-auto lg:grid-cols-3'>
+                      {[
+                        { label: 'Socios', href: '/dashboard/socios' },
+                        { label: 'Pagos', href: '/dashboard/pagos' },
+                        { label: 'Mensajes', href: '/dashboard/mensajes-admin' },
+                        { label: 'Equipamiento', href: '/dashboard/equipamientos' },
+                        { label: 'Comercial', href: '/dashboard/comercial/kiosco' },
+                        { label: 'Parámetros', href: '/dashboard/gimnasio-parametrizacion' },
+                      ].map((item) => (
+                        <Button
+                          key={item.href}
+                          type='button'
+                          variant='outline'
+                          className='w-full justify-between gap-3'
+                          onClick={() => router.push(item.href)}
+                        >
+                          <span>{item.label}</span>
+                          <ArrowRight className='h-4 w-4' />
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </section>
+
                 <div className='grid min-w-0 grid-cols-1 gap-4 mt-6 md:grid-cols-2 xl:grid-cols-3'>
                   <CuotasEstadoDashboard />
 
@@ -816,6 +972,12 @@ export default function DashboardPage() {
                     </CardHeader>
                     <CardContent className='h-[260px] overflow-y-auto sm:h-[300px] md:h-[420px] lg:h-[300px]'>
                       <div className='h-full min-h-[240px]'>
+                        {estadoEquipamiento.length === 0 ? (
+                          <div className='flex h-full min-h-[240px] flex-col items-center justify-center rounded-xl border border-dashed text-center text-sm text-muted-foreground'>
+                            <ClipboardList className='mb-2 h-7 w-7 opacity-60' />
+                            Sin datos de equipamiento para graficar.
+                          </div>
+                        ) : (
                         <Pie
                           data={{
                             labels: estadoEquipamiento.map(
@@ -850,6 +1012,7 @@ export default function DashboardPage() {
                             },
                           }}
                         />
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -859,6 +1022,12 @@ export default function DashboardPage() {
                       <CardTitle>Top Fallos de Equipamiento</CardTitle>
                     </CardHeader>
                     <CardContent className='h-[260px] sm:h-[300px]'>
+                      {topFallos.length === 0 ? (
+                        <div className='flex h-full flex-col items-center justify-center rounded-xl border border-dashed text-center text-sm text-muted-foreground'>
+                          <ClipboardList className='mb-2 h-7 w-7 opacity-60' />
+                          Sin fallos registrados para este período.
+                        </div>
+                      ) : (
                       <Bar
                         data={{
                           labels: topFallos.map((item) => item.nombre),
@@ -879,6 +1048,7 @@ export default function DashboardPage() {
                           scales: { y: { beginAtZero: true } },
                         }}
                       />
+                      )}
                     </CardContent>
                   </Card>
 
@@ -887,6 +1057,12 @@ export default function DashboardPage() {
                       <CardTitle>Segmentación de Pagos</CardTitle>
                     </CardHeader>
                     <CardContent className='h-[260px] sm:h-[300px]'>
+                      {segmentacionPagos.length === 0 ? (
+                        <div className='flex h-full flex-col items-center justify-center rounded-xl border border-dashed text-center text-sm text-muted-foreground'>
+                          <ClipboardList className='mb-2 h-7 w-7 opacity-60' />
+                          Sin pagos suficientes para segmentar.
+                        </div>
+                      ) : (
                       <Pie
                         data={{
                           labels: segmentacionPagos.map((item) => item.anio_mes),
@@ -914,6 +1090,7 @@ export default function DashboardPage() {
                           plugins: { legend: { position: 'bottom' as const } },
                         }}
                       />
+                      )}
                     </CardContent>
                   </Card>
 
@@ -922,6 +1099,12 @@ export default function DashboardPage() {
                       <CardTitle>Histograma de Pagos</CardTitle>
                     </CardHeader>
                     <CardContent className='h-[260px] sm:h-[300px]'>
+                      {histogramaPagos.length === 0 ? (
+                        <div className='flex h-full flex-col items-center justify-center rounded-xl border border-dashed text-center text-sm text-muted-foreground'>
+                          <ClipboardList className='mb-2 h-7 w-7 opacity-60' />
+                          Sin historial de pagos para graficar.
+                        </div>
+                      ) : (
                       <Bar
                         data={{
                           labels: histogramaPagos.map((item) => item.anio_mes),
@@ -944,6 +1127,7 @@ export default function DashboardPage() {
                           scales: { y: { beginAtZero: true } },
                         }}
                       />
+                      )}
                     </CardContent>
                   </Card>
                 </div>
