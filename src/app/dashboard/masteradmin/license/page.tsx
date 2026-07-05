@@ -6,16 +6,21 @@ import { toast } from 'sonner';
 import {
   Activity,
   AlertTriangle,
+  Ban,
+  BellRing,
   CalendarClock,
   CheckCircle2,
   CreditCard,
+  FileClock,
   DollarSign,
   KeyRound,
   LockKeyhole,
+  Power,
   LogOut,
   RefreshCcw,
   Save,
   ShieldCheck,
+  TimerReset,
   UnlockKeyhole,
 } from 'lucide-react';
 import { AppFooter } from '@/components/footer/AppFooter';
@@ -121,6 +126,18 @@ function getDaysUntil(value?: string | null) {
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
+function addDaysIso(days: number) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return date.toISOString();
+}
+
+function isOperationalBlocked(status: DragonPyramidLicenseStatus) {
+  return status === 'suspended' || status === 'cancelled';
+}
+
+type QuickActionId = 'mark_paid' | 'set_trial' | 'set_grace' | 'mark_overdue' | 'suspend_service' | 'cancel_service';
+
 function buildInitialForm(license?: DragonPyramidLicenseControl | null) {
   return {
     client_code: license?.client_code ?? 'gym_master_client',
@@ -147,6 +164,7 @@ export default function MasterAdminLicensePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [reactivating, setReactivating] = useState(false);
+  const [quickActionLoading, setQuickActionLoading] = useState<QuickActionId | null>(null);
 
   useEffect(() => {
     initializeAuth();
@@ -179,6 +197,7 @@ export default function MasterAdminLicensePage() {
 
   const currentStatus = (form.license_status || license?.license_status || 'active') as DragonPyramidLicenseStatus;
   const currentPaymentStatus = (form.payment_status || license?.payment_status || 'unknown') as DragonPyramidClientPaymentStatus;
+  const operationalBlocked = isOperationalBlocked(currentStatus);
   const daysUntilPayment = getDaysUntil(license?.next_due_at);
 
   const paymentHealthLabel = useMemo(() => {
@@ -202,16 +221,113 @@ export default function MasterAdminLicensePage() {
       { label: 'Producto', value: 'Gym Master', icon: Activity },
       { label: 'Cliente', value: form.client_name || 'Sin definir', icon: ShieldCheck },
       { label: 'Licencia', value: statusLabel[currentStatus], icon: KeyRound },
+      { label: 'Estado operativo', value: operationalBlocked ? 'Bloqueado' : 'Habilitado', icon: operationalBlocked ? Ban : Power },
       { label: 'Pago cliente', value: paymentStatusLabel[currentPaymentStatus], icon: CreditCard },
       { label: 'Próximo vencimiento', value: formatDateTime(license?.next_due_at), icon: CalendarClock },
       { label: 'Monto esperado', value: formatCurrency(license?.expected_amount, license?.currency), icon: DollarSign },
     ],
-    [currentPaymentStatus, currentStatus, form.client_name, license?.currency, license?.expected_amount, license?.next_due_at],
+    [currentPaymentStatus, currentStatus, form.client_name, license?.currency, license?.expected_amount, license?.next_due_at, operationalBlocked],
   );
 
   const handleLogout = () => {
     logout();
     router.push('/auth/login/masteradmin');
+  };
+
+  const handleQuickAction = async (action: QuickActionId) => {
+    const requiresConfirmation = action === 'suspend_service' || action === 'cancel_service';
+    if (requiresConfirmation) {
+      const confirmed = window.confirm(
+        action === 'suspend_service'
+          ? 'Esta acción suspenderá el acceso operativo del gimnasio. ¿Confirmás la suspensión?'
+          : 'Esta acción marcará el servicio como cancelado y bloqueará el acceso operativo. ¿Confirmás la baja?',
+      );
+      if (!confirmed) return;
+    }
+
+    setQuickActionLoading(action);
+    try {
+      const now = new Date().toISOString();
+      const basePayload = {
+        client_code: form.client_code,
+        client_name: form.client_name,
+        billing_plan: form.billing_plan,
+        expected_amount: form.expected_amount ? Number(form.expected_amount) : null,
+        currency: form.currency || 'ARS',
+      };
+
+      const payloadByAction: Record<QuickActionId, Record<string, unknown>> = {
+        mark_paid: {
+          ...basePayload,
+          license_status: 'active',
+          payment_status: 'paid',
+          last_payment_at: now,
+          next_due_at: form.next_due_at ? new Date(form.next_due_at).toISOString() : addDaysIso(30),
+          expires_at: form.expires_at ? new Date(form.expires_at).toISOString() : addDaysIso(30),
+          grace_until: null,
+          suspension_reason: null,
+        },
+        set_trial: {
+          ...basePayload,
+          license_status: 'trial',
+          payment_status: 'pending',
+          next_due_at: addDaysIso(14),
+          expires_at: addDaysIso(14),
+          grace_until: null,
+          suspension_reason: 'Trial comercial activado desde Master Admin Dragon Pyramid.',
+        },
+        set_grace: {
+          ...basePayload,
+          license_status: 'grace',
+          payment_status: 'grace',
+          next_due_at: now,
+          expires_at: now,
+          grace_until: addDaysIso(7),
+          suspension_reason: 'Período de gracia comercial aplicado desde Master Admin Dragon Pyramid.',
+        },
+        mark_overdue: {
+          ...basePayload,
+          license_status: 'active',
+          payment_status: 'overdue',
+          next_due_at: form.next_due_at ? new Date(form.next_due_at).toISOString() : addDaysIso(-1),
+          suspension_reason: 'Pago vencido pendiente de regularización. El servicio continúa operativo.',
+        },
+        suspend_service: {
+          ...basePayload,
+          license_status: 'suspended',
+          payment_status: 'suspended_candidate',
+          suspended_at: now,
+          suspension_reason: 'Suspensión operativa aplicada desde Master Admin Dragon Pyramid.',
+        },
+        cancel_service: {
+          ...basePayload,
+          license_status: 'cancelled',
+          payment_status: 'suspended_candidate',
+          suspended_at: now,
+          suspension_reason: 'Servicio cancelado desde Master Admin Dragon Pyramid.',
+        },
+      };
+
+      const response = await updateDragonPyramidLicenseControl({
+        ...payloadByAction[action],
+        sync_source: `manual_masteradmin_quick_${action}`,
+        metadata: {
+          quick_action: action,
+          source: 'license-admin-panel-v1',
+          applied_at: now,
+        },
+      });
+
+      if (!response.ok) throw new Error(response.error || 'No se pudo aplicar la acción rápida');
+      const data = response.data as DragonPyramidLicenseControl;
+      setLicense(data);
+      setForm(buildInitialForm(data));
+      toast.success('Acción rápida aplicada');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al aplicar acción rápida');
+    } finally {
+      setQuickActionLoading(null);
+    }
   };
 
   const handleSave = async () => {
@@ -327,9 +443,9 @@ export default function MasterAdminLicensePage() {
                     <LockKeyhole className='h-3.5 w-3.5' />
                     Puerta reservada /auth/login/masteradmin
                   </div>
-                  <h2 className='mt-4 text-2xl font-black sm:text-3xl'>Reactivación comercial del cliente SaaS</h2>
+                  <h2 className='mt-4 text-2xl font-black sm:text-3xl'>Panel integral de licencia SaaS</h2>
                   <p className='mt-2 text-sm leading-6 text-cyan-50/90 sm:text-base'>
-                    Esta etapa agrega reactivación controlada después de regularizar el pago: Dragon Pyramid puede levantar la suspensión operativa desde este panel o desde la futura plataforma madre.
+                    Esta etapa consolida el panel operativo interno para controlar licencia, pago, gracia, suspensión y reactivación de esta instancia Gym Master sin depender todavía de la futura plataforma madre.
                   </p>
                 </div>
                 <div className='flex w-full flex-col gap-2 sm:w-auto'>
@@ -367,7 +483,7 @@ export default function MasterAdminLicensePage() {
                       ))}
                     </ul>
                     <p className='mt-3 text-xs opacity-80'>
-                      Esta feature solo informa al cliente. El bloqueo real se implementará en la feature de suspensión por falta de pago.
+                      Esta advertencia orienta la decisión comercial. La suspensión real solo ocurre cuando se marca licencia suspendida o cancelada.
                     </p>
                   </div>
                 </div>
@@ -423,6 +539,117 @@ export default function MasterAdminLicensePage() {
               );
             })}
           </div>
+
+          <Card className='min-w-0 border-cyan-300/30 bg-white text-slate-950 shadow-xl dark:bg-slate-900 dark:text-slate-50'>
+            <CardHeader>
+              <div className='flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between'>
+                <div>
+                  <CardTitle className='flex items-center gap-2'>
+                    <ShieldCheck className='h-5 w-5 text-cyan-500' />
+                    Panel operativo Master Admin
+                  </CardTitle>
+                  <CardDescription>
+                    Acciones rápidas para soporte Dragon Pyramid. Permiten pasar entre estados comerciales sin navegar todo el formulario.
+                  </CardDescription>
+                </div>
+                <div className={`rounded-2xl border px-4 py-3 text-sm font-bold ${operationalBlocked ? statusTone.suspended : statusTone.active}`}>
+                  {operationalBlocked ? 'Servicio bloqueado' : 'Servicio operativo'}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className='space-y-5'>
+              <div className='grid gap-3 md:grid-cols-2 xl:grid-cols-3'>
+                {[
+                  {
+                    id: 'mark_paid' as QuickActionId,
+                    title: 'Marcar al día',
+                    description: 'Activa la licencia, marca pago al día y libera cualquier suspensión operativa.',
+                    icon: CheckCircle2,
+                    button: 'Al día',
+                    tone: 'border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-950/30 dark:text-emerald-100',
+                  },
+                  {
+                    id: 'set_trial' as QuickActionId,
+                    title: 'Activar trial',
+                    description: 'Deja el cliente en prueba comercial por 14 días sin bloqueo operativo.',
+                    icon: TimerReset,
+                    button: 'Trial 14 días',
+                    tone: 'border-sky-300 bg-sky-50 text-sky-900 dark:border-sky-500/40 dark:bg-sky-950/30 dark:text-sky-100',
+                  },
+                  {
+                    id: 'set_grace' as QuickActionId,
+                    title: 'Poner en gracia',
+                    description: 'Aplica gracia comercial por 7 días. Advierte, pero no bloquea el sistema.',
+                    icon: BellRing,
+                    button: 'Gracia 7 días',
+                    tone: 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/30 dark:text-amber-100',
+                  },
+                  {
+                    id: 'mark_overdue' as QuickActionId,
+                    title: 'Marcar vencido',
+                    description: 'Registra pago vencido sin suspender. El admin verá advertencia comercial.',
+                    icon: FileClock,
+                    button: 'Pago vencido',
+                    tone: 'border-orange-300 bg-orange-50 text-orange-900 dark:border-orange-500/40 dark:bg-orange-950/30 dark:text-orange-100',
+                  },
+                  {
+                    id: 'suspend_service' as QuickActionId,
+                    title: 'Suspender servicio',
+                    description: 'Bloquea el acceso operativo de admin, usuarios y socios. Master Admin queda disponible.',
+                    icon: LockKeyhole,
+                    button: 'Suspender',
+                    tone: 'border-red-300 bg-red-50 text-red-900 dark:border-red-500/40 dark:bg-red-950/30 dark:text-red-100',
+                  },
+                  {
+                    id: 'cancel_service' as QuickActionId,
+                    title: 'Cancelar servicio',
+                    description: 'Marca el cliente como dado de baja y mantiene el acceso operativo bloqueado.',
+                    icon: Ban,
+                    button: 'Cancelar',
+                    tone: 'border-slate-300 bg-slate-50 text-slate-900 dark:border-slate-700 dark:bg-slate-950/70 dark:text-slate-100',
+                  },
+                ].map((action) => {
+                  const Icon = action.icon;
+                  return (
+                    <div key={action.id} className={`flex min-w-0 flex-col gap-4 rounded-2xl border p-4 ${action.tone}`}>
+                      <div className='flex items-start gap-3'>
+                        <div className='rounded-2xl bg-white/60 p-2 dark:bg-black/20'>
+                          <Icon className='h-5 w-5' />
+                        </div>
+                        <div className='min-w-0'>
+                          <h3 className='font-black'>{action.title}</h3>
+                          <p className='mt-1 text-sm leading-5 opacity-85'>{action.description}</p>
+                        </div>
+                      </div>
+                      <Button
+                        className='mt-auto w-full'
+                        variant={action.id === 'suspend_service' || action.id === 'cancel_service' ? 'destructive' : 'secondary'}
+                        disabled={loading || saving || reactivating || quickActionLoading !== null}
+                        onClick={() => handleQuickAction(action.id)}
+                      >
+                        {quickActionLoading === action.id ? 'Aplicando...' : action.button}
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className='grid gap-3 lg:grid-cols-3'>
+                <div className='rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60'>
+                  <p className='text-xs font-semibold uppercase tracking-wide text-muted-foreground'>Última validación</p>
+                  <p className='mt-1 font-black'>{formatDateTime(license?.last_checked_at)}</p>
+                </div>
+                <div className='rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60'>
+                  <p className='text-xs font-semibold uppercase tracking-wide text-muted-foreground'>Última reactivación</p>
+                  <p className='mt-1 font-black'>{formatDateTime(license?.reactivated_at)}</p>
+                </div>
+                <div className='rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60'>
+                  <p className='text-xs font-semibold uppercase tracking-wide text-muted-foreground'>Última suspensión</p>
+                  <p className='mt-1 font-black'>{formatDateTime(license?.suspended_at)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           <div className='grid w-full min-w-0 gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]'>
             <Card className='min-w-0 border-white/10 bg-white text-slate-950 shadow-xl dark:bg-slate-900 dark:text-slate-50'>
