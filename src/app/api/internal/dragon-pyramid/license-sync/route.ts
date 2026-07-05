@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
-import { upsertDragonPyramidLicense } from '@/services/server/dragonPyramidLicenseService';
+import {
+  reactivateDragonPyramidLicenseAfterPayment,
+  upsertDragonPyramidLicense,
+} from '@/services/server/dragonPyramidLicenseService';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +30,11 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const data = await upsertDragonPyramidLicense({
+    const wantsReactivation = Boolean(body?.reactivate) ||
+      ((body?.status ?? body?.license_status) === 'active' &&
+        (body?.paymentStatus ?? body?.payment_status) === 'paid');
+
+    const commonPayload = {
       client_code: body?.clientCode ?? body?.client_code,
       client_name: body?.clientName ?? body?.client_name,
       license_status: body?.status ?? body?.license_status,
@@ -45,12 +52,27 @@ export async function POST(req: Request) {
       reactivated_at: body?.reactivatedAt ?? body?.reactivated_at,
       suspension_reason: body?.reason ?? body?.suspension_reason,
       sync_source: 'dragon_pyramid_platform',
+      reason: body?.reason ?? body?.suspension_reason,
       metadata: {
         ...(body?.metadata && typeof body.metadata === 'object' ? body.metadata : {}),
         synced_from: 'dragon_pyramid_platform',
         received_at: new Date().toISOString(),
       },
-    });
+    };
+
+    const data = wantsReactivation
+      ? await reactivateDragonPyramidLicenseAfterPayment({
+          ...commonPayload,
+          sync_source: 'dragon_pyramid_platform_reactivation',
+        })
+      : await upsertDragonPyramidLicense({
+          ...commonPayload,
+          license_status: body?.status ?? body?.license_status,
+          suspended_at: body?.suspendedAt ?? body?.suspended_at,
+          reactivated_at: body?.reactivatedAt ?? body?.reactivated_at,
+          suspension_reason: body?.reason ?? body?.suspension_reason,
+          sync_source: 'dragon_pyramid_platform',
+        });
 
     return NextResponse.json({ data }, { status: 200 });
   } catch (error) {

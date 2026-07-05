@@ -34,6 +34,23 @@ const endpointDefinitions: EndpointDefinition[] = [
     internal: true,
   },
 
+
+  {
+    path: "/api/dragon-pyramid/license/reactivate",
+    methods: ["POST"],
+    tag: "Dragon Pyramid",
+    summary: "Reactivar servicio después de pago",
+    description:
+      "Permite al rol masteradmin reactivar la instancia después de regularizar el pago: deja licencia activa, pago al día, registra reactivated_at y limpia la causa de suspensión para liberar el acceso operativo.",
+    auth: true,
+    admin: true,
+    notImplemented: false,
+    statuses: [200, 400, 401, 403, 500],
+    queryParams: [],
+    source: "src/app/api/dragon-pyramid/license/reactivate/route.ts",
+    internal: true,
+  },
+
   {
     path: "/api/dragon-pyramid/license/warning",
     methods: ["GET"],

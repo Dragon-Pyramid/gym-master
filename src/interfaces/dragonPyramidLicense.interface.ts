@@ -60,3 +60,20 @@ export type DragonPyramidLicenseUpdateInput = {
   sync_source?: string | null;
   metadata?: Record<string, unknown>;
 };
+
+
+export type DragonPyramidLicenseReactivationInput = {
+  client_code?: string;
+  client_name?: string;
+  last_payment_at?: string | null;
+  next_due_at?: string | null;
+  expected_amount?: number | string | null;
+  currency?: string | null;
+  billing_plan?: string | null;
+  payment_notes?: string | null;
+  expires_at?: string | null;
+  grace_until?: string | null;
+  reason?: string | null;
+  sync_source?: string | null;
+  metadata?: Record<string, unknown>;
+};

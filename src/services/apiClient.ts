@@ -1193,6 +1193,21 @@ export async function updateDragonPyramidLicenseControl(payload: unknown) {
   return { ok: res.ok, ...data };
 }
 
+
+export async function reactivateDragonPyramidLicenseControl(payload: unknown) {
+  const token = getToken();
+  const res = await fetch('/api/dragon-pyramid/license/reactivate', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(payload ?? {}),
+  });
+  const data = await res.json();
+  return { ok: res.ok, ...data };
+}
+
 export async function getDragonPyramidLicenseWarning() {
   const token = getToken();
   const res = await fetch('/api/dragon-pyramid/license/warning', {
