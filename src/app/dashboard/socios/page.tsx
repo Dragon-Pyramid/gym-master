@@ -8,7 +8,7 @@ import { AppFooter } from '@/components/footer/AppFooter';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, FileText, FileSpreadsheet } from 'lucide-react';
+import { Search, FileText, FileSpreadsheet, Radar, UserCheck, Users, UserX } from 'lucide-react';
 import { fetchSociosApi, setSocioActivoApi } from '@/services/browser/socioApiClient';
 import SocioModal from '@/components/modal/SocioModal';
 import SocioViewModal from '@/components/modal/SocioViewModal';
@@ -30,6 +30,33 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 const SOCIOS_PAGE_SIZE = 10;
+
+function SocioSummaryCard({
+  icon: Icon,
+  label,
+  value,
+  detail,
+}: {
+  icon: typeof Users;
+  label: string;
+  value: string | number;
+  detail?: string;
+}) {
+  return (
+    <div className='rounded-2xl border bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80'>
+      <div className='flex items-start gap-3'>
+        <div className='rounded-full bg-sky-100 p-2 text-sky-700 dark:bg-sky-950 dark:text-sky-200'>
+          <Icon className='h-4 w-4' />
+        </div>
+        <div>
+          <p className='text-xs font-semibold uppercase tracking-wide text-muted-foreground'>{label}</p>
+          <p className='mt-1 text-2xl font-black text-foreground'>{value}</p>
+          {detail ? <p className='mt-1 text-xs text-muted-foreground'>{detail}</p> : null}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function SociosPage() {
   const { isAuthenticated, initializeAuth, isInitialized } =
@@ -181,6 +208,13 @@ export default function SociosPage() {
       ? 'Activos'
       : 'Inactivos';
 
+  const totalRegistrados = socios.length;
+  const totalActivos = socios.filter((s) => s.activo).length;
+  const totalInactivos = totalRegistrados - totalActivos;
+  const perfilesConEmergencia = socios.filter(
+    (s) => s.contacto_emergencia_nombre || s.contacto_emergencia_telefono
+  ).length;
+
   if (loading || !isInitialized) {
     return (
       <div className='flex items-center justify-center h-screen'>
@@ -195,14 +229,40 @@ export default function SociosPage() {
 
   return (
     <SidebarProvider>
-      <div className='flex w-full min-h-screen'>
+      <div className='flex h-[100dvh] max-h-[100dvh] min-h-0 w-full overflow-hidden'>
         <AppSidebar />
-        <SidebarInset>
+        <SidebarInset className='!grid h-[100dvh] max-h-[100dvh] min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden'>
           <AppHeader title='Socios' />
-          <main className='flex-1 p-6 space-y-6'>
-            <Card className='w-full'>
+          <section className='min-h-0 space-y-6 overflow-y-auto overflow-x-hidden p-4 pb-8 md:p-6 md:pb-10'>
+            <div className='rounded-3xl border bg-gradient-to-br from-slate-950 via-sky-950 to-slate-950 p-5 text-white shadow-sm'>
+              <div className='flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between'>
+                <div>
+                  <p className='text-xs font-bold uppercase tracking-[0.25em] text-sky-300'>Socios · vista administrativa</p>
+                  <h1 className='mt-2 text-3xl font-black'>Socios 360</h1>
+                  <p className='mt-2 max-w-3xl text-sm text-slate-300'>
+                    Listado operativo con acceso rápido al perfil 360° del socio: cuota, ficha médica, rutinas, dietas, evolución, mensajes y actividades.
+                  </p>
+                </div>
+                <div className='rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-200'>
+                  <div className='flex items-center gap-2 font-bold text-white'>
+                    <Radar className='h-4 w-4 text-sky-300' />
+                    Atención integral
+                  </div>
+                  <p className='mt-1'>Usá el botón 360 para revisar el estado completo antes de contactar o gestionar al socio.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
+              <SocioSummaryCard icon={Users} label='Registrados' value={totalRegistrados} detail='Base total de socios' />
+              <SocioSummaryCard icon={UserCheck} label='Activos' value={totalActivos} detail='Pueden operar normalmente' />
+              <SocioSummaryCard icon={UserX} label='Inactivos' value={totalInactivos} detail='Requieren revisión administrativa' />
+              <SocioSummaryCard icon={Radar} label='Con emergencia' value={perfilesConEmergencia} detail='Perfiles con contacto de respaldo' />
+            </div>
+
+            <Card className='w-full overflow-hidden rounded-3xl border shadow-sm'>
               <CardHeader className='flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap'>
-                <h2 className='text-xl font-bold'>Listado de Socios</h2>
+                <div><h2 className='text-xl font-bold'>Listado de socios</h2><p className='text-sm text-muted-foreground'>Filtrá, exportá y abrí el perfil 360° desde la acción de cada fila.</p></div>
                 <div className='flex flex-wrap items-center w-full gap-2 md:w-auto'>
                   <div className='flex items-center flex-grow gap-2 md:flex-grow-0'>
                     <DropdownMenu>
@@ -314,7 +374,7 @@ export default function SociosPage() {
                 />
               </CardContent>
             </Card>
-          </main>
+          </section>
           <AppFooter />
         </SidebarInset>
       </div>
