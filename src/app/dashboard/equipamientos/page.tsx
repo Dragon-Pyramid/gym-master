@@ -116,12 +116,12 @@ function MetricCard({
   tone?: "red" | "amber" | "blue" | "emerald" | "slate" | "violet";
 }) {
   const tones = {
-    red: "border-red-100 bg-red-50 text-red-900",
-    amber: "border-amber-100 bg-amber-50 text-amber-900",
-    blue: "border-blue-100 bg-blue-50 text-blue-900",
-    emerald: "border-emerald-100 bg-emerald-50 text-emerald-900",
-    slate: "border-slate-100 bg-slate-50 text-slate-900",
-    violet: "border-violet-100 bg-violet-50 text-violet-900",
+    red: "border-red-100 bg-red-50 text-red-900 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-100",
+    amber: "border-amber-100 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100",
+    blue: "border-blue-100 bg-blue-50 text-blue-900 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-100",
+    emerald: "border-emerald-100 bg-emerald-50 text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100",
+    slate: "border-slate-100 bg-slate-50 text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100",
+    violet: "border-violet-100 bg-violet-50 text-violet-900 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-100",
   } as const;
 
   return (
@@ -614,11 +614,36 @@ export default function EquipamientosPage() {
 
   return (
     <SidebarProvider>
-      <div className="flex w-full min-h-screen">
+      <div className="flex h-[100dvh] max-h-[100dvh] w-full overflow-hidden">
         <AppSidebar />
-        <SidebarInset>
+        <SidebarInset className="!grid !min-h-0 !flex-1 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden">
           <AppHeader title="Equipamientos" />
-          <main className="flex-1 p-6 space-y-6">
+          <main className="min-h-0 space-y-6 overflow-y-auto overflow-x-hidden p-4 sm:p-6">
+            <section className="overflow-hidden rounded-3xl border border-cyan-500/30 bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950 p-5 text-white shadow-xl shadow-cyan-950/20 sm:p-6">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                <div className="max-w-3xl space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.35em] text-cyan-300">
+                    Infraestructura y salud operativa
+                  </p>
+                  <h1 className="text-2xl font-black sm:text-3xl">Equipamiento y mantenimiento final</h1>
+                  <p className="text-sm leading-6 text-cyan-50/85">
+                    Vista ejecutiva para controlar estado del parque, próximos preventivos, alertas técnicas, costos y decisiones de reemplazo sin saltar entre módulos.
+                  </p>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[460px]">
+                  <Button type="button" onClick={() => router.push('/dashboard/infraestructura/equipamientos/preventivos')} className="bg-cyan-500 text-slate-950 hover:bg-cyan-400">
+                    <CalendarClock className="mr-2 h-4 w-4" /> Preventivos
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => router.push('/dashboard/infraestructura/etiquetas-qr')} className="border-white/20 bg-white/10 text-white hover:bg-white/20">
+                    <FileText className="mr-2 h-4 w-4" /> Etiquetas QR
+                  </Button>
+                  <Button type="button" variant="outline" onClick={handleRefreshMantenimiento} disabled={loadingAlertas} className="border-white/20 bg-white/10 text-white hover:bg-white/20">
+                    <RefreshCw className={`mr-2 h-4 w-4 ${loadingAlertas ? "animate-spin" : ""}`} /> Actualizar
+                  </Button>
+                </div>
+              </div>
+            </section>
+
             <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
               <MetricCard title="Vencidos" value={resumenAlertas?.vencidos ?? 0} tone="red" />
               <MetricCard title="Próximos" value={resumenAlertas?.proximos ?? 0} tone="amber" helper="Umbral 5 días" />
@@ -628,8 +653,48 @@ export default function EquipamientosPage() {
               <MetricCard title="Revisar reemplazo" value={resumenBi?.equipos_revisar_reemplazo ?? 0} tone="red" helper="Score técnico/comercial" />
             </section>
 
+            <section className="grid gap-4 lg:grid-cols-3">
+              <Card className="border-emerald-500/30 bg-emerald-50 text-emerald-950 dark:bg-emerald-500/10 dark:text-emerald-100 lg:col-span-2">
+                <CardContent className="p-5">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="mt-1 h-5 w-5" />
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.22em] opacity-75">Lectura ejecutiva</p>
+                      <h2 className="mt-1 text-xl font-black">
+                        {riesgoAltoCritico.length > 0
+                          ? 'Atención técnica prioritaria'
+                          : preventivosUrgentes.length > 0
+                            ? 'Preventivos por ejecutar'
+                            : 'Parque controlado'}
+                      </h2>
+                      <p className="mt-2 text-sm leading-6 opacity-85">
+                        {riesgoAltoCritico.length > 0
+                          ? `Hay ${riesgoAltoCritico.length} equipo${riesgoAltoCritico.length === 1 ? '' : 's'} con riesgo alto/crítico. Conviene revisar antes de nuevas promociones o rutinas intensivas.`
+                          : preventivosUrgentes.length > 0
+                            ? `Hay ${preventivosUrgentes.length} preventivo${preventivosUrgentes.length === 1 ? '' : 's'} próximo${preventivosUrgentes.length === 1 ? '' : 's'} o vencido${preventivosUrgentes.length === 1 ? '' : 's'}. Programar atención reduce downtime.`
+                            : 'No se detectan señales críticas con los datos actuales. Mantener revisión periódica y completar fechas faltantes.'}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-cyan-500/30 bg-cyan-50 text-cyan-950 dark:bg-cyan-500/10 dark:text-cyan-100">
+                <CardContent className="p-5">
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] opacity-75">Próximo paso</p>
+                  <p className="mt-2 text-lg font-bold">
+                    {sinRevisionProgramada.length > 0 ? 'Completar fechas de revisión' : 'Actualizar preventivos'}
+                  </p>
+                  <p className="mt-2 text-sm opacity-80">
+                    {sinRevisionProgramada.length > 0
+                      ? `${sinRevisionProgramada.length} equipo${sinRevisionProgramada.length === 1 ? '' : 's'} sin próxima revisión.`
+                      : 'Usá el panel preventivo para programar órdenes técnicas.'}
+                  </p>
+                </CardContent>
+              </Card>
+            </section>
+
             <section className="grid gap-4 xl:grid-cols-[1fr_1fr]">
-              <Card className="border-slate-200 bg-gradient-to-br from-white to-slate-50">
+              <Card className="border-slate-200 bg-gradient-to-br from-white to-slate-50 dark:border-slate-800 dark:from-slate-950 dark:to-slate-900">
                 <CardHeader className="border-b p-4">
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="h-5 w-5 text-amber-600" />
@@ -641,28 +706,28 @@ export default function EquipamientosPage() {
                 </CardHeader>
                 <CardContent className="space-y-3 p-4">
                   <div className="grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-xl border bg-white p-3">
+                    <div className="rounded-xl border bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
                       <p className="text-xs text-muted-foreground">Alto / crítico</p>
                       <p className="mt-1 text-2xl font-bold text-red-700">{riesgoAltoCritico.length}</p>
                     </div>
-                    <div className="rounded-xl border bg-white p-3">
+                    <div className="rounded-xl border bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
                       <p className="text-xs text-muted-foreground">Preventivos urgentes</p>
                       <p className="mt-1 text-2xl font-bold text-amber-700">{preventivosUrgentes.length}</p>
                     </div>
-                    <div className="rounded-xl border bg-white p-3">
+                    <div className="rounded-xl border bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
                       <p className="text-xs text-muted-foreground">Sin revisión</p>
-                      <p className="mt-1 text-2xl font-bold text-slate-700">{sinRevisionProgramada.length}</p>
+                      <p className="mt-1 text-2xl font-bold text-slate-700 dark:text-slate-100">{sinRevisionProgramada.length}</p>
                     </div>
                   </div>
 
                   {topRiskRadar.length ? (
                     <div className="space-y-2">
                       {topRiskRadar.map((item) => (
-                        <div key={item.id} className="rounded-xl border bg-white p-3 shadow-sm">
+                        <div key={item.id} className="rounded-xl border bg-white p-3 dark:border-slate-800 dark:bg-slate-950 shadow-sm">
                           <div className="flex items-start justify-between gap-3">
                             <div>
-                              <p className="font-semibold text-slate-950">{item.nombre}</p>
-                              <p className="mt-1 text-xs text-slate-500">
+                              <p className="font-semibold text-slate-950 dark:text-slate-100">{item.nombre}</p>
+                              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                                 {item.tipo || "Sin tipo"} · {item.ubicacion || "Sin ubicación"}
                               </p>
                             </div>
@@ -670,9 +735,9 @@ export default function EquipamientosPage() {
                               {item.nivel} · {item.score}
                             </span>
                           </div>
-                          <p className="mt-2 text-sm text-slate-700">{item.mensaje}</p>
+                          <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">{item.mensaje}</p>
                           {item.factores.length > 0 && (
-                            <p className="mt-1 text-xs text-slate-500">
+                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                               Factores: {item.factores.join(", ")}
                             </p>
                           )}
@@ -709,7 +774,7 @@ export default function EquipamientosPage() {
                     </div>
                   )}
                   {sinRevisionProgramada.length > 0 && (
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:text-slate-300">
                       Completar próxima revisión en equipos sin fecha para mejorar trazabilidad.
                     </div>
                   )}
@@ -727,7 +792,7 @@ export default function EquipamientosPage() {
                       </div>
                     )}
 
-                  <div className="rounded-xl border bg-white p-4 text-sm text-slate-600">
+                  <div className="rounded-xl border bg-white p-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
                     Próxima evolución sugerida: planes preventivos por tipo de máquina, órdenes técnicas avanzadas, repuestos, QR y downtime.
                   </div>
                 </CardContent>
@@ -748,7 +813,7 @@ export default function EquipamientosPage() {
                     variant="outline"
                     onClick={handleRefreshMantenimiento}
                     disabled={loadingAlertas}
-                    className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
+                    className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd] dark:bg-slate-950 dark:text-cyan-300 dark:hover:bg-slate-900"
                   >
                     <RefreshCw className={`h-4 w-4 ${loadingAlertas ? "animate-spin" : ""}`} />
                     Actualizar
@@ -833,11 +898,11 @@ export default function EquipamientosPage() {
                 <CardContent className="space-y-3 p-4">
                   {biMantenimiento?.recomendaciones_reemplazo?.length ? (
                     biMantenimiento.recomendaciones_reemplazo.map((item) => (
-                      <div key={item.id_equipamiento} className="rounded-xl border bg-white p-4 shadow-sm">
+                      <div key={item.id_equipamiento} className="rounded-xl border bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="font-semibold text-slate-950">{item.nombre}</p>
-                            <p className="mt-1 text-xs text-slate-500">
+                            <p className="font-semibold text-slate-950 dark:text-slate-100">{item.nombre}</p>
+                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                               {item.tipo || "Sin tipo"} · {item.ubicacion || "Sin ubicación"}
                             </p>
                           </div>
@@ -845,8 +910,8 @@ export default function EquipamientosPage() {
                             Score {item.score_reemplazo}
                           </span>
                         </div>
-                        <p className="mt-3 text-sm text-slate-700">{item.recomendacion}</p>
-                        <div className="mt-2 grid gap-2 text-xs text-slate-500 sm:grid-cols-2">
+                        <p className="mt-3 text-sm text-slate-700 dark:text-slate-300">{item.recomendacion}</p>
+                        <div className="mt-2 grid gap-2 text-xs text-slate-500 dark:text-slate-400 sm:grid-cols-2">
                           <span>Correctivos 180 días: {item.correctivos_180_dias}</span>
                           <span>Costo 180 días: {formatCurrency(item.costo_180_dias)}</span>
                         </div>
@@ -874,7 +939,7 @@ export default function EquipamientosPage() {
                   variant="outline"
                   onClick={handleRefreshMantenimiento}
                   disabled={loadingAlertas}
-                  className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
+                  className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd] dark:bg-slate-950 dark:text-cyan-300 dark:hover:bg-slate-900"
                 >
                   <RefreshCw className={`h-4 w-4 ${loadingAlertas ? "animate-spin" : ""}`} />
                   Actualizar alertas
@@ -888,11 +953,11 @@ export default function EquipamientosPage() {
                 ) : (
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                     {proximasAlertas.map((alerta) => (
-                      <div key={alerta.id} className="rounded-xl border bg-white p-4 shadow-sm">
+                      <div key={alerta.id} className="rounded-xl border bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="font-semibold text-slate-950">{alerta.nombre}</p>
-                            <p className="mt-1 text-xs text-slate-500">
+                            <p className="font-semibold text-slate-950 dark:text-slate-100">{alerta.nombre}</p>
+                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                               {alerta.tipo || "Sin tipo"} · {alerta.ubicacion || "Sin ubicación"}
                             </p>
                           </div>
@@ -908,8 +973,8 @@ export default function EquipamientosPage() {
                             {alerta.estado_alerta.replaceAll("_", " ")}
                           </span>
                         </div>
-                        <p className="mt-3 text-sm text-slate-700">{alerta.mensaje}</p>
-                        <p className="mt-2 text-xs text-slate-500">
+                        <p className="mt-3 text-sm text-slate-700 dark:text-slate-300">{alerta.mensaje}</p>
+                        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
                           Próxima revisión: {alerta.proxima_revision || "sin fecha"}
                         </p>
                       </div>
@@ -947,7 +1012,7 @@ export default function EquipamientosPage() {
                       <PopoverContent className="p-0 w-72" align="start">
                         <div className="p-4 space-y-4">
                           <div>
-                            <div className="pb-2 text-sm font-medium text-gray-700">Tipo</div>
+                            <div className="pb-2 text-sm font-medium text-gray-700 dark:text-slate-200">Tipo</div>
                             <div className="space-y-2">
                               {tipos.map((tipo) => (
                                 <div key={tipo} className="flex items-center space-x-2">
@@ -969,7 +1034,7 @@ export default function EquipamientosPage() {
                           </div>
 
                           <div className="pt-4 border-t">
-                            <div className="pb-2 text-sm font-medium text-gray-700">Estado</div>
+                            <div className="pb-2 text-sm font-medium text-gray-700 dark:text-slate-200">Estado</div>
                             <div className="space-y-2">
                               {estados.map((estado) => (
                                 <div key={estado} className="flex items-center space-x-2">
@@ -993,7 +1058,7 @@ export default function EquipamientosPage() {
                           </div>
 
                           <div className="pt-4 border-t">
-                            <div className="pb-2 text-sm font-medium text-gray-700">Ubicación</div>
+                            <div className="pb-2 text-sm font-medium text-gray-700 dark:text-slate-200">Ubicación</div>
                             <div className="space-y-2">
                               {ubicaciones.map((ubicacion) => (
                                 <div key={ubicacion} className="flex items-center space-x-2">
@@ -1048,7 +1113,7 @@ export default function EquipamientosPage() {
                     type="button"
                     variant="outline"
                     onClick={() => router.push("/dashboard/parametrizacion")}
-                    className="flex items-center gap-2 bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                    className="flex items-center gap-2 bg-white border-slate-200 text-slate-700 hover:bg-slate-50 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900"
                   >
                     <Filter className="w-4 h-4" />
                     <span className="hidden sm:inline">Catálogos</span>
@@ -1057,7 +1122,7 @@ export default function EquipamientosPage() {
                   <Button
                     onClick={handleDownloadPdf}
                     variant="outline"
-                    className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
+                    className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd] dark:bg-slate-950 dark:text-cyan-300 dark:hover:bg-slate-900"
                   >
                     <FileText className="w-4 h-4" />
                     <span className="hidden sm:inline">Descargar PDF</span>
@@ -1065,7 +1130,7 @@ export default function EquipamientosPage() {
                   <Button
                     variant="outline"
                     onClick={handleExportExcel}
-                    className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
+                    className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd] dark:bg-slate-950 dark:text-cyan-300 dark:hover:bg-slate-900"
                   >
                     <FileSpreadsheet className="w-4 h-4" />
                     <span className="hidden sm:inline">Exportar</span>
