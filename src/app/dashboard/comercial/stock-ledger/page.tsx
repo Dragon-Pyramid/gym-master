@@ -8,12 +8,17 @@ import {
   ArrowRightLeft,
   BarChart3,
   Boxes,
+  CheckCircle2,
   ClipboardList,
+  FilterX,
   Loader2,
   Package,
   Plus,
   RefreshCw,
   Search,
+  ShieldAlert,
+  ShoppingCart,
+  Target,
   Warehouse,
 } from 'lucide-react';
 import { AppHeader } from '@/components/header/AppHeader';
@@ -66,6 +71,47 @@ const tiposMovimiento: Array<{ value: ComercialStockMovimientoTipo; label: strin
   { value: 'uso_interno', label: 'Uso interno', help: 'Consumo interno del gimnasio.' },
 ];
 
+type StockAlertFilter = 'todos' | 'sin_stock' | 'critico' | 'bajo_minimo' | 'ok';
+
+const stockAlertFilters: Array<{ value: StockAlertFilter; label: string }> = [
+  { value: 'todos', label: 'Todos' },
+  { value: 'sin_stock', label: 'Sin stock' },
+  { value: 'critico', label: 'Crítico' },
+  { value: 'bajo_minimo', label: 'Bajo mínimo' },
+  { value: 'ok', label: 'OK' },
+];
+
+function getStockPriority(item: ComercialStockResumenItem) {
+  if (item.estado_stock === 'sin_stock') return 4;
+  if (item.estado_stock === 'critico') return 3;
+  if (item.estado_stock === 'bajo_minimo') return 2;
+  return 1;
+}
+
+function getReorderQuantity(item: ComercialStockResumenItem) {
+  const objective = Number(item.stock_objetivo ?? 0) > 0
+    ? Number(item.stock_objetivo ?? 0)
+    : Math.max(Number(item.stock_minimo ?? 0) * 2, Number(item.stock_minimo ?? 0) + 1);
+
+  return Math.max(0, Math.ceil(objective - Number(item.stock_total ?? 0)));
+}
+
+function getAlertToneClass(item: ComercialStockResumenItem) {
+  if (item.estado_stock === 'sin_stock') {
+    return 'border-red-300 bg-red-50 text-red-900 dark:border-red-700/70 dark:bg-red-950/30 dark:text-red-100';
+  }
+
+  if (item.estado_stock === 'critico') {
+    return 'border-orange-300 bg-orange-50 text-orange-900 dark:border-orange-700/70 dark:bg-orange-950/30 dark:text-orange-100';
+  }
+
+  if (item.estado_stock === 'bajo_minimo') {
+    return 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700/70 dark:bg-amber-950/30 dark:text-amber-100';
+  }
+
+  return 'border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-700/70 dark:bg-emerald-950/30 dark:text-emerald-100';
+}
+
 function getEstadoLabel(item: ComercialStockResumenItem) {
   if (item.estado_stock === 'sin_stock') return 'Sin stock';
   if (item.estado_stock === 'critico') return 'Crítico';
@@ -74,10 +120,10 @@ function getEstadoLabel(item: ComercialStockResumenItem) {
 }
 
 function getEstadoClass(item: ComercialStockResumenItem) {
-  if (item.estado_stock === 'sin_stock') return 'bg-red-100 text-red-700';
-  if (item.estado_stock === 'critico') return 'bg-orange-100 text-orange-700';
-  if (item.estado_stock === 'bajo_minimo') return 'bg-amber-100 text-amber-700';
-  return 'bg-emerald-100 text-emerald-700';
+  if (item.estado_stock === 'sin_stock') return 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-200';
+  if (item.estado_stock === 'critico') return 'bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-200';
+  if (item.estado_stock === 'bajo_minimo') return 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-200';
+  return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-200';
 }
 
 function MovementTypeHelp({ tipo }: { tipo: ComercialStockMovimientoTipo }) {
@@ -92,6 +138,7 @@ export default function ComercialStockLedgerPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [stockAlertFilter, setStockAlertFilter] = useState<StockAlertFilter>('todos');
   const [form, setForm] = useState<CreateComercialStockMovimientoDTO>({
     producto_id: '',
     tipo: 'compra',
@@ -130,16 +177,43 @@ export default function ComercialStockLedgerPage() {
     }
   }, [isInitialized, isAuthenticated]);
 
+  const stockAlerts = useMemo(() => {
+    return dashboard.resumen
+      .filter((item) => item.estado_stock !== 'ok')
+      .sort((a, b) => {
+        const priorityDiff = getStockPriority(b) - getStockPriority(a);
+        if (priorityDiff !== 0) return priorityDiff;
+        return Number(a.stock_total ?? 0) - Number(b.stock_total ?? 0);
+      });
+  }, [dashboard.resumen]);
+
+  const highPriorityAlerts = useMemo(
+    () => stockAlerts.filter((item) => item.estado_stock === 'sin_stock' || item.estado_stock === 'critico'),
+    [stockAlerts]
+  );
+
+  const suggestedReorderUnits = useMemo(
+    () => stockAlerts.reduce((total, item) => total + getReorderQuantity(item), 0),
+    [stockAlerts]
+  );
+
+  const stockHealthPercent = useMemo(() => {
+    if (dashboard.metricas.productos === 0) return 100;
+    const healthy = dashboard.resumen.filter((item) => item.estado_stock === 'ok').length;
+    return Math.round((healthy / dashboard.metricas.productos) * 100);
+  }, [dashboard.metricas.productos, dashboard.resumen]);
+
   const filteredResumen = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
-    if (!query) return dashboard.resumen;
 
     return dashboard.resumen.filter((item) => {
-      return [item.producto_nombre, item.sku, item.codigo_barras]
+      const matchesSearch = !query || [item.producto_nombre, item.sku, item.codigo_barras]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(query));
+      const matchesAlertFilter = stockAlertFilter === 'todos' || item.estado_stock === stockAlertFilter;
+      return matchesSearch && matchesAlertFilter;
     });
-  }, [dashboard.resumen, searchTerm]);
+  }, [dashboard.resumen, searchTerm, stockAlertFilter]);
 
   const stockByProduct = useMemo(() => {
     const map = new Map<string, typeof dashboard.stockPorUbicacion>();
@@ -155,6 +229,21 @@ export default function ComercialStockLedgerPage() {
   const needsOrigin = ['venta', 'ajuste_salida', 'transferencia', 'merma', 'vencimiento', 'uso_interno'].includes(selectedTipo);
   const needsDestination = ['compra', 'ajuste_entrada', 'transferencia', 'devolucion', 'conteo_fisico'].includes(selectedTipo);
   const isConteo = selectedTipo === 'conteo_fisico';
+
+  function prepareIncomingMovement(item: ComercialStockResumenItem) {
+    const cantidad = Math.max(1, getReorderQuantity(item));
+    setForm((prev) => ({
+      ...prev,
+      producto_id: item.producto_id,
+      tipo: 'compra',
+      cantidad,
+      stock_real: null,
+      ubicacion_origen_id: '',
+      ubicacion_destino_id: dashboard.ubicaciones[0]?.id ?? prev.ubicacion_destino_id ?? '',
+      motivo: `Reposición sugerida por alerta ${getEstadoLabel(item).toLowerCase()} · ${cantidad} unidades`,
+    }));
+    toast.info('Producto cargado en el formulario de movimiento');
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -187,32 +276,32 @@ export default function ComercialStockLedgerPage() {
 
   return (
     <SidebarProvider>
-      <div className='flex min-h-screen w-full'>
+      <div className='flex h-[100dvh] max-h-[100dvh] w-full overflow-hidden bg-slate-50 text-slate-950 dark:bg-slate-950 dark:text-slate-100'>
         <AppSidebar />
-        <SidebarInset>
-          <AppHeader title='Stock Ledger Comercial' />
-          <main className='flex-1 space-y-6 p-6'>
-            <section className='rounded-2xl border bg-white p-6 shadow-sm'>
+        <SidebarInset className='grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden'>
+          <AppHeader title='Alertas de stock comercial' />
+          <main className='min-h-0 space-y-6 overflow-y-auto overflow-x-hidden p-4 sm:p-6'>
+            <section className='rounded-3xl border border-sky-200 bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950 p-6 text-white shadow-sm dark:border-cyan-800/70'>
               <div className='flex flex-col justify-between gap-4 lg:flex-row lg:items-center'>
                 <div className='space-y-2'>
-                  <p className='text-xs font-semibold uppercase tracking-[0.24em] text-sky-600'>
-                    Comercial y Stock
+                  <p className='text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300'>
+                    Centro final de alertas · Stock comercial
                   </p>
-                  <h1 className='text-2xl font-bold'>Stock ledger y ubicaciones</h1>
-                  <p className='max-w-4xl text-sm leading-relaxed text-muted-foreground'>
-                    Base operativa para inventario profesional: stock por ubicación, movimientos auditables,
-                    reposición, valor de inventario, barcode/QR y futura integración con POS/Kiosco.
+                  <h1 className='text-2xl font-bold'>Alertas de stock, reposición y movimientos</h1>
+                  <p className='max-w-4xl text-sm leading-relaxed text-cyan-50/85'>
+                    Detectá productos sin stock, críticos o bajo mínimo antes de que impacten el POS.
+                    Priorizá reposición, compras y ajustes desde un único tablero operativo.
                   </p>
                 </div>
                 <div className='flex flex-wrap gap-2'>
-                  <Button variant='outline' onClick={loadDashboard} disabled={loading}>
+                  <Button variant='outline' className='border-white/30 bg-white/10 text-white hover:bg-white/20' onClick={loadDashboard} disabled={loading}>
                     {loading ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <RefreshCw className='mr-2 h-4 w-4' />}
                     Actualizar
                   </Button>
-                  <Button asChild variant='outline'>
+                  <Button asChild variant='outline' className='border-white/30 bg-white/10 text-white hover:bg-white/20'>
                     <Link href='/dashboard/productos'>Productos</Link>
                   </Button>
-                  <Button asChild className='bg-[#02a8e1] hover:bg-[#0288b1]'>
+                  <Button asChild className='bg-cyan-400 text-slate-950 hover:bg-cyan-300'>
                     <Link href='/dashboard/comercial'>Comercial</Link>
                   </Button>
                 </div>
@@ -272,6 +361,109 @@ export default function ComercialStockLedgerPage() {
                     <p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.movimientos}</p>
                   </div>
                   <ClipboardList className='h-6 w-6 text-violet-600' />
+                </CardContent>
+              </Card>
+            </section>
+
+            <section className='grid grid-cols-1 gap-4 lg:grid-cols-[1.25fr_0.75fr]'>
+              <Card className='border-orange-200 bg-orange-50/80 dark:border-orange-900/60 dark:bg-orange-950/20'>
+                <CardHeader>
+                  <div className='flex flex-col justify-between gap-3 md:flex-row md:items-start'>
+                    <div className='space-y-1'>
+                      <CardTitle className='flex items-center gap-2 text-lg'>
+                        <ShieldAlert className='h-5 w-5 text-orange-600' />
+                        Alertas prioritarias de stock
+                      </CardTitle>
+                      <p className='text-sm text-muted-foreground'>
+                        Productos que pueden frenar ventas en POS o requieren reposición inmediata.
+                      </p>
+                    </div>
+                    <div className='rounded-full border border-orange-300 bg-white px-3 py-1 text-xs font-semibold text-orange-700 dark:border-orange-800 dark:bg-slate-950 dark:text-orange-200'>
+                      {highPriorityAlerts.length} críticas
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {stockAlerts.length === 0 ? (
+                    <div className='rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/70 dark:bg-emerald-950/30 dark:text-emerald-100'>
+                      <CheckCircle2 className='mb-2 h-5 w-5' />
+                      No hay alertas de stock. El catálogo comercial está dentro de parámetros operativos.
+                    </div>
+                  ) : (
+                    <div className='grid grid-cols-1 gap-3 md:grid-cols-2'>
+                      {stockAlerts.slice(0, 6).map((item) => {
+                        const reorderQty = getReorderQuantity(item);
+                        return (
+                          <div key={item.producto_id} className={`rounded-2xl border p-4 ${getAlertToneClass(item)}`}>
+                            <div className='flex items-start justify-between gap-3'>
+                              <div className='min-w-0'>
+                                <p className='truncate font-semibold'>{item.producto_nombre}</p>
+                                <p className='text-xs opacity-80'>
+                                  {item.sku ? `SKU ${item.sku}` : 'Sin SKU'} · Stock {item.stock_total} / mín. {item.stock_minimo}
+                                </p>
+                              </div>
+                              <span className='shrink-0 rounded-full bg-white/70 px-2 py-1 text-xs font-semibold text-slate-800 dark:bg-slate-950/70 dark:text-slate-100'>
+                                {getEstadoLabel(item)}
+                              </span>
+                            </div>
+                            <div className='mt-3 grid grid-cols-2 gap-2 text-xs'>
+                              <div className='rounded-xl bg-white/55 p-2 dark:bg-slate-950/40'>
+                                <p className='opacity-70'>Reponer sugerido</p>
+                                <p className='text-base font-bold'>{reorderQty}</p>
+                              </div>
+                              <div className='rounded-xl bg-white/55 p-2 dark:bg-slate-950/40'>
+                                <p className='opacity-70'>Valor actual</p>
+                                <p className='text-base font-bold'>{formatCurrencyARS(item.valor_inventario)}</p>
+                              </div>
+                            </div>
+                            <Button
+                              type='button'
+                              variant='outline'
+                              className='mt-3 w-full bg-white/80 text-slate-900 hover:bg-white dark:border-white/20 dark:bg-slate-950/50 dark:text-slate-100'
+                              onClick={() => prepareIncomingMovement(item)}
+                            >
+                              <ShoppingCart className='mr-2 h-4 w-4' />
+                              Preparar ingreso
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className='border-sky-200 bg-sky-50/80 dark:border-sky-900/60 dark:bg-sky-950/20'>
+                <CardHeader>
+                  <CardTitle className='flex items-center gap-2 text-lg'>
+                    <Target className='h-5 w-5 text-sky-600' />
+                    Salud de inventario
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className='space-y-4'>
+                  <div className='grid grid-cols-2 gap-3'>
+                    <div className='rounded-2xl border bg-white p-4 dark:bg-slate-950/50'>
+                      <p className='text-xs uppercase tracking-wide text-muted-foreground'>Salud stock</p>
+                      <p className='text-2xl font-bold'>{stockHealthPercent}%</p>
+                    </div>
+                    <div className='rounded-2xl border bg-white p-4 dark:bg-slate-950/50'>
+                      <p className='text-xs uppercase tracking-wide text-muted-foreground'>Unidades sugeridas</p>
+                      <p className='text-2xl font-bold'>{suggestedReorderUnits}</p>
+                    </div>
+                    <div className='rounded-2xl border bg-white p-4 dark:bg-slate-950/50'>
+                      <p className='text-xs uppercase tracking-wide text-muted-foreground'>Sin stock</p>
+                      <p className='text-2xl font-bold text-red-600'>{dashboard.metricas.productosSinStock}</p>
+                    </div>
+                    <div className='rounded-2xl border bg-white p-4 dark:bg-slate-950/50'>
+                      <p className='text-xs uppercase tracking-wide text-muted-foreground'>Bajo/crítico</p>
+                      <p className='text-2xl font-bold text-orange-600'>{dashboard.metricas.productosCriticos}</p>
+                    </div>
+                  </div>
+                  <div className='rounded-2xl border border-sky-200 bg-white p-4 text-sm leading-relaxed text-muted-foreground dark:border-sky-900/70 dark:bg-slate-950/50'>
+                    {stockAlerts.length > 0
+                      ? 'Priorizá productos sin stock o críticos antes de impulsar promociones o packs de alto movimiento.'
+                      : 'El inventario no presenta alertas críticas. Revisá movimientos recientes para mantener trazabilidad.'}
+                  </div>
                 </CardContent>
               </Card>
             </section>
@@ -408,21 +600,46 @@ export default function ComercialStockLedgerPage() {
                 <CardHeader>
                   <div className='flex flex-col justify-between gap-3 md:flex-row md:items-center'>
                     <CardTitle className='text-lg'>Resumen por producto</CardTitle>
-                    <div className='relative w-full md:w-80'>
-                      <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                      <Input
-                        className='pl-9'
-                        value={searchTerm}
-                        placeholder='Buscar producto, SKU o barcode...'
-                        onChange={(event) => setSearchTerm(event.target.value)}
-                      />
+                    <div className='flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center'>
+                      <select
+                        className='h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm md:w-44'
+                        value={stockAlertFilter}
+                        onChange={(event) => setStockAlertFilter(event.target.value as StockAlertFilter)}
+                      >
+                        {stockAlertFilters.map((filter) => (
+                          <option key={filter.value} value={filter.value}>{filter.label}</option>
+                        ))}
+                      </select>
+                      <div className='relative w-full md:w-80'>
+                        <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+                        <Input
+                          className='pl-9'
+                          value={searchTerm}
+                          placeholder='Buscar producto, SKU o barcode...'
+                          onChange={(event) => setSearchTerm(event.target.value)}
+                        />
+                      </div>
+                      {(searchTerm || stockAlertFilter !== 'todos') && (
+                        <Button
+                          type='button'
+                          variant='outline'
+                          className='w-full md:w-auto'
+                          onClick={() => {
+                            setSearchTerm('');
+                            setStockAlertFilter('todos');
+                          }}
+                        >
+                          <FilterX className='mr-2 h-4 w-4' />
+                          Limpiar
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <div className='overflow-x-auto rounded-lg border'>
                     <table className='w-full min-w-[880px] text-sm'>
-                      <thead className='bg-slate-50 text-left text-xs uppercase tracking-wide text-muted-foreground'>
+                      <thead className='bg-slate-50 text-left text-xs uppercase tracking-wide text-muted-foreground dark:bg-slate-900/70'>
                         <tr>
                           <th className='px-4 py-3'>Producto</th>
                           <th className='px-4 py-3 text-right'>Stock</th>
@@ -444,7 +661,7 @@ export default function ComercialStockLedgerPage() {
                         ) : filteredResumen.length === 0 ? (
                           <tr>
                             <td colSpan={8} className='px-4 py-8 text-center text-muted-foreground'>
-                              No hay productos para mostrar.
+                              No hay productos para mostrar con los filtros actuales.
                             </td>
                           </tr>
                         ) : (
@@ -497,7 +714,7 @@ export default function ComercialStockLedgerPage() {
                       <div key={movimiento.id} className='rounded-lg border p-3 text-sm'>
                         <div className='flex items-center justify-between gap-2'>
                           <p className='font-medium'>{movimiento.producto?.nombre || 'Producto'}</p>
-                          <span className='rounded-full bg-slate-100 px-2 py-1 text-xs'>{movimiento.tipo.replace(/_/g, ' ')}</span>
+                          <span className='rounded-full bg-slate-100 px-2 py-1 text-xs dark:bg-slate-800'>{movimiento.tipo.replace(/_/g, ' ')}</span>
                         </div>
                         <p className='mt-1 text-xs text-muted-foreground'>
                           Cantidad {movimiento.cantidad} · Stock {movimiento.stock_anterior_total} → {movimiento.stock_nuevo_total}
