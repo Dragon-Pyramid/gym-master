@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import { AppHeader } from '@/components/header/AppHeader';
@@ -8,7 +8,7 @@ import { AppFooter } from '@/components/footer/AppFooter';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, FileText, FileSpreadsheet, Radar, UserCheck, Users, UserX } from 'lucide-react';
+import { AlertTriangle, Search, FileText, FileSpreadsheet, Radar, UserCheck, Users, UserX } from 'lucide-react';
 import { fetchSociosApi, setSocioActivoApi } from '@/services/browser/socioApiClient';
 import SocioModal from '@/components/modal/SocioModal';
 import SocioViewModal from '@/components/modal/SocioViewModal';
@@ -21,6 +21,7 @@ import ExcelJS from 'exceljs';
 import { buildTimestampedDownloadFileName } from '@/utils/downloadFileName';
 import { PaginationControls } from '@/components/ui/PaginationControls';
 import { downloadCommercialReportPdf } from '@/utils/commercialReportPdf';
+import { buildSocioBaseRiskSummary, getSocioRiskToneClasses } from '@/utils/socioRiskAlerts';
 
 import {
   DropdownMenu,
@@ -52,6 +53,33 @@ function SocioSummaryCard({
           <p className='text-xs font-semibold uppercase tracking-wide text-muted-foreground'>{label}</p>
           <p className='mt-1 text-2xl font-black text-foreground'>{value}</p>
           {detail ? <p className='mt-1 text-xs text-muted-foreground'>{detail}</p> : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SocioRiskQuickCard({
+  label,
+  value,
+  detail,
+  level,
+}: {
+  label: string;
+  value: string | number;
+  detail: string;
+  level: 'alto' | 'medio' | 'bajo' | 'ok';
+}) {
+  return (
+    <div className={`rounded-2xl border p-4 shadow-sm ${getSocioRiskToneClasses(level)}`}>
+      <div className='flex items-start gap-3'>
+        <div className='rounded-full bg-black/5 p-2 dark:bg-white/10'>
+          <AlertTriangle className='h-4 w-4' />
+        </div>
+        <div>
+          <p className='text-xs font-semibold uppercase tracking-wide opacity-75'>{label}</p>
+          <p className='mt-1 text-2xl font-black'>{value}</p>
+          <p className='mt-1 text-xs opacity-80'>{detail}</p>
         </div>
       </div>
     </div>
@@ -169,6 +197,12 @@ export default function SociosPage() {
       sociosFiltrados = sociosFiltrados.filter((s) => s.activo);
     } else if (filtroActivo === 'inactivos') {
       sociosFiltrados = sociosFiltrados.filter((s) => !s.activo);
+    } else if (filtroActivo === 'riesgo_alto') {
+      sociosFiltrados = sociosFiltrados.filter((s) => buildSocioBaseRiskSummary(s).level === 'alto');
+    } else if (filtroActivo === 'riesgo_medio') {
+      sociosFiltrados = sociosFiltrados.filter((s) => buildSocioBaseRiskSummary(s).level === 'medio');
+    } else if (filtroActivo === 'seguimiento') {
+      sociosFiltrados = sociosFiltrados.filter((s) => ['alto', 'medio', 'bajo'].includes(buildSocioBaseRiskSummary(s).level));
     }
     if (searchTerm.trim() !== '') {
       const lowercaseSearch = searchTerm.toLowerCase();
@@ -206,7 +240,13 @@ export default function SociosPage() {
       ? 'Todos'
       : filtroActivo === 'activos'
       ? 'Activos'
-      : 'Inactivos';
+      : filtroActivo === 'inactivos'
+      ? 'Inactivos'
+      : filtroActivo === 'riesgo_alto'
+      ? 'Riesgo alto'
+      : filtroActivo === 'riesgo_medio'
+      ? 'Riesgo medio'
+      : 'Con alertas';
 
   const totalRegistrados = socios.length;
   const totalActivos = socios.filter((s) => s.activo).length;
@@ -214,6 +254,11 @@ export default function SociosPage() {
   const perfilesConEmergencia = socios.filter(
     (s) => s.contacto_emergencia_nombre || s.contacto_emergencia_telefono
   ).length;
+
+  const riskSummaries = useMemo(() => socios.map((socio) => buildSocioBaseRiskSummary(socio)), [socios]);
+  const totalRiesgoAlto = riskSummaries.filter((summary) => summary.level === 'alto').length;
+  const totalRiesgoMedio = riskSummaries.filter((summary) => summary.level === 'medio').length;
+  const totalSeguimiento = riskSummaries.filter((summary) => summary.level !== 'ok').length;
 
   if (loading || !isInitialized) {
     return (
@@ -260,6 +305,12 @@ export default function SociosPage() {
               <SocioSummaryCard icon={Radar} label='Con emergencia' value={perfilesConEmergencia} detail='Perfiles con contacto de respaldo' />
             </div>
 
+            <div className='grid gap-4 md:grid-cols-3'>
+              <SocioRiskQuickCard label='Riesgo alto' value={totalRiesgoAlto} detail='Socios inactivos o con señales operativas críticas.' level='alto' />
+              <SocioRiskQuickCard label='Riesgo medio' value={totalRiesgoMedio} detail='Requieren contacto o normalización administrativa.' level='medio' />
+              <SocioRiskQuickCard label='Con alertas' value={totalSeguimiento} detail='Socios con alguna señal de seguimiento detectada.' level={totalSeguimiento > 0 ? 'bajo' : 'ok'} />
+            </div>
+
             <Card className='w-full overflow-hidden rounded-3xl border shadow-sm'>
               <CardHeader className='flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap'>
                 <div><h2 className='text-xl font-bold'>Listado de socios</h2><p className='text-sm text-muted-foreground'>Filtrá, exportá y abrí el perfil 360° desde la acción de cada fila.</p></div>
@@ -295,6 +346,24 @@ export default function SociosPage() {
                           }
                         >
                           Inactivos
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onSelect={() => setFiltroActivo('riesgo_alto')}
+                          className={filtroActivo === 'riesgo_alto' ? 'font-bold' : ''}
+                        >
+                          Riesgo alto
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onSelect={() => setFiltroActivo('riesgo_medio')}
+                          className={filtroActivo === 'riesgo_medio' ? 'font-bold' : ''}
+                        >
+                          Riesgo medio
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onSelect={() => setFiltroActivo('seguimiento')}
+                          className={filtroActivo === 'seguimiento' ? 'font-bold' : ''}
+                        >
+                          Con alertas
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

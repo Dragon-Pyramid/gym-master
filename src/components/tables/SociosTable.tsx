@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, Pencil } from "lucide-react";
+import { Eye, Pencil, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -14,6 +14,7 @@ import {
   TableCaption,
 } from "@/components/ui/table";
 import { Socio } from "@/interfaces/socio.interface";
+import { buildSocioBaseRiskSummary, getSocioRiskToneClasses } from "@/utils/socioRiskAlerts";
 
 export default function SociosTable({
   socios,
@@ -54,6 +55,7 @@ export default function SociosTable({
           <TableHead>Nombre</TableHead>
           <TableHead>Teléfono</TableHead>
           <TableHead>Email</TableHead>
+          <TableHead>Riesgo</TableHead>
           <TableHead>Fecha Alta</TableHead>
           <TableHead>Activo</TableHead>
           <TableHead>Acciones</TableHead>
@@ -61,61 +63,71 @@ export default function SociosTable({
       </TableHeader>
 
       <TableBody>
-        {socios.map((s, i) => (
-          <TableRow
-            key={i}
-            className="odd:bg-muted/40 hover:bg-sky-50 dark:hover:bg-sky-950/40 transition-colors"
-          >
-            <TableCell className="font-medium">{s.dni}</TableCell>
-            <TableCell>{s.nombre_completo}</TableCell>
-            <TableCell>{s.telefono}</TableCell>
-            <TableCell>{s.email}</TableCell>
-            <TableCell>{s.fecha_alta}</TableCell>
-            <TableCell>{s.activo ? "✅" : "❌"}</TableCell>
-            <TableCell className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onView && onView(s)}
-                className="gap-1"
-                title="Vista 360 del socio"
-              >
-                <Eye className="w-4 h-4" />
-                <span className="hidden xl:inline">360</span>
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onEdit(s)}
-                title="Editar"
-              >
-                <Pencil className="w-4 h-4" />
-              </Button>
-              <Button
-                size="sm"
-                className={
-                  (s.activo
-                    ? "bg-red-500 hover:bg-red-600"
-                    : "bg-green-500 hover:bg-green-600") +
-                  " text-white w-[100px]" // 👈 fuerza el ancho exacto
-                }
-                onClick={() => onDelete && onDelete(s)}
-              >
-                {s.activo ? "Desactivar" : "Activar"}
-              </Button>
-            </TableCell>
-          </TableRow>
-        ))}
+        {socios.map((s, i) => {
+          const risk = buildSocioBaseRiskSummary(s);
+
+          return (
+            <TableRow
+              key={s.id_socio || i}
+              className="odd:bg-muted/40 hover:bg-sky-50 dark:hover:bg-sky-950/40 transition-colors"
+            >
+              <TableCell className="font-medium">{s.dni}</TableCell>
+              <TableCell>{s.nombre_completo}</TableCell>
+              <TableCell>{s.telefono || '-'}</TableCell>
+              <TableCell>{s.email || '-'}</TableCell>
+              <TableCell>
+                <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-bold ${getSocioRiskToneClasses(risk.level)}`}>
+                  <ShieldAlert className="h-3.5 w-3.5" />
+                  {risk.label}
+                </span>
+              </TableCell>
+              <TableCell>{s.fecha_alta}</TableCell>
+              <TableCell>{s.activo ? "✅" : "❌"}</TableCell>
+              <TableCell className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onView && onView(s)}
+                  className="gap-1"
+                  title="Vista 360 del socio"
+                >
+                  <Eye className="w-4 h-4" />
+                  <span className="hidden xl:inline">360</span>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onEdit(s)}
+                  title="Editar"
+                >
+                  <Pencil className="w-4 h-4" />
+                </Button>
+                <Button
+                  size="sm"
+                  className={
+                    (s.activo
+                      ? "bg-red-500 hover:bg-red-600"
+                      : "bg-green-500 hover:bg-green-600") +
+                    " text-white w-[100px]"
+                  }
+                  onClick={() => onDelete && onDelete(s)}
+                >
+                  {s.activo ? "Desactivar" : "Activar"}
+                </Button>
+              </TableCell>
+            </TableRow>
+          );
+        })}
       </TableBody>
 
       <TableFooter>
         <TableRow>
-          <TableCell colSpan={6}>Total de socios</TableCell>
+          <TableCell colSpan={7}>Total de socios</TableCell>
           <TableCell className="text-right">{socios.length}</TableCell>
         </TableRow>
       </TableFooter>
 
-      <TableCaption>Listado de socios registrados.</TableCaption>
+      <TableCaption>Listado de socios registrados con lectura rápida de riesgo.</TableCaption>
     </Table>
   );
 }
