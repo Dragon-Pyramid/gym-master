@@ -15,10 +15,22 @@ function buildHeaders(hasBody = false): HeadersInit {
   };
 }
 
+function sanitizeApiErrorMessage(value: unknown, fallback: string) {
+  const message = String(value ?? '').trim();
+  if (!message) return fallback;
+  if (message.includes('<html') || message.includes('<body') || message.includes('cloudflare') || message.length > 220) {
+    return fallback;
+  }
+  return message;
+}
+
 async function parseResponse<T>(res: Response, fallback: string): Promise<T> {
-  const payload = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(payload?.error || fallback);
-  return payload?.data as T;
+  const contentType = res.headers.get('content-type') || '';
+  const payload = contentType.includes('application/json')
+    ? await res.json().catch(() => ({}))
+    : {};
+  if (!res.ok) throw new Error(sanitizeApiErrorMessage((payload as any)?.error, fallback));
+  return (payload as any)?.data as T;
 }
 
 export async function createComercialMobileScannerSession(): Promise<ComercialScannerSession> {

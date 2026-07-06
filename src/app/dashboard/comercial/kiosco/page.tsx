@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -113,6 +113,11 @@ function getClientLabel(sale: ComercialPosVentaResumen) {
   return 'Consumidor Final';
 }
 
+function getCartTypeLabel(type: CartItem['item_tipo']) {
+  if (type === 'producto') return 'Producto';
+  if (type === 'servicio') return 'Servicio';
+  return 'Pack';
+}
 
 function escapeHtml(value: unknown) {
   return String(value ?? '')
@@ -175,6 +180,8 @@ export default function ComercialKioscoPosPage() {
   const [scannerSession, setScannerSession] = useState<ComercialScannerSession | null>(null);
   const [scannerLoading, setScannerLoading] = useState(false);
   const [scannerEvents, setScannerEvents] = useState<ComercialScannerEvent[]>([]);
+  const scannerPollFailuresRef = useRef(0);
+  const scannerPollWarningShownRef = useRef(false);
 
   useEffect(() => {
     initializeAuth();
@@ -498,6 +505,8 @@ export default function ComercialKioscoPosPage() {
       const session = await createComercialMobileScannerSession();
       setScannerSession(session);
       setScannerEvents([]);
+      scannerPollFailuresRef.current = 0;
+      scannerPollWarningShownRef.current = false;
       toast.success('Scanner móvil creado. Escaneá el QR con el celular.');
     } catch (error: any) {
       toast.error(error?.message || 'No se pudo crear scanner móvil');
@@ -512,6 +521,8 @@ export default function ComercialKioscoPosPage() {
     try {
       const session = await closeComercialMobileScannerSession(scannerSession.id);
       setScannerSession(session);
+      scannerPollFailuresRef.current = 0;
+      scannerPollWarningShownRef.current = false;
       toast.success('Scanner móvil cerrado');
     } catch (error: any) {
       toast.error(error?.message || 'No se pudo cerrar scanner móvil');
@@ -560,13 +571,20 @@ export default function ComercialKioscoPosPage() {
     if (!scannerSession?.id || scannerSession.estado !== 'activa') return;
     try {
       const state = await getComercialMobileScannerState(scannerSession.id);
+      scannerPollFailuresRef.current = 0;
+      scannerPollWarningShownRef.current = false;
       if (state.session) setScannerSession(state.session);
       setScannerEvents(state.recentEvents ?? []);
       for (const event of state.pendingEvents ?? []) {
         await processScannerEvent(event);
       }
     } catch (error: any) {
-      toast.error(error?.message || 'No se pudo consultar el scanner móvil');
+      scannerPollFailuresRef.current += 1;
+      console.warn('Scanner móvil POS: fallo transitorio de polling', error);
+      if (scannerPollFailuresRef.current >= 3 && !scannerPollWarningShownRef.current) {
+        scannerPollWarningShownRef.current = true;
+        toast.warning('Scanner móvil con conexión intermitente; seguimos reintentando en segundo plano.');
+      }
     }
   }
 
@@ -579,54 +597,105 @@ export default function ComercialKioscoPosPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scannerSession?.id, scannerSession?.estado, dashboard, ubicacionId]);
 
+  const paymentLabel = useMemo(
+    () => metodoPagoOptions.find((option) => option.value === metodoPago)?.label ?? metodoPago,
+    [metodoPago]
+  );
+
+  const posReadiness = useMemo(() => {
+    if (!ubicacionId) return { label: 'Configurar ubicación', tone: 'warning' as const, detail: 'Seleccioná una ubicación para validar stock.' };
+    if (dashboard.metricas.productosDisponibles === 0 && dashboard.metricas.serviciosDisponibles === 0 && dashboard.metricas.packsDisponibles === 0) {
+      return { label: 'Sin catálogo POS', tone: 'critical' as const, detail: 'No hay productos, servicios o packs disponibles.' };
+    }
+    if (dashboard.metricas.productosCriticos > 0) {
+      return { label: 'Atención stock', tone: 'warning' as const, detail: `${dashboard.metricas.productosCriticos} productos críticos.` };
+    }
+    return { label: 'Listo para vender', tone: 'ok' as const, detail: 'Stock, servicios y packs disponibles.' };
+  }, [dashboard.metricas.packsDisponibles, dashboard.metricas.productosCriticos, dashboard.metricas.productosDisponibles, dashboard.metricas.serviciosDisponibles, ubicacionId]);
+
+  const posReadinessClass =
+    posReadiness.tone === 'critical'
+      ? 'border-red-200 bg-red-50 text-red-700 dark:border-red-500/40 dark:bg-red-950/40 dark:text-red-100'
+      : posReadiness.tone === 'warning'
+        ? 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-950/40 dark:text-amber-100'
+        : 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-950/40 dark:text-emerald-100';
+
+  const visibleCatalogCount = filteredProducts.length + filteredServices.length + filteredPacks.length;
 
   if (!isInitialized) return <div>Cargando...</div>;
   if (!isAuthenticated) return null;
 
   return (
     <SidebarProvider>
-      <div className='flex min-h-screen w-full'>
+      <div className='flex h-[100dvh] max-h-[100dvh] w-full overflow-hidden bg-slate-50 dark:bg-slate-950'>
         <AppSidebar />
-        <SidebarInset>
+        <SidebarInset className='!grid !min-h-0 !grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden'>
           <AppHeader title='POS / Kiosco' />
-          <main className='flex-1 space-y-6 p-6'>
-            <section className='rounded-2xl border bg-white p-6 shadow-sm'>
-              <div className='flex flex-col justify-between gap-4 lg:flex-row lg:items-center'>
-                <div className='space-y-2'>
-                  <p className='text-xs font-semibold uppercase tracking-[0.24em] text-sky-600'>
-                    Comercial y Stock
+          <main className='min-h-0 space-y-5 overflow-y-auto overflow-x-hidden px-3 py-4 sm:px-4 lg:px-6'>
+            <section className='overflow-hidden rounded-3xl border border-sky-200/70 bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950 p-4 text-white shadow-xl dark:border-cyan-500/30 sm:p-6'>
+              <div className='flex flex-col justify-between gap-5 xl:flex-row xl:items-center'>
+                <div className='max-w-5xl space-y-3'>
+                  <p className='text-[0.68rem] font-semibold uppercase tracking-[0.32em] text-cyan-300'>
+                    POS móvil final · Comercial y Stock
                   </p>
-                  <h1 className='text-2xl font-bold'>Punto de Venta / Kiosco</h1>
-                  <p className='max-w-4xl text-sm leading-relaxed text-muted-foreground'>
+                  <h1 className='text-2xl font-black leading-tight sm:text-3xl'>Punto de Venta / Kiosco</h1>
+                  <p className='max-w-4xl text-sm leading-relaxed text-slate-200'>
                     Venta rápida con carrito, búsqueda por producto/servicio/pack, scanner móvil, cupones, validación de stock por ubicación,
                     descuento por stock ledger, ticket imprimible y trazabilidad BI de packs/promos.
                   </p>
+                  <div className='grid grid-cols-2 gap-2 text-xs sm:grid-cols-4'>
+                    <div className='rounded-2xl border border-white/10 bg-white/10 p-3'>
+                      <span className='text-slate-300'>Carrito</span>
+                      <p className='mt-1 text-lg font-black'>{cartTotals.items}</p>
+                    </div>
+                    <div className='rounded-2xl border border-white/10 bg-white/10 p-3'>
+                      <span className='text-slate-300'>Total actual</span>
+                      <p className='mt-1 text-lg font-black'>{formatCurrencyARS(cartTotals.total)}</p>
+                    </div>
+                    <div className='rounded-2xl border border-white/10 bg-white/10 p-3'>
+                      <span className='text-slate-300'>Pago</span>
+                      <p className='mt-1 text-lg font-black'>{paymentLabel}</p>
+                    </div>
+                    <div className={`rounded-2xl border p-3 ${posReadinessClass}`}>
+                      <span className='opacity-80'>Estado POS</span>
+                      <p className='mt-1 text-base font-black'>{posReadiness.label}</p><p className='mt-1 text-[0.68rem] font-medium opacity-80'>{posReadiness.detail}</p>
+                    </div>
+                  </div>
                 </div>
-                <div className='flex flex-wrap gap-2'>
-                  <Button variant='outline' onClick={loadDashboard} disabled={loading}>
+                <div className='grid grid-cols-2 gap-2 sm:flex sm:flex-wrap xl:justify-end'>
+                  <Button variant='secondary' onClick={loadDashboard} disabled={loading} className='w-full sm:w-auto'>
                     {loading ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <RefreshCw className='mr-2 h-4 w-4' />}
                     Actualizar
                   </Button>
-                  <Button variant='outline' onClick={handleCreateScannerSession} disabled={scannerLoading}>
+                  <Button variant='secondary' onClick={handleCreateScannerSession} disabled={scannerLoading} className='w-full sm:w-auto'>
                     {scannerLoading ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <Smartphone className='mr-2 h-4 w-4' />}
-                    Conectar scanner móvil
+                    Scanner
                   </Button>
-                  <Button asChild variant='outline'>
-                    <Link href='/dashboard/comercial/stock-ledger'>Stock Ledger</Link>
+                  <Button asChild variant='secondary' className='w-full sm:w-auto'>
+                    <Link href='/dashboard/comercial/stock-ledger'>Stock</Link>
                   </Button>
-                  <Button asChild className='bg-[#02a8e1] hover:bg-[#0288b1]'>
+                  <Button asChild className='w-full bg-[#02a8e1] hover:bg-[#0288b1] sm:w-auto'>
                     <Link href='/dashboard/ventas'>Ventas</Link>
                   </Button>
                 </div>
               </div>
             </section>
 
-
+            <section className='grid grid-cols-2 gap-3 lg:hidden'>
+              <div className='rounded-2xl border bg-white p-3 shadow-sm dark:bg-slate-900'>
+                <p className='text-xs text-muted-foreground'>Catálogo visible</p>
+                <p className='text-xl font-black'>{visibleCatalogCount}</p>
+              </div>
+              <div className='rounded-2xl border bg-white p-3 shadow-sm dark:bg-slate-900'>
+                <p className='text-xs text-muted-foreground'>Scanner</p>
+                <p className='text-xl font-black'>{scannerSession?.estado ?? 'No conectado'}</p>
+              </div>
+            </section>
 
             {scannerSession && (
-              <section className='rounded-2xl border bg-white p-5 shadow-sm'>
+              <section className='rounded-3xl border bg-white p-4 shadow-sm dark:bg-slate-900 sm:p-5'>
                 <div className='grid grid-cols-1 gap-5 lg:grid-cols-[260px_1fr]'>
-                  <div className='flex flex-col items-center rounded-2xl border border-dashed p-4'>
+                  <div className='flex flex-col items-center rounded-2xl border border-dashed bg-slate-50 p-4 dark:bg-slate-950'>
                     {scannerUrl ? <img src={buildQrImage(scannerUrl, 220)} alt='QR scanner móvil POS' className='h-52 w-52 rounded-xl' /> : <div className='h-52 w-52 rounded-xl bg-slate-100' />}
                     <p className='mt-3 text-center text-xs text-muted-foreground'>Escaneá este QR con el celular para usarlo como lector del POS.</p>
                   </div>
@@ -642,7 +711,7 @@ export default function ComercialKioscoPosPage() {
                         <Button variant='outline' onClick={handleCloseScannerSession} disabled={scannerLoading || scannerSession.estado !== 'activa'}>Cerrar sesión</Button>
                       </div>
                     </div>
-                    <div className='rounded-xl bg-slate-50 p-3 text-xs text-muted-foreground break-all'>
+                    <div className='max-w-full overflow-x-auto rounded-xl bg-slate-50 p-3 text-xs text-muted-foreground dark:bg-slate-950'>
                       {scannerUrl}
                     </div>
                     <div className='grid grid-cols-1 gap-3 md:grid-cols-3'>
@@ -666,22 +735,22 @@ export default function ComercialKioscoPosPage() {
               </section>
             )}
 
-            <section className='grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-8'>
-              <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>Ventas hoy</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.ventasHoy}</p></div><Store className='h-6 w-6 text-sky-600' /></CardContent></Card>
-              <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>Total hoy</p><p className='text-xl font-bold'>{loading ? '...' : formatCurrencyARS(dashboard.metricas.totalHoy)}</p></div><CreditCard className='h-6 w-6 text-emerald-600' /></CardContent></Card>
-              <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>Ítems hoy</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.itemsHoy}</p></div><ShoppingCart className='h-6 w-6 text-indigo-600' /></CardContent></Card>
-              <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>Productos</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.productosDisponibles}</p></div><PackagePlus className='h-6 w-6 text-violet-600' /></CardContent></Card>
-              <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>Servicios</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.serviciosDisponibles}</p></div><Store className='h-6 w-6 text-cyan-600' /></CardContent></Card>
-              <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>Packs POS</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.packsDisponibles}</p></div><PackagePlus className='h-6 w-6 text-fuchsia-600' /></CardContent></Card>
-              <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>Promos</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.promocionesActivas}</p></div><Percent className='h-6 w-6 text-rose-600' /></CardContent></Card>
-              <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>Críticos</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.productosCriticos}</p></div><Warehouse className='h-6 w-6 text-orange-600' /></CardContent></Card>
+            <section className='grid grid-cols-2 gap-3 md:grid-cols-4 2xl:grid-cols-8'>
+              <Card className='bg-white/95 dark:bg-slate-900'><CardContent className='flex items-center justify-between p-4'><div><p className='text-sm text-muted-foreground'>Ventas hoy</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.ventasHoy}</p></div><Store className='h-6 w-6 text-sky-600' /></CardContent></Card>
+              <Card className='bg-white/95 dark:bg-slate-900'><CardContent className='flex items-center justify-between p-4'><div><p className='text-sm text-muted-foreground'>Total hoy</p><p className='text-xl font-bold'>{loading ? '...' : formatCurrencyARS(dashboard.metricas.totalHoy)}</p></div><CreditCard className='h-6 w-6 text-emerald-600' /></CardContent></Card>
+              <Card className='bg-white/95 dark:bg-slate-900'><CardContent className='flex items-center justify-between p-4'><div><p className='text-sm text-muted-foreground'>Ítems hoy</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.itemsHoy}</p></div><ShoppingCart className='h-6 w-6 text-indigo-600' /></CardContent></Card>
+              <Card className='bg-white/95 dark:bg-slate-900'><CardContent className='flex items-center justify-between p-4'><div><p className='text-sm text-muted-foreground'>Productos</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.productosDisponibles}</p></div><PackagePlus className='h-6 w-6 text-violet-600' /></CardContent></Card>
+              <Card className='bg-white/95 dark:bg-slate-900'><CardContent className='flex items-center justify-between p-4'><div><p className='text-sm text-muted-foreground'>Servicios</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.serviciosDisponibles}</p></div><Store className='h-6 w-6 text-cyan-600' /></CardContent></Card>
+              <Card className='bg-white/95 dark:bg-slate-900'><CardContent className='flex items-center justify-between p-4'><div><p className='text-sm text-muted-foreground'>Packs POS</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.packsDisponibles}</p></div><PackagePlus className='h-6 w-6 text-fuchsia-600' /></CardContent></Card>
+              <Card className='bg-white/95 dark:bg-slate-900'><CardContent className='flex items-center justify-between p-4'><div><p className='text-sm text-muted-foreground'>Promos</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.promocionesActivas}</p></div><Percent className='h-6 w-6 text-rose-600' /></CardContent></Card>
+              <Card className='bg-white/95 dark:bg-slate-900'><CardContent className='flex items-center justify-between p-4'><div><p className='text-sm text-muted-foreground'>Críticos</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.productosCriticos}</p></div><Warehouse className='h-6 w-6 text-orange-600' /></CardContent></Card>
             </section>
 
-            <section className='grid grid-cols-1 gap-6 xl:grid-cols-[1fr_420px]'>
-              <div className='space-y-6'>
-                <Card>
+            <section className='grid grid-cols-1 gap-5 2xl:grid-cols-[minmax(0,1fr)_440px]'>
+              <div className='min-w-0 space-y-5'>
+                <Card className='overflow-hidden bg-white/95 dark:bg-slate-900'>
                   <CardHeader>
-                    <div className='grid grid-cols-1 gap-3 md:grid-cols-[1fr_220px] md:items-end'>
+                    <div className='grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_240px] lg:items-end'>
                       <div className='space-y-2'>
                         <Label>Buscar producto, servicio o pack</Label>
                         <div className='relative'>
@@ -698,17 +767,17 @@ export default function ComercialKioscoPosPage() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <form className='mb-4 flex gap-2' onSubmit={handleBarcodeSubmit}>
+                    <form className='mb-4 flex flex-col gap-2 sm:flex-row' onSubmit={handleBarcodeSubmit}>
                       <div className='relative flex-1'>
                         <Barcode className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
                         <Input className='pl-9' value={barcodeTerm} placeholder='Escanear o pegar código/SKU/servicio/pack y presionar Enter' onChange={(event) => setBarcodeTerm(event.target.value)} />
                       </div>
-                      <Button type='submit' variant='outline'>Agregar</Button>
+                      <Button type='submit' variant='outline' className='sm:w-auto'>Agregar</Button>
                     </form>
 
-                    <div className='grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3'>
+                    <div className='grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3'>
                       {filteredProducts.map((product) => (
-                        <button key={product.producto_id} type='button' className='rounded-xl border bg-white p-4 text-left shadow-sm transition hover:border-sky-300 hover:shadow-md' onClick={() => addToCart(product)}>
+                        <button key={product.producto_id} type='button' className='rounded-2xl border bg-white p-4 text-left shadow-sm transition hover:border-sky-300 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60 dark:bg-slate-950' onClick={() => addToCart(product)}>
                           <div className='flex items-start justify-between gap-2'>
                             <div>
                               <p className='font-semibold'>{product.producto_nombre}</p>
@@ -731,9 +800,9 @@ export default function ComercialKioscoPosPage() {
                           <h3 className='text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700'>Servicios vendibles</h3>
                           <span className='text-xs text-muted-foreground'>No descuentan stock y quedan registrados en venta_detalle</span>
                         </div>
-                        <div className='grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3'>
+                        <div className='grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3'>
                           {filteredServices.map((service) => (
-                            <button key={service.id} type='button' className='rounded-xl border border-cyan-100 bg-cyan-50/40 p-4 text-left shadow-sm transition hover:border-cyan-300 hover:shadow-md' onClick={() => addServiceToCart(service)}>
+                            <button key={service.id} type='button' className='rounded-2xl border border-cyan-100 bg-cyan-50/70 p-4 text-left shadow-sm transition hover:border-cyan-300 hover:shadow-md dark:border-cyan-500/30 dark:bg-cyan-950/30' onClick={() => addServiceToCart(service)}>
                               <div className='flex items-start justify-between gap-2'>
                                 <div>
                                   <p className='font-semibold'>{service.nombre}</p>
@@ -757,9 +826,9 @@ export default function ComercialKioscoPosPage() {
                           <h3 className='text-sm font-semibold uppercase tracking-[0.18em] text-fuchsia-700'>Packs / promociones vendibles</h3>
                           <span className='text-xs text-muted-foreground'>Se expanden en productos/servicios al vender</span>
                         </div>
-                        <div className='grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3'>
+                        <div className='grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3'>
                           {filteredPacks.map((pack) => (
-                            <button key={pack.id} type='button' className='rounded-xl border border-fuchsia-100 bg-fuchsia-50/40 p-4 text-left shadow-sm transition hover:border-fuchsia-300 hover:shadow-md' onClick={() => addPackToCart(pack)}>
+                            <button key={pack.id} type='button' className='rounded-2xl border border-fuchsia-100 bg-fuchsia-50/70 p-4 text-left shadow-sm transition hover:border-fuchsia-300 hover:shadow-md dark:border-fuchsia-500/30 dark:bg-fuchsia-950/30' onClick={() => addPackToCart(pack)}>
                               <div className='flex items-start justify-between gap-2'>
                                 <div>
                                   <p className='font-semibold'>{pack.nombre}</p>
@@ -779,12 +848,12 @@ export default function ComercialKioscoPosPage() {
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className='bg-white/95 dark:bg-slate-900'>
                   <CardHeader><CardTitle className='text-lg'>Ventas recientes</CardTitle></CardHeader>
                   <CardContent>
                     <div className='space-y-3'>
                       {dashboard.ventasRecientes.slice(0, 8).map((sale) => (
-                        <div key={sale.id} className='flex items-center justify-between gap-3 rounded-lg border p-3 text-sm'>
+                        <div key={sale.id} className='flex flex-col justify-between gap-3 rounded-xl border p-3 text-sm sm:flex-row sm:items-center'>
                           <div>
                             <p className='font-medium'>{sale.comprobante_codigo || sale.id}</p>
                             <p className='text-xs text-muted-foreground'>{getClientLabel(sale)} · {sale.metodo_pago}</p>
@@ -801,9 +870,9 @@ export default function ComercialKioscoPosPage() {
                 </Card>
               </div>
 
-              <Card className='h-fit'>
-                <CardHeader><CardTitle className='flex items-center gap-2 text-lg'><ShoppingCart className='h-5 w-5 text-sky-600' />Carrito</CardTitle></CardHeader>
-                <CardContent className='space-y-4'>
+              <Card className='h-fit overflow-hidden bg-white/95 dark:bg-slate-900 2xl:sticky 2xl:top-4'>
+                <CardHeader className='border-b bg-slate-50/80 dark:bg-slate-950/60'><CardTitle className='flex items-center justify-between gap-2 text-lg'><span className='flex items-center gap-2'><ShoppingCart className='h-5 w-5 text-sky-600' />Carrito</span><span className='rounded-full bg-sky-100 px-3 py-1 text-xs font-bold text-sky-700 dark:bg-sky-500/20 dark:text-sky-100'>{cartTotals.items} ítems</span></CardTitle></CardHeader>
+                <CardContent className='space-y-4 p-4 sm:p-6'>
                   <div className='grid grid-cols-1 gap-3'>
                     <div className='space-y-2'>
                       <Label>Tipo cliente</Label>
@@ -828,12 +897,12 @@ export default function ComercialKioscoPosPage() {
 
                   <div className='space-y-3'>
                     {cart.map((item) => (
-                      <div key={item.key} className='rounded-lg border p-3'>
+                      <div key={item.key} className='rounded-2xl border bg-slate-50/70 p-3 dark:bg-slate-950/40'>
                         <div className='flex items-start justify-between gap-2'>
-                          <div><p className='font-medium'>{item.nombre}</p><p className='text-xs text-muted-foreground'>{item.item_tipo === 'pack' ? 'Pack comercial' : item.item_tipo === 'servicio' ? 'Servicio POS' : `Disponible: ${item.stockDisponible}`}</p></div>
+                          <div><p className='font-medium'>{item.nombre}</p><p className='text-xs text-muted-foreground'>{getCartTypeLabel(item.item_tipo)}{item.item_tipo === 'producto' ? ` · Disponible: ${item.stockDisponible}` : ' POS'}</p></div>
                           <Button size='icon' variant='ghost' onClick={() => removeFromCart(item.key)}><Trash2 className='h-4 w-4' /></Button>
                         </div>
-                        <div className='mt-3 grid grid-cols-3 gap-2'>
+                        <div className='mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3'>
                           <Input type='number' min={1} max={item.stockDisponible} value={item.cantidad} onChange={(event) => updateCartQuantity(item.key, Number(event.target.value))} />
                           <Input type='number' min={0} value={item.precio_unitario} onChange={(event) => setCart((current) => current.map((cartItem) => cartItem.key === item.key ? { ...cartItem, precio_unitario: Number(event.target.value) } : cartItem))} />
                           <Input type='number' min={0} value={item.descuento} onChange={(event) => setCart((current) => current.map((cartItem) => cartItem.key === item.key ? { ...cartItem, descuento: Number(event.target.value) } : cartItem))} />
@@ -844,7 +913,7 @@ export default function ComercialKioscoPosPage() {
                     {cart.length === 0 && <p className='rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground'>Agregá productos, servicios o packs para iniciar la venta.</p>}
                   </div>
 
-                  <div className='rounded-lg bg-slate-50 p-4 text-sm'>
+                  <div className='rounded-2xl bg-slate-50 p-4 text-sm dark:bg-slate-950'>
                     <div className='flex justify-between'><span>Subtotal</span><strong>{formatCurrencyARS(cartTotals.subtotal)}</strong></div>
                     <div className='flex justify-between'><span>Descuentos</span><strong>{formatCurrencyARS(cartTotals.descuento)}</strong></div>
                     <div className='mt-2 flex justify-between border-t pt-2 text-lg'><span>Total</span><strong>{formatCurrencyARS(cartTotals.total)}</strong></div>
@@ -863,6 +932,21 @@ export default function ComercialKioscoPosPage() {
                 </CardContent>
               </Card>
             </section>
+
+            {cart.length > 0 && (
+              <div className='sticky bottom-3 z-20 rounded-2xl border border-sky-200 bg-white/95 p-3 shadow-2xl backdrop-blur dark:border-sky-500/30 dark:bg-slate-900/95 2xl:hidden'>
+                <div className='flex items-center justify-between gap-3'>
+                  <div>
+                    <p className='text-xs text-muted-foreground'>Carrito · {cartTotals.items} ítems</p>
+                    <p className='text-lg font-black'>{formatCurrencyARS(cartTotals.total)}</p>
+                  </div>
+                  <Button className='bg-[#02a8e1] hover:bg-[#0288b1]' disabled={saving || cart.length === 0} onClick={handleSubmitSale}>
+                    {saving ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <CreditCard className='mr-2 h-4 w-4' />}
+                    Cobrar
+                  </Button>
+                </div>
+              </div>
+            )}
           </main>
           <AppFooter />
         </SidebarInset>

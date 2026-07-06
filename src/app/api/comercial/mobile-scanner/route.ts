@@ -9,6 +9,15 @@ import {
 
 export const dynamic = 'force-dynamic';
 
+function sanitizeScannerRouteError(value: unknown, fallback: string) {
+  const message = String(value ?? '').trim();
+  if (!message) return fallback;
+  if (message.includes('<html') || message.includes('<body') || message.includes('cloudflare') || message.length > 220) {
+    return fallback;
+  }
+  return message;
+}
+
 export async function GET(req: NextRequest) {
   try {
     await authMiddleware(req);
@@ -17,7 +26,7 @@ export async function GET(req: NextRequest) {
     const state = await getComercialMobileScannerState(sessionId);
     return NextResponse.json({ data: state }, { status: 200 });
   } catch (error: any) {
-    const message = error?.message || 'Error al obtener scanner móvil comercial';
+    const message = sanitizeScannerRouteError(error?.message, 'Error transitorio al obtener scanner móvil comercial');
     const status = message.includes('Token') || message.includes('JWT') ? 401 : 500;
     return NextResponse.json({ error: message }, { status });
   }
@@ -46,7 +55,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ error: 'Acción de scanner no soportada' }, { status: 400 });
   } catch (error: any) {
-    const message = error?.message || 'Error al operar scanner móvil comercial';
+    const message = sanitizeScannerRouteError(error?.message, 'Error al operar scanner móvil comercial');
     const status = message.includes('Token') || message.includes('JWT') ? 401 : 400;
     return NextResponse.json({ error: message }, { status });
   }
