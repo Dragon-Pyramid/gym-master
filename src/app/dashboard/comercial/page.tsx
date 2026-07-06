@@ -5,17 +5,23 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   AlertTriangle,
+  ArrowUpRight,
   BarChart3,
   Banknote,
+  BadgePercent,
   Boxes,
+  ClipboardList,
+  CreditCard,
   DollarSign,
   Gift,
-  ClipboardList,
   Package,
+  PackageCheck,
   ReceiptText,
   RefreshCcw,
+  ScanBarcode,
   ShoppingCart,
   Store,
+  TrendingUp,
   Truck,
   Warehouse,
 } from 'lucide-react';
@@ -57,9 +63,37 @@ const initialState: LoadState = {
   ventas: [],
 };
 
+type CommercialHealthStatus = 'stable' | 'attention' | 'critical';
+
 function formatPercent(value: number) {
   if (!Number.isFinite(value)) return '0.0%';
   return `${value.toFixed(1)}%`;
+}
+
+function getHealthCopy(status: CommercialHealthStatus) {
+  if (status === 'critical') {
+    return {
+      label: 'Crítico',
+      badge: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-200',
+      text: 'Hay productos sin stock o con reposición urgente. Conviene priorizar compras antes de impulsar promociones.',
+    };
+  }
+
+  if (status === 'attention') {
+    return {
+      label: 'Atención',
+      badge:
+        'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200',
+      text: 'El tablero detecta oportunidades de reposición o venta. Revisá stock crítico y ticket promedio.',
+    };
+  }
+
+  return {
+    label: 'Operativo',
+    badge:
+      'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200',
+    text: 'La operación comercial se ve estable. Podés enfocarte en ventas, packs y servicios adicionales.',
+  };
 }
 
 function DashboardMetric({
@@ -67,21 +101,34 @@ function DashboardMetric({
   value,
   description,
   icon: Icon,
+  tone = 'sky',
 }: {
   title: string;
   value: string;
   description: string;
   icon: ElementType;
+  tone?: 'sky' | 'amber' | 'emerald' | 'violet' | 'red' | 'slate';
 }) {
+  const toneClasses = {
+    sky: 'bg-sky-50 text-sky-600 dark:bg-sky-500/15 dark:text-sky-200',
+    amber: 'bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-200',
+    emerald:
+      'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-200',
+    violet:
+      'bg-violet-50 text-violet-600 dark:bg-violet-500/15 dark:text-violet-200',
+    red: 'bg-red-50 text-red-600 dark:bg-red-500/15 dark:text-red-200',
+    slate: 'bg-slate-100 text-slate-700 dark:bg-slate-500/15 dark:text-slate-200',
+  }[tone];
+
   return (
-    <Card>
-      <CardContent className='flex items-center justify-between gap-4 p-5'>
-        <div className='space-y-1'>
+    <Card className='overflow-hidden border-slate-200/80 bg-white/95 shadow-sm dark:border-slate-800 dark:bg-slate-950/80'>
+      <CardContent className='flex h-full items-center justify-between gap-4 p-5'>
+        <div className='min-w-0 space-y-1'>
           <p className='text-sm text-muted-foreground'>{title}</p>
-          <p className='text-2xl font-bold'>{value}</p>
-          <p className='text-xs text-muted-foreground'>{description}</p>
+          <p className='truncate text-2xl font-bold'>{value}</p>
+          <p className='text-xs leading-relaxed text-muted-foreground'>{description}</p>
         </div>
-        <div className='rounded-full bg-sky-50 p-3 text-sky-600'>
+        <div className={`shrink-0 rounded-full p-3 ${toneClasses}`}>
           <Icon className='h-5 w-5' />
         </div>
       </CardContent>
@@ -95,19 +142,25 @@ function ActionCard({
   href,
   icon: Icon,
   disabled,
+  label = 'Abrir',
 }: {
   title: string;
   description: string;
   href?: string;
   icon: ElementType;
   disabled?: boolean;
+  label?: string;
 }) {
   const content = (
-    <Card className={disabled ? 'opacity-70' : 'transition hover:shadow-md'}>
+    <Card
+      className={`h-full overflow-hidden border-slate-200/80 bg-white/95 shadow-sm dark:border-slate-800 dark:bg-slate-950/80 ${
+        disabled ? 'opacity-70' : 'transition hover:-translate-y-0.5 hover:shadow-md'
+      }`}
+    >
       <CardContent className='flex h-full flex-col justify-between gap-4 p-5'>
         <div className='space-y-3'>
           <div className='flex items-center gap-3'>
-            <div className='rounded-full bg-slate-100 p-2 text-slate-700'>
+            <div className='rounded-full bg-slate-100 p-2 text-slate-700 dark:bg-slate-800 dark:text-slate-200'>
               <Icon className='h-5 w-5' />
             </div>
             <h3 className='font-semibold'>{title}</h3>
@@ -116,8 +169,13 @@ function ActionCard({
             {description}
           </p>
         </div>
-        <Button variant={disabled ? 'secondary' : 'outline'} disabled={disabled}>
-          {disabled ? 'Próxima etapa' : 'Abrir'}
+        <Button
+          className='w-full justify-between'
+          variant={disabled ? 'secondary' : 'outline'}
+          disabled={disabled}
+        >
+          {disabled ? 'Próxima etapa' : label}
+          {!disabled && <ArrowUpRight className='h-4 w-4' />}
         </Button>
       </CardContent>
     </Card>
@@ -126,6 +184,35 @@ function ActionCard({
   if (disabled || !href) return content;
 
   return <Link href={href}>{content}</Link>;
+}
+
+function InsightCard({
+  title,
+  value,
+  description,
+  icon: Icon,
+}: {
+  title: string;
+  value: string;
+  description: string;
+  icon: ElementType;
+}) {
+  return (
+    <div className='rounded-2xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70'>
+      <div className='mb-3 flex items-center gap-2'>
+        <div className='rounded-full bg-cyan-500/10 p-2 text-cyan-600 dark:text-cyan-200'>
+          <Icon className='h-4 w-4' />
+        </div>
+        <p className='text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground'>
+          {title}
+        </p>
+      </div>
+      <p className='text-xl font-bold'>{value}</p>
+      <p className='mt-1 text-sm leading-relaxed text-muted-foreground'>
+        {description}
+      </p>
+    </div>
+  );
 }
 
 export default function ComercialKioscoPage() {
@@ -177,11 +264,24 @@ export default function ComercialKioscoPage() {
       0
     );
 
-    const productosSinStock = productosActivos.filter((producto) => Number(producto.stock ?? 0) <= 0);
-    const ticketPromedio = ventasActivas.length > 0 ? ventasTotal / ventasActivas.length : 0;
-    const porcentajeStockCritico = productosActivos.length > 0
-      ? (productosCriticos.length / productosActivos.length) * 100
-      : 0;
+    const productosSinStock = productosActivos.filter(
+      (producto) => Number(producto.stock ?? 0) <= 0
+    );
+    const ticketPromedio =
+      ventasActivas.length > 0 ? ventasTotal / ventasActivas.length : 0;
+    const porcentajeStockCritico =
+      productosActivos.length > 0
+        ? (productosCriticos.length / productosActivos.length) * 100
+        : 0;
+    const serviciosActivos = data.servicios.filter(
+      (servicio) => servicio.activo !== false
+    );
+    const healthStatus: CommercialHealthStatus =
+      productosSinStock.length > 0
+        ? 'critical'
+        : productosCriticos.length > 0 || ventasActivas.length === 0
+          ? 'attention'
+          : 'stable';
 
     return {
       productosActivos: productosActivos.length,
@@ -190,13 +290,21 @@ export default function ComercialKioscoPage() {
       porcentajeStockCritico,
       valorInventario: calcularValorInventario(productosActivos),
       proveedores: data.proveedores.length,
-      servicios: data.servicios.filter((servicio) => servicio.activo !== false)
-        .length,
+      servicios: serviciosActivos.length,
       ventasActivas: ventasActivas.length,
       ventasTotal,
       ticketPromedio,
+      healthStatus,
+      conversionCatalogo:
+        productosActivos.length + serviciosActivos.length > 0
+          ? (serviciosActivos.length /
+              (productosActivos.length + serviciosActivos.length)) *
+            100
+          : 0,
     };
   }, [data]);
+
+  const healthCopy = getHealthCopy(metrics.healthStatus);
 
   if (!isInitialized) {
     return <div>Cargando...</div>;
@@ -208,76 +316,148 @@ export default function ComercialKioscoPage() {
 
   return (
     <SidebarProvider>
-      <div className='flex min-h-screen w-full'>
+      <div className='flex h-[100dvh] max-h-[100dvh] w-full overflow-hidden bg-slate-50 dark:bg-slate-950'>
         <AppSidebar />
-        <SidebarInset>
+        <SidebarInset className='!grid h-[100dvh] max-h-[100dvh] min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden'>
           <AppHeader title='Comercial / Kiosco' />
-          <main className='flex-1 space-y-6 p-6'>
-            <section className='rounded-2xl border bg-white p-6 shadow-sm'>
-              <div className='flex flex-col justify-between gap-4 lg:flex-row lg:items-center'>
-                <div className='space-y-2'>
-                  <p className='text-xs font-semibold uppercase tracking-[0.24em] text-sky-600'>
-                    Gestión comercial
+          <section className='min-h-0 space-y-6 overflow-y-auto overflow-x-hidden p-4 pb-8 sm:p-6 lg:p-8'>
+            <section className='overflow-hidden rounded-3xl border border-cyan-500/20 bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950 p-6 text-white shadow-xl shadow-cyan-950/20'>
+              <div className='flex flex-col justify-between gap-5 lg:flex-row lg:items-center'>
+                <div className='space-y-3'>
+                  <p className='text-xs font-semibold uppercase tracking-[0.28em] text-cyan-200'>
+                    Panel comercial final
                   </p>
-                  <h1 className='text-2xl font-bold'>Kiosco y ventas del gimnasio</h1>
-                  <p className='max-w-3xl text-sm leading-relaxed text-muted-foreground'>
-                    Controlá productos, stock, ventas, proveedores, servicios adicionales y finanzas operativas. Esta base comercial alimenta el tablero de ingresos, egresos y rentabilidad estimada.
+                  <h1 className='text-2xl font-black tracking-tight sm:text-3xl'>
+                    Operación comercial Gym Master
+                  </h1>
+                  <p className='max-w-3xl text-sm leading-relaxed text-cyan-50/85'>
+                    Control ejecutivo de ventas, inventario, servicios, packs,
+                    caja y reposición. Este panel resume la salud comercial del
+                    gimnasio y conecta con los módulos operativos clave.
                   </p>
                 </div>
-                <div className='flex flex-wrap gap-2'>
-                  <Button asChild className='bg-[#02a8e1] hover:bg-[#0288b1]'>
-                    <Link href='/dashboard/ventas'>Registrar venta</Link>
+                <div className='flex flex-col gap-2 sm:flex-row sm:flex-wrap lg:justify-end'>
+                  <Button asChild className='bg-cyan-500 text-slate-950 hover:bg-cyan-400'>
+                    <Link href='/dashboard/comercial/kiosco'>Abrir POS / Kiosco</Link>
                   </Button>
-                  <Button asChild variant='outline'>
-                    <Link href='/dashboard/compras'>Registrar compra</Link>
+                  <Button asChild variant='secondary'>
+                    <Link href='/dashboard/comercial/caja'>Caja</Link>
                   </Button>
-                  <Button asChild variant='outline'>
-                    <Link href='/dashboard/productos'>Ver productos</Link>
+                  <Button asChild variant='secondary'>
+                    <Link href='/dashboard/productos'>Stock</Link>
                   </Button>
-                  <Button asChild variant='outline'>
+                  <Button asChild variant='secondary'>
                     <Link href='/dashboard/finanzas'>Finanzas / BI</Link>
                   </Button>
                 </div>
               </div>
             </section>
 
-            <section className='grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6'>
+            <section className='grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4'>
               <DashboardMetric
-                title='Productos activos'
-                value={loading ? '...' : String(metrics.productosActivos)}
-                description='Productos disponibles para venta o control de stock.'
-                icon={Package}
+                title='Total vendido'
+                value={loading ? '...' : formatCurrencyARS(metrics.ventasTotal)}
+                description='Ventas activas sin operaciones anuladas.'
+                icon={TrendingUp}
+                tone='emerald'
               />
               <DashboardMetric
-                title='Stock crítico'
-                value={loading ? '...' : String(metrics.productosCriticos.length)}
-                description={loading ? 'Calculando...' : `${formatPercent(metrics.porcentajeStockCritico)} del catálogo activo.`}
-                icon={AlertTriangle}
-              />
-              <DashboardMetric
-                title='Sin stock'
-                value={loading ? '...' : String(metrics.productosSinStock.length)}
-                description='Productos que requieren acción inmediata.'
-                icon={Boxes}
+                title='Ticket promedio'
+                value={loading ? '...' : formatCurrencyARS(metrics.ticketPromedio)}
+                description={`${metrics.ventasActivas} ventas activas registradas.`}
+                icon={ReceiptText}
+                tone='sky'
               />
               <DashboardMetric
                 title='Inventario estimado'
                 value={loading ? '...' : formatCurrencyARS(metrics.valorInventario)}
-                description='Valor de venta estimado según precio y stock actual.'
+                description={`${metrics.productosActivos} productos activos en catálogo.`}
                 icon={Boxes}
+                tone='violet'
               />
               <DashboardMetric
-                title='Ventas activas'
-                value={loading ? '...' : String(metrics.ventasActivas)}
-                description={loading ? 'Calculando...' : `Ticket prom.: ${formatCurrencyARS(metrics.ticketPromedio)}`}
-                icon={ReceiptText}
+                title='Stock crítico'
+                value={loading ? '...' : String(metrics.productosCriticos.length)}
+                description={
+                  loading
+                    ? 'Calculando...'
+                    : `${formatPercent(metrics.porcentajeStockCritico)} del catálogo activo.`
+                }
+                icon={AlertTriangle}
+                tone={metrics.productosCriticos.length > 0 ? 'amber' : 'emerald'}
               />
-              <DashboardMetric
-                title='Total vendido'
-                value={loading ? '...' : formatCurrencyARS(metrics.ventasTotal)}
-                description='Total vendido sin ventas anuladas.'
-                icon={BarChart3}
-              />
+            </section>
+
+            <section className='grid grid-cols-1 gap-4 xl:grid-cols-[1.15fr_0.85fr]'>
+              <Card className='overflow-hidden border-cyan-500/20 bg-white/95 shadow-sm dark:border-cyan-500/20 dark:bg-slate-950/90'>
+                <CardHeader className='border-b border-slate-200/70 dark:border-slate-800'>
+                  <div className='flex flex-col justify-between gap-3 md:flex-row md:items-center'>
+                    <div>
+                      <CardTitle className='flex items-center gap-2 text-lg'>
+                        <Store className='h-5 w-5 text-cyan-500' />
+                        Radar comercial operativo
+                      </CardTitle>
+                      <p className='mt-1 text-sm text-muted-foreground'>
+                        Señales rápidas para decidir ventas, compras, promociones y
+                        seguimiento de caja.
+                      </p>
+                    </div>
+                    <span
+                      className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${healthCopy.badge}`}
+                    >
+                      {healthCopy.label}
+                    </span>
+                  </div>
+                </CardHeader>
+                <CardContent className='space-y-4 p-5'>
+                  <p className='rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-muted-foreground dark:border-slate-800 dark:bg-slate-900/70'>
+                    {healthCopy.text}
+                  </p>
+                  <div className='grid grid-cols-1 gap-3 md:grid-cols-3'>
+                    <InsightCard
+                      title='Catálogo'
+                      value={`${metrics.productosActivos} productos`}
+                      description={`${metrics.servicios} servicios activos y ${metrics.proveedores} proveedores registrados.`}
+                      icon={PackageCheck}
+                    />
+                    <InsightCard
+                      title='Sin stock'
+                      value={String(metrics.productosSinStock.length)}
+                      description='Productos que requieren revisión inmediata antes de nuevas ventas.'
+                      icon={AlertTriangle}
+                    />
+                    <InsightCard
+                      title='Mix servicios'
+                      value={formatPercent(metrics.conversionCatalogo)}
+                      description='Peso de servicios activos sobre catálogo comercial total.'
+                      icon={BadgePercent}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className='border-slate-200/80 bg-white/95 shadow-sm dark:border-slate-800 dark:bg-slate-950/90'>
+                <CardHeader>
+                  <CardTitle className='flex items-center gap-2 text-lg'>
+                    <ScanBarcode className='h-5 w-5 text-cyan-500' />
+                    Acciones rápidas
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className='grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1'>
+                  <Button asChild className='justify-between bg-cyan-600 hover:bg-cyan-700'>
+                    <Link href='/dashboard/comercial/kiosco'>Vender en POS <ArrowUpRight className='h-4 w-4' /></Link>
+                  </Button>
+                  <Button asChild variant='outline' className='justify-between'>
+                    <Link href='/dashboard/comercial/caja'>Abrir caja <ArrowUpRight className='h-4 w-4' /></Link>
+                  </Button>
+                  <Button asChild variant='outline' className='justify-between'>
+                    <Link href='/dashboard/comercial/servicios-promociones'>Packs y promos <ArrowUpRight className='h-4 w-4' /></Link>
+                  </Button>
+                  <Button asChild variant='outline' className='justify-between'>
+                    <Link href='/dashboard/comercial/compras-reposicion'>Reposición <ArrowUpRight className='h-4 w-4' /></Link>
+                  </Button>
+                </CardContent>
+              </Card>
             </section>
 
             <section className='grid grid-cols-1 gap-4 lg:grid-cols-3'>
@@ -286,48 +466,51 @@ export default function ComercialKioscoPage() {
                 description='Alta, edición, activación/desactivación y control de stock con alertas de reposición operativa.'
                 href='/dashboard/productos'
                 icon={Package}
+                label='Gestionar stock'
               />
               <ActionCard
                 title='POS / Kiosco'
-                description='Venta rápida con carrito, búsqueda por código de barras, validación de stock y ticket imprimible básico.'
+                description='Venta rápida con carrito, códigos de barra, validación de stock, servicios, packs y ticket imprimible.'
                 href='/dashboard/comercial/kiosco'
                 icon={Store}
+                label='Vender ahora'
               />
               <ActionCard
                 title='Caja / Cashup'
                 description='Apertura, ingresos, retiros, cierre esperado vs contado y reporte X/Z del turno comercial.'
                 href='/dashboard/comercial/caja'
                 icon={Banknote}
+                label='Controlar caja'
               />
               <ActionCard
                 title='Stock ledger'
-                description='Stock por ubicación, movimientos auditables, conteo físico, mermas, transferencias y reposición base.'
+                description='Movimientos auditables, conteo físico, mermas, transferencias y reposición base por ubicación.'
                 href='/dashboard/comercial/stock-ledger'
                 icon={Warehouse}
               />
               <ActionCard
                 title='Ventas y tickets'
-                description='Ventas a socios o consumidores finales. La emisión de ticket formal queda preparada para la siguiente etapa.'
+                description='Ventas a socios o consumidores finales con consulta rápida de tickets y operaciones registradas.'
                 href='/dashboard/ventas'
                 icon={ReceiptText}
               />
               <ActionCard
-                title='Proveedores'
-                description='Base de proveedores para compras, reposición de stock y trazabilidad comercial.'
-                href='/dashboard/proveedores'
-                icon={Truck}
-              />
-              <ActionCard
                 title='Compras y reposición'
-                description='Generá reposición sugerida, órdenes de compra y recepción integrada al Stock Ledger.'
+                description='Reposición sugerida, órdenes de compra y recepción integrada al Stock Ledger.'
                 href='/dashboard/comercial/compras-reposicion'
                 icon={ShoppingCart}
               />
               <ActionCard
-                title='Gastos / Egresos'
-                description='Registrá egresos operativos, vencimientos, medios de pago y comprobantes para alimentar el BI financiero.'
-                href='/dashboard/otros-gastos'
-                icon={ClipboardList}
+                title='Servicios, packs y promos'
+                description='Servicios vendibles, packs de clases, promociones, cupones, canales y grupos de cliente.'
+                href='/dashboard/comercial/servicios-promociones'
+                icon={Gift}
+              />
+              <ActionCard
+                title='BI Packs / Promos'
+                description='Trazabilidad de packs vendidos, cupones usados, ingreso generado y ranking comercial por promoción.'
+                href='/dashboard/comercial/pack-analytics'
+                icon={BadgePercent}
               />
               <ActionCard
                 title='Finanzas / BI'
@@ -336,18 +519,17 @@ export default function ComercialKioscoPage() {
                 icon={DollarSign}
               />
               <ActionCard
-                title='Servicios adicionales'
-                description='Servicios vendibles, packs de clases, promociones, cupones, canales y grupos de cliente.'
-                href='/dashboard/comercial/servicios-promociones'
-                icon={Store}
+                title='Proveedores'
+                description='Base de proveedores para compras, reposición de stock y trazabilidad comercial.'
+                href='/dashboard/proveedores'
+                icon={Truck}
               />
               <ActionCard
-                title='BI Packs / Promos'
-                description='Trazabilidad de packs vendidos, cupones usados, ingreso generado y ranking comercial por promoción.'
-                href='/dashboard/comercial/pack-analytics'
-                icon={Gift}
+                title='Gastos / Egresos'
+                description='Registrá egresos operativos, vencimientos, medios de pago y comprobantes para alimentar el BI financiero.'
+                href='/dashboard/otros-gastos'
+                icon={ClipboardList}
               />
-
               <ActionCard
                 title='Devoluciones y mermas'
                 description='Próxima etapa: devolución de productos vendidos, reintegro a stock o registro como merma/no apto.'
@@ -356,8 +538,8 @@ export default function ComercialKioscoPage() {
               />
             </section>
 
-            {metrics.productosCriticos.length > 0 && (
-              <Card>
+            <section className='grid grid-cols-1 gap-4 xl:grid-cols-[0.95fr_1.05fr]'>
+              <Card className='border-slate-200/80 bg-white/95 shadow-sm dark:border-slate-800 dark:bg-slate-950/90'>
                 <CardHeader>
                   <CardTitle className='flex items-center gap-2 text-lg'>
                     <AlertTriangle className='h-5 w-5 text-amber-600' />
@@ -365,54 +547,73 @@ export default function ComercialKioscoPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className='grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3'>
-                    {metrics.productosCriticos.slice(0, 9).map((producto) => (
-                      <div
-                        key={producto.id}
-                        className='rounded-xl border bg-amber-50/60 p-4 text-sm'
-                      >
-                        <p className='font-semibold'>{producto.nombre}</p>
-                        <p className='text-muted-foreground'>
-                          Stock actual: {producto.stock} · {getProductoStockEstadoLabel(producto)}
-                        </p>
-                      </div>
-                    ))}
+                  {metrics.productosCriticos.length > 0 ? (
+                    <div className='grid grid-cols-1 gap-3 md:grid-cols-2'>
+                      {metrics.productosCriticos.slice(0, 8).map((producto) => (
+                        <div
+                          key={producto.id}
+                          className='rounded-xl border border-amber-200 bg-amber-50/70 p-4 text-sm dark:border-amber-500/30 dark:bg-amber-500/10'
+                        >
+                          <p className='font-semibold'>{producto.nombre}</p>
+                          <p className='text-muted-foreground'>
+                            Stock actual: {producto.stock} ·{' '}
+                            {getProductoStockEstadoLabel(producto)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className='rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5 text-sm text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100'>
+                      No se detectan productos críticos en el catálogo activo.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className='border-slate-200/80 bg-white/95 shadow-sm dark:border-slate-800 dark:bg-slate-950/90'>
+                <CardHeader>
+                  <CardTitle className='flex items-center gap-2 text-lg'>
+                    <ShoppingCart className='h-5 w-5 text-cyan-500' />
+                    Lectura ejecutiva comercial
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className='grid grid-cols-1 gap-4 text-sm md:grid-cols-3'>
+                  <div className='rounded-xl border bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/70'>
+                    <p className='font-semibold'>Ingresos comerciales</p>
+                    <p className='mt-1 text-muted-foreground'>
+                      {loading
+                        ? 'Calculando...'
+                        : `${metrics.ventasActivas} ventas activas por ${formatCurrencyARS(metrics.ventasTotal)}.`}
+                    </p>
+                  </div>
+                  <div className='rounded-xl border bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/70'>
+                    <p className='font-semibold'>Stock y reposición</p>
+                    <p className='mt-1 text-muted-foreground'>
+                      {loading
+                        ? 'Calculando...'
+                        : `${metrics.productosCriticos.length} críticos y ${metrics.productosSinStock.length} sin stock.`}
+                    </p>
+                  </div>
+                  <div className='rounded-xl border bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/70'>
+                    <p className='font-semibold'>Decisión sugerida</p>
+                    <p className='mt-1 text-muted-foreground'>
+                      {metrics.productosCriticos.length > 0
+                        ? 'Priorizar reposición de productos críticos antes de nuevas promociones.'
+                        : metrics.ventasActivas === 0
+                          ? 'Cargar ventas reales para alimentar el BI comercial y validar el flujo completo.'
+                          : 'Catálogo estable para impulsar ventas y servicios adicionales.'}
+                    </p>
+                  </div>
+                  <div className='rounded-xl border bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/70 md:col-span-3'>
+                    <p className='font-semibold'>Próximo paso operativo</p>
+                    <p className='mt-1 text-muted-foreground'>
+                      Revisar caja, stock crítico y packs/promociones al inicio del turno. Si el stock está estable, impulsar servicios adicionales y promociones de alto margen.
+                    </p>
                   </div>
                 </CardContent>
               </Card>
-            )}
-
-            <Card>
-              <CardHeader>
-                <CardTitle className='flex items-center gap-2 text-lg'>
-                  <ShoppingCart className='h-5 w-5 text-sky-600' />
-                  Lectura ejecutiva comercial
-                </CardTitle>
-              </CardHeader>
-              <CardContent className='grid grid-cols-1 gap-4 text-sm md:grid-cols-3'>
-                <div className='rounded-xl border bg-slate-50 p-4'>
-                  <p className='font-semibold'>Ingresos comerciales</p>
-                  <p className='mt-1 text-muted-foreground'>
-                    {loading ? 'Calculando...' : `${metrics.ventasActivas} ventas activas por ${formatCurrencyARS(metrics.ventasTotal)}.`}
-                  </p>
-                </div>
-                <div className='rounded-xl border bg-slate-50 p-4'>
-                  <p className='font-semibold'>Stock y reposición</p>
-                  <p className='mt-1 text-muted-foreground'>
-                    {loading ? 'Calculando...' : `${metrics.productosCriticos.length} críticos y ${metrics.productosSinStock.length} sin stock.`}
-                  </p>
-                </div>
-                <div className='rounded-xl border bg-slate-50 p-4'>
-                  <p className='font-semibold'>Decisión sugerida</p>
-                  <p className='mt-1 text-muted-foreground'>
-                    {metrics.productosCriticos.length > 0
-                      ? 'Priorizar reposición de productos críticos antes de nuevas promociones.'
-                      : 'Catálogo estable para impulsar ventas y servicios adicionales.'}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </main>
+            </section>
+          </section>
           <AppFooter />
         </SidebarInset>
       </div>
