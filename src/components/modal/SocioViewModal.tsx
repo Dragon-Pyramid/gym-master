@@ -15,6 +15,7 @@ import {
   MessageSquare,
   Phone,
   Scale,
+  ShieldAlert,
   ShieldCheck,
   Sparkles,
   TrendingUp,
@@ -33,6 +34,7 @@ import { Socio360Perfil } from "@/interfaces/socio360.interface";
 import { fetchSocio360Api } from "@/services/browser/socio360ApiClient";
 import { formatFrontendDateTime } from '@/utils/dateFormat';
 import { getProfilePhotoOrDefault, isDefaultProfilePhoto } from '@/utils/profilePhoto';
+import { buildSocio360RiskSummary, getSocioRiskToneClasses, SocioRiskAlert } from '@/utils/socioRiskAlerts';
 
 const sexoLabel = (value?: string | null) => {
   if (value === "M") return "Masculino";
@@ -134,6 +136,32 @@ function ModuleCard({
   );
 }
 
+function RiskAlertCard({ alert }: { alert: SocioRiskAlert }) {
+  return (
+    <div className={`rounded-2xl border p-3 text-sm shadow-sm ${getSocioRiskToneClasses(alert.level)}`}>
+      <div className="flex items-start gap-3">
+        <div className="rounded-full bg-black/5 p-2 dark:bg-white/10">
+          <ShieldAlert className="h-4 w-4" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-black">{alert.title}</p>
+            <span className="rounded-full bg-black/5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide dark:bg-white/10">
+              {alert.level}
+            </span>
+          </div>
+          <p className="mt-1 opacity-85">{alert.description}</p>
+          {alert.href && alert.actionLabel ? (
+            <Button asChild variant="outline" size="sm" className="mt-3 w-full bg-white/70 dark:bg-slate-950/30">
+              <Link href={alert.href}>{alert.actionLabel}</Link>
+            </Button>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SocioViewModal({
   open,
   onClose,
@@ -180,6 +208,22 @@ export default function SocioViewModal({
     return Math.abs(new Date(diff).getUTCFullYear() - 1970);
   }, [socio?.fecnac]);
 
+  const riskSummary = useMemo(
+    () =>
+      socio
+        ? buildSocio360RiskSummary(socio, perfil360)
+        : {
+            level: 'ok' as const,
+            label: 'Sin alertas críticas',
+            score: 0,
+            alerts: [],
+            highCount: 0,
+            mediumCount: 0,
+            lowCount: 0,
+          },
+    [socio, perfil360]
+  );
+
   if (!socio) return null;
 
   const fotoPerfil = getProfilePhotoOrDefault(socio.foto);
@@ -193,7 +237,6 @@ export default function SocioViewModal({
     : cuotaEstado.toLowerCase().includes('día') || cuotaEstado.toLowerCase().includes('act')
       ? 'success'
       : 'warning';
-
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="!left-1/2 !top-1/2 !flex !h-[min(92dvh,860px)] !max-h-[92dvh] !w-[min(96vw,1120px)] !max-w-[1120px] !-translate-x-1/2 !-translate-y-1/2 flex-col overflow-hidden bg-background p-0 text-foreground sm:rounded-2xl">
@@ -261,6 +304,9 @@ export default function SocioViewModal({
                       >
                         {tieneFotoPropia ? 'Foto cargada' : 'Foto pendiente'}
                       </span>
+                      <span className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-bold ${getSocioRiskToneClasses(riskSummary.level)}`}>
+                        {riskSummary.label}
+                      </span>
                     </div>
                     <div className="mt-3 grid gap-2 text-sm text-muted-foreground md:grid-cols-2">
                       <span className="flex items-center gap-2"><ClipboardList className="h-4 w-4" /> DNI {socio.dni || '-'}</span>
@@ -283,6 +329,37 @@ export default function SocioViewModal({
                 <MetricCard icon={HeartPulse} label="Ficha médica" value={perfil360?.fichaMedica.ultimoEstado || 'Sin datos'} tone={perfil360?.fichaMedica.activo ? 'success' : 'warning'} detail={perfil360?.fichaMedica.ultimaFecha ? `Última revisión: ${perfil360.fichaMedica.ultimaFecha}` : undefined} />
                 <MetricCard icon={Activity} label="Actividad física" value={`${perfil360?.rutinas.total ?? 0} rutinas`} tone={(perfil360?.rutinas.total ?? 0) > 0 ? 'success' : 'warning'} detail={`${perfil360?.evolucion.total ?? 0} controles de evolución`} />
                 <MetricCard icon={MessageSquare} label="Mensajes" value={perfil360?.mensajes.total ?? 0} tone={(perfil360?.mensajes.pendientes ?? 0) > 0 ? 'warning' : 'info'} detail={(perfil360?.mensajes.pendientes ?? 0) > 0 ? `${perfil360?.mensajes.pendientes} pendientes` : 'Sin pendientes detectados'} />
+              </section>
+
+              <section className={`rounded-3xl border p-4 shadow-sm ${getSocioRiskToneClasses(riskSummary.level)}`}>
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-full bg-black/5 p-2 dark:bg-white/10">
+                      <ShieldAlert className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.2em] opacity-75">Alertas de riesgo 360</p>
+                      <h3 className="mt-1 text-xl font-black">{riskSummary.label}</h3>
+                      <p className="mt-1 text-sm opacity-85">
+                        {riskSummary.alerts.length > 0
+                          ? `${riskSummary.alerts.length} señal(es) para priorizar atención administrativa.`
+                          : 'No se detectan alertas relevantes con los datos consultados.'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center text-xs font-bold md:min-w-[220px]">
+                    <div className="rounded-2xl bg-black/5 p-3 dark:bg-white/10"><p className="text-lg">{riskSummary.highCount}</p><p>Altas</p></div>
+                    <div className="rounded-2xl bg-black/5 p-3 dark:bg-white/10"><p className="text-lg">{riskSummary.mediumCount}</p><p>Medias</p></div>
+                    <div className="rounded-2xl bg-black/5 p-3 dark:bg-white/10"><p className="text-lg">{riskSummary.lowCount}</p><p>Leves</p></div>
+                  </div>
+                </div>
+                {riskSummary.alerts.length > 0 ? (
+                  <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    {riskSummary.alerts.slice(0, 6).map((alert) => (
+                      <RiskAlertCard key={alert.id} alert={alert} />
+                    ))}
+                  </div>
+                ) : null}
               </section>
 
               <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
@@ -321,9 +398,9 @@ export default function SocioViewModal({
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
                       <p className="font-bold">Riesgo administrativo</p>
                       <p className="mt-1 text-slate-300">
-                        {(perfil360?.mensajes.pendientes ?? 0) > 0
-                          ? 'Tiene mensajes pendientes de respuesta administrativa.'
-                          : 'No se detectan mensajes pendientes en el resumen consultado.'}
+                        {riskSummary.alerts.length > 0
+                          ? `${riskSummary.label}: revisar las alertas 360 antes de cerrar la atención.`
+                          : 'No se detectan mensajes ni señales críticas en el resumen consultado.'}
                       </p>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
