@@ -3,7 +3,26 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Bot, Loader2, Send, Sparkles, UserRound } from 'lucide-react';
+import {
+  Activity,
+  AlertTriangle,
+  Apple,
+  ArrowRight,
+  BookOpenCheck,
+  Bot,
+  Brain,
+  CheckCircle2,
+  Dumbbell,
+  Info,
+  Loader2,
+  MessageSquareText,
+  RefreshCcw,
+  SearchCheck,
+  Send,
+  ShieldCheck,
+  Sparkles,
+  UserRound,
+} from 'lucide-react';
 
 import { AppFooter } from '@/components/footer/AppFooter';
 import { AppHeader } from '@/components/header/AppHeader';
@@ -11,7 +30,11 @@ import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
-import type { RagCoachChatActionResult } from '@/interfaces/ragCoachChat.interface';
+import type {
+  RagCoachChatActionResult,
+  RagCoachChatIntent,
+  RagCoachChatSource,
+} from '@/interfaces/ragCoachChat.interface';
 import { enviarMensajeCoachIa } from '@/services/ragCoachChatClient';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -22,6 +45,12 @@ type ChatMessage = {
   actions?: RagCoachChatActionResult[];
   suggestedReplies?: string[];
   contextSummary?: string;
+  contextHints?: string[];
+  coachNotes?: string[];
+  nextBestStep?: string;
+  safetySummary?: string;
+  intent?: RagCoachChatIntent;
+  missingParams?: string[];
 };
 
 const quickPrompts = [
@@ -29,6 +58,24 @@ const quickPrompts = [
   'Quiero una dieta para bajar grasa sin perder músculo',
   'Estoy estancado, analizá mi evolución física',
   'No sé por dónde empezar, quiero mejorar mi físico',
+];
+
+const coachCapabilities = [
+  {
+    title: 'Rutinas',
+    description: 'Genera planes usando objetivo, nivel, días y restricciones.',
+    icon: Dumbbell,
+  },
+  {
+    title: 'Dietas',
+    description: 'Crea orientación nutricional con disclaimers de seguridad.',
+    icon: Apple,
+  },
+  {
+    title: 'Evolución',
+    description: 'Analiza progreso físico y sugiere próximos ajustes.',
+    icon: Activity,
+  },
 ];
 
 function createId() {
@@ -47,6 +94,131 @@ function actionLinkLabel(action: RagCoachChatActionResult) {
   return 'Abrir';
 }
 
+function actionVisual(action: RagCoachChatActionResult) {
+  if (!action.ok) return { icon: AlertTriangle, label: 'Revisar', className: 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100' };
+  if (action.type === 'routine_generated') return { icon: Dumbbell, label: 'Rutina', className: 'border-cyan-200 bg-cyan-50 text-cyan-900 dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-100' };
+  if (action.type === 'diet_generated') return { icon: Apple, label: 'Dieta', className: 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100' };
+  if (action.type === 'evolution_analyzed') return { icon: Activity, label: 'Evolución', className: 'border-violet-200 bg-violet-50 text-violet-900 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-100' };
+  return { icon: MessageSquareText, label: 'Guía', className: 'border-slate-200 bg-slate-50 text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100' };
+}
+
+function intentLabel(intent?: RagCoachChatIntent) {
+  if (intent === 'routine_request') return 'Rutina detectada';
+  if (intent === 'diet_request') return 'Dieta detectada';
+  if (intent === 'routine_and_diet_request') return 'Rutina + dieta';
+  if (intent === 'evolution_analysis_request') return 'Evolución detectada';
+  if (intent === 'general_guidance') return 'Orientación general';
+  if (intent === 'unknown') return 'Necesita más datos';
+  return null;
+}
+
+function formatSimilarity(value?: number) {
+  if (typeof value !== 'number' || Number.isNaN(value)) return null;
+  const percentage = Math.max(0, Math.min(100, Math.round(value * 100)));
+  return `${percentage}%`;
+}
+
+function hasSources(actions?: RagCoachChatActionResult[]) {
+  return actions?.some((action) => (action.sources ?? []).length > 0) ?? false;
+}
+
+function renderSources(sources: RagCoachChatSource[]) {
+  if (!sources.length) return null;
+
+  return (
+    <div className="mt-3 rounded-xl border border-slate-200 bg-white/90 p-3 text-xs text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-950/70 dark:text-slate-200">
+      <div className="mb-2 flex items-center gap-2 font-semibold text-slate-900 dark:text-white">
+        <BookOpenCheck className="h-3.5 w-3.5 text-[#02a8e1]" />
+        Fuentes recuperadas
+      </div>
+      <div className="space-y-2">
+        {sources.map((source, index) => {
+          const similarity = formatSimilarity(source.similarity);
+          return (
+            <div key={`${source.title}-${index}`} className="rounded-lg border border-slate-100 bg-slate-50 p-2 dark:border-slate-800 dark:bg-slate-900/80">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-semibold text-slate-900 dark:text-white">{source.title}</span>
+                {similarity && (
+                  <span className="rounded-full bg-cyan-100 px-2 py-0.5 text-[10px] font-semibold text-cyan-800 dark:bg-cyan-500/15 dark:text-cyan-100">
+                    similitud {similarity}
+                  </span>
+                )}
+              </div>
+              <div className="mt-1 flex flex-wrap gap-1 text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                {source.domain && <span>{source.domain}</span>}
+                {source.sourceTable && <span>· {source.sourceTable}</span>}
+              </div>
+              {source.contentPreview && (
+                <p className="mt-1 line-clamp-2 text-slate-600 dark:text-slate-300">{source.contentPreview}</p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function renderAction(action: RagCoachChatActionResult) {
+  const visual = actionVisual(action);
+  const Icon = visual.icon;
+
+  return (
+    <div key={`${action.type}-${action.title}`} className={`rounded-xl border p-3 ${visual.className}`}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <Icon className="h-4 w-4 shrink-0" />
+            <span className="text-xs font-semibold uppercase tracking-wide">{visual.label}</span>
+          </div>
+          <h3 className="mt-1 text-sm font-bold">{action.title}</h3>
+          <p className="mt-1 text-xs leading-relaxed opacity-90">{action.message}</p>
+        </div>
+        {action.viewPath && (
+          <Button size="sm" variant="outline" asChild className="h-9 shrink-0 bg-white/80 text-xs dark:bg-slate-950/50">
+            <Link href={action.viewPath}>
+              {actionLinkLabel(action)}
+              <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+            </Link>
+          </Button>
+        )}
+      </div>
+
+      {action.ragSummary && (
+        <div className="mt-3 rounded-lg bg-white/70 p-2 text-xs leading-relaxed dark:bg-slate-950/40">
+          <strong>Resumen RAG:</strong> {action.ragSummary}
+        </div>
+      )}
+
+      {renderSources(action.sources ?? [])}
+
+      {(action.safetyNotes?.length ?? 0) > 0 && (
+        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+          <div className="mb-1 flex items-center gap-1.5 font-semibold">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            Seguridad aplicada
+          </div>
+          <ul className="list-disc space-y-1 pl-4">
+            {action.safetyNotes?.slice(0, 3).map((note) => <li key={note}>{note}</li>)}
+          </ul>
+        </div>
+      )}
+
+      {(action.warnings?.length ?? 0) > 0 && (
+        <div className="mt-3 rounded-lg border border-slate-200 bg-white/70 p-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-200">
+          <div className="mb-1 flex items-center gap-1.5 font-semibold">
+            <Info className="h-3.5 w-3.5" />
+            Observaciones
+          </div>
+          <ul className="list-disc space-y-1 pl-4">
+            {action.warnings?.slice(0, 3).map((warning) => <li key={warning}>{warning}</li>)}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CoachIaPage() {
   const router = useRouter();
   const { user, isAuthenticated, initializeAuth, isInitialized } = useAuthStore();
@@ -55,6 +227,9 @@ export default function CoachIaPage() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const totalAssistantMessages = messages.filter((message) => message.role === 'assistant').length;
+  const totalActionMessages = messages.reduce((total, message) => total + (message.actions?.filter((action) => action.ok).length ?? 0), 0);
+  const hasRagSources = messages.some((message) => hasSources(message.actions));
 
   useEffect(() => {
     initializeAuth();
@@ -73,18 +248,24 @@ export default function CoachIaPage() {
       {
         id: createId(),
         role: 'assistant',
-        content: `Hola, ${displayName}, ¿en qué te puedo ayudar? Puedo ayudarte con rutinas, dietas o evolución física.`,
+        content: `Hola, ${displayName}. Soy tu Coach IA de Gym Master. Puedo ayudarte con rutinas, dietas y evolución física usando tu contexto del gimnasio cuando esté disponible.`,
         suggestedReplies: quickPrompts,
+        nextBestStep: 'Contame tu objetivo, disponibilidad semanal, nivel y restricciones.',
       },
     ]);
   }, [displayName, isAuthenticated, isInitialized, messages.length]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [messages, loading]);
 
   if (!isInitialized) {
-    return <div>Cargando...</div>;
+    return (
+      <div className="flex min-h-[100dvh] items-center justify-center bg-slate-50 text-sm text-slate-600 dark:bg-slate-950 dark:text-slate-300">
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        Cargando Coach IA...
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
@@ -120,6 +301,12 @@ export default function CoachIaPage() {
         actions: res.data.actions,
         suggestedReplies: res.data.suggestedReplies,
         contextSummary: res.data.contextSummary,
+        contextHints: res.data.contextHints,
+        coachNotes: res.data.coachNotes,
+        nextBestStep: res.data.nextBestStep,
+        safetySummary: res.data.safetySummary,
+        intent: res.data.intent,
+        missingParams: res.data.missingParams,
       };
 
       setMessages((current) => [...current, assistantMessage]);
@@ -132,6 +319,7 @@ export default function CoachIaPage() {
           content: error instanceof Error
             ? error.message
             : 'Ocurrió un error al consultar el Coach IA.',
+          nextBestStep: 'Reintentá en unos segundos o revisá los módulos de rutinas, dietas y evolución desde el menú.',
         },
       ]);
     } finally {
@@ -144,145 +332,310 @@ export default function CoachIaPage() {
     await sendMessage(input);
   };
 
+  const resetConversation = () => {
+    setInput('');
+    setMessages([
+      {
+        id: createId(),
+        role: 'assistant',
+        content: `Conversación reiniciada, ${displayName}. Contame qué objetivo querés trabajar ahora.`,
+        suggestedReplies: quickPrompts,
+        nextBestStep: 'Elegí una sugerencia o escribí tu consulta completa.',
+      },
+    ]);
+  };
+
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full">
+      <div className="flex h-[100dvh] w-full overflow-hidden bg-slate-50 dark:bg-slate-950">
         <AppSidebar />
-        <SidebarInset>
+        <SidebarInset className="h-[100dvh] overflow-hidden bg-slate-50 dark:bg-slate-950">
           <AppHeader title="Coach IA" />
-          <main className="flex-1 p-6">
-            <Card className="mx-auto flex min-h-[72vh] w-full max-w-5xl flex-col rounded-2xl border bg-white shadow-sm">
-              <CardHeader className="border-b p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <Bot className="h-6 w-6 text-[#02a8e1]" />
-                      <h1 className="text-2xl font-bold text-gray-950">Coach IA Gym Master</h1>
+          <section className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-6">
+            <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 pb-4">
+              <div className="overflow-hidden rounded-3xl border border-cyan-100 bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950 p-5 text-white shadow-xl dark:border-cyan-500/20 sm:p-6">
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="max-w-3xl">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-xs font-semibold text-cyan-100">
+                      <Brain className="h-3.5 w-3.5" />
+                      RAG Coach final polish
                     </div>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Conversá sobre rutinas, dietas y evolución física. El Coach puede generar y guardar resultados cuando corresponda.
+                    <h1 className="mt-4 text-2xl font-black tracking-tight sm:text-4xl">
+                      Coach IA con contexto, fuentes y fallback seguro
+                    </h1>
+                    <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-base">
+                      Consultá rutinas, dietas y evolución física con una experiencia más clara, trazable y lista para demo comercial.
                     </p>
                   </div>
-                  <div className="hidden rounded-full bg-[#02a8e1]/10 px-3 py-1 text-xs font-semibold text-[#027ca8] md:block">
-                    RAG Coach Unificado
+
+                  <div className="grid grid-cols-3 gap-2 sm:min-w-[360px]">
+                    <div className="rounded-2xl border border-white/10 bg-white/10 p-3 text-center backdrop-blur">
+                      <div className="text-2xl font-black">{totalAssistantMessages}</div>
+                      <div className="text-[11px] text-slate-300">respuestas</div>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-white/10 p-3 text-center backdrop-blur">
+                      <div className="text-2xl font-black">{totalActionMessages}</div>
+                      <div className="text-[11px] text-slate-300">acciones</div>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-white/10 p-3 text-center backdrop-blur">
+                      <div className="text-2xl font-black">{hasRagSources ? 'Sí' : '—'}</div>
+                      <div className="text-[11px] text-slate-300">fuentes</div>
+                    </div>
                   </div>
                 </div>
-              </CardHeader>
+              </div>
 
-              <CardContent className="flex flex-1 flex-col gap-4 p-4">
-                <div className="flex-1 space-y-4 overflow-y-auto rounded-xl bg-slate-50 p-4">
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      {message.role === 'assistant' && (
-                        <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#02a8e1] text-white">
-                          <Bot className="h-4 w-4" />
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+                <Card className="flex min-h-[70dvh] flex-col overflow-hidden rounded-3xl border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                  <CardHeader className="border-b border-slate-200 bg-white/95 p-4 dark:border-slate-800 dark:bg-slate-900/95">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#02a8e1] text-white shadow-lg shadow-cyan-500/20">
+                            <Bot className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <h2 className="text-xl font-black text-slate-950 dark:text-white">Coach IA Gym Master</h2>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">Chat unificado · Rutinas · Dietas · Evolución</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100">
+                          <ShieldCheck className="h-3.5 w-3.5" />
+                          Safety fallback
+                        </span>
+                        <Button type="button" size="sm" variant="outline" onClick={resetConversation} disabled={loading}>
+                          <RefreshCcw className="mr-1.5 h-3.5 w-3.5" />
+                          Reiniciar
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="flex min-h-0 flex-1 flex-col gap-4 p-3 sm:p-4">
+                    <div className="min-h-0 flex-1 space-y-4 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/70 sm:p-4">
+                      {messages.length === 0 && !loading && (
+                        <div className="flex h-full min-h-[360px] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center dark:border-slate-700 dark:bg-slate-900/60">
+                          <Bot className="h-10 w-10 text-[#02a8e1]" />
+                          <h3 className="mt-3 text-lg font-bold text-slate-950 dark:text-white">El Coach está listo</h3>
+                          <p className="mt-1 max-w-md text-sm text-slate-500 dark:text-slate-400">
+                            Escribí una consulta o elegí una sugerencia para generar una respuesta contextual.
+                          </p>
                         </div>
                       )}
 
-                      <div
-                        className={`max-w-[86%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${
-                          message.role === 'user'
-                            ? 'bg-[#02a8e1] text-white'
-                            : 'border bg-white text-gray-900'
-                        }`}
-                      >
-                        <div className="whitespace-pre-line">{message.content}</div>
+                      {messages.map((message) => {
+                        const label = intentLabel(message.intent);
+                        return (
+                          <div
+                            key={message.id}
+                            className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                          >
+                            {message.role === 'assistant' && (
+                              <div className="mt-1 hidden h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#02a8e1] text-white shadow-md shadow-cyan-500/20 sm:flex">
+                                <Bot className="h-4 w-4" />
+                              </div>
+                            )}
 
-                        {message.contextSummary && message.role === 'assistant' && (
-                          <div className="mt-3 rounded-xl border border-cyan-100 bg-cyan-50 px-3 py-2 text-xs text-cyan-900">
-                            <strong>Contexto aplicado:</strong> {message.contextSummary}
+                            <div
+                              className={`max-w-[94%] rounded-3xl px-4 py-3 text-sm leading-relaxed shadow-sm sm:max-w-[86%] ${
+                                message.role === 'user'
+                                  ? 'bg-[#02a8e1] text-white'
+                                  : 'border border-slate-200 bg-white text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100'
+                              }`}
+                            >
+                              {label && message.role === 'assistant' && (
+                                <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-800 dark:bg-cyan-500/10 dark:text-cyan-100">
+                                  <SearchCheck className="h-3 w-3" />
+                                  {label}
+                                </div>
+                              )}
+
+                              <div className="whitespace-pre-line">{message.content}</div>
+
+                              {message.contextSummary && message.role === 'assistant' && (
+                                <div className="mt-3 rounded-xl border border-cyan-100 bg-cyan-50 px-3 py-2 text-xs text-cyan-950 dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-100">
+                                  <strong>Contexto aplicado:</strong> {message.contextSummary}
+                                </div>
+                              )}
+
+                              {message.safetySummary && message.role === 'assistant' && (
+                                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+                                  <strong>Seguridad:</strong> {message.safetySummary}
+                                </div>
+                              )}
+
+                              {(message.actions?.length ?? 0) > 0 && (
+                                <div className="mt-3 space-y-3">
+                                  {message.actions?.map(renderAction)}
+                                </div>
+                              )}
+
+                              {(message.contextHints?.length ?? 0) > 0 && message.role === 'assistant' && (
+                                <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-950/70 dark:text-slate-200">
+                                  <div className="mb-1 font-semibold">Pistas del contexto</div>
+                                  <ul className="list-disc space-y-1 pl-4">
+                                    {message.contextHints?.slice(0, 3).map((hint) => <li key={hint}>{hint}</li>)}
+                                  </ul>
+                                </div>
+                              )}
+
+                              {(message.missingParams?.length ?? 0) > 0 && message.role === 'assistant' && (
+                                <div className="mt-3 flex flex-wrap gap-1.5">
+                                  {message.missingParams?.map((param) => (
+                                    <span key={param} className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                                      falta: {param}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+
+                              {message.nextBestStep && message.role === 'assistant' && (
+                                <div className="mt-3 rounded-xl border border-violet-100 bg-violet-50 px-3 py-2 text-xs text-violet-950 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-100">
+                                  <strong>Próximo paso:</strong> {message.nextBestStep}
+                                </div>
+                              )}
+
+                              {message.suggestedReplies && message.suggestedReplies.length > 0 && message.role === 'assistant' && (
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  {message.suggestedReplies.slice(0, 4).map((suggestion) => (
+                                    <button
+                                      type="button"
+                                      key={suggestion}
+                                      className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-[#02a8e1] hover:text-[#027ca8] disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-200 dark:hover:border-cyan-400 dark:hover:text-cyan-100"
+                                      onClick={() => sendMessage(suggestion)}
+                                      disabled={loading}
+                                    >
+                                      {suggestion}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {message.role === 'user' && (
+                              <div className="mt-1 hidden h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-slate-700 text-white shadow-md dark:bg-slate-600 sm:flex">
+                                <UserRound className="h-4 w-4" />
+                              </div>
+                            )}
                           </div>
-                        )}
+                        );
+                      })}
 
-                        {message.actions?.some((action) => action.viewPath) && (
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            {message.actions
-                              .filter((action) => action.viewPath)
-                              .map((action) => (
-                                <Button key={`${action.type}-${action.viewPath}`} size="sm" variant="outline" asChild>
-                                  <Link href={action.viewPath ?? '/dashboard'}>
-                                    {actionLinkLabel(action)}
-                                  </Link>
-                                </Button>
-                              ))}
+                      {loading && (
+                        <div className="flex items-center gap-3 rounded-2xl border border-cyan-100 bg-white p-3 text-sm text-slate-600 shadow-sm dark:border-cyan-500/20 dark:bg-slate-900 dark:text-slate-300">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[#02a8e1] text-white">
+                            <Loader2 className="h-4 w-4 animate-spin" />
                           </div>
-                        )}
-
-                        {message.suggestedReplies && message.suggestedReplies.length > 0 && message.role === 'assistant' && (
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            {message.suggestedReplies.slice(0, 4).map((suggestion) => (
-                              <button
-                                type="button"
-                                key={suggestion}
-                                className="rounded-full border px-3 py-1 text-xs text-muted-foreground transition hover:border-[#02a8e1] hover:text-[#027ca8]"
-                                onClick={() => sendMessage(suggestion)}
-                              >
-                                {suggestion}
-                              </button>
-                            ))}
+                          <div>
+                            <div className="font-semibold text-slate-900 dark:text-white">Analizando contexto del socio</div>
+                            <div className="text-xs text-slate-500 dark:text-slate-400">Buscando rutinas, dietas, evolución y referencias RAG disponibles...</div>
                           </div>
-                        )}
-                      </div>
-
-                      {message.role === 'user' && (
-                        <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-700 text-white">
-                          <UserRound className="h-4 w-4" />
                         </div>
                       )}
+                      <div ref={bottomRef} />
                     </div>
-                  ))}
 
-                  {loading && (
-                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#02a8e1] text-white">
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                    <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
+                      {quickPrompts.map((prompt) => (
+                        <Button
+                          key={prompt}
+                          type="button"
+                          variant="outline"
+                          className="h-auto justify-start whitespace-normal rounded-2xl py-3 text-left text-xs dark:border-slate-700 dark:bg-slate-950/50"
+                          onClick={() => sendMessage(prompt)}
+                          disabled={loading}
+                        >
+                          <Sparkles className="mr-2 h-4 w-4 shrink-0 text-[#02a8e1]" />
+                          {prompt}
+                        </Button>
+                      ))}
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-2 sm:flex-row">
+                      <textarea
+                        value={input}
+                        onChange={(event) => setInput(event.target.value)}
+                        placeholder="Escribí tu consulta: quiero rutina, dieta, revisar progreso..."
+                        className="min-h-14 flex-1 resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#02a8e1] focus:ring-2 focus:ring-cyan-100 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-cyan-500/20"
+                        maxLength={1600}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' && !event.shiftKey) {
+                            event.preventDefault();
+                            void sendMessage(input);
+                          }
+                        }}
+                      />
+                      <Button type="submit" disabled={loading || !input.trim()} className="h-14 rounded-2xl bg-[#02a8e1] px-5 font-semibold hover:bg-[#0288b1]">
+                        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                        <span className="ml-2 sm:hidden md:inline">Enviar</span>
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+
+                <aside className="space-y-4">
+                  <Card className="rounded-3xl border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                        <h2 className="text-base font-bold text-slate-950 dark:text-white">Checklist de calidad</h2>
                       </div>
-                      El Coach IA está analizando tu pedido...
-                    </div>
-                  )}
-                  <div ref={bottomRef} />
-                </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
+                      {[
+                        'Contexto del socio visible.',
+                        'Fuentes RAG cuando existan.',
+                        'Fallback seguro para señales sensibles.',
+                        'Acciones claras para ver rutina, dieta o evolución.',
+                        'Diseño responsive sin scroll horizontal.',
+                      ].map((item) => (
+                        <div key={item} className="flex items-start gap-2 rounded-xl bg-slate-50 p-2 dark:bg-slate-950/60">
+                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
 
-                <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
-                  {quickPrompts.map((prompt) => (
-                    <Button
-                      key={prompt}
-                      type="button"
-                      variant="outline"
-                      className="h-auto justify-start whitespace-normal text-left text-xs"
-                      onClick={() => sendMessage(prompt)}
-                      disabled={loading}
-                    >
-                      <Sparkles className="mr-2 h-4 w-4 shrink-0 text-[#02a8e1]" />
-                      {prompt}
-                    </Button>
-                  ))}
-                </div>
+                  <Card className="rounded-3xl border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="h-5 w-5 text-[#02a8e1]" />
+                        <h2 className="text-base font-bold text-slate-950 dark:text-white">Qué puede hacer</h2>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {coachCapabilities.map((capability) => {
+                        const Icon = capability.icon;
+                        return (
+                          <div key={capability.title} className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-950/60">
+                            <div className="flex items-center gap-2 text-sm font-bold text-slate-950 dark:text-white">
+                              <Icon className="h-4 w-4 text-[#02a8e1]" />
+                              {capability.title}
+                            </div>
+                            <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">{capability.description}</p>
+                          </div>
+                        );
+                      })}
+                    </CardContent>
+                  </Card>
 
-                <form onSubmit={handleSubmit} className="flex gap-2">
-                  <textarea
-                    value={input}
-                    onChange={(event) => setInput(event.target.value)}
-                    placeholder="Escribí tu consulta: quiero rutina, dieta, revisar progreso..."
-                    className="min-h-12 flex-1 rounded-xl border px-4 py-3 text-sm outline-none focus:border-[#02a8e1]"
-                    maxLength={1600}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' && !event.shiftKey) {
-                        event.preventDefault();
-                        void sendMessage(input);
-                      }
-                    }}
-                  />
-                  <Button type="submit" disabled={loading || !input.trim()} className="h-12 bg-[#02a8e1] hover:bg-[#0288b1]">
-                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </main>
+                  <Card className="rounded-3xl border-amber-200 bg-amber-50 shadow-sm dark:border-amber-500/30 dark:bg-amber-500/10">
+                    <CardContent className="p-4 text-xs leading-relaxed text-amber-950 dark:text-amber-100">
+                      <div className="mb-2 flex items-center gap-2 font-bold">
+                        <AlertTriangle className="h-4 w-4" />
+                        Nota importante
+                      </div>
+                      El Coach IA orienta y ayuda a organizar información del gimnasio. No reemplaza evaluación médica, nutricional ni profesional cuando hay lesiones, síntomas o condiciones clínicas.
+                    </CardContent>
+                  </Card>
+                </aside>
+              </div>
+            </div>
+          </section>
           <AppFooter />
         </SidebarInset>
       </div>

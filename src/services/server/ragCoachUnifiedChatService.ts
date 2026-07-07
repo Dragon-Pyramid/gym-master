@@ -4,6 +4,7 @@ import type {
   RagCoachChatIntent,
   RagCoachChatRequest,
   RagCoachChatResponseData,
+  RagCoachChatSource,
 } from '@/interfaces/ragCoachChat.interface';
 import { dataGeneracionRutina } from '@/services/rutinaService';
 import { createDietaSocio } from '@/services/dietaService';
@@ -14,6 +15,7 @@ import { analyzeEvolucionFisicaWithRag } from './ragEvolucionFisicaCoachService'
 import { buildRagCoachSocioContext, type RagCoachSocioContext } from './ragCoachSocioContextService';
 
 const MAX_MESSAGE_LENGTH = 1600;
+const MAX_SOURCES_PER_ACTION = 4;
 
 function normalize(value: string) {
   return value
@@ -42,6 +44,10 @@ function resolveSocioId(user: JwtUser, requested?: string | null) {
 
 function getDisplayName(user: JwtUser) {
   return cleanText(user.nombre, 80) || cleanText(user.email, 80) || 'socio';
+}
+
+function uniqueValues(values: string[]) {
+  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
 }
 
 function detectIntent(message: string): RagCoachChatIntent {
@@ -129,6 +135,38 @@ function getContextCoachLine(context?: RagCoachSocioContext | null) {
   return context.resumenHumano;
 }
 
+function buildSafetyNotes(message: string, intent: RagCoachChatIntent, context?: RagCoachSocioContext | null) {
+  const text = normalize(message);
+  const notes: string[] = [];
+
+  if (/\b(dolor de pecho|pecho|desmayo|desmayos|taquicardia|mareo fuerte|falta de aire)\b/.test(text)) {
+    notes.push('Se detectó una posible señal sensible. No conviene intensificar entrenamiento ni dieta sin evaluación profesional.');
+  }
+
+  if (/\b(diabetes|glucemia|insulina|hipertension|presion alta|cardiopatia|embarazo|trastorno alimentario|anorexia|bulimia)\b/.test(text)) {
+    notes.push('El pedido menciona una condición clínica o nutricional sensible. El Coach solo puede orientar de forma general y debe intervenir un profesional.');
+  }
+
+  if (/\b(lesion|lesionado|dolor|hernia|rodilla|hombro|lumbar|espalda)\b/.test(text)) {
+    notes.push('Se detectó posible lesión o dolor. Priorizar técnica, progresión conservadora y supervisión profesional.');
+  }
+
+  if (intent === 'diet_request' || intent === 'routine_and_diet_request') {
+    notes.push('La dieta generada es orientativa y no reemplaza una evaluación nutricional individual.');
+  }
+
+  if ((context?.fichaMedica.restriccionesSeguras ?? []).length > 0) {
+    notes.push('Se aplicaron restricciones seguras registradas en la ficha médica del socio.');
+  }
+
+  return uniqueValues(notes);
+}
+
+function shouldBlockAutomationForSafety(message: string) {
+  const text = normalize(message);
+  return /\b(dolor de pecho|desmayo|desmayos|falta de aire|mareo fuerte|taquicardia)\b/.test(text);
+}
+
 function buildContextAwareGuidance(name: string, message: string, context?: RagCoachSocioContext | null) {
   const base = buildGuidanceReply(name, message, context);
   const contextLine = getContextCoachLine(context);
@@ -158,6 +196,42 @@ function evolutionViewMessage() {
   return 'Podés volver a consultar tu seguimiento desde Menú Personal → Evolución Física.';
 }
 
+type RagContextResultLike = {
+  title?: string;
+  domain?: string;
+  sourceTable?: string;
+  similarity?: number;
+  content?: string;
+};
+
+function mapRagSources(results?: RagContextResultLike[] | null): RagCoachChatSource[] {
+  return (results ?? [])
+    .slice(0, MAX_SOURCES_PER_ACTION)
+    .map((result) => ({
+      title: cleanText(result.title, 120) || 'Referencia RAG',
+      domain: cleanText(result.domain, 60) || undefined,
+      sourceTable: cleanText(result.sourceTable, 60) || undefined,
+      similarity: typeof result.similarity === 'number' ? result.similarity : undefined,
+      contentPreview: cleanText(result.content, 180) || undefined,
+    }));
+}
+
+function buildFailedAction(
+  type: RagCoachChatActionResult['type'],
+  title: string,
+  error: unknown,
+): RagCoachChatActionResult {
+  const message = error instanceof Error ? error.message : 'Error desconocido.';
+  return {
+    type,
+    ok: false,
+    title,
+    message: `No pude completar esta acción automáticamente. Motivo: ${message}`,
+    warnings: [message],
+    safetyNotes: ['Podés intentar nuevamente o revisar el módulo correspondiente desde el menú.'],
+  };
+}
+
 async function getEvolutionSuggestion(user: JwtUser, socioId: string, context?: RagCoachSocioContext | null) {
   if (context) {
     if (context.evolucion.total === 0) {
@@ -185,7 +259,7 @@ async function generateRoutineAction(user: JwtUser, socioId: string, message: st
   const dias = inferDays(message, context);
   const restricciones = mergeRestrictions(inferRestrictions(message), context);
 
-  await buildRutinasRagContext(user, {
+  const ragContext = await buildRutinasRagContext(user, {
     objetivo,
     nivel,
     dias,
@@ -193,7 +267,11 @@ async function generateRoutineAction(user: JwtUser, socioId: string, message: st
     mensajeSocio: message,
     restricciones,
     id_socio: socioId,
-  }).catch(() => undefined);
+  }).catch((error) => ({
+    summary: 'No se pudo recuperar contexto RAG de rutinas. Se usa generación formal segura.',
+    results: [],
+    warnings: [error instanceof Error ? error.message : 'Error desconocido al consultar RAG de rutinas.'],
+  }));
 
   const rutinaGenerada = await dataGeneracionRutina(user, {
     objetivo,
@@ -209,6 +287,10 @@ async function generateRoutineAction(user: JwtUser, socioId: string, message: st
     message: `Listo, ya generé y guardé tu rutina de ${dias} días. ${routineViewMessage()}`,
     viewPath: '/dashboard/rutinas/asistente',
     viewLabel: 'Ver rutina',
+    ragSummary: ragContext.summary,
+    sources: mapRagSources(ragContext.results),
+    warnings: ragContext.warnings,
+    safetyNotes: restricciones ? [restricciones] : [],
     payload: {
       objetivo,
       nivel,
@@ -225,7 +307,7 @@ async function generateDietAction(user: JwtUser, socioId: string, message: strin
   const fechaInicio = todayIso();
   const fechaFin = addDaysIso(30);
 
-  await buildDietasRagContext(user, {
+  const ragContext = await buildDietasRagContext(user, {
     socio_id: socioId,
     objetivo,
     fecha_inicio: fechaInicio,
@@ -234,7 +316,12 @@ async function generateDietAction(user: JwtUser, socioId: string, message: strin
     mensajeSocio: message,
     restricciones,
     preferencias: '',
-  }).catch(() => undefined);
+  }).catch((error) => ({
+    summary: 'No se pudo recuperar contexto RAG de dietas. Se usa generación formal segura.',
+    results: [],
+    disclaimers: [],
+    warnings: [error instanceof Error ? error.message : 'Error desconocido al consultar RAG de dietas.'],
+  }));
 
   const dietaGenerada = await createDietaSocio(
     {
@@ -253,6 +340,10 @@ async function generateDietAction(user: JwtUser, socioId: string, message: strin
     message: `Listo, ya generé y guardé tu dieta orientativa por 30 días. ${dietViewMessage()}`,
     viewPath: '/dashboard/dietas',
     viewLabel: 'Ver dieta',
+    ragSummary: ragContext.summary,
+    sources: mapRagSources(ragContext.results),
+    warnings: ragContext.warnings,
+    safetyNotes: uniqueValues([restricciones, ...(ragContext.disclaimers ?? [])]),
     payload: {
       objetivo,
       fecha_inicio: fechaInicio,
@@ -278,6 +369,10 @@ async function analyzeEvolutionAction(user: JwtUser, socioId: string, message: s
     message: `${analysis.progreso.tendenciaPrincipal} ${evolutionViewMessage()}`,
     viewPath: '/dashboard/evolucion-fisica',
     viewLabel: 'Ver evolución física',
+    ragSummary: analysis.ragContext?.summary,
+    sources: mapRagSources(analysis.ragContext?.results),
+    warnings: analysis.alertas,
+    safetyNotes: analysis.disclaimers,
     payload: analysis,
   };
 }
@@ -323,30 +418,77 @@ export async function handleUnifiedRagCoachChat(
   });
 
   const intent = detectIntent(message);
-  const actions: RagCoachChatActionResult[] = [];
+  const safetyNotes = buildSafetyNotes(message, intent, socioContext);
+  const evolutionSuggestion = await getEvolutionSuggestion(user, effectiveSocioId, socioContext);
+  const contextLine = getContextCoachLine(socioContext);
   const coachNotes: string[] = [];
-  const missingParams: string[] = [];
   const suggestedReplies: string[] = [];
 
+  if (contextLine) coachNotes.push(contextLine);
+  coachNotes.push(...(socioContext?.hints ?? []));
+
+  if (shouldBlockAutomationForSafety(message)) {
+    const reply = [
+      `${name}, por seguridad no voy a generar una rutina, dieta ni progresión automática con síntomas sensibles como dolor de pecho, desmayo, falta de aire o taquicardia.`,
+      'Lo más prudente es pausar la actividad intensa y consultar con un profesional de salud antes de ajustar entrenamiento o alimentación.',
+      evolutionSuggestion,
+      contextLine,
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+
+    return {
+      greeting,
+      intent: 'general_guidance',
+      reply,
+      actions: [
+        {
+          type: 'guidance_only',
+          ok: true,
+          title: 'Fallback de seguridad',
+          message: 'Se priorizó orientación segura y no se ejecutaron acciones automáticas.',
+          safetyNotes,
+        },
+      ],
+      suggestedReplies: ['Quiero revisar mi evolución física', 'Tengo restricciones y quiero una orientación general'],
+      missingParams: [],
+      coachNotes: [...coachNotes, 'Fallback de seguridad activado por señales sensibles.'],
+      contextSummary: socioContext?.resumenHumano,
+      contextHints: socioContext?.hints,
+      nextBestStep: 'Derivar a evaluación profesional antes de ajustar entrenamiento o dieta.',
+      safetySummary: safetyNotes.join(' '),
+    };
+  }
+
+  const actions: RagCoachChatActionResult[] = [];
+
   if (intent === 'routine_request' || intent === 'routine_and_diet_request') {
-    actions.push(await generateRoutineAction(user, effectiveSocioId, message, socioContext));
-    coachNotes.push('Después de generar una rutina, conviene ofrecer una dieta que acompañe el mismo objetivo.');
-    suggestedReplies.push('Sí, quiero una dieta que acompañe mi rutina');
+    try {
+      actions.push(await generateRoutineAction(user, effectiveSocioId, message, socioContext));
+      coachNotes.push('Después de generar una rutina, conviene ofrecer una dieta que acompañe el mismo objetivo.');
+      suggestedReplies.push('Sí, quiero una dieta que acompañe mi rutina');
+    } catch (error) {
+      actions.push(buildFailedAction('routine_generated', 'Rutina no generada', error));
+    }
   }
 
   if (intent === 'diet_request' || intent === 'routine_and_diet_request') {
-    actions.push(await generateDietAction(user, effectiveSocioId, message, socioContext));
-    coachNotes.push('La dieta fue generada como orientación general y debe respetar disclaimers nutricionales.');
+    try {
+      actions.push(await generateDietAction(user, effectiveSocioId, message, socioContext));
+      coachNotes.push('La dieta fue generada como orientación general y debe respetar disclaimers nutricionales.');
+    } catch (error) {
+      actions.push(buildFailedAction('diet_generated', 'Dieta no generada', error));
+    }
   }
 
   if (intent === 'evolution_analysis_request') {
-    actions.push(await analyzeEvolutionAction(user, effectiveSocioId, message, socioContext));
+    try {
+      actions.push(await analyzeEvolutionAction(user, effectiveSocioId, message, socioContext));
+    } catch (error) {
+      actions.push(buildFailedAction('evolution_analyzed', 'Evolución no analizada', error));
+    }
   }
 
-  const evolutionSuggestion = await getEvolutionSuggestion(user, effectiveSocioId, socioContext);
-  const contextLine = getContextCoachLine(socioContext);
-  if (contextLine) coachNotes.push(contextLine);
-  coachNotes.push(...(socioContext?.hints ?? []));
   suggestedReplies.push('Analizar mi evolución física', 'Quiero cargar mi evolución inicial');
 
   if (actions.length === 0) {
@@ -360,6 +502,7 @@ export async function handleUnifiedRagCoachChat(
           ok: true,
           title: 'Orientación inicial',
           message: 'El Coach necesita algunos datos más antes de generar una rutina o dieta.',
+          safetyNotes,
         },
       ],
       suggestedReplies: ['Quiero una rutina', 'Quiero una dieta', 'Quiero revisar mi evolución física'],
@@ -368,28 +511,31 @@ export async function handleUnifiedRagCoachChat(
       contextSummary: socioContext?.resumenHumano,
       contextHints: socioContext?.hints,
       nextBestStep: 'Pedir objetivo, disponibilidad semanal y restricciones.',
+      safetySummary: safetyNotes.join(' '),
     };
   }
 
+  const successfulActions = actions.filter((action) => action.ok);
   const actionMessages = actions.map((action) => action.message).join('\n\n');
-  const offerDiet = intent === 'routine_request'
+  const offerDiet = intent === 'routine_request' && successfulActions.some((action) => action.type === 'routine_generated')
     ? '\n\nSi querés, también puedo prepararte una dieta orientativa que acompañe esta rutina de entrenamiento.'
     : '';
-
+  const safetySuffix = safetyNotes.length ? `\n\nNota de seguridad: ${safetyNotes[0]}` : '';
   const contextSuffix = contextLine ? `\n\n${contextLine}` : '';
 
   return {
     greeting,
     intent,
-    reply: `${actionMessages}${offerDiet}\n\n${evolutionSuggestion}${contextSuffix}`,
+    reply: `${actionMessages}${offerDiet}\n\n${evolutionSuggestion}${contextSuffix}${safetySuffix}`,
     actions,
-    suggestedReplies,
-    missingParams,
+    suggestedReplies: uniqueValues(suggestedReplies),
+    missingParams: [],
     coachNotes,
     contextSummary: socioContext?.resumenHumano,
     contextHints: socioContext?.hints,
     nextBestStep: intent === 'routine_request'
       ? 'Ofrecer dieta complementaria y seguimiento de evolución física.'
       : 'Sugerir seguimiento mensual de evolución física si el socio está comprometido.',
+    safetySummary: safetyNotes.join(' '),
   };
 }

@@ -18,6 +18,14 @@ export interface RagCoachChatRequest {
   conversationContext?: Record<string, unknown>;
 }
 
+export interface RagCoachChatSource {
+  title: string;
+  domain?: string;
+  sourceTable?: string;
+  similarity?: number;
+  contentPreview?: string;
+}
+
 export interface RagCoachChatActionResult {
   type: RagCoachChatActionType;
   ok: boolean;
@@ -26,6 +34,10 @@ export interface RagCoachChatActionResult {
   viewPath?: string;
   viewLabel?: string;
   payload?: unknown;
+  ragSummary?: string;
+  sources?: RagCoachChatSource[];
+  warnings?: string[];
+  safetyNotes?: string[];
 }
 
 export interface RagCoachChatResponseData {
@@ -39,6 +51,7 @@ export interface RagCoachChatResponseData {
   contextSummary?: string;
   contextHints?: string[];
   nextBestStep?: string;
+  safetySummary?: string;
 }
 
 export interface RagCoachChatApiResponse {
