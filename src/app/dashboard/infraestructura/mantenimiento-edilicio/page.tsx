@@ -168,12 +168,12 @@ function MetricCard({
   tone?: 'red' | 'amber' | 'blue' | 'emerald' | 'slate' | 'violet';
 }) {
   const tones = {
-    red: 'border-red-100 bg-red-50 text-red-900',
-    amber: 'border-amber-100 bg-amber-50 text-amber-900',
-    blue: 'border-blue-100 bg-blue-50 text-blue-900',
-    emerald: 'border-emerald-100 bg-emerald-50 text-emerald-900',
-    slate: 'border-slate-100 bg-white text-slate-950',
-    violet: 'border-violet-100 bg-violet-50 text-violet-900',
+    red: 'border-red-200 bg-red-50 text-red-900 dark:border-red-500/30 dark:bg-red-950/30 dark:text-red-100',
+    amber: 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-100',
+    blue: 'border-blue-200 bg-blue-50 text-blue-900 dark:border-sky-500/30 dark:bg-sky-950/30 dark:text-sky-100',
+    emerald: 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-950/30 dark:text-emerald-100',
+    slate: 'border-slate-200 bg-white text-slate-950 dark:text-slate-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100',
+    violet: 'border-violet-200 bg-violet-50 text-violet-900 dark:border-violet-500/30 dark:bg-violet-950/30 dark:text-violet-100',
   };
 
   return (
@@ -187,7 +187,7 @@ function MetricCard({
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <label className="space-y-1 text-sm font-medium text-slate-700">
+    <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300 dark:text-slate-200">
       <span>{label}</span>
       {children}
     </label>
@@ -207,7 +207,7 @@ function SelectField({
     <select
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
       {children}
     </select>
@@ -277,6 +277,33 @@ export default function MantenimientoEdilicioPage() {
     () => (dashboard?.ordenes ?? []).filter((orden) => orden.activo !== false && orden.estado !== 'completada' && orden.estado !== 'cancelada'),
     [dashboard],
   );
+
+  const executiveSummary = useMemo(() => {
+    const metrics = dashboard?.metricas;
+    const overdueAssets = metrics?.activosVencidos ?? 0;
+    const criticalAssets = metrics?.activosCriticos ?? 0;
+    const overdueOrders = metrics?.ordenesVencidas ?? 0;
+    const openOrders = metrics?.ordenesAbiertas ?? 0;
+    const checklistCritical = (dashboard?.checklistEjecuciones ?? []).filter((item) => item.resultado_general === 'critico').length;
+    const needsAttention = overdueAssets + overdueOrders + checklistCritical;
+    const status = needsAttention > 0 ? 'Atención prioritaria' : openOrders > 0 ? 'Seguimiento operativo' : 'Infraestructura controlada';
+    const nextStep = needsAttention > 0
+      ? 'Resolver vencimientos críticos, órdenes vencidas y checklists observados antes de nuevas mejoras edilicias.'
+      : openOrders > 0
+        ? 'Cerrar órdenes abiertas y registrar checklists para sostener trazabilidad edilicia.'
+        : 'Mantener calendario preventivo, QR visibles y revisión periódica de sectores clave.';
+
+    return {
+      status,
+      needsAttention,
+      overdueAssets,
+      criticalAssets,
+      overdueOrders,
+      openOrders,
+      checklistCritical,
+      nextStep,
+    };
+  }, [dashboard]);
 
   const registerSuccess = async (message: string) => {
     setSuccess(message);
@@ -405,31 +432,47 @@ export default function MantenimientoEdilicioPage() {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full">
+      <div className="flex h-[100dvh] max-h-[100dvh] w-full overflow-hidden">
         <AppSidebar />
-        <SidebarInset>
+        <SidebarInset className="!grid !min-h-0 !grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden">
           <AppHeader title="Mantenimiento Edilicio" />
-          <main className="flex-1 space-y-6 p-6">
-            <Card className="border-sky-100 bg-white p-6 shadow-sm">
-              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <main className="min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6">
+            <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 pb-8">
+            <Card className="overflow-hidden border-sky-500/30 bg-gradient-to-br from-slate-950 via-sky-950 to-slate-950 p-6 text-white shadow-xl dark:border-cyan-400/30">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-6 w-6 text-sky-600" />
-                    <h1 className="text-2xl font-bold text-slate-950">Infraestructura / Mantenimiento Edilicio</h1>
+                  <p className="text-xs font-bold uppercase tracking-[0.35em] text-cyan-200">Infraestructura final</p>
+                  <div className="mt-3 flex items-center gap-3">
+                    <span className="rounded-2xl bg-cyan-400/15 p-3 text-cyan-100 ring-1 ring-cyan-300/30">
+                      <Building2 className="h-7 w-7" />
+                    </span>
+                    <div>
+                      <h1 className="text-3xl font-black tracking-tight">Mantenimiento edilicio y checklists</h1>
+                      <p className="mt-1 max-w-4xl text-sm leading-6 text-slate-200">
+                        Control operativo del edificio: sectores, activos edilicios, vencimientos, órdenes, checklists, QR y trazabilidad preventiva para sostener la continuidad del gimnasio.
+                      </p>
+                    </div>
                   </div>
-                  <p className="mt-2 max-w-4xl text-sm text-muted-foreground">
-                    Inventario y control del edificio del gimnasio: sectores, activos edilicios, matafuegos, luminarias, baños, salones, cañerías, mobiliario, vencimientos y órdenes de mantenimiento.
-                  </p>
                 </div>
-                <Button type="button" variant="outline" onClick={loadDashboard} disabled={loading || Boolean(saving)}>
-                  {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                  Actualizar
-                </Button>
+                <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[440px]">
+                  <Button type="button" className="bg-cyan-500 text-slate-950 dark:text-slate-100 hover:bg-cyan-400" onClick={loadDashboard} disabled={loading || Boolean(saving)}>
+                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                    Actualizar
+                  </Button>
+                  <Button type="button" variant="secondary" onClick={() => document.getElementById('infraestructura-checklist-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
+                    <ClipboardCheck className="mr-2 h-4 w-4" />
+                    Checklist
+                  </Button>
+                  <Button type="button" variant="secondary" onClick={() => document.getElementById('infraestructura-orden-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
+                    <Wrench className="mr-2 h-4 w-4" />
+                    Orden
+                  </Button>
+                </div>
               </div>
             </Card>
 
             {error ? (
-              <Card className="border-red-200 bg-red-50 p-4 text-sm text-red-800">
+              <Card className="border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-500/30 dark:bg-red-950/30 dark:text-red-100">
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="mt-0.5 h-4 w-4" />
                   <div>
@@ -442,7 +485,7 @@ export default function MantenimientoEdilicioPage() {
             ) : null}
 
             {success ? (
-              <Card className="border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+              <Card className="border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-950/30 dark:text-emerald-100">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4" />
                   <span>{success}</span>
@@ -459,8 +502,59 @@ export default function MantenimientoEdilicioPage() {
               <MetricCard title="Costo mes" value={formatCurrency(dashboard?.metricas.costoOrdenesMes)} helper="Estimado/real" tone="emerald" />
             </section>
 
+            <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+              <Card className="border-cyan-500/25 bg-gradient-to-br from-cyan-950 via-slate-950 to-slate-950 p-5 text-white shadow-lg">
+                <p className="text-xs font-bold uppercase tracking-[0.28em] text-cyan-200">Lectura ejecutiva edilicia</p>
+                <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <h2 className="text-2xl font-black">{executiveSummary.status}</h2>
+                    <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-200">{executiveSummary.nextStep}</p>
+                  </div>
+                  <span className={`rounded-full px-4 py-2 text-sm font-bold ${executiveSummary.needsAttention > 0 ? 'bg-red-500/20 text-red-100 ring-1 ring-red-300/30' : 'bg-emerald-500/20 text-emerald-100 ring-1 ring-emerald-300/30'}`}>
+                    {executiveSummary.needsAttention > 0 ? `${executiveSummary.needsAttention} alertas` : 'Sin críticos'}
+                  </span>
+                </div>
+                <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10">
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-300">Vencimientos</p>
+                    <p className="mt-2 text-2xl font-black">{executiveSummary.overdueAssets}</p>
+                    <p className="text-xs text-slate-300">activos vencidos</p>
+                  </div>
+                  <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10">
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-300">Órdenes</p>
+                    <p className="mt-2 text-2xl font-black">{executiveSummary.openOrders}</p>
+                    <p className="text-xs text-slate-300">abiertas para seguimiento</p>
+                  </div>
+                  <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10">
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-300">Checklists</p>
+                    <p className="mt-2 text-2xl font-black">{executiveSummary.checklistCritical}</p>
+                    <p className="text-xs text-slate-300">críticos detectados</p>
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="border-emerald-500/25 bg-white p-5 text-slate-950 dark:text-slate-100 shadow-sm dark:border-emerald-500/25 dark:bg-slate-950 dark:text-slate-100">
+                <p className="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600 dark:text-emerald-300">Próximo paso operativo</p>
+                <h2 className="mt-3 text-xl font-black">Checklists, QR y órdenes conectadas</h2>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  Usá las acciones rápidas para registrar inspecciones, crear órdenes y generar QR por sector o activo. La prioridad es mantener trazabilidad sin salir de esta pantalla.
+                </p>
+                <div className="mt-4 grid gap-3 text-sm">
+                  <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+                    <span className="font-semibold">Sectores activos:</span> {dashboard?.sectores.length ?? 0}
+                  </div>
+                  <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+                    <span className="font-semibold">QR generados:</span> {dashboard?.qrCodes.length ?? 0}
+                  </div>
+                  <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+                    <span className="font-semibold">Ejecuciones recientes:</span> {dashboard?.checklistEjecuciones.length ?? 0}
+                  </div>
+                </div>
+              </Card>
+            </section>
+
             <section className="grid gap-6 xl:grid-cols-3">
-              <Card className="p-5">
+              <Card className="p-5 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
                 <div className="mb-4 flex items-center gap-2">
                   <Building2 className="h-5 w-5 text-sky-600" />
                   <h2 className="text-lg font-semibold">Nuevo sector</h2>
@@ -489,7 +583,7 @@ export default function MantenimientoEdilicioPage() {
                 </form>
               </Card>
 
-              <Card className="p-5">
+              <Card className="p-5 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
                 <div className="mb-4 flex items-center gap-2">
                   <ShieldCheck className="h-5 w-5 text-emerald-600" />
                   <h2 className="text-lg font-semibold">Nuevo activo edilicio</h2>
@@ -537,7 +631,7 @@ export default function MantenimientoEdilicioPage() {
                 </form>
               </Card>
 
-              <Card className="p-5">
+              <Card id="infraestructura-orden-form" className="p-5 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
                 <div className="mb-4 flex items-center gap-2">
                   <Wrench className="h-5 w-5 text-violet-600" />
                   <h2 className="text-lg font-semibold">Nueva orden</h2>
@@ -597,7 +691,7 @@ export default function MantenimientoEdilicioPage() {
 
 
             <section className="grid gap-6 xl:grid-cols-3">
-              <Card className="p-5">
+              <Card id="infraestructura-checklist-form" className="p-5 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
                 <div className="mb-4 flex items-center gap-2">
                   <ClipboardCheck className="h-5 w-5 text-emerald-600" />
                   <h2 className="text-lg font-semibold">Ejecutar checklist</h2>
@@ -651,7 +745,7 @@ export default function MantenimientoEdilicioPage() {
                 </form>
               </Card>
 
-              <Card className="p-5">
+              <Card className="p-5 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
                 <div className="mb-4 flex items-center gap-2">
                   <QrCode className="h-5 w-5 text-sky-600" />
                   <h2 className="text-lg font-semibold">QR activo / sector</h2>
@@ -689,7 +783,7 @@ export default function MantenimientoEdilicioPage() {
                       />
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Último código</p>
-                        <p className="mt-1 break-all font-mono font-semibold text-slate-950">{lastQr.codigo}</p>
+                        <p className="mt-1 break-all font-mono font-semibold text-slate-950 dark:text-slate-100">{lastQr.codigo}</p>
                         <p className="mt-1 text-xs text-muted-foreground">{lastQr.titulo}</p>
                         <Button
                           type="button"
@@ -706,7 +800,7 @@ export default function MantenimientoEdilicioPage() {
                 ) : null}
               </Card>
 
-              <Card className="p-5">
+              <Card className="p-5 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
                 <div className="mb-4 flex items-center gap-2">
                   <ScanLine className="h-5 w-5 text-violet-600" />
                   <h2 className="text-lg font-semibold">Lector QR/barra</h2>
@@ -725,20 +819,20 @@ export default function MantenimientoEdilicioPage() {
             </section>
 
             <section className="grid gap-6 xl:grid-cols-2">
-              <Card className="p-5">
+              <Card id="infraestructura-checklist-form" className="p-5 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
                 <div className="mb-4 flex items-center gap-2">
                   <ClipboardCheck className="h-5 w-5 text-emerald-600" />
                   <h2 className="text-lg font-semibold">Checklists recientes</h2>
                 </div>
                 <div className="space-y-3">
                   {(dashboard?.checklistEjecuciones ?? []).length === 0 ? (
-                    <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Todavía no hay checklists ejecutados.</p>
+                    <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground dark:border-slate-800">Todavía no hay checklists ejecutados.</p>
                   ) : (
                     (dashboard?.checklistEjecuciones ?? []).slice(0, 6).map((ejecucion) => (
-                      <div key={ejecucion.id} className="rounded-lg border p-3">
+                      <div key={ejecucion.id} className="rounded-lg border p-3 dark:border-slate-800">
                         <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                           <div>
-                            <p className="font-semibold text-slate-950">{ejecucion.template?.nombre ?? 'Checklist edilicio'}</p>
+                            <p className="font-semibold text-slate-950 dark:text-slate-100">{ejecucion.template?.nombre ?? 'Checklist edilicio'}</p>
                             <p className="text-xs text-muted-foreground">
                               {ejecucion.infraestructura_activo?.nombre ?? ejecucion.infraestructura_sector?.nombre ?? ejecucion.mantenimiento_edilicio_orden?.titulo ?? 'Sin referencia'} · {formatDate(ejecucion.ejecutado_en)}
                             </p>
@@ -754,17 +848,17 @@ export default function MantenimientoEdilicioPage() {
                 </div>
               </Card>
 
-              <Card className="p-5">
+              <Card className="p-5 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
                 <div className="mb-4 flex items-center gap-2">
                   <QrCode className="h-5 w-5 text-sky-600" />
                   <h2 className="text-lg font-semibold">Códigos activos</h2>
                 </div>
                 <div className="space-y-3">
                   {(dashboard?.qrCodes ?? []).length === 0 ? (
-                    <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Todavía no hay códigos QR/barra generados.</p>
+                    <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground dark:border-slate-800">Todavía no hay códigos QR/barra generados.</p>
                   ) : (
                     (dashboard?.qrCodes ?? []).slice(0, 8).map((qr) => (
-                      <div key={qr.id} className="rounded-lg border p-3">
+                      <div key={qr.id} className="rounded-lg border p-3 dark:border-slate-800">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                           <img
                             src={buildQrImageUrl(qr.codigo, 120)}
@@ -772,8 +866,8 @@ export default function MantenimientoEdilicioPage() {
                             className="h-24 w-24 rounded border bg-white p-1.5"
                           />
                           <div className="min-w-0 flex-1">
-                            <p className="font-semibold text-slate-950">{qr.titulo}</p>
-                            <p className="mt-1 break-all font-mono text-xs text-slate-700">{qr.codigo}</p>
+                            <p className="font-semibold text-slate-950 dark:text-slate-100">{qr.titulo}</p>
+                            <p className="mt-1 break-all font-mono text-xs text-slate-700 dark:text-slate-300">{qr.codigo}</p>
                             <p className="mt-1 text-xs text-muted-foreground">{labelFromValue(qr.target_type)} · {qr.route}</p>
                             <Button
                               type="button"
@@ -793,22 +887,22 @@ export default function MantenimientoEdilicioPage() {
               </Card>
             </section>
             <section className="grid gap-6 xl:grid-cols-2">
-              <Card className="p-5">
+              <Card className="p-5 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
                 <div className="mb-4 flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5 text-amber-600" />
                   <h2 className="text-lg font-semibold">Alertas edilicias</h2>
                 </div>
                 <div className="space-y-3">
                   {(dashboard?.alertas ?? []).length === 0 ? (
-                    <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Sin alertas críticas o vencimientos próximos.</p>
+                    <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground dark:border-slate-800">Sin alertas críticas o vencimientos próximos.</p>
                   ) : (
                     (dashboard?.alertas ?? []).map((activo) => {
                       const remaining = Math.min(daysUntil(activo.fecha_vencimiento) ?? 9999, daysUntil(activo.fecha_proximo_mantenimiento) ?? 9999);
                       return (
-                        <div key={activo.id} className="rounded-lg border p-3">
+                        <div key={activo.id} className="rounded-lg border p-3 dark:border-slate-800">
                           <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                             <div>
-                              <p className="font-semibold text-slate-950">{activo.nombre}</p>
+                              <p className="font-semibold text-slate-950 dark:text-slate-100">{activo.nombre}</p>
                               <p className="text-xs text-muted-foreground">{activo.categoria?.nombre ?? 'Sin categoría'} · {activo.sector?.nombre ?? 'Sin sector'}</p>
                             </div>
                             <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
@@ -823,20 +917,20 @@ export default function MantenimientoEdilicioPage() {
                 </div>
               </Card>
 
-              <Card className="p-5">
+              <Card className="p-5 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
                 <div className="mb-4 flex items-center gap-2">
                   <CalendarClock className="h-5 w-5 text-violet-600" />
                   <h2 className="text-lg font-semibold">Órdenes abiertas</h2>
                 </div>
                 <div className="space-y-3">
                   {activeOrders.length === 0 ? (
-                    <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Sin órdenes abiertas.</p>
+                    <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground dark:border-slate-800">Sin órdenes abiertas.</p>
                   ) : (
                     activeOrders.map((orden) => (
-                      <div key={orden.id} className="rounded-lg border p-3">
+                      <div key={orden.id} className="rounded-lg border p-3 dark:border-slate-800">
                         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                           <div>
-                            <p className="font-semibold text-slate-950">{orden.titulo}</p>
+                            <p className="font-semibold text-slate-950 dark:text-slate-100">{orden.titulo}</p>
                             <p className="text-xs text-muted-foreground">{labelFromValue(orden.tipo_orden)} · {labelFromValue(orden.prioridad)} · Vence {formatDate(orden.fecha_vencimiento)}</p>
                             <p className="mt-1 text-xs text-muted-foreground">{orden.infraestructura_activo?.nombre ?? orden.infraestructura_sector?.nombre ?? 'Sin referencia'}</p>
                           </div>
@@ -852,7 +946,7 @@ export default function MantenimientoEdilicioPage() {
               </Card>
             </section>
 
-            <Card className="p-5">
+            <Card className="p-5 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
               <div className="mb-4 flex items-center gap-2">
                 <ShieldCheck className="h-5 w-5 text-sky-600" />
                 <h2 className="text-lg font-semibold">Inventario edilicio</h2>
@@ -878,7 +972,7 @@ export default function MantenimientoEdilicioPage() {
                     ) : (
                       (dashboard?.activos ?? []).map((activo: InfraestructuraActivo) => (
                         <tr key={activo.id} className="border-b last:border-0">
-                          <td className="px-3 py-3 font-medium text-slate-950">{activo.nombre}</td>
+                          <td className="px-3 py-3 font-medium text-slate-950 dark:text-slate-100">{activo.nombre}</td>
                           <td className="px-3 py-3">{activo.categoria?.nombre ?? '-'}</td>
                           <td className="px-3 py-3">{activo.sector?.nombre ?? '-'}</td>
                           <td className="px-3 py-3">{labelFromValue(activo.estado)}</td>
@@ -892,6 +986,7 @@ export default function MantenimientoEdilicioPage() {
                 </table>
               </div>
             </Card>
+            </div>
           </main>
           <AppFooter />
         </SidebarInset>
