@@ -1,4 +1,5 @@
 import type { JwtUser } from '@/interfaces/jwtUser.interface';
+import type { RagCoachContextSnapshot } from '@/interfaces/ragCoachChat.interface';
 import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 
 export type RagCoachSocioContext = {
@@ -57,6 +58,9 @@ export type RagCoachSocioContext = {
   };
   resumenHumano: string;
   hints: string[];
+  contextSnapshot: RagCoachContextSnapshot;
+  memoryHighlights: string[];
+  recommendedFocus: string[];
 };
 
 function toIsoDate(value: Date) {
@@ -117,7 +121,7 @@ function buildSafeMedicalRestrictions(row: Record<string, unknown> | null) {
   return restrictions;
 }
 
-function buildHumanSummary(context: Omit<RagCoachSocioContext, 'resumenHumano' | 'hints'>) {
+function buildHumanSummary(context: Omit<RagCoachSocioContext, 'resumenHumano' | 'hints' | 'contextSnapshot' | 'memoryHighlights' | 'recommendedFocus'>) {
   const parts = [
     `${context.rutinas.total} rutina${context.rutinas.total === 1 ? '' : 's'}`,
     `${context.dietas.total} dieta${context.dietas.total === 1 ? '' : 's'}`,
@@ -129,7 +133,7 @@ function buildHumanSummary(context: Omit<RagCoachSocioContext, 'resumenHumano' |
   return `Usé tu contexto del sistema: ${parts.join(', ')}.`;
 }
 
-function buildHints(context: Omit<RagCoachSocioContext, 'resumenHumano' | 'hints'>) {
+function buildHints(context: Omit<RagCoachSocioContext, 'resumenHumano' | 'hints' | 'contextSnapshot' | 'memoryHighlights' | 'recommendedFocus'>) {
   const hints: string[] = [];
 
   if (context.rutinas.total === 0) {
@@ -156,7 +160,109 @@ function buildHints(context: Omit<RagCoachSocioContext, 'resumenHumano' | 'hints
     hints.push('Tiene observaciones preventivas de ficha médica: priorizar recomendaciones prudentes.');
   }
 
+
   return hints;
+}
+
+function levelLabel(value?: number | null) {
+  if (value === 1) return 'Inicial';
+  if (value === 2) return 'Intermedio';
+  if (value === 3) return 'Avanzado';
+  return 'No definido';
+}
+
+function objectiveLabel(value?: number | null) {
+  const labels: Record<number, string> = {
+    1: 'Ganar masa muscular',
+    2: 'Definición / bajar grasa',
+    3: 'Bajar de peso',
+    4: 'Fuerza',
+    5: 'Resistencia',
+    6: 'Rehabilitación / cuidado físico',
+    7: 'Salud y bienestar',
+    10: 'Estrés / bienestar emocional',
+  };
+
+  return value && labels[value] ? labels[value] : 'No definido';
+}
+
+function buildReadinessScore(context: Omit<RagCoachSocioContext, 'resumenHumano' | 'hints' | 'contextSnapshot' | 'memoryHighlights' | 'recommendedFocus'>) {
+  let score = 0;
+  if (context.socio) score += 15;
+  if (context.socio?.objetivo) score += 15;
+  if (context.socio?.nivel) score += 10;
+  if (context.rutinas.total > 0) score += 15;
+  if (context.dietas.total > 0) score += 15;
+  if (context.evolucion.total > 0) score += 15;
+  if (context.asistencia.ultimos30Dias > 0) score += 10;
+  if (context.fichaMedica.existe) score += 5;
+  return Math.max(0, Math.min(100, score));
+}
+
+function readinessLabel(score: number) {
+  if (score >= 75) return 'Contexto alto';
+  if (score >= 45) return 'Contexto medio';
+  return 'Contexto inicial';
+}
+
+function buildContextSnapshot(
+  context: Omit<RagCoachSocioContext, 'resumenHumano' | 'hints' | 'contextSnapshot' | 'memoryHighlights' | 'recommendedFocus'>,
+): RagCoachContextSnapshot {
+  const readinessScore = buildReadinessScore(context);
+  return {
+    socioName: context.socio?.nombre,
+    nivelLabel: levelLabel(context.socio?.nivel),
+    objetivoLabel: objectiveLabel(context.socio?.objetivo),
+    diasPorSemana: context.socio?.diasPorSemana ?? null,
+    rutinasTotal: context.rutinas.total,
+    ultimaRutina: context.rutinas.recientes[0]?.nombre ?? null,
+    dietasTotal: context.dietas.total,
+    ultimaDietaObjetivo: context.dietas.recientes[0]?.objetivo ?? context.dietas.recientes[0]?.nombrePlan ?? null,
+    evolucionTotal: context.evolucion.total,
+    ultimaEvolucionFecha: context.evolucion.ultimaFecha ?? null,
+    ultimoPeso: context.evolucion.ultimoPeso ?? context.fichaMedica.peso ?? null,
+    ultimaCintura: context.evolucion.ultimaCintura ?? null,
+    asistencia7Dias: context.asistencia.ultimos7Dias,
+    asistencia30Dias: context.asistencia.ultimos30Dias,
+    fichaMedicaExiste: context.fichaMedica.existe,
+    restriccionesMedicas: context.fichaMedica.restriccionesSeguras.length,
+    aprobacionMedica: context.fichaMedica.aprobacionMedica ?? null,
+    readinessScore,
+    readinessLabel: readinessLabel(readinessScore),
+  };
+}
+
+function buildMemoryHighlights(context: Omit<RagCoachSocioContext, 'resumenHumano' | 'hints' | 'contextSnapshot' | 'memoryHighlights' | 'recommendedFocus'>) {
+  const highlights: string[] = [];
+  const latestRoutine = context.rutinas.recientes[0]?.nombre;
+  const latestDiet = context.dietas.recientes[0]?.objetivo ?? context.dietas.recientes[0]?.nombrePlan;
+
+  if (latestRoutine) highlights.push(`Última rutina detectada: ${latestRoutine}.`);
+  if (latestDiet) highlights.push(`Última dieta/objetivo nutricional detectado: ${latestDiet}.`);
+  if (context.evolucion.ultimaFecha) {
+    const metrics = [
+      context.evolucion.ultimoPeso ? `${context.evolucion.ultimoPeso} kg` : '',
+      context.evolucion.ultimaCintura ? `cintura ${context.evolucion.ultimaCintura} cm` : '',
+    ].filter(Boolean).join(' · ');
+    highlights.push(`Última evolución: ${context.evolucion.ultimaFecha}${metrics ? ` (${metrics})` : ''}.`);
+  }
+  if (context.asistencia.ultimos7Dias > 0) highlights.push(`Asistencia reciente: ${context.asistencia.ultimos7Dias} registro(s) en 7 días.`);
+  if (context.fichaMedica.restriccionesSeguras.length > 0) highlights.push('Ficha médica con restricciones preventivas activas.');
+
+  return highlights;
+}
+
+function buildRecommendedFocus(context: Omit<RagCoachSocioContext, 'resumenHumano' | 'hints' | 'contextSnapshot' | 'memoryHighlights' | 'recommendedFocus'>) {
+  const focus: string[] = [];
+
+  if (context.rutinas.total === 0) focus.push('crear rutina base inicial');
+  if (context.dietas.total === 0) focus.push('acompañar con orientación nutricional');
+  if (context.evolucion.total === 0) focus.push('cargar evolución física inicial');
+  if (context.asistencia.ultimos7Dias === 0) focus.push('retomar asistencia de forma progresiva');
+  if (context.fichaMedica.restriccionesSeguras.length > 0) focus.push('mantener recomendaciones conservadoras');
+  if (!focus.length) focus.push('ajustar rutina/dieta según progreso mensual');
+
+  return focus;
 }
 
 export async function buildRagCoachSocioContext(
@@ -231,7 +337,7 @@ export async function buildRagCoachSocioContext(
   const latestEvolution = evolucionRows[0] ?? null;
   const asistencia7 = asistenciaRows.filter((row) => typeof row.fecha === 'string' && row.fecha >= start7).length;
 
-  const baseContext: Omit<RagCoachSocioContext, 'resumenHumano' | 'hints'> = {
+  const baseContext: Omit<RagCoachSocioContext, 'resumenHumano' | 'hints' | 'contextSnapshot' | 'memoryHighlights' | 'recommendedFocus'> = {
     socioId,
     socio: socioRow
       ? {
@@ -293,5 +399,8 @@ export async function buildRagCoachSocioContext(
     ...baseContext,
     resumenHumano: buildHumanSummary(baseContext),
     hints: buildHints(baseContext),
+    contextSnapshot: buildContextSnapshot(baseContext),
+    memoryHighlights: buildMemoryHighlights(baseContext),
+    recommendedFocus: buildRecommendedFocus(baseContext),
   };
 }

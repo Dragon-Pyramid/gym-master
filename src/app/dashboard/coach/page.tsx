@@ -13,12 +13,14 @@ import {
   Brain,
   CheckCircle2,
   Dumbbell,
+  History,
   Info,
   Loader2,
   MessageSquareText,
   RefreshCcw,
   SearchCheck,
   Send,
+  Target,
   ShieldCheck,
   Sparkles,
   UserRound,
@@ -34,6 +36,8 @@ import type {
   RagCoachChatActionResult,
   RagCoachChatIntent,
   RagCoachChatSource,
+  RagCoachContextSnapshot,
+  RagCoachConversationMemory,
 } from '@/interfaces/ragCoachChat.interface';
 import { enviarMensajeCoachIa } from '@/services/ragCoachChatClient';
 import { useAuthStore } from '@/stores/authStore';
@@ -51,6 +55,10 @@ type ChatMessage = {
   safetySummary?: string;
   intent?: RagCoachChatIntent;
   missingParams?: string[];
+  contextSnapshot?: RagCoachContextSnapshot;
+  memoryHighlights?: string[];
+  memoryTrace?: string[];
+  contextConfidence?: 'alta' | 'media' | 'baja';
 };
 
 const quickPrompts = [
@@ -120,6 +128,55 @@ function formatSimilarity(value?: number) {
 
 function hasSources(actions?: RagCoachChatActionResult[]) {
   return actions?.some((action) => (action.sources ?? []).length > 0) ?? false;
+}
+
+function getLatestAssistant(messages: ChatMessage[]) {
+  return [...messages].reverse().find((message) => message.role === 'assistant');
+}
+
+function buildConversationMemory(
+  previousMessages: ChatMessage[],
+  pendingUserMessage: ChatMessage,
+): RagCoachConversationMemory {
+  const messagesForMemory = [...previousMessages, pendingUserMessage];
+  const latestAssistant = getLatestAssistant(previousMessages);
+
+  return {
+    recentMessages: messagesForMemory.slice(-8).map((message) => ({
+      role: message.role,
+      content: message.content.slice(0, 280),
+      intent: message.intent,
+    })),
+    lastAssistantIntent: latestAssistant?.intent,
+    lastActionTypes: latestAssistant?.actions?.map((action) => action.type) ?? [],
+    lastSuggestedReplies: latestAssistant?.suggestedReplies?.slice(0, 4) ?? [],
+    pendingMissingParams: latestAssistant?.missingParams?.slice(0, 6) ?? [],
+    lastNextBestStep: latestAssistant?.nextBestStep,
+    lastContextSummary: latestAssistant?.contextSummary,
+  };
+}
+
+function getLatestContextMessage(messages: ChatMessage[]) {
+  return [...messages].reverse().find((message) => message.role === 'assistant' && (message.contextSnapshot || message.contextSummary));
+}
+
+function contextConfidenceLabel(value?: 'alta' | 'media' | 'baja') {
+  if (value === 'alta') return 'Alta';
+  if (value === 'media') return 'Media';
+  if (value === 'baja') return 'Baja';
+  return 'Pendiente';
+}
+
+function contextConfidenceClass(value?: 'alta' | 'media' | 'baja') {
+  if (value === 'alta') return 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100';
+  if (value === 'media') return 'border-cyan-200 bg-cyan-50 text-cyan-800 dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-100';
+  if (value === 'baja') return 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100';
+  return 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-200';
+}
+
+function formatContextValue(value?: string | number | null) {
+  if (value === null || value === undefined || value === '') return '—';
+  return String(value);
 }
 
 function renderSources(sources: RagCoachChatSource[]) {
@@ -230,6 +287,8 @@ export default function CoachIaPage() {
   const totalAssistantMessages = messages.filter((message) => message.role === 'assistant').length;
   const totalActionMessages = messages.reduce((total, message) => total + (message.actions?.filter((action) => action.ok).length ?? 0), 0);
   const hasRagSources = messages.some((message) => hasSources(message.actions));
+  const latestContextMessage = useMemo(() => getLatestContextMessage(messages), [messages]);
+  const latestContextSnapshot = latestContextMessage?.contextSnapshot;
 
   useEffect(() => {
     initializeAuth();
@@ -288,7 +347,11 @@ export default function CoachIaPage() {
     setMessages((current) => [...current, userMessage]);
 
     try {
-      const res = await enviarMensajeCoachIa({ message, socio_id: user?.id_socio || 'me' });
+      const res = await enviarMensajeCoachIa({
+        message,
+        socio_id: user?.id_socio || 'me',
+        conversationContext: buildConversationMemory(messages, userMessage),
+      });
 
       if (!res.ok || !res.data) {
         throw new Error(res.error || 'No se pudo obtener respuesta del Coach IA.');
@@ -307,6 +370,10 @@ export default function CoachIaPage() {
         safetySummary: res.data.safetySummary,
         intent: res.data.intent,
         missingParams: res.data.missingParams,
+        contextSnapshot: res.data.contextSnapshot,
+        memoryHighlights: res.data.memoryHighlights,
+        memoryTrace: res.data.memoryTrace,
+        contextConfidence: res.data.contextConfidence,
       };
 
       setMessages((current) => [...current, assistantMessage]);
@@ -358,13 +425,13 @@ export default function CoachIaPage() {
                   <div className="max-w-3xl">
                     <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-xs font-semibold text-cyan-100">
                       <Brain className="h-3.5 w-3.5" />
-                      RAG Coach final polish
+                      RAG Coach contextual memory
                     </div>
                     <h1 className="mt-4 text-2xl font-black tracking-tight sm:text-4xl">
-                      Coach IA con contexto, fuentes y fallback seguro
+                      Coach IA con memoria contextual del socio
                     </h1>
                     <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-base">
-                      Consultá rutinas, dietas y evolución física con una experiencia más clara, trazable y lista para demo comercial.
+                      Consultá rutinas, dietas y evolución física con continuidad conversacional, contexto operativo y recomendaciones más personalizadas.
                     </p>
                   </div>
 
@@ -461,6 +528,25 @@ export default function CoachIaPage() {
                                 </div>
                               )}
 
+                              {message.contextSnapshot && message.role === 'assistant' && (
+                                <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-emerald-950 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100">
+                                  <div className="mb-2 flex items-center gap-1.5 font-semibold">
+                                    <Target className="h-3.5 w-3.5" />
+                                    Memoria contextual
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                                    <span>Objetivo: {formatContextValue(message.contextSnapshot.objetivoLabel)}</span>
+                                    <span>Nivel: {formatContextValue(message.contextSnapshot.nivelLabel)}</span>
+                                    <span>Rutinas: {message.contextSnapshot.rutinasTotal}</span>
+                                    <span>Dietas: {message.contextSnapshot.dietasTotal}</span>
+                                    <span>Evolución: {message.contextSnapshot.evolucionTotal}</span>
+                                    <span>Asistencia 7d: {message.contextSnapshot.asistencia7Dias}</span>
+                                    <span>Score: {message.contextSnapshot.readinessScore}%</span>
+                                    <span>{message.contextSnapshot.readinessLabel}</span>
+                                  </div>
+                                </div>
+                              )}
+
                               {message.safetySummary && message.role === 'assistant' && (
                                 <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
                                   <strong>Seguridad:</strong> {message.safetySummary}
@@ -480,6 +566,24 @@ export default function CoachIaPage() {
                                     {message.contextHints?.slice(0, 3).map((hint) => <li key={hint}>{hint}</li>)}
                                   </ul>
                                 </div>
+                              )}
+
+                              {(message.memoryHighlights?.length ?? 0) > 0 && message.role === 'assistant' && (
+                                <div className="mt-3 rounded-xl border border-violet-100 bg-violet-50 px-3 py-2 text-xs text-violet-950 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-100">
+                                  <div className="mb-1 font-semibold">Memoria recordada</div>
+                                  <ul className="list-disc space-y-1 pl-4">
+                                    {message.memoryHighlights?.slice(0, 3).map((item) => <li key={item}>{item}</li>)}
+                                  </ul>
+                                </div>
+                              )}
+
+                              {(message.memoryTrace?.length ?? 0) > 0 && message.role === 'assistant' && (
+                                <details className="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-300">
+                                  <summary className="cursor-pointer font-semibold">Trazabilidad contextual</summary>
+                                  <ul className="mt-2 list-disc space-y-1 pl-4">
+                                    {message.memoryTrace?.slice(0, 5).map((item) => <li key={item}>{item}</li>)}
+                                  </ul>
+                                </details>
                               )}
 
                               {(message.missingParams?.length ?? 0) > 0 && message.role === 'assistant' && (
@@ -580,14 +684,75 @@ export default function CoachIaPage() {
                   <Card className="rounded-3xl border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
                     <CardHeader className="pb-2">
                       <div className="flex items-center gap-2">
+                        <History className="h-5 w-5 text-[#02a8e1]" />
+                        <h2 className="text-base font-bold text-slate-950 dark:text-white">Memoria contextual</h2>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
+                      <div className={`rounded-2xl border px-3 py-2 text-xs font-semibold ${contextConfidenceClass(latestContextMessage?.contextConfidence)}`}>
+                        Confianza: {contextConfidenceLabel(latestContextMessage?.contextConfidence)}
+                      </div>
+                      {latestContextSnapshot ? (
+                        <div className="space-y-2 rounded-2xl bg-slate-50 p-3 text-xs dark:bg-slate-950/60">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-slate-500 dark:text-slate-400">Objetivo</span>
+                            <strong className="text-right text-slate-900 dark:text-white">{formatContextValue(latestContextSnapshot.objetivoLabel)}</strong>
+                          </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-slate-500 dark:text-slate-400">Nivel</span>
+                            <strong className="text-right text-slate-900 dark:text-white">{formatContextValue(latestContextSnapshot.nivelLabel)}</strong>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 pt-2 text-center">
+                            <div className="rounded-xl bg-white p-2 dark:bg-slate-900">
+                              <div className="font-black text-slate-950 dark:text-white">{latestContextSnapshot.rutinasTotal}</div>
+                              <div className="text-[10px]">rutinas</div>
+                            </div>
+                            <div className="rounded-xl bg-white p-2 dark:bg-slate-900">
+                              <div className="font-black text-slate-950 dark:text-white">{latestContextSnapshot.dietasTotal}</div>
+                              <div className="text-[10px]">dietas</div>
+                            </div>
+                            <div className="rounded-xl bg-white p-2 dark:bg-slate-900">
+                              <div className="font-black text-slate-950 dark:text-white">{latestContextSnapshot.evolucionTotal}</div>
+                              <div className="text-[10px]">evolución</div>
+                            </div>
+                          </div>
+                          <div className="rounded-xl border border-slate-200 bg-white p-2 dark:border-slate-800 dark:bg-slate-900">
+                            <div className="mb-1 flex items-center justify-between text-[11px]">
+                              <span>Score contextual</span>
+                              <strong>{latestContextSnapshot.readinessScore}%</strong>
+                            </div>
+                            <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+                              <div className="h-full rounded-full bg-[#02a8e1]" style={{ width: `${latestContextSnapshot.readinessScore}%` }} />
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="rounded-2xl bg-slate-50 p-3 text-xs dark:bg-slate-950/60">
+                          Todavía no hay memoria contextual calculada. Enviá una consulta para que el Coach lea el contexto del socio.
+                        </p>
+                      )}
+                      {(latestContextMessage?.memoryHighlights?.length ?? 0) > 0 && (
+                        <div className="space-y-1 rounded-2xl border border-slate-200 p-3 text-xs dark:border-slate-700">
+                          <div className="font-semibold text-slate-950 dark:text-white">Recordado</div>
+                          {latestContextMessage?.memoryHighlights?.slice(0, 3).map((item) => (
+                            <p key={item}>• {item}</p>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  <Card className="rounded-3xl border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center gap-2">
                         <CheckCircle2 className="h-5 w-5 text-emerald-500" />
                         <h2 className="text-base font-bold text-slate-950 dark:text-white">Checklist de calidad</h2>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
                       {[
-                        'Contexto del socio visible.',
-                        'Fuentes RAG cuando existan.',
+                        'Memoria conversacional visible.',
+                        'Contexto operativo del socio resumido.',
                         'Fallback seguro para señales sensibles.',
                         'Acciones claras para ver rutina, dieta o evolución.',
                         'Diseño responsive sin scroll horizontal.',

@@ -2,6 +2,7 @@ import type { JwtUser } from '@/interfaces/jwtUser.interface';
 import type {
   RagCoachChatActionResult,
   RagCoachChatIntent,
+  RagCoachConversationMemory,
   RagCoachChatRequest,
   RagCoachChatResponseData,
   RagCoachChatSource,
@@ -16,6 +17,10 @@ import { buildRagCoachSocioContext, type RagCoachSocioContext } from './ragCoach
 
 const MAX_MESSAGE_LENGTH = 1600;
 const MAX_SOURCES_PER_ACTION = 4;
+const MAX_MEMORY_MESSAGES = 8;
+
+const AFFIRMATIVE_FOLLOW_UP_RE = /^(si|sí|dale|ok|perfecto|hacelo|hazlo|quiero eso|generala|generalo|armala|armalo|preparala|preparalo|tambien|también)$/;
+
 
 function normalize(value: string) {
   return value
@@ -48,6 +53,92 @@ function getDisplayName(user: JwtUser) {
 
 function uniqueValues(values: string[]) {
   return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
+}
+
+function safeArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? value as T[] : [];
+}
+
+function sanitizeMemoryText(value: unknown, maxLength = 280) {
+  return cleanText(value, maxLength);
+}
+
+function sanitizeConversationMemory(value: unknown): RagCoachConversationMemory {
+  if (!value || typeof value !== 'object') return {};
+  const raw = value as Record<string, unknown>;
+  const recentMessages = safeArray<Record<string, unknown>>(raw.recentMessages)
+    .slice(-MAX_MEMORY_MESSAGES)
+    .map((item) => ({
+      role: item.role === 'assistant' ? 'assistant' as const : 'user' as const,
+      content: sanitizeMemoryText(item.content),
+      intent: typeof item.intent === 'string' ? item.intent as RagCoachChatIntent : undefined,
+    }))
+    .filter((item) => item.content.length > 0);
+
+  return {
+    recentMessages,
+    lastAssistantIntent: typeof raw.lastAssistantIntent === 'string' ? raw.lastAssistantIntent as RagCoachChatIntent : undefined,
+    lastActionTypes: safeArray<string>(raw.lastActionTypes)
+      .filter((item): item is RagCoachChatActionResult['type'] => ['routine_generated', 'diet_generated', 'evolution_analyzed', 'guidance_only'].includes(item)),
+    lastSuggestedReplies: safeArray<string>(raw.lastSuggestedReplies).map((item) => sanitizeMemoryText(item, 120)).filter(Boolean).slice(0, 4),
+    pendingMissingParams: safeArray<string>(raw.pendingMissingParams).map((item) => sanitizeMemoryText(item, 60)).filter(Boolean).slice(0, 6),
+    lastNextBestStep: sanitizeMemoryText(raw.lastNextBestStep, 180) || undefined,
+    lastContextSummary: sanitizeMemoryText(raw.lastContextSummary, 220) || undefined,
+  };
+}
+
+function hasPriorAction(memory: RagCoachConversationMemory, actionType: RagCoachChatActionResult['type']) {
+  return (memory.lastActionTypes ?? []).includes(actionType);
+}
+
+function resolveIntentWithMemory(message: string, detectedIntent: RagCoachChatIntent, memory: RagCoachConversationMemory): RagCoachChatIntent {
+  const text = normalize(message);
+
+  if (detectedIntent !== 'general_guidance' && detectedIntent !== 'unknown') return detectedIntent;
+
+  if (/\b(que hago hoy|hoy que hago|que me toca hoy|plan de hoy|seguimos|continuemos)\b/.test(text)) {
+    if (hasPriorAction(memory, 'routine_generated')) return 'routine_request';
+    if (memory.lastAssistantIntent === 'routine_request') return 'routine_request';
+  }
+
+  if (AFFIRMATIVE_FOLLOW_UP_RE.test(text)) {
+    if (memory.lastSuggestedReplies?.some((reply) => normalize(reply).includes('dieta'))) return 'diet_request';
+    if (hasPriorAction(memory, 'routine_generated') && !hasPriorAction(memory, 'diet_generated')) return 'diet_request';
+    if (memory.lastAssistantIntent === 'general_guidance' || memory.lastAssistantIntent === 'unknown') return 'routine_request';
+  }
+
+  if (/\b(esa dieta|la dieta|alimentacion complementaria|acompañar la rutina|acompanar la rutina)\b/.test(text)) return 'diet_request';
+  if (/\b(esa rutina|mi rutina|la rutina|entrenamiento de hoy)\b/.test(text)) return 'routine_request';
+  if (/\b(mi progreso|como voy|sigo igual|estoy igual|avance)\b/.test(text)) return 'evolution_analysis_request';
+
+  return detectedIntent;
+}
+
+function buildMemoryTrace(memory: RagCoachConversationMemory, intent: RagCoachChatIntent, context?: RagCoachSocioContext | null) {
+  const trace: string[] = [];
+
+  if ((memory.recentMessages ?? []).length > 0) {
+    trace.push(`Se usaron ${memory.recentMessages?.length ?? 0} mensaje(s) recientes de esta conversación.`);
+  }
+  if (memory.lastAssistantIntent) trace.push(`Última intención recordada: ${memory.lastAssistantIntent}.`);
+  if ((memory.pendingMissingParams ?? []).length > 0) trace.push(`Parámetros pendientes recordados: ${memory.pendingMissingParams?.join(', ')}.`);
+  if (context?.contextSnapshot) trace.push(`${context.contextSnapshot.readinessLabel}: ${context.contextSnapshot.readinessScore}% de contexto operativo disponible.`);
+  if ((context?.recommendedFocus ?? []).length > 0) trace.push(`Foco sugerido: ${context?.recommendedFocus.slice(0, 3).join(', ')}.`);
+  trace.push(`Intención final aplicada: ${intent}.`);
+
+  return uniqueValues(trace).slice(0, 6);
+}
+
+function buildContextConfidence(context?: RagCoachSocioContext | null): 'alta' | 'media' | 'baja' {
+  const score = context?.contextSnapshot?.readinessScore ?? 0;
+  if (score >= 75) return 'alta';
+  if (score >= 45) return 'media';
+  return 'baja';
+}
+
+function buildContextualReplyPrefix(context?: RagCoachSocioContext | null) {
+  if (!context?.memoryHighlights.length) return '';
+  return `Tomé como memoria del socio: ${context.memoryHighlights.slice(0, 3).join(' ')}`;
 }
 
 function detectIntent(message: string): RagCoachChatIntent {
@@ -167,11 +258,23 @@ function shouldBlockAutomationForSafety(message: string) {
   return /\b(dolor de pecho|desmayo|desmayos|falta de aire|mareo fuerte|taquicardia)\b/.test(text);
 }
 
-function buildContextAwareGuidance(name: string, message: string, context?: RagCoachSocioContext | null) {
+function buildContextAwareGuidance(
+  name: string,
+  message: string,
+  context?: RagCoachSocioContext | null,
+  memory?: RagCoachConversationMemory,
+) {
   const base = buildGuidanceReply(name, message, context);
   const contextLine = getContextCoachLine(context);
-  if (!contextLine) return base;
-  return `${base}\n\n${contextLine}`;
+  const memoryLines = [
+    memory?.lastNextBestStep ? `Continuidad previa: ${memory.lastNextBestStep}` : '',
+    (memory?.pendingMissingParams ?? []).length > 0
+      ? `Datos pendientes ya detectados: ${(memory?.pendingMissingParams ?? []).join(', ')}.`
+      : '',
+    memory?.lastContextSummary ? `Contexto recordado: ${memory.lastContextSummary}` : '',
+  ].filter(Boolean);
+
+  return [base, contextLine, ...memoryLines].filter(Boolean).join('\n\n');
 }
 
 function todayIso() {
@@ -417,7 +520,10 @@ export async function handleUnifiedRagCoachChat(
     return null;
   });
 
-  const intent = detectIntent(message);
+  const conversationMemory = sanitizeConversationMemory(payload.conversationContext);
+  const detectedIntent = detectIntent(message);
+  const intent = resolveIntentWithMemory(message, detectedIntent, conversationMemory);
+  const memoryTrace = buildMemoryTrace(conversationMemory, intent, socioContext);
   const safetyNotes = buildSafetyNotes(message, intent, socioContext);
   const evolutionSuggestion = await getEvolutionSuggestion(user, effectiveSocioId, socioContext);
   const contextLine = getContextCoachLine(socioContext);
@@ -425,7 +531,9 @@ export async function handleUnifiedRagCoachChat(
   const suggestedReplies: string[] = [];
 
   if (contextLine) coachNotes.push(contextLine);
+  coachNotes.push(...(socioContext?.memoryHighlights ?? []));
   coachNotes.push(...(socioContext?.hints ?? []));
+  if (conversationMemory.lastNextBestStep) coachNotes.push(`Continuidad previa: ${conversationMemory.lastNextBestStep}`);
 
   if (shouldBlockAutomationForSafety(message)) {
     const reply = [
@@ -457,6 +565,10 @@ export async function handleUnifiedRagCoachChat(
       contextHints: socioContext?.hints,
       nextBestStep: 'Derivar a evaluación profesional antes de ajustar entrenamiento o dieta.',
       safetySummary: safetyNotes.join(' '),
+      contextSnapshot: socioContext?.contextSnapshot,
+      memoryHighlights: socioContext?.memoryHighlights,
+      memoryTrace,
+      contextConfidence: buildContextConfidence(socioContext),
     };
   }
 
@@ -495,7 +607,7 @@ export async function handleUnifiedRagCoachChat(
     return {
       greeting,
       intent,
-      reply: `${buildContextAwareGuidance(name, message, socioContext)}\n\n${evolutionSuggestion}`,
+      reply: `${buildContextAwareGuidance(name, message, socioContext, conversationMemory)}\n\n${evolutionSuggestion}`,
       actions: [
         {
           type: 'guidance_only',
@@ -512,6 +624,10 @@ export async function handleUnifiedRagCoachChat(
       contextHints: socioContext?.hints,
       nextBestStep: 'Pedir objetivo, disponibilidad semanal y restricciones.',
       safetySummary: safetyNotes.join(' '),
+      contextSnapshot: socioContext?.contextSnapshot,
+      memoryHighlights: socioContext?.memoryHighlights,
+      memoryTrace,
+      contextConfidence: buildContextConfidence(socioContext),
     };
   }
 
@@ -522,11 +638,13 @@ export async function handleUnifiedRagCoachChat(
     : '';
   const safetySuffix = safetyNotes.length ? `\n\nNota de seguridad: ${safetyNotes[0]}` : '';
   const contextSuffix = contextLine ? `\n\n${contextLine}` : '';
+  const memoryPrefix = buildContextualReplyPrefix(socioContext);
+  const memorySuffix = memoryPrefix ? `\n\n${memoryPrefix}` : '';
 
   return {
     greeting,
     intent,
-    reply: `${actionMessages}${offerDiet}\n\n${evolutionSuggestion}${contextSuffix}${safetySuffix}`,
+    reply: `${actionMessages}${offerDiet}\n\n${evolutionSuggestion}${memorySuffix}${contextSuffix}${safetySuffix}`,
     actions,
     suggestedReplies: uniqueValues(suggestedReplies),
     missingParams: [],
@@ -537,5 +655,9 @@ export async function handleUnifiedRagCoachChat(
       ? 'Ofrecer dieta complementaria y seguimiento de evolución física.'
       : 'Sugerir seguimiento mensual de evolución física si el socio está comprometido.',
     safetySummary: safetyNotes.join(' '),
+    contextSnapshot: socioContext?.contextSnapshot,
+    memoryHighlights: socioContext?.memoryHighlights,
+    memoryTrace,
+    contextConfidence: buildContextConfidence(socioContext),
   };
 }
