@@ -356,7 +356,7 @@ export default function DashboardPage() {
         if (!cancelled) {
           setGimnasioParametrizacionStatus({
             completa: false,
-            faltantes: ['Datos legales y comerciales del gimnasio'],
+            faltantes: [t('adminDashboard.gymSetup.defaultMissingField')],
           });
         }
       }
@@ -367,7 +367,7 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [user?.rol]);
+  }, [t, user?.rol]);
 
 
   useEffect(() => {
@@ -447,10 +447,10 @@ export default function DashboardPage() {
       : 0);
   const adminHealthLabel =
     adminOperationalAlerts === 0
-      ? 'Operación estable'
+      ? t('adminDashboard.health.stable')
       : adminOperationalAlerts <= 3
-      ? 'Atención moderada'
-      : 'Prioridad alta';
+      ? t('adminDashboard.health.moderate')
+      : t('adminDashboard.health.highPriority');
 
   const showAdminAccessFeedback = (payload: {
     event_id?: string;
@@ -472,7 +472,7 @@ export default function DashboardPage() {
     }
 
     setWelcomeData({
-      nombre: payload.nombre ?? 'Socio',
+      nombre: payload.nombre ?? t('socioDashboard.greeting.memberRole'),
       foto: payload.foto ?? null,
       id_socio: payload.id_socio,
       variant: payload.variant ?? 'success',
@@ -495,17 +495,17 @@ export default function DashboardPage() {
 
     showAdminAccessFeedback({
       event_id: `asistencia-${a.id}-${variant}`,
-      nombre: a.socio?.nombre_completo ?? 'Socio',
+      nombre: a.socio?.nombre_completo ?? t('socioDashboard.greeting.memberRole'),
       foto: a.socio?.foto ?? null,
       id_socio: a.socio?.id_socio ?? a.socio_id,
       variant,
       message:
         variant === 'debt'
           ? a.mensaje_acceso ||
-            'El socio debe dirigirse a administración para regularizar su situación.'
+            t('adminDashboard.accessFeedback.debtMessage')
           : variant === 'inactive'
           ? a.mensaje_acceso ||
-            'El socio está desactivado. Debe dirigirse a administración para regularizar su situación.'
+            t('adminDashboard.accessFeedback.inactiveMessage')
           : null,
     });
   };
@@ -532,13 +532,13 @@ export default function DashboardPage() {
 
           showAdminAccessFeedback({
             event_id: payload.event_id,
-            nombre: payload.socio?.nombre_completo ?? 'Socio',
+            nombre: payload.socio?.nombre_completo ?? t('socioDashboard.greeting.memberRole'),
             foto: payload.socio?.foto ?? null,
             id_socio: payload.socio?.id_socio,
             variant,
             message:
               payload.mensaje_acceso ||
-              'El socio debe dirigirse a administración para regularizar su situación.',
+              t('adminDashboard.accessFeedback.debtMessage'),
           });
         }
       )
@@ -577,7 +577,7 @@ export default function DashboardPage() {
         )}
         <AppSidebar />
         <div className='grid h-[100dvh] max-h-[100dvh] min-w-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden w-full'>
-          <AppHeader title='Dashboard' />
+          <AppHeader title={t('adminDashboard.headerTitle')} />
 
           {showQr && (
             <div className='fixed inset-0 z-[60] flex items-center justify-center p-6'>
@@ -637,7 +637,7 @@ export default function DashboardPage() {
                         <AlertTriangle className='mt-1 h-5 w-5 shrink-0' />
                         <div className='min-w-0'>
                           <p className='text-xs font-semibold uppercase tracking-[0.22em] opacity-80'>
-                            Aviso comercial Dragon Pyramid
+                            {t('adminDashboard.license.eyebrow')}
                           </p>
                           <h2 className='mt-1 text-base font-black sm:text-lg'>
                             {dragonPyramidLicenseWarning.title}
@@ -651,13 +651,13 @@ export default function DashboardPage() {
                             ))}
                           </ul>
                           <p className='mt-2 text-xs opacity-80'>
-                            Este aviso no bloquea el sistema. La suspensión real queda reservada para la feature posterior de bloqueo por falta de pago.
+                            {t('adminDashboard.license.nonBlockingNote')}
                           </p>
                         </div>
                       </div>
                       <div className='rounded-xl border border-current/20 px-3 py-2 text-xs font-semibold md:max-w-[240px]'>
-                        Cliente: {dragonPyramidLicenseWarning.clientName ?? 'Gym Master Cliente'}
-                        {loadingDragonPyramidWarning ? ' · actualizando...' : ''}
+                        {t('adminDashboard.license.client', { client: dragonPyramidLicenseWarning.clientName ?? t('adminDashboard.license.defaultClient') })}
+                        {loadingDragonPyramidWarning ? ` · ${t('adminDashboard.common.updating')}` : ''}
                       </div>
                     </CardContent>
                   </Card>
@@ -669,14 +669,12 @@ export default function DashboardPage() {
                       <div className='flex gap-3'>
                         <AlertTriangle className='mt-1 h-5 w-5 shrink-0 text-amber-600' />
                         <div>
-                          <h2 className='text-base font-semibold'>Datos del gimnasio pendientes</h2>
+                          <h2 className='text-base font-semibold'>{t('adminDashboard.gymSetup.title')}</h2>
                           <p className='mt-1 text-sm leading-6'>
-                            Antes de emitir recibos, reportes PDF o comprobantes comerciales, cargá los datos legales y
-                            comerciales del gimnasio. Gym Master es la plataforma tecnológica; el emisor debe ser el
-                            gimnasio cliente.
+                            {t('adminDashboard.gymSetup.description')}
                           </p>
                           <p className='mt-2 text-xs'>
-                            Campos faltantes: {gimnasioParametrizacionStatus.faltantes.slice(0, 6).join(', ')}
+                            {t('adminDashboard.gymSetup.missingFields', { fields: gimnasioParametrizacionStatus.faltantes.slice(0, 6).join(', ') })}
                             {gimnasioParametrizacionStatus.faltantes.length > 6 ? '...' : ''}
                           </p>
                         </div>
@@ -687,7 +685,7 @@ export default function DashboardPage() {
                         className='w-full border-amber-300 bg-white text-amber-900 hover:bg-amber-100 sm:w-auto'
                         onClick={() => router.push('/dashboard/gimnasio-parametrizacion')}
                       >
-                        Completar datos
+                        {t('adminDashboard.gymSetup.action')}
                       </Button>
                     </CardContent>
                   </Card>
@@ -697,11 +695,11 @@ export default function DashboardPage() {
                   <div className='flex flex-col justify-between gap-5 xl:flex-row xl:items-center'>
                     <div className='space-y-2'>
                       <p className='text-xs font-semibold uppercase tracking-[0.24em] text-sky-200'>
-                        Panel ejecutivo
+                        {t('adminDashboard.hero.eyebrow')}
                       </p>
-                      <h1 className='text-2xl font-bold leading-tight sm:text-3xl'>Visión general del gimnasio</h1>
+                      <h1 className='text-2xl font-bold leading-tight sm:text-3xl'>{t('adminDashboard.hero.title')}</h1>
                       <p className='max-w-3xl text-sm leading-6 text-slate-200'>
-                        Resumen operativo para decidir rápido: cuotas, mensajes, equipamiento, mantenimiento, comercial y BI.
+                        {t('adminDashboard.hero.description')}
                       </p>
                     </div>
                     <div className='grid grid-cols-1 gap-2 sm:flex sm:flex-wrap'>
@@ -714,23 +712,23 @@ export default function DashboardPage() {
                           window.history.pushState({}, '', url);
                         }}
                       >
-                        QR del día
+                        {t('adminDashboard.hero.actions.dayQr')}
                       </Button>
                       <Button
                         variant='secondary'
                         className='w-full sm:w-auto'
                         onClick={() => window.open('/dashboard/asistencias/terminal', '_blank', 'noopener,noreferrer')}
                       >
-                        Terminal
+                        {t('adminDashboard.hero.actions.terminal')}
                       </Button>
                       <Button variant='secondary' className='w-full sm:w-auto' onClick={() => router.push('/dashboard/finanzas')}>
-                        Finanzas / BI
+                        {t('adminDashboard.hero.actions.financeBi')}
                       </Button>
                       <Button variant='secondary' className='w-full sm:w-auto' onClick={() => router.push('/dashboard/comercial')}>
-                        Comercial
+                        {t('adminDashboard.hero.actions.commercial')}
                       </Button>
                       <Button variant='secondary' className='w-full sm:w-auto' onClick={() => router.push('/dashboard/bi-socios-demografia-promociones')}>
-                        BI Socios
+                        {t('adminDashboard.hero.actions.memberBi')}
                       </Button>
                     </div>
                   </div>
@@ -739,28 +737,28 @@ export default function DashboardPage() {
                     <div className='rounded-xl border border-white/10 bg-white/10 p-4'>
                       <div className='flex items-center gap-2 text-sky-100'>
                         <Megaphone className='h-4 w-4' />
-                        <p className='text-sm font-medium'>Mensajes sin responder</p>
+                        <p className='text-sm font-medium'>{t('adminDashboard.metrics.unansweredMessages')}</p>
                       </div>
                       <p className='mt-2 text-2xl font-bold'>{loadingMensajesPendientes ? '...' : mensajesSinResponder}</p>
                     </div>
                     <div className='rounded-xl border border-white/10 bg-white/10 p-4'>
                       <div className='flex items-center gap-2 text-sky-100'>
                         <Wrench className='h-4 w-4' />
-                        <p className='text-sm font-medium'>Equipos en revisión</p>
+                        <p className='text-sm font-medium'>{t('adminDashboard.metrics.equipmentInReview')}</p>
                       </div>
                       <p className='mt-2 text-2xl font-bold'>{equiposEnRevision}</p>
                     </div>
                     <div className='rounded-xl border border-white/10 bg-white/10 p-4'>
                       <div className='flex items-center gap-2 text-sky-100'>
                         <BarChart3 className='h-4 w-4' />
-                        <p className='text-sm font-medium'>Próximos mantenimientos</p>
+                        <p className='text-sm font-medium'>{t('adminDashboard.metrics.upcomingMaintenance')}</p>
                       </div>
                       <p className='mt-2 text-2xl font-bold'>{proximosMantenimientos}</p>
                     </div>
                     <div className='rounded-xl border border-white/10 bg-white/10 p-4'>
                       <div className='flex items-center gap-2 text-sky-100'>
                         <DollarSign className='h-4 w-4' />
-                        <p className='text-sm font-medium'>Costo mant. mes</p>
+                        <p className='text-sm font-medium'>{t('adminDashboard.metrics.monthlyMaintenanceCost')}</p>
                       </div>
                       <p className='mt-2 text-2xl font-bold'>{formatDashboardCurrency(costoMantenimientoMensual)}</p>
                     </div>
@@ -775,11 +773,11 @@ export default function DashboardPage() {
                       </div>
                       <div className='min-w-0'>
                         <p className='text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground'>
-                          Estado operativo
+                          {t('adminDashboard.cards.operationalStatus')}
                         </p>
                         <h3 className='mt-1 text-xl font-black'>{adminHealthLabel}</h3>
                         <p className='mt-1 text-sm text-muted-foreground'>
-                          {adminOperationalAlerts} señales requieren seguimiento entre mensajes, mantenimiento, licencia o configuración.
+                          {t('adminDashboard.cards.alertSignals', { count: adminOperationalAlerts })}
                         </p>
                       </div>
                     </CardContent>
@@ -792,15 +790,15 @@ export default function DashboardPage() {
                       </div>
                       <div className='min-w-0'>
                         <p className='text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground'>
-                          Puntualidad de pagos
+                          {t('adminDashboard.cards.paymentPunctuality')}
                         </p>
                         <h3 className='mt-1 text-xl font-black'>
                           {latestPaymentSegment
                             ? formatDashboardPercent(latestPaymentSegment.porcentaje_puntualidad)
-                            : 'Sin datos'}
+                            : t('adminDashboard.common.noData')}
                         </h3>
                         <p className='mt-1 text-sm text-muted-foreground'>
-                          Último corte: {latestPaymentSegment?.anio_mes ?? 'pendiente de datos'}.
+                          {t('adminDashboard.cards.latestCut', { period: latestPaymentSegment?.anio_mes ?? t('adminDashboard.common.pendingData') })}
                         </p>
                       </div>
                     </CardContent>
@@ -813,7 +811,7 @@ export default function DashboardPage() {
                       </div>
                       <div className='min-w-0'>
                         <p className='text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground'>
-                          Ingresos del período
+                          {t('adminDashboard.cards.periodIncome')}
                         </p>
                         <h3 className='mt-1 text-xl font-black'>
                           {latestPaymentHistogram
@@ -821,7 +819,7 @@ export default function DashboardPage() {
                             : formatDashboardCurrency(0)}
                         </h3>
                         <p className='mt-1 text-sm text-muted-foreground'>
-                          Base del histograma financiero más reciente.
+                          {t('adminDashboard.cards.latestHistogramBase')}
                         </p>
                       </div>
                     </CardContent>
@@ -834,11 +832,11 @@ export default function DashboardPage() {
                       </div>
                       <div className='min-w-0'>
                         <p className='text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground'>
-                          Riesgo técnico
+                          {t('adminDashboard.cards.technicalRisk')}
                         </p>
                         <h3 className='mt-1 text-xl font-black'>{equiposFueraDeServicio}</h3>
                         <p className='mt-1 text-sm text-muted-foreground'>
-                          Equipos fuera de servicio que pueden afectar operación.
+                          {t('adminDashboard.cards.outOfServiceDescription')}
                         </p>
                       </div>
                     </CardContent>
@@ -849,23 +847,23 @@ export default function DashboardPage() {
                   <div className='flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between'>
                     <div className='min-w-0'>
                       <p className='text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground'>
-                        Accesos rápidos de cierre operativo
+                        {t('adminDashboard.quickAccess.eyebrow')}
                       </p>
                       <h2 className='mt-1 text-lg font-black sm:text-xl'>
-                        Ir directo a las áreas críticas del día
+                        {t('adminDashboard.quickAccess.title')}
                       </h2>
                       <p className='mt-1 text-sm text-muted-foreground'>
-                        Atajos para resolver pagos, socios, mensajes, stock, equipamiento y configuración sin recorrer el menú completo.
+                        {t('adminDashboard.quickAccess.description')}
                       </p>
                     </div>
                     <div className='grid w-full grid-cols-1 gap-2 sm:grid-cols-2 lg:w-auto lg:grid-cols-3'>
                       {[
-                        { label: 'Socios', href: '/dashboard/socios' },
-                        { label: 'Pagos', href: '/dashboard/pagos' },
-                        { label: 'Mensajes', href: '/dashboard/mensajes-admin' },
-                        { label: 'Equipamiento', href: '/dashboard/equipamientos' },
-                        { label: 'Comercial', href: '/dashboard/comercial/kiosco' },
-                        { label: 'Parámetros', href: '/dashboard/gimnasio-parametrizacion' },
+                        { label: t('adminDashboard.quickAccess.members'), href: '/dashboard/socios' },
+                        { label: t('adminDashboard.quickAccess.payments'), href: '/dashboard/pagos' },
+                        { label: t('adminDashboard.quickAccess.messages'), href: '/dashboard/mensajes-admin' },
+                        { label: t('adminDashboard.quickAccess.equipment'), href: '/dashboard/equipamientos' },
+                        { label: t('adminDashboard.quickAccess.commercial'), href: '/dashboard/comercial/kiosco' },
+                        { label: t('adminDashboard.quickAccess.parameters'), href: '/dashboard/gimnasio-parametrizacion' },
                       ].map((item) => (
                         <Button
                           key={item.href}
@@ -890,7 +888,7 @@ export default function DashboardPage() {
                     onClick={() => router.push('/dashboard/mensajes-admin')}
                   >
                     <CardHeader>
-                      <CardTitle>Bandeja de entrada</CardTitle>
+                      <CardTitle>{t('adminDashboard.inbox.title')}</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className='grid grid-cols-2 gap-4'>
@@ -899,7 +897,7 @@ export default function DashboardPage() {
                             {loadingMensajesPendientes ? '...' : mensajesPendientes}
                           </div>
                           <p className='text-sm text-muted-foreground'>
-                            Nuevos / en espera
+                            {t('adminDashboard.inbox.newWaiting')}
                           </p>
                         </div>
                         <div>
@@ -907,12 +905,12 @@ export default function DashboardPage() {
                             {loadingMensajesPendientes ? '...' : mensajesSinResponder}
                           </div>
                           <p className='text-sm text-muted-foreground'>
-                            Sin responder
+                            {t('adminDashboard.inbox.unanswered')}
                           </p>
                         </div>
                       </div>
                       <p className='mt-3 text-xs text-muted-foreground'>
-                        Sin responder incluye mensajes pendientes y leídos que todavía no tienen respuesta.
+                        {t('adminDashboard.inbox.description')}
                       </p>
                       <Button
                         type='button'
@@ -923,61 +921,61 @@ export default function DashboardPage() {
                           router.push('/dashboard/mensajes-admin');
                         }}
                       >
-                        Abrir bandeja
+                        {t('adminDashboard.inbox.action')}
                       </Button>
                     </CardContent>
                   </Card>
 
                   <Card>
                     <CardHeader>
-                      <CardTitle>Equipos Totales</CardTitle>
+                      <CardTitle>{t('adminDashboard.equipment.totalTitle')}</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className='text-3xl font-bold'>{equiposTotales}</div>
                       <p className='text-sm text-muted-foreground'>
-                        Total de equipos registrados
+                        {t('adminDashboard.equipment.totalDescription')}
                       </p>
                     </CardContent>
                   </Card>
 
                   <Card>
                     <CardHeader>
-                      <CardTitle>Equipos en Revisión</CardTitle>
+                      <CardTitle>{t('adminDashboard.equipment.reviewTitle')}</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className='text-3xl font-bold'>
                         {equiposEnRevision}
                       </div>
                       <p className='text-sm text-muted-foreground'>
-                        Actualmente en proceso de revisión
+                        {t('adminDashboard.equipment.reviewDescription')}
                       </p>
                     </CardContent>
                   </Card>
 
                   <Card>
                     <CardHeader>
-                      <CardTitle>Próximos Mantenimientos</CardTitle>
+                      <CardTitle>{t('adminDashboard.equipment.maintenanceTitle')}</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className='text-3xl font-bold'>
                         {proximosMantenimientos}
                       </div>
                       <p className='text-sm text-muted-foreground'>
-                        Equipos con mantenimiento programado
+                        {t('adminDashboard.equipment.maintenanceDescription')}
                       </p>
                     </CardContent>
                   </Card>
 
                   <Card>
                     <CardHeader>
-                      <CardTitle>Estado de Equipamiento</CardTitle>
+                      <CardTitle>{t('adminDashboard.equipment.statusTitle')}</CardTitle>
                     </CardHeader>
                     <CardContent className='h-[260px] overflow-y-auto sm:h-[300px] md:h-[420px] lg:h-[300px]'>
                       <div className='h-full min-h-[240px]'>
                         {estadoEquipamiento.length === 0 ? (
                           <div className='flex h-full min-h-[240px] flex-col items-center justify-center rounded-xl border border-dashed text-center text-sm text-muted-foreground'>
                             <ClipboardList className='mb-2 h-7 w-7 opacity-60' />
-                            Sin datos de equipamiento para graficar.
+                            {t('adminDashboard.equipment.noEquipmentData')}
                           </div>
                         ) : (
                         <Pie
@@ -987,7 +985,7 @@ export default function DashboardPage() {
                             ),
                             datasets: [
                               {
-                                label: 'Costo Últimos 3M',
+                                label: t('adminDashboard.charts.last3MonthsCost'),
                                 data: estadoEquipamiento.map(
                                   (item) => item.costo_ultimos_3m
                                 ),
@@ -1021,13 +1019,13 @@ export default function DashboardPage() {
 
                   <Card className='md:col-span-2 xl:col-span-3'>
                     <CardHeader>
-                      <CardTitle>Top Fallos de Equipamiento</CardTitle>
+                      <CardTitle>{t('adminDashboard.charts.topFailures')}</CardTitle>
                     </CardHeader>
                     <CardContent className='h-[260px] sm:h-[300px]'>
                       {topFallos.length === 0 ? (
                         <div className='flex h-full flex-col items-center justify-center rounded-xl border border-dashed text-center text-sm text-muted-foreground'>
                           <ClipboardList className='mb-2 h-7 w-7 opacity-60' />
-                          Sin fallos registrados para este período.
+                          {t('adminDashboard.charts.noFailures')}
                         </div>
                       ) : (
                       <Bar
@@ -1035,7 +1033,7 @@ export default function DashboardPage() {
                           labels: topFallos.map((item) => item.nombre),
                           datasets: [
                             {
-                              label: 'Total Fallos',
+                              label: t('adminDashboard.charts.totalFailures'),
                               data: topFallos.map((item) => item.total_fallos),
                               backgroundColor: '#FF8042',
                               borderColor: '#FF8042',
@@ -1056,13 +1054,13 @@ export default function DashboardPage() {
 
                   <Card className='md:col-span-2 xl:col-span-3'>
                     <CardHeader>
-                      <CardTitle>Segmentación de Pagos</CardTitle>
+                      <CardTitle>{t('adminDashboard.charts.paymentSegmentation')}</CardTitle>
                     </CardHeader>
                     <CardContent className='h-[260px] sm:h-[300px]'>
                       {segmentacionPagos.length === 0 ? (
                         <div className='flex h-full flex-col items-center justify-center rounded-xl border border-dashed text-center text-sm text-muted-foreground'>
                           <ClipboardList className='mb-2 h-7 w-7 opacity-60' />
-                          Sin pagos suficientes para segmentar.
+                          {t('adminDashboard.charts.noPaymentsSegmentation')}
                         </div>
                       ) : (
                       <Pie
@@ -1070,7 +1068,7 @@ export default function DashboardPage() {
                           labels: segmentacionPagos.map((item) => item.anio_mes),
                           datasets: [
                             {
-                              label: 'Total Pagado',
+                              label: t('adminDashboard.charts.totalPaid'),
                               data: segmentacionPagos.map(
                                 (item) => item.total_pagado
                               ),
@@ -1098,13 +1096,13 @@ export default function DashboardPage() {
 
                   <Card className='md:col-span-2 xl:col-span-3'>
                     <CardHeader>
-                      <CardTitle>Histograma de Pagos</CardTitle>
+                      <CardTitle>{t('adminDashboard.charts.paymentHistogram')}</CardTitle>
                     </CardHeader>
                     <CardContent className='h-[260px] sm:h-[300px]'>
                       {histogramaPagos.length === 0 ? (
                         <div className='flex h-full flex-col items-center justify-center rounded-xl border border-dashed text-center text-sm text-muted-foreground'>
                           <ClipboardList className='mb-2 h-7 w-7 opacity-60' />
-                          Sin historial de pagos para graficar.
+                          {t('adminDashboard.charts.noPaymentHistory')}
                         </div>
                       ) : (
                       <Bar
@@ -1112,7 +1110,7 @@ export default function DashboardPage() {
                           labels: histogramaPagos.map((item) => item.anio_mes),
                           datasets: [
                             {
-                              label: 'Total Pagado',
+                              label: t('adminDashboard.charts.totalPaid'),
                               data: histogramaPagos.map(
                                 (item) => item.total_pagado
                               ),
