@@ -9,6 +9,7 @@ import {
   SidebarMenuItem,
 } from '../ui/sidebar';
 import { useAuthStore } from '@/stores/authStore';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface SidebarLogoutButtonProps {
   isMobile: boolean;
@@ -20,6 +21,7 @@ export const SidebarLogoutButton: React.FC<SidebarLogoutButtonProps> = ({
   closeSidebar,
 }) => {
   const router = useRouter();
+  const { t } = useI18n();
   const { logout } = useAuthStore();
 
   const handleLogout = () => {
@@ -40,11 +42,11 @@ export const SidebarLogoutButton: React.FC<SidebarLogoutButtonProps> = ({
             type='button'
             onClick={handleLogout}
             className='flex w-full items-center gap-2 text-sm text-muted-foreground hover:text-foreground'
-            title='Cerrar sesión'
-            aria-label='Cerrar sesión'
+            title={t('sidebar.logout')}
+            aria-label={t('sidebar.logout')}
           >
             <LogOut className='h-4 w-4' aria-hidden='true' />
-            <span>Cerrar sesión</span>
+            <span>{t('sidebar.logout')}</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>

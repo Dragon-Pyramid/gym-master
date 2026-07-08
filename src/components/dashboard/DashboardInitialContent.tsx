@@ -16,6 +16,7 @@ import SocioMobileMensajeriaSoporteCard from '@/components/dashboard/socio/Socio
 import SocioMobileSaludFichaMedicaCard from '@/components/dashboard/socio/SocioMobileSaludFichaMedicaCard';
 import SocioMobilePagosRecibosCard from '@/components/dashboard/socio/SocioMobilePagosRecibosCard';
 import SocioMobileActividadesAgendaCard from '@/components/dashboard/socio/SocioMobileActividadesAgendaCard';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type SocioMobileFeedSectionProps = {
   eyebrow: string;
@@ -76,17 +77,21 @@ const SocioMobileFeedSection = ({
 const SocioMobileQuickActionRail = ({
   actions,
   onNavigate,
+  eyebrow,
+  title,
 }: {
   actions: SocioMobileQuickAction[];
   onNavigate: (href: string) => void;
+  eyebrow: string;
+  title: string;
 }) => (
   <Card className='overflow-hidden border-sky-100 bg-white/95 p-3 shadow-sm dark:border-sky-900/60 dark:bg-slate-950/70'>
     <div className='mb-3 flex items-center justify-between gap-3 px-1'>
       <div>
         <p className='text-[0.65rem] font-black uppercase tracking-[0.22em] text-sky-600 dark:text-sky-300'>
-          Accesos rápidos
+          {eyebrow}
         </p>
-        <h2 className='text-base font-black leading-tight'>Abrí lo que necesitás</h2>
+        <h2 className='text-base font-black leading-tight'>{title}</h2>
       </div>
       <span className='rounded-full bg-sky-50 px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.12em] text-sky-700 dark:bg-sky-950 dark:text-sky-200'>
         App
@@ -118,8 +123,9 @@ const SocioMobileQuickActionRail = ({
 
 
 const DashboardInitialContent = () => {
+  const { t } = useI18n();
   const { user } = useAuthStore();
-  const userName = user?.nombre || 'Invitado';
+  const userName = user?.nombre || t('socioDashboard.greeting.guest');
   const userType = user?.rol || '';
   const userImage = user?.foto || '/gm_logo.svg';
 
@@ -130,29 +136,37 @@ const DashboardInitialContent = () => {
     () =>
       isInternalUser
         ? [
-            'Cada tarea bien registrada mejora la operación del gimnasio.',
-            'La atención ordenada también forma parte de la experiencia del socio.',
-            'Tu gestión diaria mantiene el gimnasio funcionando.',
-            'Un buen control evita problemas antes de que aparezcan.',
-            'La organización del equipo se nota en cada detalle.',
+            t('socioDashboard.motivation.internal1'),
+            t('socioDashboard.motivation.internal2'),
+            t('socioDashboard.motivation.internal3'),
+            t('socioDashboard.motivation.internal4'),
+            t('socioDashboard.motivation.internal5'),
           ]
         : [
-            'La clave no es querer, sino hacer. ¡Empieza hoy!',
-            'Tu cuerpo puede lograrlo. Solo tu mente tiene que creerlo.',
-            'Cada esfuerzo te acerca a tu mejor versión. ¡No te rindas!',
-            'No esperes el momento perfecto, haz perfecto el momento.',
-            'La disciplina es el puente entre tus metas y tus logros.',
-            'El dolor que sientes hoy será la fuerza que sientes mañana.',
-            'No se trata de ser perfecto, se trata de ser mejor que ayer.',
-            'Tu única competencia eres tú mismo de ayer.',
+            t('socioDashboard.motivation.member1'),
+            t('socioDashboard.motivation.member2'),
+            t('socioDashboard.motivation.member3'),
+            t('socioDashboard.motivation.member4'),
+            t('socioDashboard.motivation.member5'),
+            t('socioDashboard.motivation.member6'),
+            t('socioDashboard.motivation.member7'),
+            t('socioDashboard.motivation.member8'),
           ],
-    [isInternalUser]
+    [isInternalUser, t]
   );
 
-  const [motivationIndex, setMotivationIndex] = useState(() =>
-    Math.floor(Math.random() * motivationalMessages.length)
-  );
-  const [isFading, setIsFading] = useState(false);
+  const motivationSeed = `${user?.id ?? ''}-${userName}-${userType}`;
+  const motivationIndex = useMemo(() => {
+    if (motivationalMessages.length === 0) return 0;
+
+    const hash = Array.from(motivationSeed).reduce(
+      (acc, char) => acc + char.charCodeAt(0),
+      0,
+    );
+
+    return hash % motivationalMessages.length;
+  }, [motivationSeed, motivationalMessages.length]);
+
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -163,56 +177,40 @@ const DashboardInitialContent = () => {
     return () => clearInterval(timeTimer);
   }, []);
 
-  useEffect(() => {
-    if (motivationalMessages.length === 0) return;
-
-    const timer = setInterval(() => {
-      setIsFading(true);
-      setTimeout(() => {
-        setMotivationIndex(
-          (prevIndex) => (prevIndex + 1) % motivationalMessages.length
-        );
-        setIsFading(false);
-      }, 300);
-    }, 5000);
-
-    return () => clearInterval(timer);
-  }, [motivationalMessages.length]);
-
-  const randomMotivation = motivationalMessages[motivationIndex];
+  const randomMotivation = motivationalMessages[motivationIndex] ?? motivationalMessages[0] ?? '';
   const heroActionText = isInternalUser
-    ? '¡Listo para gestionar la operación del gimnasio!'
-    : '¡Llegó la hora de entrenar!';
+    ? t('socioDashboard.greeting.internalHeroAction')
+    : t('socioDashboard.greeting.memberHeroAction');
   const HeroIcon = isInternalUser ? ClipboardCheck : Dumbbell;
   const actionCards = isInternalUser
     ? [
-        { icon: '✅', label: 'Operación', className: 'border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 dark:border-blue-800', textClassName: 'text-blue-700 dark:text-blue-300' },
-        { icon: '🤝', label: 'Atención', className: 'border-green-200 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 dark:border-green-800', textClassName: 'text-green-700 dark:text-green-300' },
-        { icon: '📊', label: 'Control', className: 'border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 dark:border-orange-800', textClassName: 'text-orange-700 dark:text-orange-300' },
+        { icon: '✅', label: t('socioDashboard.common.administration'), className: 'border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 dark:border-blue-800', textClassName: 'text-blue-700 dark:text-blue-300' },
+        { icon: '🤝', label: t('socioDashboard.messages.title'), className: 'border-green-200 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 dark:border-green-800', textClassName: 'text-green-700 dark:text-green-300' },
+        { icon: '📊', label: t('socioDashboard.common.detail'), className: 'border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 dark:border-orange-800', textClassName: 'text-orange-700 dark:text-orange-300' },
       ]
     : [
-        { icon: '💪', label: 'Fuerza', className: 'border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 dark:border-blue-800', textClassName: 'text-blue-700 dark:text-blue-300' },
-        { icon: '🎯', label: 'Enfoque', className: 'border-green-200 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 dark:border-green-800', textClassName: 'text-green-700 dark:text-green-300' },
-        { icon: '🔥', label: 'Energía', className: 'border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 dark:border-orange-800', textClassName: 'text-orange-700 dark:text-orange-300' },
+        { icon: '💪', label: t('socioDashboard.quickActions.training'), className: 'border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20 dark:border-blue-800', textClassName: 'text-blue-700 dark:text-blue-300' },
+        { icon: '🎯', label: t('socioDashboard.sections.progressEyebrow'), className: 'border-green-200 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20 dark:border-green-800', textClassName: 'text-green-700 dark:text-green-300' },
+        { icon: '🔥', label: t('socioDashboard.sections.todayEyebrow'), className: 'border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20 dark:border-orange-800', textClassName: 'text-orange-700 dark:text-orange-300' },
       ];
 
   const hour = currentTime.getHours();
   let timeOfDay = '';
 
   if (hour < 12) {
-    timeOfDay = 'Buenos días';
+    timeOfDay = t('socioDashboard.greeting.morning');
   } else if (hour < 19) {
-    timeOfDay = 'Buenas tardes';
+    timeOfDay = t('socioDashboard.greeting.afternoon');
   } else {
-    timeOfDay = 'Buenas noches';
+    timeOfDay = t('socioDashboard.greeting.evening');
   }
 
   const typeDisplay =
     userType === 'socio'
-      ? 'Socio'
+      ? t('socioDashboard.greeting.memberRole')
       : userType === 'usuario'
-      ? 'Usuario'
-      : 'Administrador';
+      ? t('socioDashboard.greeting.internalRole')
+      : t('socioDashboard.greeting.adminRole');
 
   const getTypeColor = () => {
     switch (userType) {
@@ -261,17 +259,17 @@ const DashboardInitialContent = () => {
   const estadoCuotaValor = estadoCuotaSocio?.estado_cuota ?? 'sin_pagos';
   const cuotaAlDia = estadoCuotaValor === 'al_dia';
   const cuotaEstadoLabel = cuotaAlDia
-    ? 'Al día'
+    ? t('socioDashboard.fee.upToDate')
     : estadoCuotaValor === 'vencido'
-      ? 'Vencida'
-      : 'Pendiente';
+      ? t('socioDashboard.fee.overdue')
+      : t('socioDashboard.fee.pending');
   const cuotaMontoAdeudado = Number(estadoCuotaSocio?.monto_adeudado ?? 0);
   const cuotaFechaLabel = cuotaAlDia
     ? formatDate(estadoCuotaSocio?.vencimiento_cuota)
     : formatDate(estadoCuotaSocio?.fecha_limite_pago);
   const cuotaFechaTitulo = cuotaAlDia
-    ? 'Vencimiento de cuota'
-    : 'Fecha límite de pago';
+    ? t('socioDashboard.fee.dueDate')
+    : t('socioDashboard.fee.paymentDeadline');
   const cuotaCardClass = cuotaAlDia
     ? 'border-green-200 bg-gradient-to-r from-green-50 to-emerald-100 dark:from-green-950/20 dark:to-emerald-900/20 dark:border-green-800'
     : estadoCuotaValor === 'vencido'
@@ -355,57 +353,57 @@ const DashboardInitialContent = () => {
 
   const socioMobileActions = [
     {
-      title: cuotaAlDia ? 'Mi cuota' : 'Pagar cuota',
-      description: cuotaAlDia ? 'Ver historial' : 'Regularizar',
+      title: cuotaAlDia ? t('socioDashboard.quickActions.myFee') : t('socioDashboard.fee.payFee'),
+      description: cuotaAlDia ? t('socioDashboard.quickActions.viewHistory') : t('socioDashboard.quickActions.regularize'),
       href: cuotaAlDia ? '/dashboard/mi-cuenta/historial-pagos' : '/dashboard/mi-cuenta/pagar-cuota',
       icon: CreditCard,
       className: cuotaAlDia ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-sky-200 bg-sky-50 text-sky-900',
     },
     {
-      title: 'QR / asistencia',
-      description: 'Ingreso al gym',
+      title: t('socioDashboard.quickActions.qrAttendance'),
+      description: t('socioDashboard.quickActions.gymEntry'),
       href: '/dashboard/control-asistencia',
       icon: QrCode,
       className: 'border-indigo-200 bg-indigo-50 text-indigo-900',
     },
     {
-      title: 'Coach IA',
-      description: 'Rutina, dieta y progreso',
+      title: t('socioDashboard.quickActions.coach'),
+      description: t('socioDashboard.quickActions.coachDescription'),
       href: '/dashboard/coach',
       icon: MessageCircle,
       className: 'border-cyan-200 bg-cyan-50 text-cyan-900',
     },
     {
-      title: 'Rutina',
-      description: 'Entrenamiento',
+      title: t('socioDashboard.quickActions.routine'),
+      description: t('socioDashboard.quickActions.training'),
       href: '/dashboard/rutinas/asistente',
       icon: Dumbbell,
       className: 'border-orange-200 bg-orange-50 text-orange-900',
     },
     {
-      title: 'Dieta',
-      description: 'Plan alimentario',
+      title: t('socioDashboard.quickActions.diet'),
+      description: t('socioDashboard.quickActions.mealPlan'),
       href: '/dashboard/dietas',
       icon: Utensils,
       className: 'border-lime-200 bg-lime-50 text-lime-900',
     },
     {
-      title: 'Evolución',
-      description: 'Progreso físico',
+      title: t('socioDashboard.quickActions.evolution'),
+      description: t('socioDashboard.quickActions.physicalProgress'),
       href: '/dashboard/evolucion-fisica',
       icon: Activity,
       className: 'border-violet-200 bg-violet-50 text-violet-900',
     },
     {
-      title: 'Ficha médica',
-      description: tieneFichaMedica === false ? 'Completar' : 'Consultar',
+      title: t('socioDashboard.quickActions.medicalRecord'),
+      description: tieneFichaMedica === false ? t('socioDashboard.quickActions.complete') : t('socioDashboard.quickActions.consult'),
       href: '/dashboard/ficha-medica',
       icon: HeartPulse,
       className: tieneFichaMedica === false ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-rose-200 bg-rose-50 text-rose-900',
     },
     {
-      title: 'Mensajes',
-      description: 'Casilla',
+      title: t('socioDashboard.quickActions.messages'),
+      description: t('socioDashboard.quickActions.inbox'),
       href: '/dashboard/mensajes',
       icon: MessageCircle,
       className: 'border-slate-200 bg-slate-50 text-slate-900',
@@ -413,7 +411,7 @@ const DashboardInitialContent = () => {
   ];
 
   const socioMobileSecondaryActions = socioMobileActions.filter(
-    (item) => item.title !== 'Mi cuota' && item.title !== 'Pagar cuota' && item.title !== 'QR / asistencia'
+    (item) => item.href !== '/dashboard/mi-cuenta/historial-pagos' && item.href !== '/dashboard/mi-cuenta/pagar-cuota' && item.href !== '/dashboard/control-asistencia'
   );
 
   return (
@@ -440,7 +438,7 @@ const DashboardInitialContent = () => {
                       {userName}
                     </h1>
                     <p className='mt-1 text-sm text-slate-300'>
-                      Tu gimnasio, rutina y progreso en un solo lugar.
+                      {t('socioDashboard.greeting.memberHeroDescription')}
                     </p>
                   </div>
                 </div>
@@ -453,7 +451,7 @@ const DashboardInitialContent = () => {
                 <div className='flex items-start justify-between gap-3'>
                   <div>
                     <p className='text-xs uppercase tracking-[0.18em] text-sky-200'>
-                      Estado de cuota
+                      {t('socioDashboard.fee.statusTitle')}
                     </p>
                     <div className='mt-1 flex items-center gap-2 text-lg font-bold'>
                       {cuotaAlDia ? (
@@ -461,7 +459,7 @@ const DashboardInitialContent = () => {
                       ) : (
                         <AlertCircle className='h-5 w-5 text-amber-300' />
                       )}
-                      {loadingEstadoCuota ? 'Consultando...' : cuotaEstadoLabel}
+                      {loadingEstadoCuota ? t('socioDashboard.common.loading') : cuotaEstadoLabel}
                     </div>
                     <p className='mt-1 text-xs text-slate-300'>
                       {cuotaFechaTitulo}: {cuotaFechaLabel}
@@ -469,7 +467,7 @@ const DashboardInitialContent = () => {
                   </div>
                   <div className='text-right'>
                     <p className='text-xs text-sky-200'>
-                      {cuotaAlDia ? 'Debe' : 'A regularizar'}
+                      {cuotaAlDia ? t('socioDashboard.fee.amountDue') : t('socioDashboard.fee.amountToRegularize')}
                     </p>
                     <p className='text-lg font-black'>
                       {cuotaAlDia ? '$ 0' : formatMoney(cuotaMontoAdeudado)}
@@ -491,22 +489,24 @@ const DashboardInitialContent = () => {
                   className='mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#02a8e1] px-4 py-3 text-sm font-bold text-white shadow-lg shadow-sky-950/20 transition active:scale-[0.98] disabled:opacity-60'
                 >
                   <CreditCard className='h-4 w-4' />
-                  {cuotaAlDia ? 'Ver historial de pagos' : loadingPago ? 'Redirigiendo...' : 'Pagar cuota'}
+                  {cuotaAlDia ? t('socioDashboard.fee.viewPaymentHistory') : loadingPago ? t('socioDashboard.fee.redirecting') : t('socioDashboard.fee.payFee')}
                 </button>
               </div>
             </div>
 
             <SocioMobileQuickActionRail
               actions={socioMobileSecondaryActions}
+              eyebrow={t('socioDashboard.common.quickAccessEyebrow')}
+              title={t('socioDashboard.common.quickAccessTitle')}
               onNavigate={(href) => router.push(href)}
             />
 
             <SocioMobileFeedSection
-              eyebrow='Prioridad'
-              title='Acceso y estado'
-              description='Ingreso, cuota y salud siempre visibles antes de entrenar.'
+              eyebrow={t('socioDashboard.sections.priorityEyebrow')}
+              title={t('socioDashboard.sections.accessTitle')}
+              description={t('socioDashboard.sections.accessDescription')}
               icon={QrCode}
-              badge='Ahora'
+              badge={t('socioDashboard.common.now')}
               accentClassName='bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-200'
             >
               <SocioMobileAsistenciaQrCard
@@ -531,11 +531,11 @@ const DashboardInitialContent = () => {
             </SocioMobileFeedSection>
 
             <SocioMobileFeedSection
-              eyebrow='Hoy'
-              title='Entrenamiento y agenda'
-              description='Entrenamiento, dieta y clases disponibles para hoy.'
+              eyebrow={t('socioDashboard.sections.todayEyebrow')}
+              title={t('socioDashboard.sections.trainingAgendaTitle')}
+              description={t('socioDashboard.sections.trainingAgendaDescription')}
               icon={Dumbbell}
-              badge='Diario'
+              badge={t('socioDashboard.common.daily')}
               accentClassName='bg-orange-50 text-orange-700 dark:bg-orange-950/60 dark:text-orange-200'
             >
               <SocioMobileTodayPlan />
@@ -543,9 +543,9 @@ const DashboardInitialContent = () => {
             </SocioMobileFeedSection>
 
             <SocioMobileFeedSection
-              eyebrow='Progreso'
-              title='Evolución física'
-              description='Tu evolución física resumida en pocos indicadores.'
+              eyebrow={t('socioDashboard.sections.progressEyebrow')}
+              title={t('socioDashboard.sections.physicalEvolutionTitle')}
+              description={t('socioDashboard.sections.physicalEvolutionDescription')}
               icon={Activity}
               accentClassName='bg-violet-50 text-violet-700 dark:bg-violet-950/60 dark:text-violet-200'
             >
@@ -553,9 +553,9 @@ const DashboardInitialContent = () => {
             </SocioMobileFeedSection>
 
             <SocioMobileFeedSection
-              eyebrow='Comunicación'
-              title='Soporte del gimnasio'
-              description='Mensajes y contacto directo con administración.'
+              eyebrow={t('socioDashboard.sections.communicationEyebrow')}
+              title={t('socioDashboard.sections.supportTitle')}
+              description={t('socioDashboard.sections.supportDescription')}
               icon={MessageCircle}
               accentClassName='bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-200'
             >
@@ -565,13 +565,7 @@ const DashboardInitialContent = () => {
             <Card className='border-primary/20 bg-primary/5 p-4'>
               <div className='flex items-start gap-3'>
                 <div className='mt-2 h-2 w-2 rounded-full bg-primary' />
-                <blockquote
-                  className={`text-base font-medium leading-relaxed text-foreground transition-all duration-300 ${
-                    isFading
-                      ? 'opacity-0 translate-y-2'
-                      : 'opacity-100 translate-y-0'
-                  }`}
-                >
+                <blockquote className='min-h-[3.5rem] text-base font-medium leading-relaxed text-foreground'>
                   &ldquo;{randomMotivation}&rdquo;
                 </blockquote>
               </div>
@@ -635,7 +629,7 @@ const DashboardInitialContent = () => {
                   <div className='flex flex-wrap items-center justify-between gap-4'>
                     <div className='flex flex-col gap-1'>
                       <span className='text-sm text-muted-foreground'>
-                        Estado de cuota
+                        {t('socioDashboard.fee.statusTitle')}
                       </span>
                       <span className={`inline-flex items-center gap-2 text-lg font-semibold ${cuotaEstadoClass}`}>
                         {cuotaAlDia ? (
@@ -643,12 +637,12 @@ const DashboardInitialContent = () => {
                         ) : (
                           <AlertCircle className='w-5 h-5' />
                         )}
-                        {loadingEstadoCuota ? 'Consultando...' : cuotaEstadoLabel}
+                        {loadingEstadoCuota ? t('socioDashboard.common.loading') : cuotaEstadoLabel}
                       </span>
                     </div>
                     <div className='flex flex-col gap-1'>
                       <span className='text-sm text-muted-foreground'>
-                        {cuotaAlDia ? 'Monto adeudado' : 'Monto a regularizar'}
+                        {cuotaAlDia ? t('socioDashboard.fee.amountDue') : t('socioDashboard.fee.amountToRegularize')}
                       </span>
                       <span className={`text-lg font-semibold ${cuotaAlDia ? 'text-green-700 dark:text-green-300' : 'text-blue-700 dark:text-blue-300'}`}>
                         {cuotaAlDia ? '$ 0' : formatMoney(cuotaMontoAdeudado)}
@@ -663,7 +657,7 @@ const DashboardInitialContent = () => {
                       </span>
                       {!cuotaAlDia && estadoCuotaSocio?.dias_gracia ? (
                         <span className='text-xs text-muted-foreground'>
-                          Incluye {estadoCuotaSocio.dias_gracia} días de gracia.
+                          {t('socioDashboard.fee.graceDays', { days: estadoCuotaSocio.dias_gracia })}
                         </span>
                       ) : null}
                     </div>
@@ -675,7 +669,7 @@ const DashboardInitialContent = () => {
                         onClick={handlePagarStripe}
                         disabled={loadingPago}
                       >
-                        {loadingPago ? 'Redirigiendo...' : 'Pagar con Stripe'}
+                        {loadingPago ? t('socioDashboard.fee.redirecting') : t('socioDashboard.fee.payWithStripe')}
                       </button>
                     </div>
                   )}
@@ -690,10 +684,10 @@ const DashboardInitialContent = () => {
                     <FileWarning className='mt-0.5 h-5 w-5 shrink-0 text-amber-700 dark:text-amber-300' />
                     <div>
                       <p className='font-semibold text-amber-900 dark:text-amber-100'>
-                        Ficha médica pendiente
+                        {t('socioDashboard.health.pendingTitle')}
                       </p>
                       <p className='mt-1 text-sm text-amber-800 dark:text-amber-200'>
-                        No es obligatoria para ingresar, pero es importante presentarla para que el gimnasio conozca antecedentes, apto médico y contactos preventivos.
+                        {t('socioDashboard.health.pendingDescription')}
                       </p>
                     </div>
                   </div>
@@ -702,7 +696,7 @@ const DashboardInitialContent = () => {
                     onClick={() => router.push('/dashboard/ficha-medica')}
                     className='rounded-md bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700'
                   >
-                    Cargar ficha médica
+                    {t('socioDashboard.health.upload')}
                   </button>
                 </div>
               </Card>
@@ -713,12 +707,12 @@ const DashboardInitialContent = () => {
                 <div className='mb-4 flex items-center justify-between gap-3'>
                   <div>
                     <p className='text-xs font-semibold uppercase tracking-[0.22em] text-sky-600 dark:text-sky-300'>
-                      Accesos rápidos
+                      {t('socioDashboard.common.quickAccessEyebrow')}
                     </p>
-                    <h2 className='text-lg font-bold'>Tu app del gimnasio</h2>
+                    <h2 className='text-lg font-bold'>{t('socioDashboard.quickActions.appTitle')}</h2>
                   </div>
                   <span className='rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 dark:bg-sky-950 dark:text-sky-200'>
-                    Mobile web
+                    {t('socioDashboard.common.mobileWeb')}
                   </span>
                 </div>
 
@@ -746,21 +740,15 @@ const DashboardInitialContent = () => {
                 </div>
 
                 <p className='mt-3 text-xs leading-5 text-muted-foreground'>
-                  Experiencia web responsive conectada a tu gimnasio. Podés usarla desde el navegador o como acceso directo PWA en el celular.
+                  {t('socioDashboard.quickActions.appDescription')}
                 </p>
               </Card>
             ) : null}
 
             <Card className='p-6 bg-gradient-to-r backdrop-blur-sm from-primary/5 via-primary/10 to-primary/5 border-primary/20'>
               <div className='flex items-start gap-3'>
-                <div className='w-2 h-2 mt-3 rounded-full animate-pulse bg-primary' />
-                <blockquote
-                  className={`text-lg sm:text-xl font-medium text-foreground leading-relaxed transition-all duration-300 ${
-                    isFading
-                      ? 'opacity-0 transform translate-y-2'
-                      : 'opacity-100 transform translate-y-0'
-                  }`}
-                >
+                <div className='w-2 h-2 mt-3 rounded-full bg-primary' />
+                <blockquote className='min-h-[4.5rem] text-lg font-medium leading-relaxed text-foreground sm:text-xl'>
                   &ldquo;{randomMotivation}&rdquo;
                 </blockquote>
               </div>

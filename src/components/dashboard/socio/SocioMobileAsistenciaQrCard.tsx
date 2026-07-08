@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import QrDisplayModal from '@/components/ui/qr-display';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type SocioMobileAsistenciaQrCardProps = {
   cuotaAlDia: boolean;
@@ -32,11 +33,12 @@ export default function SocioMobileAsistenciaQrCard({
   montoAdeudadoLabel = '$ 0',
 }: SocioMobileAsistenciaQrCardProps) {
   const router = useRouter();
+  const { t } = useI18n();
   const [qrOpen, setQrOpen] = useState(false);
 
   const statusCopy = cuotaAlDia
-    ? 'Tu cuota figura al día. Podés usar el QR para registrar tu ingreso o salida.'
-    : 'Tu cuota requiere revisión. Regularizá el pago para evitar alertas al ingresar.';
+    ? t('socioDashboard.fee.statusCopyOk')
+    : t('socioDashboard.fee.statusCopyPending');
 
   return (
     <>
@@ -45,13 +47,13 @@ export default function SocioMobileAsistenciaQrCard({
           <div className='flex items-start justify-between gap-3'>
             <div className='min-w-0'>
               <p className='text-xs font-semibold uppercase tracking-[0.22em] text-sky-200'>
-                Asistencia
+                {t('socioDashboard.attendance.eyebrow')}
               </p>
               <h2 className='mt-1 text-xl font-black leading-tight'>
-                QR de ingreso
+                {t('socioDashboard.attendance.title')}
               </h2>
               <p className='mt-2 text-sm leading-5 text-slate-300'>
-                Abrí tu acceso rápido para entrar al gimnasio y revisar tu estado antes de pasar por recepción.
+                {t('socioDashboard.attendance.description')}
               </p>
             </div>
             <div className='shrink-0 rounded-2xl bg-white/10 p-3 ring-1 ring-white/10'>
@@ -69,7 +71,7 @@ export default function SocioMobileAsistenciaQrCard({
               <div className='min-w-0 flex-1'>
                 <div className='flex flex-wrap items-center gap-2'>
                   <span className='text-sm font-bold'>
-                    {loadingEstadoCuota ? 'Consultando cuota...' : cuotaEstadoLabel}
+                    {loadingEstadoCuota ? t('socioDashboard.fee.checking') : cuotaEstadoLabel}
                   </span>
                   <span
                     className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${
@@ -78,7 +80,7 @@ export default function SocioMobileAsistenciaQrCard({
                         : 'bg-amber-300/15 text-amber-200'
                     }`}
                   >
-                    {cuotaAlDia ? 'Acceso habilitado' : 'Revisar acceso'}
+                    {cuotaAlDia ? t('socioDashboard.fee.enabledAccess') : t('socioDashboard.fee.reviewAccess')}
                   </span>
                 </div>
                 <p className='mt-1 text-xs leading-5 text-slate-300'>
@@ -90,7 +92,7 @@ export default function SocioMobileAsistenciaQrCard({
                     <p className='mt-0.5 font-bold text-slate-100'>{cuotaFechaLabel}</p>
                   </div>
                   <div className='rounded-xl bg-black/20 p-2'>
-                    <p className='text-slate-400'>{cuotaAlDia ? 'Deuda' : 'A regularizar'}</p>
+                    <p className='text-slate-400'>{cuotaAlDia ? t('socioDashboard.common.debt') : t('socioDashboard.common.regularize')}</p>
                     <p className='mt-0.5 font-bold text-slate-100'>
                       {cuotaAlDia ? '$ 0' : montoAdeudadoLabel}
                     </p>
@@ -111,8 +113,8 @@ export default function SocioMobileAsistenciaQrCard({
                 <ShieldCheck className='h-4 w-4 text-emerald-600' />
               </div>
               <div>
-                <p className='text-sm font-black'>Mostrar QR</p>
-                <p className='text-xs text-slate-600'>Acceso rápido</p>
+                <p className='text-sm font-black'>{t('socioDashboard.attendance.showQr')}</p>
+                <p className='text-xs text-slate-600'>{t('socioDashboard.attendance.quickAccess')}</p>
               </div>
             </button>
 
@@ -126,8 +128,8 @@ export default function SocioMobileAsistenciaQrCard({
                 <QrCode className='h-4 w-4 text-slate-300' />
               </div>
               <div>
-                <p className='text-sm font-black'>Escanear QR</p>
-                <p className='text-xs text-slate-300'>Control de asistencia</p>
+                <p className='text-sm font-black'>{t('socioDashboard.attendance.scanQr')}</p>
+                <p className='text-xs text-slate-300'>{t('socioDashboard.attendance.attendanceControl')}</p>
               </div>
             </button>
           </div>
@@ -139,7 +141,7 @@ export default function SocioMobileAsistenciaQrCard({
               className='flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-3 py-3 text-xs font-bold text-white transition active:scale-[0.98]'
             >
               <History className='h-4 w-4' />
-              Historial
+              {t('socioDashboard.common.history')}
             </button>
             <button
               type='button'
@@ -151,7 +153,7 @@ export default function SocioMobileAsistenciaQrCard({
               }`}
             >
               <CreditCard className='h-4 w-4' />
-              {cuotaAlDia ? 'Mi cuenta' : 'Pagar cuota'}
+              {cuotaAlDia ? t('socioDashboard.common.account') : t('socioDashboard.fee.payFee')}
             </button>
           </div>
         </div>

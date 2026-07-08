@@ -18,6 +18,7 @@ import { Card } from "@/components/ui/card";
 import { EvolucionSocio } from "@/interfaces/evolucionSocio.interface";
 import { getEvolucionesFisicas } from "@/services/evolucionSocioClient";
 import { formatFrontendDate } from "@/utils/dateFormat";
+import { useI18n } from "@/i18n/I18nProvider";
 
 type DeltaDirection = "lower" | "higher" | "neutral";
 
@@ -101,24 +102,25 @@ const getDateLabel = (value?: string | null) => {
   }
 };
 
-const buildSummary = (metrics: ProgressMetric[]) => {
+const buildSummary = (metrics: ProgressMetric[], t: (key: string) => string) => {
   const improvements = metrics.filter(
     (metric) => isImprovement(metric.delta, metric.direction) === true
   );
 
   if (improvements.length >= 3) {
-    return "Excelente evolución: bajaste medidas clave y ganaste masa muscular.";
+    return t("socioDashboard.progress.excellent");
   }
 
   if (improvements.length > 0) {
-    return "Buen progreso: ya hay señales positivas en tus mediciones.";
+    return t("socioDashboard.progress.good");
   }
 
-  return "Hay datos cargados. Sumá una nueva medición para ver mejor la tendencia.";
+  return t("socioDashboard.progress.addMeasurement");
 };
 
 export default function SocioEvolucionProgressInsights() {
   const router = useRouter();
+  const { t } = useI18n();
   const [rows, setRows] = useState<EvolucionSocio[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -138,7 +140,7 @@ export default function SocioEvolucionProgressInsights() {
       } catch {
         if (!cancelled) {
           setRows([]);
-          setError("No se pudo consultar tu evolución física ahora.");
+          setError(t("socioDashboard.progress.fetchError"));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -150,7 +152,7 @@ export default function SocioEvolucionProgressInsights() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   const orderedRows = useMemo(() => getOrderedRows(rows), [rows]);
   const initial = orderedRows.find((row) => row.es_registro_inicial) || orderedRows[0] || null;
@@ -161,7 +163,7 @@ export default function SocioEvolucionProgressInsights() {
 
     return [
       {
-        label: "Peso",
+        label: t("socioDashboard.progress.weight"),
         current: formatNumber(current.peso, " kg"),
         initial: formatNumber(initial.peso, " kg"),
         delta: delta(current.peso, initial.peso),
@@ -170,7 +172,7 @@ export default function SocioEvolucionProgressInsights() {
         icon: Scale,
       },
       {
-        label: "Cintura",
+        label: t("socioDashboard.progress.waist"),
         current: formatNumber(current.cintura, " cm"),
         initial: formatNumber(initial.cintura, " cm"),
         delta: delta(current.cintura, initial.cintura),
@@ -179,7 +181,7 @@ export default function SocioEvolucionProgressInsights() {
         icon: Ruler,
       },
       {
-        label: "% grasa",
+        label: t("socioDashboard.progress.bodyFat"),
         current: formatNumber(current.porcentaje_grasa, "%"),
         initial: formatNumber(initial.porcentaje_grasa, "%"),
         delta: delta(current.porcentaje_grasa, initial.porcentaje_grasa),
@@ -188,7 +190,7 @@ export default function SocioEvolucionProgressInsights() {
         icon: Percent,
       },
       {
-        label: "Músculo",
+        label: t("socioDashboard.progress.muscle"),
         current: formatNumber(current.masa_muscular, " kg"),
         initial: formatNumber(initial.masa_muscular, " kg"),
         delta: delta(current.masa_muscular, initial.masa_muscular),
@@ -197,9 +199,9 @@ export default function SocioEvolucionProgressInsights() {
         icon: Dumbbell,
       },
     ];
-  }, [current, initial]);
+  }, [current, initial, t]);
 
-  const summary = buildSummary(metrics);
+  const summary = buildSummary(metrics, t);
 
   if (loading) {
     return (
@@ -221,14 +223,14 @@ export default function SocioEvolucionProgressInsights() {
         <div className="flex items-start gap-3">
           <Activity className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
           <div className="min-w-0 flex-1">
-            <p className="font-semibold text-amber-900">Evolución física</p>
+            <p className="font-semibold text-amber-900">{t("socioDashboard.progress.title")}</p>
             <p className="mt-1 text-sm leading-5 text-amber-800">{error}</p>
             <button
               type="button"
               onClick={() => router.push("/dashboard/evolucion-fisica")}
               className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-amber-900"
             >
-              Abrir módulo
+              {t("socioDashboard.progress.openModule")}
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
@@ -246,22 +248,22 @@ export default function SocioEvolucionProgressInsights() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-violet-700 dark:text-violet-300">
-              Progreso físico
+              {t("socioDashboard.progress.eyebrow")}
             </p>
             <h2 className="mt-1 text-lg font-black text-slate-950 dark:text-white">
-              {current ? "Ya tenés tu primera medición" : "Todavía no hay mediciones"}
+              {current ? t("socioDashboard.progress.firstMeasurement") : t("socioDashboard.progress.noMeasurements")}
             </h2>
             <p className="mt-1 text-sm leading-5 text-slate-600 dark:text-slate-300">
               {current
-                ? "Cargá una segunda evolución para comparar peso, grasa, cintura y masa muscular."
-                : "Registrá tu evolución inicial para empezar a medir tu progreso real."}
+                ? t("socioDashboard.progress.firstMeasurementDescription")
+                : t("socioDashboard.progress.noMeasurementsDescription")}
             </p>
             <button
               type="button"
               onClick={() => router.push("/dashboard/evolucion-fisica")}
               className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white active:scale-[0.98]"
             >
-              Ir a evolución física
+              {t("socioDashboard.progress.goToEvolution")}
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
@@ -275,9 +277,9 @@ export default function SocioEvolucionProgressInsights() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-violet-200">
-            Progreso físico
+            {t("socioDashboard.progress.eyebrow")}
           </p>
-          <h2 className="mt-1 text-xl font-black">Tu cambio se nota</h2>
+          <h2 className="mt-1 text-xl font-black">{t("socioDashboard.progress.changeNoticeable")}</h2>
           <p className="mt-1 text-sm leading-5 text-slate-300">{summary}</p>
         </div>
         <div className="rounded-2xl bg-emerald-400/15 p-2 text-emerald-200">
@@ -309,7 +311,7 @@ export default function SocioEvolucionProgressInsights() {
                 <DeltaIcon className="h-3.5 w-3.5" />
                 {formatSigned(metric.delta, metric.suffix)}
               </div>
-              <p className="mt-1 text-[11px] text-slate-400">Inicial: {metric.initial}</p>
+              <p className="mt-1 text-[11px] text-slate-400">{t("socioDashboard.progress.initial", { value: metric.initial })}</p>
             </div>
           );
         })}
@@ -320,14 +322,14 @@ export default function SocioEvolucionProgressInsights() {
           <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">
             {getDateLabel(initial.fecha)} → {getDateLabel(current.fecha)}
           </p>
-          <p className="text-xs text-slate-300">{orderedRows.length} mediciones registradas</p>
+          <p className="text-xs text-slate-300">{t("socioDashboard.progress.registeredMeasurements", { count: orderedRows.length })}</p>
         </div>
         <button
           type="button"
           onClick={() => router.push("/dashboard/evolucion-fisica")}
           className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-2 text-xs font-bold text-slate-950 active:scale-[0.98]"
         >
-          Ver detalle
+          {t("socioDashboard.progress.viewDetail")}
           <ArrowRight className="h-3.5 w-3.5" />
         </button>
       </div>

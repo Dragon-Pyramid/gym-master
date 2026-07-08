@@ -15,13 +15,16 @@ import { Card } from '@/components/ui/card';
 import type { SocioMensaje } from '@/interfaces/socioMensaje.interface';
 import { getMisMensajesSocio } from '@/services/apiClient';
 import { formatFrontendDateTime } from '@/utils/dateFormat';
+import { useI18n } from '@/i18n/I18nProvider';
 
-const estadoLabel: Record<string, string> = {
-  pendiente: 'Pendiente',
-  leido: 'Leído por administración',
-  respondido: 'Respondido',
-  cerrado: 'Cerrado',
-};
+function getEstadoLabel(t: (key: string) => string): Record<string, string> {
+  return {
+    pendiente: t('socioDashboard.messages.statusPending'),
+    leido: t('socioDashboard.messages.statusRead'),
+    respondido: t('socioDashboard.messages.statusAnswered'),
+    cerrado: t('socioDashboard.messages.statusClosed'),
+  };
+}
 
 function getLatestMessage(messages: SocioMensaje[]): SocioMensaje | undefined {
   return [...messages].sort((a, b) => {
@@ -33,6 +36,7 @@ function getLatestMessage(messages: SocioMensaje[]): SocioMensaje | undefined {
 
 export default function SocioMobileMensajeriaSoporteCard() {
   const router = useRouter();
+  const { t } = useI18n();
   const [messages, setMessages] = useState<SocioMensaje[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,14 +52,14 @@ export default function SocioMobileMensajeriaSoporteCard() {
         if (cancelled) return;
 
         if (!response.ok) {
-          throw new Error(response.error || 'No se pudieron consultar los mensajes.');
+          throw new Error(response.error || t('socioDashboard.messages.fetchError'));
         }
 
         setMessages(response.data ?? []);
       } catch (err) {
         if (cancelled) return;
         setMessages([]);
-        setError(err instanceof Error ? err.message : 'No se pudieron consultar los mensajes.');
+        setError(err instanceof Error ? err.message : t('socioDashboard.messages.fetchError'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -66,7 +70,7 @@ export default function SocioMobileMensajeriaSoporteCard() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   const totals = useMemo(() => {
     return messages.reduce(
@@ -85,28 +89,28 @@ export default function SocioMobileMensajeriaSoporteCard() {
   const hasPending = totals.pendientes > 0;
 
   const statusLabel = loading
-    ? 'Consultando mensajes...'
+    ? t('socioDashboard.messages.loading')
     : error
-      ? 'No se pudo consultar'
+      ? t('socioDashboard.messages.unavailable')
       : hasResponses
-        ? 'Tenés respuestas para revisar'
+        ? t('socioDashboard.messages.answersReady')
         : hasPending
-          ? 'Consulta enviada'
+          ? t('socioDashboard.messages.requestSent')
           : totals.total > 0
-            ? 'Sin mensajes pendientes'
-            : 'Canal disponible';
+            ? t('socioDashboard.messages.noPending')
+            : t('socioDashboard.messages.channelAvailable');
 
   const statusDescription = loading
-    ? 'Estamos revisando tu bandeja de mensajes.'
+    ? t('socioDashboard.messages.loadingDescription')
     : error
-      ? 'Podés entrar igual a mensajes y volver a intentar desde allí.'
+      ? t('socioDashboard.messages.errorDescription')
       : hasResponses
-        ? 'Administración respondió una o más consultas. Revisá la bandeja cuando puedas.'
+        ? t('socioDashboard.messages.answersDescription')
         : hasPending
-          ? 'Tu consulta ya fue enviada al gimnasio. Te avisaremos cuando tenga respuesta.'
+          ? t('socioDashboard.messages.pendingDescription')
           : totals.total > 0
-            ? 'No tenés respuestas nuevas ni consultas pendientes.'
-            : 'Escribí al gimnasio por dudas de cuota, horarios, rutinas, reclamos o sugerencias.';
+            ? t('socioDashboard.messages.noPendingDescription')
+            : t('socioDashboard.messages.availableDescription');
 
   return (
     <Card className='overflow-hidden border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950/80'>
@@ -118,16 +122,16 @@ export default function SocioMobileMensajeriaSoporteCard() {
             </div>
             <div className='min-w-0'>
               <p className='text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200'>
-                Mensajería
+                {t('socioDashboard.messages.eyebrow')}
               </p>
-              <h2 className='mt-1 text-lg font-black'>Soporte del gimnasio</h2>
+              <h2 className='mt-1 text-lg font-black'>{t('socioDashboard.messages.title')}</h2>
               <p className='mt-1 text-sm leading-5 text-slate-300'>
-                Consultas, reclamos, sugerencias y respuestas de administración.
+                {t('socioDashboard.messages.description')}
               </p>
             </div>
           </div>
           <span className='shrink-0 rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-950'>
-            Socio
+            {t('socioDashboard.greeting.memberRole')}
           </span>
         </div>
       </div>
@@ -156,15 +160,15 @@ export default function SocioMobileMensajeriaSoporteCard() {
         <div className='grid grid-cols-3 gap-2 text-center'>
           <div className='rounded-2xl border border-slate-100 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/60'>
             <p className='text-lg font-black text-slate-950 dark:text-slate-50'>{loading ? '-' : totals.total}</p>
-            <p className='text-[11px] font-medium text-slate-500 dark:text-slate-400'>Total</p>
+            <p className='text-[11px] font-medium text-slate-500 dark:text-slate-400'>{t('socioDashboard.messages.total')}</p>
           </div>
           <div className='rounded-2xl border border-amber-100 bg-amber-50 p-3 dark:border-amber-900/70 dark:bg-amber-950/30'>
             <p className='text-lg font-black text-amber-700 dark:text-amber-300'>{loading ? '-' : totals.pendientes}</p>
-            <p className='text-[11px] font-medium text-amber-700/80 dark:text-amber-200/80'>Pendientes</p>
+            <p className='text-[11px] font-medium text-amber-700/80 dark:text-amber-200/80'>{t('socioDashboard.messages.pending')}</p>
           </div>
           <div className='rounded-2xl border border-cyan-100 bg-cyan-50 p-3 dark:border-cyan-900/70 dark:bg-cyan-950/30'>
             <p className='text-lg font-black text-cyan-700 dark:text-cyan-300'>{loading ? '-' : totals.respondidos}</p>
-            <p className='text-[11px] font-medium text-cyan-700/80 dark:text-cyan-200/80'>Respondidos</p>
+            <p className='text-[11px] font-medium text-cyan-700/80 dark:text-cyan-200/80'>{t('socioDashboard.messages.answered')}</p>
           </div>
         </div>
 
@@ -174,7 +178,7 @@ export default function SocioMobileMensajeriaSoporteCard() {
               <div className='min-w-0'>
                 <p className='truncate text-sm font-bold'>{latestMessage.asunto}</p>
                 <p className='mt-1 text-xs text-muted-foreground'>
-                  {estadoLabel[latestMessage.estado] ?? latestMessage.estado} · {formatFrontendDateTime(latestMessage.actualizado_en ?? latestMessage.creado_en)}
+                  {getEstadoLabel(t)[latestMessage.estado] ?? latestMessage.estado} · {formatFrontendDateTime(latestMessage.actualizado_en ?? latestMessage.creado_en)}
                 </p>
               </div>
               <span className='shrink-0 rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold'>
@@ -194,14 +198,14 @@ export default function SocioMobileMensajeriaSoporteCard() {
             className='flex items-center justify-center gap-2 rounded-xl bg-[#02a8e1] px-3 py-3 text-sm font-bold text-white shadow-sm transition active:scale-[0.98]'
           >
             <MessageSquarePlus className='h-4 w-4' />
-            Enviar consulta
+            {t('socioDashboard.messages.newMessage')}
           </button>
           <button
             type='button'
             onClick={() => router.push('/dashboard/mensajes')}
             className='flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold text-slate-900 shadow-sm transition active:scale-[0.98] dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100'
           >
-            Ver mensajes
+            {t('socioDashboard.messages.openInbox')}
             <ChevronRight className='h-4 w-4' />
           </button>
         </div>
