@@ -9,6 +9,9 @@ import {
   EstadoCuotaSocio,
 } from '@/interfaces/cuotaEstado.interface';
 import { getAdminCuotasEstadoSocios } from '@/services/apiClient';
+import { useI18n } from '@/i18n/I18nProvider';
+
+type TranslationFn = (key: string, params?: Record<string, string | number | boolean | null | undefined>) => string;
 
 function formatDate(value: string | null): string {
   if (!value) return '-';
@@ -31,7 +34,42 @@ function formatMoney(value: number): string {
   }).format(value);
 }
 
-function EstadoBadge({ estado }: { estado: EstadoCuotaSocio['estado_cuota'] }) {
+function estadoLabel(estado: EstadoCuotaSocio['estado_cuota'], t: TranslationFn) {
+  if (estado === 'al_dia') return t('adminDashboard.quotas.statusUpToDate');
+  if (estado === 'vencido') return t('adminDashboard.quotas.statusOverdue');
+  return t('adminDashboard.quotas.statusNoPayments');
+}
+
+function paymentMethodLabel(value: string | null | undefined, t: TranslationFn) {
+  const normalized = String(value ?? '').trim().toLowerCase();
+
+  if (!normalized) return '-';
+  if (normalized === 'efectivo') return t('adminDashboard.quotas.methodCash');
+  if (normalized === 'transferencia') return t('adminDashboard.quotas.methodTransfer');
+  if (normalized === 'stripe') return 'Stripe';
+  if (normalized === 'otro') return t('adminDashboard.quotas.methodOther');
+
+  return String(value).replace(/_/g, ' ');
+}
+
+function paymentStateLabel(value: string | null | undefined, t: TranslationFn) {
+  const normalized = String(value ?? '').trim().toLowerCase();
+
+  if (!normalized) return '-';
+  if (normalized === 'pagado') return t('adminDashboard.quotas.paymentPaid');
+  if (normalized === 'pendiente') return t('adminDashboard.quotas.paymentPending');
+  if (normalized === 'cancelado') return t('adminDashboard.quotas.paymentCancelled');
+
+  return String(value).replace(/_/g, ' ');
+}
+
+function EstadoBadge({
+  estado,
+  t,
+}: {
+  estado: EstadoCuotaSocio['estado_cuota'];
+  t: TranslationFn;
+}) {
   const className =
     estado === 'al_dia'
       ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
@@ -39,21 +77,24 @@ function EstadoBadge({ estado }: { estado: EstadoCuotaSocio['estado_cuota'] }) {
       ? 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300'
       : 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300';
 
-  const label =
-    estado === 'al_dia' ? 'Al día' : estado === 'vencido' ? 'Vencido' : 'Sin pagos';
-
   return (
     <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${className}`}>
-      {label}
+      {estadoLabel(estado, t)}
     </span>
   );
 }
 
-function SociosCriticosTable({ socios }: { socios: EstadoCuotaSocio[] }) {
+function SociosCriticosTable({
+  socios,
+  t,
+}: {
+  socios: EstadoCuotaSocio[];
+  t: TranslationFn;
+}) {
   if (socios.length === 0) {
     return (
       <div className='rounded-xl border border-dashed p-6 text-sm text-muted-foreground'>
-        No hay socios vencidos ni sin pagos para mostrar.
+        {t('adminDashboard.quotas.noCriticalMembers')}
       </div>
     );
   }
@@ -63,12 +104,12 @@ function SociosCriticosTable({ socios }: { socios: EstadoCuotaSocio[] }) {
       <table className='w-full min-w-[760px] text-sm'>
         <thead className='bg-muted/60 text-left'>
           <tr>
-            <th className='px-4 py-3 font-semibold'>Socio</th>
-            <th className='px-4 py-3 font-semibold'>Estado</th>
-            <th className='px-4 py-3 font-semibold'>Último pago</th>
-            <th className='px-4 py-3 font-semibold'>Cobertura hasta</th>
-            <th className='px-4 py-3 font-semibold'>Días vencido</th>
-            <th className='px-4 py-3 font-semibold'>Método</th>
+            <th className='px-4 py-3 font-semibold'>{t('adminDashboard.quotas.member')}</th>
+            <th className='px-4 py-3 font-semibold'>{t('adminDashboard.quotas.status')}</th>
+            <th className='px-4 py-3 font-semibold'>{t('adminDashboard.quotas.lastPayment')}</th>
+            <th className='px-4 py-3 font-semibold'>{t('adminDashboard.quotas.coverageUntil')}</th>
+            <th className='px-4 py-3 font-semibold'>{t('adminDashboard.quotas.daysOverdue')}</th>
+            <th className='px-4 py-3 font-semibold'>{t('adminDashboard.quotas.method')}</th>
           </tr>
         </thead>
         <tbody>
@@ -76,12 +117,12 @@ function SociosCriticosTable({ socios }: { socios: EstadoCuotaSocio[] }) {
             <tr key={socio.id_socio} className='border-t'>
               <td className='px-4 py-3 font-medium'>{socio.nombre_completo}</td>
               <td className='px-4 py-3'>
-                <EstadoBadge estado={socio.estado_cuota} />
+                <EstadoBadge estado={socio.estado_cuota} t={t} />
               </td>
               <td className='px-4 py-3'>{formatDate(socio.ultimo_pago)}</td>
               <td className='px-4 py-3'>{formatDate(socio.periodo_hasta)}</td>
               <td className='px-4 py-3'>{socio.dias_vencido}</td>
-              <td className='px-4 py-3 capitalize'>{socio.metodo_pago ?? '-'}</td>
+              <td className='px-4 py-3 capitalize'>{paymentMethodLabel(socio.metodo_pago, t)}</td>
             </tr>
           ))}
         </tbody>
@@ -91,6 +132,7 @@ function SociosCriticosTable({ socios }: { socios: EstadoCuotaSocio[] }) {
 }
 
 export default function CuotasEstadoDashboard() {
+  const { t } = useI18n();
   const [data, setData] = useState<AdminCuotasEstadoResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -104,7 +146,7 @@ export default function CuotasEstadoDashboard() {
     if (result.ok && result.data) {
       setData(result.data);
     } else {
-      setError(result.error || 'No se pudo obtener el estado de cuotas');
+      setError(result.error || t('adminDashboard.quotas.fetchError'));
     }
 
     setLoading(false);
@@ -135,10 +177,10 @@ export default function CuotasEstadoDashboard() {
     return (
       <Card className='md:col-span-2 xl:col-span-3'>
         <CardHeader>
-          <CardTitle>Estado de cuotas</CardTitle>
+          <CardTitle>{t('adminDashboard.quotas.title')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className='text-sm text-muted-foreground'>Cargando estado de cuotas...</p>
+          <p className='text-sm text-muted-foreground'>{t('adminDashboard.quotas.loading')}</p>
         </CardContent>
       </Card>
     );
@@ -150,10 +192,10 @@ export default function CuotasEstadoDashboard() {
         <CardHeader className='flex flex-row items-center justify-between gap-4'>
           <CardTitle className='flex items-center gap-2'>
             <AlertTriangle className='h-5 w-5 text-red-500' />
-            Estado de cuotas
+            {t('adminDashboard.quotas.title')}
           </CardTitle>
           <Button variant='outline' size='sm' className='w-full md:w-auto' onClick={fetchData}>
-            Reintentar
+            {t('adminDashboard.quotas.retry')}
           </Button>
         </CardHeader>
         <CardContent>
@@ -169,13 +211,13 @@ export default function CuotasEstadoDashboard() {
     <section className='min-w-0 space-y-4 md:col-span-2 xl:col-span-3'>
       <div className='flex flex-col gap-2 md:flex-row md:items-end md:justify-between'>
         <div>
-          <h2 className='text-xl font-bold sm:text-2xl'>Estado de cuotas</h2>
+          <h2 className='text-xl font-bold sm:text-2xl'>{t('adminDashboard.quotas.title')}</h2>
           <p className='text-sm text-muted-foreground'>
-            Control operativo de socios al día, vencidos y sin pagos.
+            {t('adminDashboard.quotas.description')}
           </p>
         </div>
         <Button variant='outline' size='sm' onClick={fetchData}>
-          Actualizar
+          {t('adminDashboard.quotas.refresh')}
         </Button>
       </div>
 
@@ -184,7 +226,7 @@ export default function CuotasEstadoDashboard() {
           <CardHeader className='pb-2'>
             <CardTitle className='flex items-center gap-2 text-sm font-medium'>
               <Users className='h-4 w-4' />
-              Total socios
+              {t('adminDashboard.quotas.totalMembers')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -196,7 +238,7 @@ export default function CuotasEstadoDashboard() {
           <CardHeader className='pb-2'>
             <CardTitle className='flex items-center gap-2 text-sm font-medium'>
               <CheckCircle2 className='h-4 w-4 text-emerald-500' />
-              Al día
+              {t('adminDashboard.quotas.upToDate')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -208,7 +250,7 @@ export default function CuotasEstadoDashboard() {
           <CardHeader className='pb-2'>
             <CardTitle className='flex items-center gap-2 text-sm font-medium'>
               <AlertTriangle className='h-4 w-4 text-red-500' />
-              Vencidos
+              {t('adminDashboard.quotas.overdue')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -220,7 +262,7 @@ export default function CuotasEstadoDashboard() {
           <CardHeader className='pb-2'>
             <CardTitle className='flex items-center gap-2 text-sm font-medium'>
               <AlertTriangle className='h-4 w-4 text-amber-500' />
-              Sin pagos
+              {t('adminDashboard.quotas.noPayments')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -232,7 +274,7 @@ export default function CuotasEstadoDashboard() {
           <CardHeader className='pb-2'>
             <CardTitle className='flex items-center gap-2 text-sm font-medium'>
               <DollarSign className='h-4 w-4' />
-              Cobrado QA/actual
+              {t('adminDashboard.quotas.collected')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -244,10 +286,10 @@ export default function CuotasEstadoDashboard() {
       <div className='grid grid-cols-1 gap-4 xl:grid-cols-3'>
         <Card className='xl:col-span-2'>
           <CardHeader>
-            <CardTitle>Socios con atención requerida</CardTitle>
+            <CardTitle>{t('adminDashboard.quotas.criticalMembers')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <SociosCriticosTable socios={sociosCriticos} />
+            <SociosCriticosTable socios={sociosCriticos} t={t} />
           </CardContent>
         </Card>
 
@@ -255,12 +297,12 @@ export default function CuotasEstadoDashboard() {
           <CardHeader>
             <CardTitle className='flex items-center gap-2'>
               <CreditCard className='h-5 w-5' />
-              Pagos por método
+              {t('adminDashboard.quotas.paymentsByMethod')}
             </CardTitle>
           </CardHeader>
           <CardContent className='space-y-3'>
             {data.pagos_por_metodo.length === 0 ? (
-              <p className='text-sm text-muted-foreground'>No hay pagos registrados.</p>
+              <p className='text-sm text-muted-foreground'>{t('adminDashboard.quotas.noRegisteredPayments')}</p>
             ) : (
               data.pagos_por_metodo.map((item) => (
                 <div
@@ -268,9 +310,12 @@ export default function CuotasEstadoDashboard() {
                   className='flex items-center justify-between gap-3 rounded-xl border p-3'
                 >
                   <div>
-                    <p className='font-semibold capitalize'>{item.metodo_pago}</p>
+                    <p className='font-semibold capitalize'>{paymentMethodLabel(item.metodo_pago, t)}</p>
                     <p className='text-xs text-muted-foreground'>
-                      {item.cantidad} pago(s) · {item.estado}
+                      {t('adminDashboard.quotas.paymentCountState', {
+                        count: item.cantidad,
+                        state: paymentStateLabel(item.estado, t),
+                      })}
                     </p>
                   </div>
                   <p className='font-bold'>{formatMoney(item.total_pagado)}</p>
