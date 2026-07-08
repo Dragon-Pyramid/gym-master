@@ -11,11 +11,14 @@ import {
 } from '@/lib/permissions/menuPermissions';
 import { getDragonPyramidLicenseSuspensionStatus } from '@/services/apiClient';
 import type { DragonPyramidSuspensionStatus } from '@/utils/dragonPyramidSuspension';
+import { useI18n } from '@/i18n/I18nProvider';
 
 function DashboardRouteLoading() {
+  const { t } = useI18n();
+
   return (
     <div className='flex min-h-screen items-center justify-center bg-background px-4 text-sm text-muted-foreground'>
-      Validando acceso...
+      {t('common.validatingAccess')}
     </div>
   );
 }

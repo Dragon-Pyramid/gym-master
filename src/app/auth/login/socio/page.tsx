@@ -5,6 +5,8 @@ export default function LoginSocioPage() {
     <GymMasterLoginForm
       title='Ingreso de Socio'
       description='Accedé directamente a tu cuenta de socio.'
+      titleKey='login.memberFormTitle'
+      descriptionKey='login.memberFormDescription'
       lockedRole='socio'
       allowedRoles={['socio']}
     />

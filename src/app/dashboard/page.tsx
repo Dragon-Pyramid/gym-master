@@ -58,6 +58,7 @@ import AsistenciasRecientesTable from '@/components/ui/asistencias-recientes-tab
 import ClockCard from '@/components/ui/ClockCard';
 import BienvenidaSocio from '@/components/ui/BienvenidaSocio';
 import { supabaseBrowser } from '@/lib/supabase-browser';
+import { useI18n } from '@/i18n/I18nProvider';
 import { getToken } from '@/services/storageService';
 import { getResolvedGimnasioBranding } from '@/utils/gimnasioBrandingClient';
 
@@ -166,6 +167,7 @@ interface MetricaHistogramaPagos {
 }
 
 export default function DashboardPage() {
+  const { t } = useI18n();
   const { user, isAuthenticated, initializeAuth, isInitialized } =
     useAuthStore();
   const router = useRouter();
@@ -555,7 +557,7 @@ export default function DashboardPage() {
   if (loadingDatos || !isInitialized) {
     return (
       <div className='flex items-center justify-center h-screen'>
-        Cargando dashboard...
+        {t('common.loadingDashboard')}
       </div>
     );
   }

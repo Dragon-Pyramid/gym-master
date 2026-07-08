@@ -28,6 +28,8 @@ import { useRouter } from 'next/navigation';
 import FechaHora from '../ui/FechaHora';
 import Image from 'next/image';
 import { useAuthStore } from '@/stores/authStore';
+import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
+import { useI18n } from '@/i18n/I18nProvider';
 
 function useDarkMode() {
   const [dark, setDark] = React.useState(false);
@@ -61,6 +63,7 @@ export const AppHeader = ({ title }: AppHeaderProps) => {
   const { user, logout } = useAuthStore();
   const { isMobile, setOpenMobile } = useSidebar();
   const { dark, toggle } = useDarkMode();
+  const { t } = useI18n();
 
   const handleLogout = () => {
     logout();
@@ -104,14 +107,16 @@ export const AppHeader = ({ title }: AppHeaderProps) => {
                   size='icon'
                   className='text-muted-foreground hover:text-foreground'
                   onClick={toggle}
-                  aria-label='Cambiar modo claro/oscuro'
+                  aria-label={t('header.toggleTheme')}
                 >
                   {dark ? <Moon className='h-5 w-5' /> : <Sun className='h-5 w-5' />}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>{dark ? 'Modo claro' : 'Modo oscuro'}</TooltipContent>
+              <TooltipContent>{dark ? t('header.lightMode') : t('header.darkMode')}</TooltipContent>
             </Tooltip>
           </TooltipProvider>
+
+          <LanguageSwitcher compact />
 
           <div className='hidden md:block'>
             <FechaHora />
@@ -125,12 +130,12 @@ export const AppHeader = ({ title }: AppHeaderProps) => {
                   size='icon'
                   className='text-muted-foreground hover:text-foreground'
                   onClick={handlePrimaryNavigation}
-                  aria-label={isMobile ? 'Abrir menú del dashboard' : 'Buscar'}
+                  aria-label={isMobile ? t('header.openMenu') : t('header.search')}
                 >
                   {isMobile ? <Menu className='h-5 w-5' /> : <Search className='h-5 w-5' />}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>{isMobile ? 'Abrir menú' : 'Buscar'}</TooltipContent>
+              <TooltipContent>{isMobile ? t('header.openMenu') : t('header.search')}</TooltipContent>
             </Tooltip>
           </TooltipProvider>
 
@@ -145,43 +150,43 @@ export const AppHeader = ({ title }: AppHeaderProps) => {
                       variant='ghost'
                       size='icon'
                       className='text-muted-foreground hover:text-foreground'
-                      aria-label='Abrir configuración'
+                      aria-label={t('header.settings')}
                     >
                       <Settings className='h-5 w-5' />
                     </Button>
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
-                <TooltipContent>Configuración</TooltipContent>
+                <TooltipContent>{t('header.settings')}</TooltipContent>
               </Tooltip>
             </TooltipProvider>
 
             <DropdownMenuContent align='end' className='w-56'>
-              <DropdownMenuLabel>Configuración</DropdownMenuLabel>
+              <DropdownMenuLabel>{t('header.settings')}</DropdownMenuLabel>
               <DropdownMenuSeparator />
 
               <DropdownMenuItem onClick={() => router.push('/dashboard/perfil')}>
                 <User className='h-4 w-4' />
-                Mi perfil
+                {t('header.profile')}
               </DropdownMenuItem>
 
               <DropdownMenuItem onClick={() => router.push('/dashboard/settings/preferences')}>
                 <SlidersHorizontal className='h-4 w-4' />
-                Preferencias
+                {t('header.preferences')}
               </DropdownMenuItem>
 
               <DropdownMenuItem onClick={() => router.push('/auth/change-password')}>
                 <Lock className='h-4 w-4' />
-                Cambiar contraseña
+                {t('header.changePassword')}
               </DropdownMenuItem>
 
               {isAdmin ? (
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => router.push('/dashboard/gimnasio-parametrizacion')}>
-                    Datos del gimnasio
+                    {t('header.gymData')}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => router.push('/dashboard/parametrizacion')}>
-                    Parametrización
+                    {t('header.parametrization')}
                   </DropdownMenuItem>
                 </>
               ) : null}
@@ -205,14 +210,14 @@ export const AppHeader = ({ title }: AppHeaderProps) => {
               <DropdownMenuSeparator />
 
               <DropdownMenuItem onClick={() => router.push('/dashboard/perfil')}>
-                Editar perfil
+                {t('header.editProfile')}
               </DropdownMenuItem>
 
               <DropdownMenuItem onClick={() => router.push('/dashboard/settings/preferences')}>
-                Preferencias
+                {t('header.preferences')}
               </DropdownMenuItem>
 
-              <DropdownMenuItem onClick={handleLogout}>Cerrar sesión</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout}>{t('header.logout')}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

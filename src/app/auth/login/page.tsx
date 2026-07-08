@@ -14,9 +14,12 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
+import { useI18n } from '@/i18n/I18nProvider';
 
 export default function LoginEntryPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const { isAuthenticated, initializeAuth, isInitialized, user } = useAuthStore();
 
   useEffect(() => {
@@ -27,7 +30,11 @@ export default function LoginEntryPage() {
   }, [initializeAuth, isAuthenticated, isInitialized, router, user?.must_change_password]);
 
   return (
-    <div className='flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-4'>
+    <div className='relative flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-4 py-10'>
+      <div className='absolute right-4 top-4'>
+        <LanguageSwitcher compact />
+      </div>
+
       <div className='relative h-52 w-52 md:h-64 md:w-64'>
         <Image
           src='/gm_logo.svg'
@@ -38,20 +45,30 @@ export default function LoginEntryPage() {
         />
       </div>
 
+      <div className='max-w-2xl text-center'>
+        <p className='text-sm font-semibold uppercase tracking-[0.24em] text-primary'>
+          {t('login.browserAuto')}
+        </p>
+        <h1 className='mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl'>
+          {t('login.entryTitle')}
+        </h1>
+        <p className='mt-2 text-sm text-muted-foreground sm:text-base'>
+          {t('login.entryDescription')}
+        </p>
+      </div>
+
       <div className='grid w-full max-w-3xl gap-4 md:grid-cols-2'>
         <Card className='border-primary/20'>
           <CardHeader>
             <CardTitle className='flex items-center gap-2'>
               <UserRound className='h-5 w-5' />
-              Ingreso de socios
+              {t('login.memberTitle')}
             </CardTitle>
-            <CardDescription>
-              Acceso directo para socios del gimnasio. No requiere seleccionar tipo de usuario.
-            </CardDescription>
+            <CardDescription>{t('login.memberDescription')}</CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild className='w-full'>
-              <Link href='/auth/login/socio'>Entrar como socio</Link>
+              <Link href='/auth/login/socio'>{t('login.memberAction')}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -60,15 +77,13 @@ export default function LoginEntryPage() {
           <CardHeader>
             <CardTitle className='flex items-center gap-2'>
               <ShieldCheck className='h-5 w-5' />
-              Administración
+              {t('login.adminTitle')}
             </CardTitle>
-            <CardDescription>
-              Acceso para administradores y usuarios internos del gimnasio.
-            </CardDescription>
+            <CardDescription>{t('login.adminDescription')}</CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild variant='outline' className='w-full'>
-              <Link href='/auth/login/admin'>Entrar al panel</Link>
+              <Link href='/auth/login/admin'>{t('login.adminAction')}</Link>
             </Button>
           </CardContent>
         </Card>

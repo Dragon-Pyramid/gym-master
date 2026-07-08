@@ -18,6 +18,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { getPasswordPolicyChecks } from '@/utils/passwordPolicy';
+import { useI18n } from '@/i18n/I18nProvider';
 
 function useDarkMode() {
   const [dark, setDark] = useState(false);
@@ -46,6 +47,7 @@ function ResetPasswordContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token') ?? '';
   const { dark, toggle } = useDarkMode();
+  const { t } = useI18n();
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -170,7 +172,7 @@ function ResetPasswordContent() {
 
         <CardContent>
           {validating ? (
-            <div className='py-8 text-center text-sm text-muted-foreground'>Validando enlace...</div>
+            <div className='py-8 text-center text-sm text-muted-foreground'>{t('login.validatingRecoveryLink')}</div>
           ) : tokenError ? (
             <div className='space-y-4'>
               <div className='rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-100'>
