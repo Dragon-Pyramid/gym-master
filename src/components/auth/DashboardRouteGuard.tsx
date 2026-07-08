@@ -35,6 +35,7 @@ function DashboardRouteSuspended({
   suspensionStatus: DragonPyramidSuspensionStatus;
 }) {
   const router = useRouter();
+  const { t } = useI18n();
   const logout = useAuthStore((state) => state.logout);
 
   const handleReload = () => {
@@ -54,7 +55,7 @@ function DashboardRouteSuspended({
         </div>
 
         <p className='text-xs font-black uppercase tracking-[0.28em] text-red-700 dark:text-red-200'>
-          Dragon Pyramid · Control de licencia
+          {t('auth.access.licenseControl')}
         </p>
         <h1 className='mt-3 text-2xl font-black tracking-tight text-red-800 dark:text-red-100 sm:text-3xl'>
           {suspensionStatus.title}
@@ -65,7 +66,7 @@ function DashboardRouteSuspended({
 
         {suspensionStatus.clientName ? (
           <div className='mx-auto mt-5 max-w-md rounded-2xl border border-red-200 bg-white/70 p-4 text-left text-sm dark:border-red-900/70 dark:bg-red-950/40'>
-            <p className='text-xs font-bold uppercase tracking-wide text-red-700 dark:text-red-200'>Cliente</p>
+            <p className='text-xs font-bold uppercase tracking-wide text-red-700 dark:text-red-200'>{t('auth.access.client')}</p>
             <p className='mt-1 font-black text-red-950 dark:text-red-50'>{suspensionStatus.clientName}</p>
           </div>
         ) : null}
@@ -85,25 +86,25 @@ function DashboardRouteSuspended({
             className='inline-flex h-11 items-center justify-center rounded-md border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-900 transition-colors hover:bg-red-50 dark:border-red-900/70 dark:bg-red-950/30 dark:text-red-100 dark:hover:bg-red-950/50'
           >
             <RefreshCcw className='mr-2 h-4 w-4' />
-            Reintentar
+            {t('auth.access.retry')}
           </button>
           <Link
             href='/auth/login/masteradmin'
             className='inline-flex h-11 items-center justify-center rounded-md bg-red-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-800 dark:bg-red-600 dark:hover:bg-red-500'
           >
-            Acceso Dragon Pyramid
+            {t('auth.access.dragonAccess')}
           </Link>
           <button
             type='button'
             onClick={handleChangeUser}
             className='inline-flex h-11 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-semibold transition-colors hover:bg-accent hover:text-accent-foreground'
           >
-            Cambiar usuario
+            {t('auth.access.changeUser')}
           </button>
         </div>
 
         <p className='mt-5 text-xs leading-5 text-red-900/70 dark:text-red-100/70'>
-          El bloqueo no afecta el acceso reservado Master Admin ni la sincronización interna de Dragon Pyramid para permitir regularización o reactivación del servicio.
+          {t('auth.access.suspensionNote')}
         </p>
       </section>
     </main>
@@ -115,6 +116,8 @@ function DashboardRouteUnauthorized({
 }: {
   permissionLabel?: string;
 }) {
+  const { t } = useI18n();
+
   return (
     <main className='flex min-h-screen items-center justify-center bg-background px-4 py-8'>
       <section className='w-full max-w-xl rounded-2xl border border-red-300 bg-red-50/95 p-6 text-center shadow-lg shadow-red-900/10 dark:border-red-900/70 dark:bg-red-950/80'>
@@ -123,14 +126,14 @@ function DashboardRouteUnauthorized({
         </div>
 
         <h1 className='text-2xl font-bold tracking-tight text-red-700 dark:text-red-200'>
-          USTED NO TIENE ACCESO A ESTE MENÚ
+          {t('auth.access.unauthorizedTitle')}
         </h1>
 
         <p className='mt-3 text-sm leading-6 text-red-900/80 dark:text-red-100/80'>
-          Tu usuario no tiene permisos para ingresar a esta sección del panel.
+          {t('auth.access.unauthorizedMessage')}
           {permissionLabel
-            ? ` Se requiere el módulo “${permissionLabel}”.`
-            : ' Solicitá a un administrador que revise tus permisos.'}
+            ? t('auth.access.unauthorizedPermission', { permission: permissionLabel })
+            : t('auth.access.unauthorizedFallback')}
         </p>
 
         <div className='mt-6 flex flex-col justify-center gap-3 sm:flex-row'>
@@ -138,13 +141,13 @@ function DashboardRouteUnauthorized({
             href='/dashboard'
             className='inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90'
           >
-            Volver al inicio
+            {t('auth.access.backHome')}
           </Link>
           <Link
             href='/auth/login'
             className='inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground'
           >
-            Cambiar usuario
+            {t('auth.access.changeUser')}
           </Link>
         </div>
       </section>

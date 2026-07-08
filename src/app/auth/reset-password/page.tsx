@@ -17,8 +17,10 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { getPasswordPolicyChecks } from '@/utils/passwordPolicy';
 import { useI18n } from '@/i18n/I18nProvider';
+import { translateAuthMessage } from '@/i18n/authErrorMessages';
 
 function useDarkMode() {
   const [dark, setDark] = useState(false);
@@ -61,7 +63,7 @@ function ResetPasswordContent() {
 
   useEffect(() => {
     if (!token) {
-      setTokenError('El enlace de recuperación no contiene token.');
+      setTokenError(t('auth.reset.missingToken'));
       setValidating(false);
       return;
     }
@@ -72,12 +74,12 @@ function ResetPasswordContent() {
       .then(async (response) => {
         const payload = await response.json().catch(() => ({}));
         if (!response.ok || !payload.valid) {
-          throw new Error(payload.message || 'El enlace no es válido o expiró');
+          throw new Error(payload.message || t('auth.reset.invalidLink'));
         }
         if (mounted) setEmailMasked(payload.email_masked ?? null);
       })
       .catch((error) => {
-        if (mounted) setTokenError(error.message || 'El enlace no es válido o expiró');
+        if (mounted) setTokenError(translateAuthMessage(error.message, t, 'auth.errors.recoveryLinkInvalid'));
       })
       .finally(() => {
         if (mounted) setValidating(false);
@@ -86,7 +88,7 @@ function ResetPasswordContent() {
     return () => {
       mounted = false;
     };
-  }, [token]);
+  }, [t, token]);
 
   const checks = useMemo(() => getPasswordPolicyChecks(password), [password]);
   const passwordsMatch = password === confirmPassword && confirmPassword.length > 0;
@@ -96,7 +98,7 @@ function ResetPasswordContent() {
     event.preventDefault();
 
     if (!isPasswordValid) {
-      toast.error('La contraseña debe cumplir todos los requisitos y coincidir.');
+      toast.error(t('auth.passwordPolicy.invalidToast'));
       return;
     }
 
@@ -111,13 +113,13 @@ function ResetPasswordContent() {
       const payload = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(payload.error || 'No se pudo restablecer la contraseña');
+        throw new Error(payload.error || t('auth.errors.passwordUpdateFailed'));
       }
 
       setDone(true);
-      toast.success(payload.message || 'Contraseña actualizada correctamente.');
+      toast.success(translateAuthMessage(payload.message, t, 'auth.success.passwordUpdated'));
     } catch (error: any) {
-      toast.error(error.message || 'No se pudo restablecer la contraseña');
+      toast.error(translateAuthMessage(error.message, t, 'auth.errors.passwordUpdateFailed'));
     } finally {
       setLoading(false);
     }
@@ -129,21 +131,22 @@ function ResetPasswordContent() {
         <Button variant='ghost' asChild>
           <Link href='/auth/login'>
             <ArrowLeft className='mr-2 h-4 w-4' />
-            Volver
+            {t('auth.common.back')}
           </Link>
         </Button>
       </div>
 
-      <div className='absolute right-4 top-4'>
+      <div className='absolute right-4 top-4 flex items-center gap-2'>
         <Button
           variant='ghost'
           size='icon'
           onClick={toggle}
-          aria-label='Cambiar modo claro/oscuro'
-          title='Cambiar modo claro/oscuro'
+          aria-label={t('auth.common.themeToggle')}
+          title={t('auth.common.themeToggle')}
         >
           {dark ? <Moon className='h-6 w-6' /> : <Sun className='h-6 w-6' />}
         </Button>
+        <LanguageSwitcher compact />
       </div>
 
       <div className='mb-2 text-center'>
@@ -163,10 +166,10 @@ function ResetPasswordContent() {
           <div className='mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary'>
             <LockKeyhole className='h-6 w-6' />
           </div>
-          <CardTitle>Crear nueva contraseña</CardTitle>
+          <CardTitle>{t('auth.reset.title')}</CardTitle>
           <CardDescription>
-            Definí una contraseña segura para volver a ingresar a Gym Master.
-            {emailMasked ? <span className='block'>Cuenta: {emailMasked}</span> : null}
+            {t('auth.reset.description')}
+            {emailMasked ? <span className='block'>{t('auth.reset.account', { email: emailMasked })}</span> : null}
           </CardDescription>
         </CardHeader>
 
@@ -179,22 +182,22 @@ function ResetPasswordContent() {
                 {tokenError}
               </div>
               <Button asChild className='w-full'>
-                <Link href='/auth/forgot-password'>Solicitar nuevo enlace</Link>
+                <Link href='/auth/forgot-password'>{t('auth.common.requestNewLink')}</Link>
               </Button>
             </div>
           ) : done ? (
             <div className='space-y-4'>
               <div className='rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-100'>
-                Tu contraseña fue actualizada correctamente. Ya podés iniciar sesión.
+                {t('auth.reset.successMessage')}
               </div>
               <Button asChild className='w-full'>
-                <Link href='/auth/login'>Ir al login</Link>
+                <Link href='/auth/login'>{t('auth.common.goToLogin')}</Link>
               </Button>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className='space-y-4'>
               <div className='grid gap-2'>
-                <Label htmlFor='password'>Nueva contraseña</Label>
+                <Label htmlFor='password'>{t('auth.reset.newPassword')}</Label>
                 <div className='relative'>
                   <Input
                     id='password'
@@ -211,7 +214,7 @@ function ResetPasswordContent() {
                     size='icon'
                     className='absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground'
                     onClick={() => setShowPassword((value) => !value)}
-                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    aria-label={showPassword ? t('auth.reset.hidePassword') : t('auth.reset.showPassword')}
                   >
                     {showPassword ? <EyeOff className='h-4 w-4' /> : <Eye className='h-4 w-4' />}
                   </Button>
@@ -219,7 +222,7 @@ function ResetPasswordContent() {
               </div>
 
               <div className='grid gap-2'>
-                <Label htmlFor='confirmPassword'>Confirmar contraseña</Label>
+                <Label htmlFor='confirmPassword'>{t('auth.reset.confirmPassword')}</Label>
                 <div className='relative'>
                   <Input
                     id='confirmPassword'
@@ -236,7 +239,7 @@ function ResetPasswordContent() {
                     size='icon'
                     className='absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground'
                     onClick={() => setShowConfirmPassword((value) => !value)}
-                    aria-label={showConfirmPassword ? 'Ocultar confirmación' : 'Mostrar confirmación'}
+                    aria-label={showConfirmPassword ? t('auth.reset.hideConfirmPassword') : t('auth.reset.showConfirmPassword')}
                   >
                     {showConfirmPassword ? <EyeOff className='h-4 w-4' /> : <Eye className='h-4 w-4' />}
                   </Button>
@@ -244,19 +247,19 @@ function ResetPasswordContent() {
               </div>
 
               <div className='rounded-lg border bg-muted/30 p-3 text-sm'>
-                <p className='mb-2 font-medium'>Requisitos de seguridad</p>
+                <p className='mb-2 font-medium'>{t('auth.passwordPolicy.title')}</p>
                 <div className='grid gap-1'>
-                  <span className={checks.minLength ? 'text-emerald-600' : 'text-red-600'}>• Mínimo 8 caracteres</span>
-                  <span className={checks.uppercase ? 'text-emerald-600' : 'text-red-600'}>• Al menos una mayúscula</span>
-                  <span className={checks.lowercase ? 'text-emerald-600' : 'text-red-600'}>• Al menos una minúscula</span>
-                  <span className={checks.number ? 'text-emerald-600' : 'text-red-600'}>• Al menos un número</span>
-                  <span className={checks.symbol ? 'text-emerald-600' : 'text-red-600'}>• Al menos un símbolo</span>
-                  <span className={passwordsMatch ? 'text-emerald-600' : 'text-red-600'}>• Ambas contraseñas coinciden</span>
+                  <span className={checks.minLength ? 'text-emerald-600' : 'text-red-600'}>• {t('auth.passwordPolicy.minLength')}</span>
+                  <span className={checks.uppercase ? 'text-emerald-600' : 'text-red-600'}>• {t('auth.passwordPolicy.uppercase')}</span>
+                  <span className={checks.lowercase ? 'text-emerald-600' : 'text-red-600'}>• {t('auth.passwordPolicy.lowercase')}</span>
+                  <span className={checks.number ? 'text-emerald-600' : 'text-red-600'}>• {t('auth.passwordPolicy.number')}</span>
+                  <span className={checks.symbol ? 'text-emerald-600' : 'text-red-600'}>• {t('auth.passwordPolicy.symbol')}</span>
+                  <span className={passwordsMatch ? 'text-emerald-600' : 'text-red-600'}>• {t('auth.passwordPolicy.match')}</span>
                 </div>
               </div>
 
               <Button type='submit' className='w-full' disabled={loading || !isPasswordValid}>
-                {loading ? 'Actualizando...' : 'Guardar nueva contraseña'}
+                {loading ? t('auth.reset.submitting') : t('auth.reset.submit')}
               </Button>
             </form>
           )}

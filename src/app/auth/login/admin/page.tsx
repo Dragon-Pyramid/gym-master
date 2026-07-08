@@ -3,8 +3,8 @@ import GymMasterLoginForm from '@/components/auth/GymMasterLoginForm';
 export default function LoginAdminPage() {
   return (
     <GymMasterLoginForm
-      title='Ingreso Administración'
-      description='Acceso para administradores y usuarios internos.'
+      title='Administration sign-in'
+      description='Access for administrators and internal users.'
       titleKey='login.adminFormTitle'
       descriptionKey='login.adminFormDescription'
       allowedRoles={['admin', 'usuario']}

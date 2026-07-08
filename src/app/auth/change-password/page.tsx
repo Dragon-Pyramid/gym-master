@@ -16,9 +16,12 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { getPasswordPolicyChecks } from '@/utils/passwordPolicy';
 import { getToken } from '@/services/storageService';
 import { useAuthStore } from '@/stores/authStore';
+import { useI18n } from '@/i18n/I18nProvider';
+import { translateAuthMessage } from '@/i18n/authErrorMessages';
 
 function useDarkMode() {
   const [dark, setDark] = useState(false);
@@ -47,6 +50,7 @@ function useDarkMode() {
 
 export default function ChangePasswordPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const {
     user,
     isAuthenticated,
@@ -81,14 +85,14 @@ export default function ChangePasswordPage() {
     event.preventDefault();
 
     if (!isPasswordValid) {
-      toast.error('La contraseña debe cumplir todos los requisitos y coincidir.');
+      toast.error(t('auth.passwordPolicy.invalidToast'));
       return;
     }
 
     const token = getToken();
 
     if (!token) {
-      toast.error('Sesión vencida. Volvé a iniciar sesión.');
+      toast.error(t('auth.errors.sessionExpired'));
       router.replace('/auth/login');
       return;
     }
@@ -108,14 +112,14 @@ export default function ChangePasswordPage() {
       const payload = await res.json().catch(() => ({}));
 
       if (!res.ok || !payload.token) {
-        throw new Error(payload.error || 'No se pudo actualizar la contraseña');
+        throw new Error(payload.error || t('auth.errors.passwordUpdateFailed'));
       }
 
       refreshSession(payload.token);
-      toast.success('Contraseña actualizada correctamente.');
+      toast.success(t('auth.success.passwordUpdated'));
       router.replace('/dashboard');
     } catch (error: any) {
-      toast.error(error.message || 'Error al cambiar contraseña');
+      toast.error(translateAuthMessage(error.message, t, 'auth.errors.passwordChangeFailed'));
     } finally {
       setLoading(false);
     }
@@ -129,16 +133,17 @@ export default function ChangePasswordPage() {
 
   return (
     <div className='relative flex min-h-screen flex-col items-center justify-center bg-background px-4'>
-      <div className='absolute right-4 top-4'>
+      <div className='absolute right-4 top-4 flex items-center gap-2'>
         <Button
           variant='ghost'
           size='icon'
           onClick={toggle}
-          aria-label='Cambiar modo claro/oscuro'
-          title='Cambiar modo claro/oscuro'
+          aria-label={t('auth.common.themeToggle')}
+          title={t('auth.common.themeToggle')}
         >
           {dark ? <Moon className='h-6 w-6' /> : <Sun className='h-6 w-6' />}
         </Button>
+        <LanguageSwitcher compact />
       </div>
 
       <div className='mb-2 text-center'>
@@ -158,18 +163,18 @@ export default function ChangePasswordPage() {
           <div className='mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary'>
             <LockKeyhole className='h-6 w-6' />
           </div>
-          <CardTitle>{isInitialPasswordChange ? 'Cambiá tu contraseña inicial' : 'Cambiar contraseña'}</CardTitle>
+          <CardTitle>{isInitialPasswordChange ? t('auth.changePassword.initialTitle') : t('auth.changePassword.title')}</CardTitle>
           <CardDescription>
             {isInitialPasswordChange
-              ? 'Tu usuario fue creado con una contraseña temporal. Para continuar, debés definir una contraseña personal y segura.'
-              : 'Actualizá tu contraseña personal manteniendo los requisitos de seguridad de Gym Master.'}
+              ? t('auth.changePassword.initialDescription')
+              : t('auth.changePassword.description')}
           </CardDescription>
         </CardHeader>
 
         <CardContent>
           <form onSubmit={handleSubmit} className='space-y-4'>
             <div className='grid gap-2'>
-              <Label htmlFor='password'>Nueva contraseña</Label>
+              <Label htmlFor='password'>{t('auth.reset.newPassword')}</Label>
               <div className='relative'>
                 <Input
                   id='password'
@@ -186,7 +191,7 @@ export default function ChangePasswordPage() {
                   size='icon'
                   className='absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground'
                   onClick={() => setShowPassword((value) => !value)}
-                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  aria-label={showPassword ? t('auth.reset.hidePassword') : t('auth.reset.showPassword')}
                 >
                   {showPassword ? <EyeOff className='h-4 w-4' /> : <Eye className='h-4 w-4' />}
                 </Button>
@@ -194,7 +199,7 @@ export default function ChangePasswordPage() {
             </div>
 
             <div className='grid gap-2'>
-              <Label htmlFor='confirmPassword'>Confirmar contraseña</Label>
+              <Label htmlFor='confirmPassword'>{t('auth.reset.confirmPassword')}</Label>
               <div className='relative'>
                 <Input
                   id='confirmPassword'
@@ -211,7 +216,7 @@ export default function ChangePasswordPage() {
                   size='icon'
                   className='absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground'
                   onClick={() => setShowConfirmPassword((value) => !value)}
-                  aria-label={showConfirmPassword ? 'Ocultar confirmación' : 'Mostrar confirmación'}
+                  aria-label={showConfirmPassword ? t('auth.reset.hideConfirmPassword') : t('auth.reset.showConfirmPassword')}
                 >
                   {showConfirmPassword ? <EyeOff className='h-4 w-4' /> : <Eye className='h-4 w-4' />}
                 </Button>
@@ -219,31 +224,31 @@ export default function ChangePasswordPage() {
             </div>
 
             <div className='rounded-lg border bg-muted/30 p-3 text-sm'>
-              <p className='mb-2 font-medium'>Requisitos de seguridad</p>
+              <p className='mb-2 font-medium'>{t('auth.passwordPolicy.title')}</p>
               <div className='grid gap-1'>
                 <span className={checks.minLength ? 'text-emerald-600' : 'text-red-600'}>
-                  • Mínimo 8 caracteres
+                  • {t('auth.passwordPolicy.minLength')}
                 </span>
                 <span className={checks.uppercase ? 'text-emerald-600' : 'text-red-600'}>
-                  • Al menos una mayúscula
+                  • {t('auth.passwordPolicy.uppercase')}
                 </span>
                 <span className={checks.lowercase ? 'text-emerald-600' : 'text-red-600'}>
-                  • Al menos una minúscula
+                  • {t('auth.passwordPolicy.lowercase')}
                 </span>
                 <span className={checks.number ? 'text-emerald-600' : 'text-red-600'}>
-                  • Al menos un número
+                  • {t('auth.passwordPolicy.number')}
                 </span>
                 <span className={checks.symbol ? 'text-emerald-600' : 'text-red-600'}>
-                  • Al menos un símbolo
+                  • {t('auth.passwordPolicy.symbol')}
                 </span>
                 <span className={passwordsMatch ? 'text-emerald-600' : 'text-red-600'}>
-                  • Ambas contraseñas coinciden
+                  • {t('auth.passwordPolicy.match')}
                 </span>
               </div>
             </div>
 
             <Button type='submit' className='w-full' disabled={loading}>
-              {loading ? 'Actualizando...' : 'Guardar nueva contraseña'}
+              {loading ? t('auth.reset.submitting') : t('auth.reset.submit')}
             </Button>
 
             <Button
@@ -255,7 +260,7 @@ export default function ChangePasswordPage() {
                 router.replace('/auth/login');
               }}
             >
-              Cambiar usuario
+              {t('auth.common.changeUser')}
             </Button>
           </form>
         </CardContent>
