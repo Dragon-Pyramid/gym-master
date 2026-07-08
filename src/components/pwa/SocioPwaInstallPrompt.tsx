@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuthStore } from '@/stores/authStore';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type BeforeInstallPromptChoice = {
   outcome: 'accepted' | 'dismissed';
@@ -60,6 +61,7 @@ function isStandaloneMode() {
 
 export function SocioPwaInstallPrompt() {
   const isMobile = useIsMobile();
+  const { t } = useI18n();
   const { user, isAuthenticated } = useAuthStore();
 
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
@@ -75,18 +77,18 @@ export function SocioPwaInstallPrompt() {
   const copy = useMemo(() => {
     if (isIos && !canInstallWithPrompt) {
       return {
-        title: 'Instalá Gym Master',
-        body: 'Abrilo como app desde el inicio del celular: Compartir y luego Agregar a inicio.',
-        action: 'Entendido',
+        title: t('socioDashboard.pwa.installTitle'),
+        body: t('socioDashboard.pwa.installIosBody'),
+        action: t('socioDashboard.pwa.understood'),
       };
     }
 
     return {
-      title: 'Instalá Gym Master',
-      body: 'Usalo como app para entrar más rápido a rutina, dieta, pagos y perfil.',
-      action: 'Instalar',
+      title: t('socioDashboard.pwa.installTitle'),
+      body: t('socioDashboard.pwa.installBody'),
+      action: t('socioDashboard.pwa.install'),
     };
-  }, [canInstallWithPrompt, isIos]);
+  }, [canInstallWithPrompt, isIos, t]);
 
   useEffect(() => {
     const syncInstalledState = () => {
@@ -209,7 +211,7 @@ export function SocioPwaInstallPrompt() {
               className='h-8 rounded-full px-3 text-xs'
               onClick={handleDismiss}
             >
-              Después
+              {t('socioDashboard.pwa.later')}
             </Button>
           </div>
         </div>
@@ -218,7 +220,7 @@ export function SocioPwaInstallPrompt() {
           type='button'
           className='rounded-full p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-900 dark:hover:text-slate-200'
           onClick={handleDismiss}
-          aria-label='Ocultar sugerencia de instalación'
+          aria-label={t('socioDashboard.pwa.hideInstall')}
         >
           <X className='h-4 w-4' aria-hidden='true' />
         </button>

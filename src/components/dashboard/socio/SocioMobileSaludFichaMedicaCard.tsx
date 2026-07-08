@@ -18,6 +18,7 @@ import type { FichaMedica } from '@/interfaces/fichaMedica.interface';
 import { getFichaMedicaActual } from '@/services/apiClient';
 import { useAuthStore } from '@/stores/authStore';
 import { formatFrontendDate } from '@/utils/dateFormat';
+import { useI18n } from '@/i18n/I18nProvider';
 
 function normalizeFicha(raw: unknown): FichaMedica | null {
   const value = Array.isArray(raw) ? raw[raw.length - 1] : raw;
@@ -35,8 +36,8 @@ function hasFichaData(ficha: FichaMedica | null) {
   });
 }
 
-function safeDateLabel(value?: Date | string | null) {
-  if (!value) return 'Sin fecha registrada';
+function safeDateLabel(value: Date | string | null | undefined, t: (key: string) => string) {
+  if (!value) return t('socioDashboard.health.noDate');
   try {
     return formatFrontendDate(String(value));
   } catch {
@@ -56,31 +57,35 @@ function isPastDate(value?: Date | string | null) {
   return date < today;
 }
 
-function compactText(value?: string | null, fallback = 'Sin datos') {
+function compactText(value: string | null | undefined, fallback: string) {
   const text = String(value ?? '').trim();
   if (!text) return fallback;
   return text.length > 56 ? `${text.slice(0, 56).trim()}...` : text;
 }
 
-function buildPreventiveItems(ficha: FichaMedica | null) {
+function buildPreventiveItems(
+  ficha: FichaMedica | null,
+  t: (key: string, params?: Record<string, string | number | boolean | null | undefined>) => string,
+) {
   if (!ficha) return [];
 
   const items: string[] = [];
 
-  if (ficha.alergias?.trim()) items.push(`Alergias: ${compactText(ficha.alergias)}`);
-  if (ficha.medicacion?.trim()) items.push(`Medicación: ${compactText(ficha.medicacion)}`);
-  if (ficha.lesiones_previas?.trim()) items.push(`Lesiones: ${compactText(ficha.lesiones_previas)}`);
+  if (ficha.alergias?.trim()) items.push(t('socioDashboard.health.allergies', { value: compactText(ficha.alergias, t('socioDashboard.health.noData')) }));
+  if (ficha.medicacion?.trim()) items.push(t('socioDashboard.health.medication', { value: compactText(ficha.medicacion, t('socioDashboard.health.noData')) }));
+  if (ficha.lesiones_previas?.trim()) items.push(t('socioDashboard.health.injuries', { value: compactText(ficha.lesiones_previas, t('socioDashboard.health.noData')) }));
   if (ficha.enfermedades_cronicas?.trim()) {
-    items.push(`Enfermedades crónicas: ${compactText(ficha.enfermedades_cronicas)}`);
+    items.push(t('socioDashboard.health.chronicDiseases', { value: compactText(ficha.enfermedades_cronicas, t('socioDashboard.health.noData')) }));
   }
-  if (ficha.problemas_cardiacos) items.push('Declaró problemas cardíacos.');
-  if (ficha.problemas_respiratorios) items.push('Declaró problemas respiratorios.');
+  if (ficha.problemas_cardiacos) items.push(t('socioDashboard.health.heartProblems'));
+  if (ficha.problemas_respiratorios) items.push(t('socioDashboard.health.respiratoryProblems'));
 
   return items.slice(0, 3);
 }
 
 export default function SocioMobileSaludFichaMedicaCard() {
   const router = useRouter();
+  const { t } = useI18n();
   const { user } = useAuthStore();
   const [ficha, setFicha] = useState<FichaMedica | null>(null);
   const [loading, setLoading] = useState(true);
@@ -105,7 +110,7 @@ export default function SocioMobileSaludFichaMedicaCard() {
         if (cancelled) return;
 
         if (!response.ok) {
-          throw new Error('No se pudo consultar la ficha médica.');
+          throw new Error(t('socioDashboard.health.fetchError'));
         }
 
         const normalized = normalizeFicha(response.data);
@@ -113,7 +118,7 @@ export default function SocioMobileSaludFichaMedicaCard() {
       } catch (err) {
         if (cancelled) return;
         setFicha(null);
-        setError(err instanceof Error ? err.message : 'No se pudo consultar la ficha médica.');
+        setError(err instanceof Error ? err.message : t('socioDashboard.health.fetchError'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -124,9 +129,9 @@ export default function SocioMobileSaludFichaMedicaCard() {
     return () => {
       cancelled = true;
     };
-  }, [socioId]);
+  }, [socioId, t]);
 
-  const preventiveItems = useMemo(() => buildPreventiveItems(ficha), [ficha]);
+  const preventiveItems = useMemo(() => buildPreventiveItems(ficha, t), [ficha, t]);
   const hasFicha = Boolean(ficha);
   const hasApproval = Boolean(ficha?.aprobacion_medica);
   const revisionOverdue = isPastDate(ficha?.proxima_revision);
@@ -140,9 +145,9 @@ export default function SocioMobileSaludFichaMedicaCard() {
           </div>
           <div>
             <p className='text-xs font-semibold uppercase tracking-[0.22em] text-rose-600 dark:text-rose-300'>
-              Mi salud
+              {t('socioDashboard.health.eyebrow')}
             </p>
-            <p className='mt-1 text-sm font-semibold'>Consultando ficha médica...</p>
+            <p className='mt-1 text-sm font-semibold'>{t('socioDashboard.health.loading')}</p>
           </div>
         </div>
       </Card>
@@ -155,14 +160,14 @@ export default function SocioMobileSaludFichaMedicaCard() {
         <div className='flex items-start gap-3'>
           <AlertCircle className='mt-0.5 h-5 w-5 shrink-0 text-amber-700 dark:text-amber-300' />
           <div className='min-w-0 flex-1'>
-            <p className='font-semibold text-amber-900 dark:text-amber-100'>No pudimos consultar tu ficha</p>
+            <p className='font-semibold text-amber-900 dark:text-amber-100'>{t('socioDashboard.health.errorTitle')}</p>
             <p className='mt-1 text-sm leading-5 text-amber-800 dark:text-amber-200'>{error}</p>
             <button
               type='button'
               onClick={() => router.push('/dashboard/ficha-medica')}
               className='mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-bold text-white active:scale-[0.98]'
             >
-              Abrir ficha médica
+              {t('socioDashboard.health.open')}
               <ChevronRight className='h-4 w-4' />
             </button>
           </div>
@@ -177,13 +182,13 @@ export default function SocioMobileSaludFichaMedicaCard() {
         <div className='flex items-start justify-between gap-3'>
           <div className='min-w-0'>
             <p className='text-xs font-semibold uppercase tracking-[0.22em] text-amber-700 dark:text-amber-300'>
-              Mi salud
+              {t('socioDashboard.health.eyebrow')}
             </p>
             <h2 className='mt-1 text-xl font-black leading-tight text-amber-950 dark:text-amber-50'>
-              Ficha médica pendiente
+              {t('socioDashboard.health.pendingTitle')}
             </h2>
             <p className='mt-2 text-sm leading-5 text-amber-800 dark:text-amber-200'>
-              Completala para que el gimnasio conozca antecedentes, lesiones, alergias y datos preventivos antes de entrenar.
+              {t('socioDashboard.health.pendingDescription')}
             </p>
           </div>
           <div className='shrink-0 rounded-2xl bg-amber-100 p-3 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200'>
@@ -196,7 +201,7 @@ export default function SocioMobileSaludFichaMedicaCard() {
           onClick={() => router.push('/dashboard/ficha-medica')}
           className='mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-amber-900/10 transition active:scale-[0.98]'
         >
-          Cargar ficha médica
+          {t('socioDashboard.health.upload')}
           <ChevronRight className='h-4 w-4' />
         </button>
       </Card>
@@ -208,11 +213,11 @@ export default function SocioMobileSaludFichaMedicaCard() {
       <div className='flex items-start justify-between gap-3'>
         <div className='min-w-0'>
           <p className='text-xs font-semibold uppercase tracking-[0.22em] text-rose-600 dark:text-rose-300'>
-            Mi salud
+            {t('socioDashboard.health.eyebrow')}
           </p>
-          <h2 className='mt-1 text-xl font-black leading-tight'>Ficha médica</h2>
+          <h2 className='mt-1 text-xl font-black leading-tight'>{t('socioDashboard.health.title')}</h2>
           <p className='mt-2 text-sm leading-5 text-muted-foreground'>
-            Resumen preventivo para entrenar con más seguridad.
+            {t('socioDashboard.health.description')}
           </p>
         </div>
         <div className='shrink-0 rounded-2xl bg-rose-100 p-3 text-rose-700 dark:bg-rose-950/40 dark:text-rose-200'>
@@ -224,31 +229,31 @@ export default function SocioMobileSaludFichaMedicaCard() {
         <div className={`rounded-2xl border p-3 ${hasApproval ? 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/20 dark:text-emerald-100' : 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-100'}`}>
           <div className='flex items-center gap-2'>
             {hasApproval ? <ShieldCheck className='h-4 w-4' /> : <AlertCircle className='h-4 w-4' />}
-            <span className='text-xs font-semibold uppercase'>Apto médico</span>
+            <span className='text-xs font-semibold uppercase'>{t('socioDashboard.health.approval')}</span>
           </div>
-          <p className='mt-1 text-sm font-black'>{hasApproval ? 'Presentado' : 'A revisar'}</p>
+          <p className='mt-1 text-sm font-black'>{hasApproval ? t('socioDashboard.health.presented') : t('socioDashboard.health.toReview')}</p>
         </div>
 
         <div className={`rounded-2xl border p-3 ${revisionOverdue ? 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-100' : 'border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-900 dark:bg-sky-950/20 dark:text-sky-100'}`}>
           <div className='flex items-center gap-2'>
             <CalendarDays className='h-4 w-4' />
-            <span className='text-xs font-semibold uppercase'>Revisión</span>
+            <span className='text-xs font-semibold uppercase'>{t('socioDashboard.health.review')}</span>
           </div>
-          <p className='mt-1 text-sm font-black'>{safeDateLabel(ficha?.proxima_revision)}</p>
+          <p className='mt-1 text-sm font-black'>{safeDateLabel(ficha?.proxima_revision, t)}</p>
         </div>
       </div>
 
       <div className='mt-4 grid grid-cols-3 gap-2 text-center'>
         <div className='rounded-2xl border border-border/70 bg-background/70 p-2'>
-          <p className='text-[11px] text-muted-foreground'>Peso</p>
+          <p className='text-[11px] text-muted-foreground'>{t('socioDashboard.health.weight')}</p>
           <p className='text-sm font-black'>{ficha?.peso ? `${ficha.peso} kg` : '—'}</p>
         </div>
         <div className='rounded-2xl border border-border/70 bg-background/70 p-2'>
-          <p className='text-[11px] text-muted-foreground'>Altura</p>
+          <p className='text-[11px] text-muted-foreground'>{t('socioDashboard.health.height')}</p>
           <p className='text-sm font-black'>{ficha?.altura ? `${ficha.altura} cm` : '—'}</p>
         </div>
         <div className='rounded-2xl border border-border/70 bg-background/70 p-2'>
-          <p className='text-[11px] text-muted-foreground'>IMC</p>
+          <p className='text-[11px] text-muted-foreground'>{t('socioDashboard.health.bmi')}</p>
           <p className='text-sm font-black'>{ficha?.imc ?? '—'}</p>
         </div>
       </div>
@@ -257,7 +262,7 @@ export default function SocioMobileSaludFichaMedicaCard() {
         <div className='mt-4 rounded-2xl border border-rose-100 bg-white/70 p-3 text-sm dark:border-rose-900/50 dark:bg-slate-950/40'>
           <div className='mb-2 flex items-center gap-2 font-bold'>
             <Stethoscope className='h-4 w-4 text-rose-600 dark:text-rose-300' />
-            Datos preventivos
+            {t('socioDashboard.health.preventiveData')}
           </div>
           <ul className='space-y-1.5 text-muted-foreground'>
             {preventiveItems.map((item) => (
@@ -270,7 +275,7 @@ export default function SocioMobileSaludFichaMedicaCard() {
         </div>
       ) : (
         <div className='mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-3 text-sm text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/20 dark:text-emerald-100'>
-          No hay alertas preventivas declaradas en la ficha actual.
+          {t('socioDashboard.health.noPreventiveAlerts')}
         </div>
       )}
 
@@ -279,7 +284,7 @@ export default function SocioMobileSaludFichaMedicaCard() {
         onClick={() => router.push('/dashboard/ficha-medica')}
         className='mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-rose-900/10 transition active:scale-[0.98]'
       >
-        Ver ficha médica
+        {t('socioDashboard.health.view')}
         <ChevronRight className='h-4 w-4' />
       </button>
     </Card>

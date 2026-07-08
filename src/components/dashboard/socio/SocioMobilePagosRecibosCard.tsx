@@ -21,6 +21,7 @@ import { getToken } from '@/services/storageService';
 import { formatFrontendDate } from '@/utils/dateFormat';
 import { descargarPagoReciboPdf } from '@/utils/pagoReciboPdf';
 import type { ResponsePago } from '@/interfaces/pago.interface';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type PagoSocio = {
   id: string;
@@ -85,14 +86,40 @@ function formatDate(value?: string | null) {
   }
 }
 
-function label(value?: string | null) {
+function normalizeText(value: unknown) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function localizeFeeDescription(
+  value: string | null | undefined,
+  locale: string,
+  t: (key: string) => string,
+) {
+  if (!value) return t('socioDashboard.payments.fee');
+  if (locale !== 'en') return value;
+
+  const normalized = normalizeText(value);
+  if (normalized.includes('cuota')) {
+    return t('socioDashboard.payments.membershipFee');
+  }
+
+  return value;
+}
+
+function label(value: string | null | undefined, t: (key: string) => string) {
   if (!value) return '-';
   if (value === 'stripe') return 'Stripe';
-  if (value === 'efectivo') return 'Efectivo';
-  if (value === 'transferencia') return 'Transferencia';
-  if (value === 'pagado') return 'Pagado';
-  if (value === 'pendiente') return 'Pendiente';
-  if (value === 'cancelado') return 'Cancelado';
+  if (value === 'efectivo') return t('socioDashboard.payments.cash');
+  if (value === 'transferencia') return t('socioDashboard.payments.transfer');
+  if (value === 'pagado') return t('socioDashboard.payments.paid');
+  if (value === 'pendiente') return t('socioDashboard.payments.pending');
+  if (value === 'cancelado') return t('socioDashboard.payments.cancelled');
   return value.replace(/_/g, ' ');
 }
 
@@ -104,19 +131,19 @@ function sortPayments(payments: PagoSocio[]) {
   });
 }
 
-function toReceiptPayload(pago: PagoSocio): ResponsePago {
+function toReceiptPayload(pago: PagoSocio, t: (key: string) => string): ResponsePago {
   return {
     ...pago,
     fecha_vencimiento: pago.fecha_vencimiento ?? pago.periodo_hasta ?? pago.fecha_pago,
     enviar_email: pago.enviar_email ?? false,
     socio: pago.socio ?? {
       id_socio: '',
-      nombre_completo: 'Socio',
+      nombre_completo: t('socioDashboard.greeting.memberRole'),
       email: null,
     },
     cuota: pago.cuota ?? {
       id: '',
-      descripcion: 'Cuota',
+      descripcion: t('socioDashboard.payments.fee'),
       monto: pago.monto_pagado,
       periodo: null,
     },
@@ -133,6 +160,7 @@ export default function SocioMobilePagosRecibosCard({
   montoAdeudadoLabel = '$ 0',
 }: SocioMobilePagosRecibosCardProps) {
   const router = useRouter();
+  const { t, locale } = useI18n();
   const [payments, setPayments] = useState<PagoSocio[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -154,14 +182,14 @@ export default function SocioMobilePagosRecibosCard({
         if (cancelled) return;
 
         if (!response.ok) {
-          throw new Error(payload.error || 'No se pudo obtener el historial de pagos.');
+          throw new Error(payload.error || t('socioDashboard.payments.fetchError'));
         }
 
         setPayments(Array.isArray(payload.data) ? payload.data : []);
       } catch (err) {
         if (cancelled) return;
         setPayments([]);
-        setError(err instanceof Error ? err.message : 'No se pudo obtener el historial de pagos.');
+        setError(err instanceof Error ? err.message : t('socioDashboard.payments.fetchError'));
       } finally {
         if (!cancelled) setLoadingPayments(false);
       }
@@ -172,7 +200,7 @@ export default function SocioMobilePagosRecibosCard({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   const sortedPayments = useMemo(() => sortPayments(payments), [payments]);
   const latestPayment = sortedPayments[0];
@@ -185,20 +213,20 @@ export default function SocioMobilePagosRecibosCard({
   const canDownloadReceipt = Boolean(latestPayment?.id && latestPayment?.estado !== 'cancelado');
 
   const statusDescription = loadingEstadoCuota
-    ? 'Estamos consultando tu estado de cuota.'
+    ? t('socioDashboard.payments.loadingDescription')
     : cuotaAlDia
-      ? 'Tu cuota figura al día. Revisá tus recibos y conservá el comprobante de tus pagos.'
-      : 'Tenés un importe pendiente. Regularizá tu cuota para mantener el acceso sin alertas.';
+      ? t('socioDashboard.payments.okDescription')
+      : t('socioDashboard.payments.pendingDescription');
 
   const handleDownloadLatestReceipt = async () => {
     if (!latestPayment) return;
 
     try {
       setDownloading(true);
-      await descargarPagoReciboPdf(toReceiptPayload(latestPayment));
-      toast.success('Recibo PDF generado correctamente');
+      await descargarPagoReciboPdf(toReceiptPayload(latestPayment, t));
+      toast.success(t('socioDashboard.payments.receiptSuccess'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'No se pudo generar el recibo PDF');
+      toast.error(err instanceof Error ? err.message : t('socioDashboard.payments.receiptError'));
     } finally {
       setDownloading(false);
     }
@@ -209,11 +237,11 @@ export default function SocioMobilePagosRecibosCard({
       <div className='flex items-start justify-between gap-3'>
         <div className='min-w-0'>
           <p className='text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700 dark:text-emerald-300'>
-            Pagos y recibos
+            {t('socioDashboard.payments.eyebrow')}
           </p>
-          <h2 className='mt-1 text-xl font-black leading-tight'>Mi cuenta</h2>
+          <h2 className='mt-1 text-xl font-black leading-tight'>{t('socioDashboard.payments.title')}</h2>
           <p className='mt-2 text-sm leading-5 text-muted-foreground'>
-            Consultá tu cuota, último pago y comprobantes desde el celular.
+            {t('socioDashboard.payments.description')}
           </p>
         </div>
         <div className='shrink-0 rounded-2xl bg-emerald-100 p-3 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-200'>
@@ -231,10 +259,10 @@ export default function SocioMobilePagosRecibosCard({
           <div className='min-w-0 flex-1'>
             <div className='flex items-center justify-between gap-2'>
               <p className='text-sm font-black'>
-                {loadingEstadoCuota ? 'Consultando cuota...' : cuotaEstadoLabel}
+                {loadingEstadoCuota ? t('socioDashboard.fee.checking') : cuotaEstadoLabel}
               </p>
               <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${cuotaAlDia ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200'}`}>
-                {cuotaAlDia ? 'Sin deuda' : montoAdeudadoLabel}
+                {cuotaAlDia ? t('socioDashboard.payments.noDebt') : montoAdeudadoLabel}
               </span>
             </div>
             <p className='mt-1 text-xs leading-5 opacity-80'>{statusDescription}</p>
@@ -250,36 +278,36 @@ export default function SocioMobilePagosRecibosCard({
         <div className='rounded-2xl border border-border/70 bg-background/90 p-3 dark:bg-slate-950/60'>
           <div className='mb-2 flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground'>
             <ReceiptText className='h-4 w-4' />
-            Último pago
+            {t('socioDashboard.payments.latestPayment')}
           </div>
           {loadingPayments ? (
             <div className='flex items-center gap-2 text-sm font-semibold text-muted-foreground'>
               <Loader2 className='h-4 w-4 animate-spin' />
-              Cargando...
+              {t('socioDashboard.payments.loading')}
             </div>
           ) : error ? (
-            <p className='text-sm font-semibold text-amber-700 dark:text-amber-300'>A revisar</p>
+            <p className='text-sm font-semibold text-amber-700 dark:text-amber-300'>{t('socioDashboard.payments.toReview')}</p>
           ) : latestPayment ? (
             <>
               <p className='text-base font-black'>{formatMoney(latestPayment.monto_pagado)}</p>
               <p className='mt-1 text-xs text-muted-foreground'>{formatDate(latestPayment.fecha_pago)}</p>
             </>
           ) : (
-            <p className='text-sm font-semibold text-muted-foreground'>Sin pagos</p>
+            <p className='text-sm font-semibold text-muted-foreground'>{t('socioDashboard.payments.noPayments')}</p>
           )}
         </div>
 
         <div className='rounded-2xl border border-border/70 bg-background/90 p-3 dark:bg-slate-950/60'>
           <div className='mb-2 flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground'>
             <History className='h-4 w-4' />
-            Historial
+            {t('socioDashboard.common.history')}
           </div>
           {loadingPayments ? (
-            <p className='text-sm font-semibold text-muted-foreground'>Consultando...</p>
+            <p className='text-sm font-semibold text-muted-foreground'>{t('socioDashboard.common.loading')}</p>
           ) : (
             <>
               <p className='text-base font-black'>{payments.length}</p>
-              <p className='mt-1 text-xs text-muted-foreground'>pagos registrados</p>
+              <p className='mt-1 text-xs text-muted-foreground'>{t('socioDashboard.payments.registeredPayments')}</p>
             </>
           )}
         </div>
@@ -290,12 +318,12 @@ export default function SocioMobilePagosRecibosCard({
           <div className='flex items-start gap-3'>
             <FileText className='mt-0.5 h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-300' />
             <div className='min-w-0'>
-              <p className='font-bold'>Último comprobante disponible</p>
+              <p className='font-bold'>{t('socioDashboard.payments.latestReceipt')}</p>
               <p className='mt-1 text-xs leading-5 text-muted-foreground'>
-                {latestPayment.cuota?.descripcion ?? 'Cuota'} · {label(latestPayment.metodo_pago)} · {label(latestPayment.estado)}
+                {localizeFeeDescription(latestPayment.cuota?.descripcion, locale, t)} · {label(latestPayment.metodo_pago, t)} · {label(latestPayment.estado, t)}
               </p>
               <p className='mt-1 text-xs leading-5 text-muted-foreground'>
-                Total histórico registrado: {formatMoney(totalPagado)}
+                {t('socioDashboard.payments.historicalTotal', { amount: formatMoney(totalPagado) })}
               </p>
             </div>
           </div>
@@ -304,7 +332,7 @@ export default function SocioMobilePagosRecibosCard({
 
       {error ? (
         <div className='mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200'>
-          {error}. Podés entrar al historial y volver a intentar desde allí.
+          {t('socioDashboard.payments.errorHelp', { error })}
         </div>
       ) : null}
 
@@ -319,8 +347,8 @@ export default function SocioMobilePagosRecibosCard({
             <ChevronRight className='h-4 w-4 opacity-60' />
           </div>
           <div>
-            <p className='text-sm font-black'>{cuotaAlDia ? 'Mi cuenta' : 'Pagar cuota'}</p>
-            <p className='text-xs opacity-75'>{cuotaAlDia ? 'Ver opciones' : 'Regularizar'}</p>
+            <p className='text-sm font-black'>{cuotaAlDia ? t('socioDashboard.common.account') : t('socioDashboard.fee.payFee')}</p>
+            <p className='text-xs opacity-75'>{cuotaAlDia ? t('socioDashboard.payments.viewOptions') : t('socioDashboard.quickActions.regularize')}</p>
           </div>
         </button>
 
@@ -334,8 +362,8 @@ export default function SocioMobilePagosRecibosCard({
             <ChevronRight className='h-4 w-4 opacity-60' />
           </div>
           <div>
-            <p className='text-sm font-black'>Historial</p>
-            <p className='text-xs opacity-75'>Pagos y recibos</p>
+            <p className='text-sm font-black'>{t('socioDashboard.common.history')}</p>
+            <p className='text-xs opacity-75'>{t('socioDashboard.payments.paymentsAndReceipts')}</p>
           </div>
         </button>
       </div>
@@ -347,7 +375,7 @@ export default function SocioMobilePagosRecibosCard({
         className='mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm font-bold text-emerald-800 shadow-sm transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-900 dark:bg-slate-950 dark:text-emerald-200'
       >
         {downloading ? <Loader2 className='h-4 w-4 animate-spin' /> : <Download className='h-4 w-4' />}
-        {hasPayments ? 'Descargar último recibo' : 'Sin recibos disponibles'}
+        {hasPayments ? t('socioDashboard.payments.downloadLatestReceipt') : t('socioDashboard.payments.noReceipts')}
       </button>
     </Card>
   );

@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuthStore } from '@/stores/authStore';
+import { useI18n } from '@/i18n/I18nProvider';
 
 const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
 const ONLINE_RESTORED_VISIBLE_MS = 4500;
@@ -25,6 +26,7 @@ function isStandaloneMode() {
 
 export function PwaConnectionUpdateBanner() {
   const isMobile = useIsMobile();
+  const { t } = useI18n();
   const { user, isAuthenticated } = useAuthStore();
 
   const [isOnline, setIsOnline] = useState(true);
@@ -183,8 +185,8 @@ export function PwaConnectionUpdateBanner() {
       return {
         kind: 'offline' as const,
         icon: WifiOff,
-        title: 'Sin conexión',
-        body: 'Podés seguir viendo contenido ya cargado. Algunas acciones volverán cuando tengas internet.',
+        title: t('socioDashboard.pwa.offlineTitle'),
+        body: t('socioDashboard.pwa.offlineBody'),
       };
     }
 
@@ -192,8 +194,8 @@ export function PwaConnectionUpdateBanner() {
       return {
         kind: 'update' as const,
         icon: RefreshCw,
-        title: 'Nueva versión disponible',
-        body: 'Actualizá Gym Master para usar la última versión de la app.',
+        title: t('socioDashboard.pwa.updateTitle'),
+        body: t('socioDashboard.pwa.updateBody'),
       };
     }
 
@@ -201,13 +203,13 @@ export function PwaConnectionUpdateBanner() {
       return {
         kind: 'online' as const,
         icon: CheckCircle2,
-        title: 'Conexión recuperada',
-        body: 'Ya podés seguir usando Gym Master normalmente.',
+        title: t('socioDashboard.pwa.onlineTitle'),
+        body: t('socioDashboard.pwa.onlineBody'),
       };
     }
 
     return null;
-  }, [isOnline, showOnlineRestored, updateReady]);
+  }, [isOnline, showOnlineRestored, t, updateReady]);
 
   if (!shouldTargetSocioPwa || !banner) return null;
 
@@ -246,7 +248,7 @@ export function PwaConnectionUpdateBanner() {
                 onClick={handleUpdateNow}
                 disabled={isRefreshing}
               >
-                {isRefreshing ? 'Actualizando...' : 'Actualizar'}
+                {isRefreshing ? t('socioDashboard.pwa.updating') : t('socioDashboard.pwa.update')}
               </Button>
               <Button
                 size='sm'
@@ -254,7 +256,7 @@ export function PwaConnectionUpdateBanner() {
                 className='h-8 rounded-full px-3 text-xs'
                 onClick={handleDismissUpdate}
               >
-                Después
+                {t('socioDashboard.pwa.later')}
               </Button>
             </div>
           ) : null}
@@ -265,7 +267,7 @@ export function PwaConnectionUpdateBanner() {
             type='button'
             className='rounded-full p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-900 dark:hover:text-slate-200'
             onClick={handleDismissUpdate}
-            aria-label='Ocultar aviso de actualización'
+            aria-label={t('socioDashboard.pwa.hideUpdate')}
           >
             <X className='h-4 w-4' aria-hidden='true' />
           </button>

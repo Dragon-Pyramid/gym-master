@@ -14,9 +14,10 @@ import type { ElementType } from 'react';
 
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuthStore } from '@/stores/authStore';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type SocioBottomNavItem = {
-  label: string;
+  labelKey: string;
   href: string;
   icon: ElementType;
   isActive: (pathname: string) => boolean;
@@ -24,19 +25,19 @@ type SocioBottomNavItem = {
 
 const socioBottomNavItems: SocioBottomNavItem[] = [
   {
-    label: 'Inicio',
+    labelKey: 'socioDashboard.bottomNav.home',
     href: '/dashboard',
     icon: Home,
     isActive: (pathname) => pathname === '/dashboard' || pathname === '/dashboard/',
   },
   {
-    label: 'Rutina',
+    labelKey: 'socioDashboard.bottomNav.routine',
     href: '/dashboard/rutinas/asistente',
     icon: Dumbbell,
     isActive: (pathname) => pathname.startsWith('/dashboard/rutinas'),
   },
   {
-    label: 'Dieta',
+    labelKey: 'socioDashboard.bottomNav.diet',
     href: '/dashboard/dietas',
     icon: Utensils,
     isActive: (pathname) =>
@@ -44,7 +45,7 @@ const socioBottomNavItems: SocioBottomNavItem[] = [
       pathname.startsWith('/dashboard/gestion-dietas'),
   },
   {
-    label: 'Pagos',
+    labelKey: 'socioDashboard.bottomNav.payments',
     href: '/dashboard/mi-cuenta/pagar-cuota',
     icon: CreditCard,
     isActive: (pathname) =>
@@ -53,7 +54,7 @@ const socioBottomNavItems: SocioBottomNavItem[] = [
       pathname.startsWith('/dashboard/cuotas'),
   },
   {
-    label: 'Perfil',
+    labelKey: 'socioDashboard.bottomNav.profile',
     href: '/dashboard/perfil',
     icon: UserRound,
     isActive: (pathname) => pathname.startsWith('/dashboard/perfil'),
@@ -62,6 +63,7 @@ const socioBottomNavItems: SocioBottomNavItem[] = [
 
 export function SocioMobileBottomNavigation() {
   const pathname = usePathname() ?? '';
+  const { t } = useI18n();
   const isMobile = useIsMobile();
   const { user, isAuthenticated } = useAuthStore();
 
@@ -80,7 +82,7 @@ export function SocioMobileBottomNavigation() {
 
   return (
     <nav
-      aria-label='Navegación principal del socio'
+      aria-label={t('socioDashboard.bottomNav.aria')}
       className='gm-pwa-bottom-nav fixed inset-x-0 bottom-0 z-[80] border-t border-slate-200 bg-white px-2 pb-[calc(0.55rem+env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_22px_rgba(15,23,42,0.12)] md:hidden dark:border-slate-800 dark:bg-slate-950'
     >
       <div className='mx-auto grid max-w-md grid-cols-5 gap-1'>
@@ -105,7 +107,7 @@ export function SocioMobileBottomNavigation() {
                 }`}
                 aria-hidden='true'
               />
-              <span className='max-w-full truncate leading-none'>{item.label}</span>
+              <span className='max-w-full truncate leading-none'>{t(item.labelKey)}</span>
             </Link>
           );
         })}

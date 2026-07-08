@@ -18,6 +18,7 @@ import { getDietasPorSocio, getHistorialRutinas } from '@/services/apiClient';
 import type { Dieta } from '@/interfaces/dieta.interface';
 import type { Rutina } from '@/interfaces/rutina.interface';
 import { formatFrontendDate } from '@/utils/dateFormat';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type TodayRoutineSummary = {
   rutina: Rutina;
@@ -55,6 +56,97 @@ const WEEKDAY_LABELS = [
   'domingo',
 ];
 
+const WEEKDAY_INDEX_MAP: Record<string, number> = {
+  lunes: 1,
+  martes: 2,
+  miercoles: 3,
+  miércoles: 3,
+  jueves: 4,
+  viernes: 5,
+  sabado: 6,
+  sábado: 6,
+  domingo: 7,
+};
+
+function translateWeekdayLabel(label: string, locale: string) {
+  const normalized = normalizeText(label);
+  const weekdayIndex = WEEKDAY_INDEX_MAP[normalized];
+  if (!weekdayIndex) return label;
+
+  const referenceDate = new Date(Date.UTC(2024, 0, weekdayIndex));
+  const localized = new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'es-AR', {
+    weekday: 'long',
+    timeZone: 'UTC',
+  }).format(referenceDate);
+
+  return localized.charAt(0).toUpperCase() + localized.slice(1);
+}
+
+function translateRoutineTitle(title: string, locale: string) {
+  if (locale !== 'en') return title;
+
+  const normalized = normalizeText(title);
+
+  if (normalized === 'plan automatico definicion') {
+    return 'Automatic plan - Definition';
+  }
+
+  let translated = title
+    .replace(/plan\s+autom[aá]tico/gi, 'Automatic plan')
+    .replace(/definici[oó]n/gi, 'Definition')
+    .replace(/^rutina\s+auto\b/i, 'Auto routine')
+    .replace(/^rutina\s+semana\b/i, 'Week routine')
+    .replace(/^rutina\b/i, 'Routine');
+
+  if (translated !== title) {
+    translated = translated
+      .replace(/\s+-\s+/g, ' - ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (translated.toUpperCase() === translated) {
+      translated = translated.toLowerCase().replace(/(^|[\s-])\p{L}/gu, (match) => match.toUpperCase());
+    }
+  }
+
+  return translated;
+}
+
+function translateDietLabel(value: string, locale: string) {
+  if (locale !== 'en') return value;
+
+  const normalized = normalizeText(value);
+
+  if (normalized === 'plan automatico definicion') {
+    return 'Automatic plan - Definition';
+  }
+
+  if (normalized === 'definicion') {
+    return 'Definition';
+  }
+
+  let translated = value
+    .replace(/plan\s+autom[aá]tico/gi, 'Automatic plan')
+    .replace(/definici[oó]n/gi, 'Definition')
+    .replace(/volumen/gi, 'Volume')
+    .replace(/mantenimiento/gi, 'Maintenance')
+    .replace(/descenso\s+de\s+peso/gi, 'Weight loss')
+    .replace(/p[eé]rdida\s+de\s+grasa/gi, 'Fat loss');
+
+  if (translated !== value) {
+    translated = translated
+      .replace(/\s+-\s+/g, ' - ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (translated.toUpperCase() === translated) {
+      translated = translated.toLowerCase().replace(/(^|[\s-])\p{L}/gu, (match) => match.toUpperCase());
+    }
+  }
+
+  return translated;
+}
+
 function normalizeText(value: unknown) {
   return String(value ?? '')
     .normalize('NFD')
@@ -76,26 +168,26 @@ function parseMaybeJson(value: unknown) {
   }
 }
 
-function getRoutineTitle(rutina?: Rutina | null) {
-  if (!rutina) return 'Sin rutina activa';
-  if (rutina.nombre) return rutina.nombre;
-  if (rutina.semana) return `Rutina semana ${rutina.semana}`;
-  return `Rutina #${rutina.id_rutina}`;
+function getRoutineTitle(rutina: Rutina | null | undefined, t: (key: string, params?: Record<string, string | number | boolean | null | undefined>) => string, locale: string) {
+  if (!rutina) return t('socioDashboard.todayPlan.noActiveRoutine');
+  if (rutina.nombre) return translateRoutineTitle(rutina.nombre, locale);
+  if (rutina.semana) return t('socioDashboard.todayPlan.routineWeek', { week: rutina.semana });
+  return t('socioDashboard.todayPlan.routineId', { id: rutina.id_rutina });
 }
 
-function getDayNameFromRoutineDay(dayData: any, index: number) {
+function getDayNameFromRoutineDay(dayData: any, index: number, t: (key: string, params?: Record<string, string | number | boolean | null | undefined>) => string) {
   const directName =
     dayData?.dia ?? dayData?.nombre_dia ?? dayData?.dia_semana ?? dayData?.nombre;
 
   if (typeof directName === 'number') {
-    return WEEKDAY_LABELS[directName - 1] ?? `día ${directName}`;
+    return WEEKDAY_LABELS[directName - 1] ?? t('socioDashboard.todayPlan.dayNumber', { day: directName });
   }
 
   if (typeof directName === 'string' && directName.trim()) {
     return directName;
   }
 
-  return WEEKDAY_LABELS[index] ?? `día ${index + 1}`;
+  return WEEKDAY_LABELS[index] ?? t('socioDashboard.todayPlan.dayNumber', { day: index + 1 });
 }
 
 function getExercisesFromDay(dayData: any): any[] {
@@ -115,7 +207,7 @@ function getExercisesFromDay(dayData: any): any[] {
   return [];
 }
 
-function extractRoutineDays(rutina: Rutina) {
+function extractRoutineDays(rutina: Rutina, t: (key: string, params?: Record<string, string | number | boolean | null | undefined>) => string) {
   const parsed = parseMaybeJson(rutina.rutina_desc ?? rutina.contenido);
 
   if (!parsed || typeof parsed !== 'object') return [];
@@ -124,7 +216,7 @@ function extractRoutineDays(rutina: Rutina) {
 
   if (Array.isArray(parsedRecord.dias)) {
     return parsedRecord.dias.map((dayData: any, index: number) => ({
-      label: getDayNameFromRoutineDay(dayData, index),
+      label: getDayNameFromRoutineDay(dayData, index, t),
       exercises: getExercisesFromDay(dayData),
     }));
   }
@@ -148,21 +240,21 @@ function extractRoutineDays(rutina: Rutina) {
   return [];
 }
 
-function buildTodayRoutineSummary(rutinas: Rutina[]): TodayRoutineSummary | null {
+function buildTodayRoutineSummary(rutinas: Rutina[], t: (key: string, params?: Record<string, string | number | boolean | null | undefined>) => string, locale: string): TodayRoutineSummary | null {
   const latest = rutinas[0];
   if (!latest) return null;
 
   const todayLabel = DAY_LABELS[new Date().getDay()];
   const todayNormalized = normalizeText(todayLabel);
-  const days = extractRoutineDays(latest);
+  const days = extractRoutineDays(latest, t);
   const todayDay = days.find((day) => normalizeText(day.label) === todayNormalized);
   const fallbackDay = days[0];
   const selectedDay = todayDay ?? fallbackDay;
 
   return {
     rutina: latest,
-    title: getRoutineTitle(latest),
-    dayLabel: selectedDay?.label ?? todayLabel,
+    title: getRoutineTitle(latest, t, locale),
+    dayLabel: translateWeekdayLabel(selectedDay?.label ?? todayLabel, locale),
     exerciseCount: selectedDay?.exercises?.length ?? 0,
     fallbackToLatest: !todayDay,
   };
@@ -185,8 +277,8 @@ function isDateWithinRange(date: Date, start?: string | null, end?: string | nul
   return Boolean(startDate || endDate);
 }
 
-function formatDateSafe(value?: string | null) {
-  if (!value) return 'sin fecha';
+function formatDateSafe(value: string | null | undefined, t: (key: string) => string) {
+  if (!value) return t('socioDashboard.todayPlan.noDate');
   try {
     return formatFrontendDate(value);
   } catch {
@@ -217,7 +309,7 @@ function getTodayStorageKey(dietaId: string | number) {
   return `gym-master:dieta-followup:${dietaId}:${year}-${month}-${day}`;
 }
 
-function getDietFollowupLabel(dieta?: Dieta | null) {
+function getDietFollowupLabel(dieta: Dieta | null | undefined, t: (key: string, params?: Record<string, string | number | boolean | null | undefined>) => string) {
   if (!dieta || typeof window === 'undefined') return null;
   const total = countDietMeals(dieta.observaciones);
   if (!total) return null;
@@ -226,13 +318,13 @@ function getDietFollowupLabel(dieta?: Dieta | null) {
     const raw = window.localStorage.getItem(getTodayStorageKey(dieta.id));
     const completedMeals = raw ? JSON.parse(raw)?.completedMeals : [];
     const completed = Array.isArray(completedMeals) ? completedMeals.length : 0;
-    return `${Math.min(completed, total)}/${total} comidas hoy`;
+    return t('socioDashboard.todayPlan.mealsToday', { completed: Math.min(completed, total), total });
   } catch {
-    return `0/${total} comidas hoy`;
+    return t('socioDashboard.todayPlan.mealsToday', { completed: 0, total });
   }
 }
 
-function buildTodayDietSummary(dietas: Dieta[]): TodayDietSummary | null {
+function buildTodayDietSummary(dietas: Dieta[], t: (key: string, params?: Record<string, string | number | boolean | null | undefined>) => string, locale: string): TodayDietSummary | null {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -245,15 +337,16 @@ function buildTodayDietSummary(dietas: Dieta[]): TodayDietSummary | null {
 
   return {
     dieta: latest,
-    title: latest.nombre_plan || 'Plan alimentario',
-    objective: latest.objetivo || 'Objetivo no especificado',
-    periodLabel: `${formatDateSafe(latest.fecha_inicio)} al ${formatDateSafe(latest.fecha_fin)}`,
+    title: latest.nombre_plan ? translateDietLabel(latest.nombre_plan, locale) : t('socioDashboard.todayPlan.foodPlan'),
+    objective: latest.objetivo ? translateDietLabel(latest.objetivo, locale) : t('socioDashboard.todayPlan.unspecifiedGoal'),
+    periodLabel: t('socioDashboard.todayPlan.dateRange', { start: formatDateSafe(latest.fecha_inicio, t), end: formatDateSafe(latest.fecha_fin, t) }),
     isActiveToday: Boolean(active),
   };
 }
 
 export default function SocioMobileTodayPlan() {
   const router = useRouter();
+  const { t, locale } = useI18n();
   const { user } = useAuthStore();
   const socioId = user?.id_socio ?? user?.id;
   const [rutinas, setRutinas] = useState<Rutina[]>([]);
@@ -293,7 +386,7 @@ export default function SocioMobileTodayPlan() {
         );
       } catch {
         if (!cancelled) {
-          setError('No pudimos cargar tu rutina y dieta en este momento.');
+          setError(t('socioDashboard.todayPlan.error'));
           setRutinas([]);
           setDietas([]);
         }
@@ -307,13 +400,13 @@ export default function SocioMobileTodayPlan() {
     return () => {
       cancelled = true;
     };
-  }, [socioId]);
+  }, [socioId, t]);
 
-  const routineSummary = useMemo(() => buildTodayRoutineSummary(rutinas), [rutinas]);
-  const dietSummary = useMemo(() => buildTodayDietSummary(dietas), [dietas]);
+  const routineSummary = useMemo(() => buildTodayRoutineSummary(rutinas, t, locale), [locale, rutinas, t]);
+  const dietSummary = useMemo(() => buildTodayDietSummary(dietas, t, locale), [dietas, locale, t]);
   const dietFollowupLabel = useMemo(
-    () => getDietFollowupLabel(dietSummary?.dieta),
-    [dietSummary]
+    () => getDietFollowupLabel(dietSummary?.dieta, t),
+    [dietSummary, t]
   );
 
   return (
@@ -322,11 +415,11 @@ export default function SocioMobileTodayPlan() {
         <div className='flex items-start justify-between gap-3'>
           <div>
             <p className='text-xs font-semibold uppercase tracking-[0.22em] text-sky-200'>
-              Hoy
+              {t('socioDashboard.todayPlan.eyebrow')}
             </p>
-            <h2 className='mt-1 text-lg font-black'>Tu plan de acción</h2>
+            <h2 className='mt-1 text-lg font-black'>{t('socioDashboard.todayPlan.title')}</h2>
             <p className='mt-1 text-xs text-slate-300'>
-              Entrenamiento, nutrición y coach IA en un solo lugar.
+              {t('socioDashboard.todayPlan.description')}
             </p>
           </div>
           <div className='rounded-2xl bg-white/10 p-2'>
@@ -339,7 +432,7 @@ export default function SocioMobileTodayPlan() {
         {loading ? (
           <div className='flex items-center gap-2 rounded-2xl border bg-white px-4 py-4 text-sm text-muted-foreground dark:bg-slate-950'>
             <Loader2 className='h-4 w-4 animate-spin' />
-            Consultando tu rutina y dieta...
+            {t('socioDashboard.todayPlan.loading')}
           </div>
         ) : error ? (
           <div className='rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900'>
@@ -360,14 +453,14 @@ export default function SocioMobileTodayPlan() {
                 </span>
                 <span className='min-w-0'>
                   <span className='block text-sm font-black text-orange-950 dark:text-orange-100'>
-                    {routineSummary ? routineSummary.title : 'Sin rutina asignada'}
+                    {routineSummary ? routineSummary.title : t('socioDashboard.todayPlan.noRoutine')}
                   </span>
                   <span className='mt-0.5 block text-xs leading-5 text-orange-800/80 dark:text-orange-200/80'>
                     {routineSummary
                       ? routineSummary.exerciseCount > 0
-                        ? `${routineSummary.dayLabel}: ${routineSummary.exerciseCount} ejercicios${routineSummary.fallbackToLatest ? ' de tu última rutina' : ''}`
-                        : 'Última rutina disponible para consultar'
-                      : 'Generá o solicitá una rutina desde el asistente'}
+                        ? `${routineSummary.dayLabel}: ${t('socioDashboard.todayPlan.exercises', { count: routineSummary.exerciseCount })}${routineSummary.fallbackToLatest ? ` ${t('socioDashboard.todayPlan.fromLatestRoutine')}` : ''}`
+                        : t('socioDashboard.todayPlan.latestRoutine')
+                      : t('socioDashboard.todayPlan.requestRoutine')}
                   </span>
                 </span>
               </span>
@@ -385,12 +478,12 @@ export default function SocioMobileTodayPlan() {
                 </span>
                 <span className='min-w-0'>
                   <span className='block text-sm font-black text-lime-950 dark:text-lime-100'>
-                    {dietSummary ? dietSummary.title : 'Sin dieta asignada'}
+                    {dietSummary ? dietSummary.title : t('socioDashboard.todayPlan.noDiet')}
                   </span>
                   <span className='mt-0.5 block text-xs leading-5 text-lime-800/80 dark:text-lime-200/80'>
                     {dietSummary
-                      ? `${dietSummary.isActiveToday ? 'Activa' : 'Última registrada'} · ${dietSummary.objective} · ${dietSummary.periodLabel}${dietFollowupLabel ? ` · ${dietFollowupLabel}` : ''}`
-                      : 'Consultá o generá un plan alimentario'}
+                      ? `${dietSummary.isActiveToday ? t('socioDashboard.todayPlan.active') : t('socioDashboard.todayPlan.latestRegistered')} · ${dietSummary.objective} · ${dietSummary.periodLabel}${dietFollowupLabel ? ` · ${dietFollowupLabel}` : ''}`
+                      : t('socioDashboard.todayPlan.consultFoodPlan')}
                   </span>
                 </span>
               </span>
@@ -406,7 +499,7 @@ export default function SocioMobileTodayPlan() {
             className='flex items-center justify-center gap-2 rounded-xl bg-[#02a8e1] px-3 py-2.5 text-xs font-bold text-white shadow-sm active:scale-[0.98]'
           >
             <Dumbbell className='h-4 w-4' />
-            Asistente
+            {t('socioDashboard.common.assistant')}
           </button>
           <button
             type='button'
@@ -414,19 +507,19 @@ export default function SocioMobileTodayPlan() {
             className='flex items-center justify-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-xs font-bold text-sky-900 shadow-sm active:scale-[0.98] dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-100'
           >
             <Bot className='h-4 w-4' />
-            Coach IA
+            {t('socioDashboard.common.coach')}
           </button>
         </div>
 
         {routineSummary || dietSummary ? (
           <div className='flex items-center gap-2 rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/20 dark:text-emerald-100'>
             <CheckCircle2 className='h-4 w-4 shrink-0' />
-            Tenés información disponible para entrenar y seguir tu progreso.
+            {t('socioDashboard.todayPlan.readyInfo')}
           </div>
         ) : (
           <div className='flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-muted-foreground dark:border-slate-800 dark:bg-slate-950'>
             <CalendarDays className='h-4 w-4 shrink-0' />
-            Cuando tengas rutina o dieta asignada, aparecerán acá.
+            {t('socioDashboard.todayPlan.emptyInfo')}
           </div>
         )}
       </div>
