@@ -6,6 +6,8 @@ import type {
   RagCoachChatRequest,
   RagCoachChatResponseData,
   RagCoachChatSource,
+  RagCoachQualityAudit,
+  RagCoachQualityCheckItem,
 } from '@/interfaces/ragCoachChat.interface';
 import { dataGeneracionRutina } from '@/services/rutinaService';
 import { createDietaSocio } from '@/services/dietaService';
@@ -253,6 +255,135 @@ function buildSafetyNotes(message: string, intent: RagCoachChatIntent, context?:
   return uniqueValues(notes);
 }
 
+function hasExplicitObjective(message: string) {
+  const text = normalize(message);
+  return /\b(ganar masa|masa muscular|hipertrofia|bajar grasa|definicion|definir|bajar de peso|adelgazar|fuerza|resistencia|rehabilitacion|salud|bienestar|estres)\b/.test(text);
+}
+
+function hasExplicitLevel(message: string) {
+  const text = normalize(message);
+  return /\b(inicial|principiante|intermedio|avanzado|experto|hace meses|anos entrenando|años entrenando)\b/.test(text);
+}
+
+function hasExplicitDays(message: string) {
+  const text = normalize(message);
+  return /(?:^|\D)([1-6])\s*(?:dias?|veces|entrenamientos?)(?:\s+por\s+semana)?(?:\D|$)/.test(text)
+    || /\b(un|una|uno|dos|tres|cuatro|cinco|seis)\s+(dias?|veces|entrenamientos?)\b/.test(text);
+}
+
+function shouldBlockDietAutomationForQuality(message: string) {
+  const text = normalize(message);
+  return /\b(anorexia|bulimia|trastorno alimentario|tca|dejar de comer|no quiero comer|ayuno extremo|dieta extrema|800 calorias|800 kcal|1000 calorias|1000 kcal|bajar 10 kilos en una semana)\b/.test(text);
+}
+
+function qualityStatusLabel(score: number, blocked: boolean) {
+  if (blocked) return 'Bloqueado por seguridad';
+  if (score >= 85) return 'Calidad alta';
+  if (score >= 65) return 'Calidad aceptable con advertencias';
+  return 'Requiere más datos';
+}
+
+function buildQualityAudit(params: {
+  domain: RagCoachQualityAudit['domain'];
+  message: string;
+  context?: RagCoachSocioContext | null;
+  sources?: RagCoachChatSource[];
+  warnings?: string[];
+  safetyNotes?: string[];
+  blocked?: boolean;
+}): RagCoachQualityAudit {
+  const checks: RagCoachQualityCheckItem[] = [];
+  const hasSources = (params.sources ?? []).length > 0;
+  const contextScore = params.context?.contextSnapshot?.readinessScore ?? 0;
+
+  checks.push({
+    label: 'Grounding / fuentes',
+    status: hasSources ? 'passed' : 'warning',
+    detail: hasSources
+      ? 'La respuesta recuperó fuentes RAG y las expone al socio.'
+      : 'No hubo fuentes RAG visibles; se usa fallback formal y debe mantenerse el tono prudente.',
+  });
+
+  checks.push({
+    label: 'Contexto del socio',
+    status: contextScore >= 45 ? 'passed' : 'warning',
+    detail: contextScore >= 45
+      ? `Se aplicó contexto operativo del socio con score ${contextScore}%.`
+      : 'El contexto del socio es bajo; la respuesta debe pedir datos faltantes y evitar afirmaciones fuertes.',
+  });
+
+  if (params.domain === 'rutina') {
+    const hasMinimumData = (hasExplicitObjective(params.message) || Boolean(params.context?.socio?.objetivo))
+      && (hasExplicitLevel(params.message) || Boolean(params.context?.socio?.nivel))
+      && (hasExplicitDays(params.message) || Boolean(params.context?.socio?.diasPorSemana));
+
+    checks.push({
+      label: 'Datos mínimos de rutina',
+      status: hasMinimumData ? 'passed' : 'warning',
+      detail: hasMinimumData
+        ? 'Objetivo, nivel y frecuencia semanal se detectaron desde el mensaje o el perfil del socio.'
+        : 'Faltan objetivo, nivel o frecuencia explícita; se aplicaron defaults seguros y conviene confirmar con el socio.',
+    });
+  }
+
+  if (params.domain === 'dieta') {
+    const hasNutritionObjective = hasExplicitObjective(params.message) || Boolean(params.context?.socio?.objetivo);
+
+    checks.push({
+      label: 'Datos mínimos de dieta',
+      status: hasNutritionObjective ? 'passed' : 'warning',
+      detail: hasNutritionObjective
+        ? 'La dieta quedó vinculada a un objetivo detectado o inferido desde el contexto del socio.'
+        : 'No hay objetivo nutricional claro; conviene pedir objetivo, restricciones y preferencias alimentarias.',
+    });
+
+    checks.push({
+      label: 'Disclaimers nutricionales',
+      status: 'passed',
+      detail: 'La respuesta mantiene advertencia de orientación general y no reemplazo profesional.',
+    });
+  }
+
+  const hasSafetySignals = (params.safetyNotes ?? []).length > 0 || (params.warnings ?? []).length > 0;
+  checks.push({
+    label: 'Límites de seguridad',
+    status: params.blocked ? 'blocked' : hasSafetySignals ? 'warning' : 'passed',
+    detail: params.blocked
+      ? 'Se bloqueó la acción automática por riesgo clínico/nutricional sensible.'
+      : hasSafetySignals
+        ? 'Se detectaron advertencias y la respuesta debe conservar límites prudentes.'
+        : 'No se detectaron señales sensibles en el pedido.',
+  });
+
+  checks.push({
+    label: 'Promesas y próximos pasos',
+    status: 'passed',
+    detail: 'La respuesta evita prometer resultados garantizados y propone un siguiente paso accionable.',
+  });
+
+  const score = Math.round(
+    checks.reduce((total, check) => {
+      if (check.status === 'passed') return total + 100;
+      if (check.status === 'warning') return total + 65;
+      return total;
+    }, 0) / checks.length,
+  );
+
+  return {
+    domain: params.domain,
+    score,
+    statusLabel: qualityStatusLabel(score, Boolean(params.blocked)),
+    summary: `${params.domain === 'rutina' ? 'Rutina' : params.domain === 'dieta' ? 'Dieta' : 'Orientación'} auditada con score ${score}%.`,
+    checks,
+  };
+}
+
+function buildQaSummary(actions: RagCoachChatActionResult[]) {
+  const audits = actions.map((action) => action.qualityAudit).filter((item): item is RagCoachQualityAudit => Boolean(item));
+  if (audits.length === 0) return undefined;
+  return audits.map((audit) => `${audit.domain}: ${audit.score}% (${audit.statusLabel})`).join(' · ');
+}
+
 function shouldBlockAutomationForSafety(message: string) {
   const text = normalize(message);
   return /\b(dolor de pecho|desmayo|desmayos|falta de aire|mareo fuerte|taquicardia)\b/.test(text);
@@ -383,6 +514,12 @@ async function generateRoutineAction(user: JwtUser, socioId: string, message: st
     id_socio: socioId,
   });
 
+  const sources = mapRagSources(ragContext.results);
+  const safetyNotes = uniqueValues([
+    restricciones,
+    ...buildSafetyNotes(message, 'routine_request', context),
+  ]);
+
   return {
     type: 'routine_generated',
     ok: true,
@@ -391,9 +528,17 @@ async function generateRoutineAction(user: JwtUser, socioId: string, message: st
     viewPath: '/dashboard/rutinas/asistente',
     viewLabel: 'Ver rutina',
     ragSummary: ragContext.summary,
-    sources: mapRagSources(ragContext.results),
+    sources,
     warnings: ragContext.warnings,
-    safetyNotes: restricciones ? [restricciones] : [],
+    safetyNotes,
+    qualityAudit: buildQualityAudit({
+      domain: 'rutina',
+      message,
+      context,
+      sources,
+      warnings: ragContext.warnings,
+      safetyNotes,
+    }),
     payload: {
       objetivo,
       nivel,
@@ -436,6 +581,13 @@ async function generateDietAction(user: JwtUser, socioId: string, message: strin
     user,
   );
 
+  const sources = mapRagSources(ragContext.results);
+  const safetyNotes = uniqueValues([
+    restricciones,
+    ...buildSafetyNotes(message, 'diet_request', context),
+    ...(ragContext.disclaimers ?? []),
+  ]);
+
   return {
     type: 'diet_generated',
     ok: true,
@@ -444,9 +596,17 @@ async function generateDietAction(user: JwtUser, socioId: string, message: strin
     viewPath: '/dashboard/dietas',
     viewLabel: 'Ver dieta',
     ragSummary: ragContext.summary,
-    sources: mapRagSources(ragContext.results),
+    sources,
     warnings: ragContext.warnings,
-    safetyNotes: uniqueValues([restricciones, ...(ragContext.disclaimers ?? [])]),
+    safetyNotes,
+    qualityAudit: buildQualityAudit({
+      domain: 'dieta',
+      message,
+      context,
+      sources,
+      warnings: ragContext.warnings,
+      safetyNotes,
+    }),
     payload: {
       objetivo,
       fecha_inicio: fechaInicio,
@@ -536,6 +696,20 @@ export async function handleUnifiedRagCoachChat(
   if (conversationMemory.lastNextBestStep) coachNotes.push(`Continuidad previa: ${conversationMemory.lastNextBestStep}`);
 
   if (shouldBlockAutomationForSafety(message)) {
+    const action: RagCoachChatActionResult = {
+      type: 'guidance_only',
+      ok: true,
+      title: 'Fallback de seguridad',
+      message: 'Se priorizó orientación segura y no se ejecutaron acciones automáticas.',
+      safetyNotes,
+      qualityAudit: buildQualityAudit({
+        domain: 'orientacion',
+        message,
+        context: socioContext,
+        safetyNotes,
+        blocked: true,
+      }),
+    };
     const reply = [
       `${name}, por seguridad no voy a generar una rutina, dieta ni progresión automática con síntomas sensibles como dolor de pecho, desmayo, falta de aire o taquicardia.`,
       'Lo más prudente es pausar la actividad intensa y consultar con un profesional de salud antes de ajustar entrenamiento o alimentación.',
@@ -549,15 +723,7 @@ export async function handleUnifiedRagCoachChat(
       greeting,
       intent: 'general_guidance',
       reply,
-      actions: [
-        {
-          type: 'guidance_only',
-          ok: true,
-          title: 'Fallback de seguridad',
-          message: 'Se priorizó orientación segura y no se ejecutaron acciones automáticas.',
-          safetyNotes,
-        },
-      ],
+      actions: [action],
       suggestedReplies: ['Quiero revisar mi evolución física', 'Tengo restricciones y quiero una orientación general'],
       missingParams: [],
       coachNotes: [...coachNotes, 'Fallback de seguridad activado por señales sensibles.'],
@@ -565,6 +731,47 @@ export async function handleUnifiedRagCoachChat(
       contextHints: socioContext?.hints,
       nextBestStep: 'Derivar a evaluación profesional antes de ajustar entrenamiento o dieta.',
       safetySummary: safetyNotes.join(' '),
+      qaSummary: buildQaSummary([action]),
+      contextSnapshot: socioContext?.contextSnapshot,
+      memoryHighlights: socioContext?.memoryHighlights,
+      memoryTrace,
+      contextConfidence: buildContextConfidence(socioContext),
+    };
+  }
+
+  if ((intent === 'diet_request' || intent === 'routine_and_diet_request') && shouldBlockDietAutomationForQuality(message)) {
+    const action: RagCoachChatActionResult = {
+      type: 'guidance_only',
+      ok: true,
+      title: 'Dieta no generada por seguridad',
+      message: 'El pedido incluye señales de dieta extrema o trastorno alimentario. El Coach solo puede dar orientación general y recomendar evaluación profesional.',
+      safetyNotes,
+      qualityAudit: buildQualityAudit({
+        domain: 'dieta',
+        message,
+        context: socioContext,
+        safetyNotes,
+        blocked: true,
+      }),
+    };
+
+    return {
+      greeting,
+      intent: 'general_guidance',
+      reply: [
+        `${name}, no voy a generar una dieta automática con señales de restricción extrema o posible TCA.`,
+        'Puedo ayudarte a ordenar objetivos saludables y sugerirte que lo revises con un nutricionista o profesional de salud.',
+        contextLine,
+      ].filter(Boolean).join('\n\n'),
+      actions: [action],
+      suggestedReplies: ['Quiero una orientación general segura', 'Quiero revisar mi evolución física'],
+      missingParams: [],
+      coachNotes: [...coachNotes, 'Bloqueo QA nutricional activado por riesgo de dieta extrema/TCA.'],
+      contextSummary: socioContext?.resumenHumano,
+      contextHints: socioContext?.hints,
+      nextBestStep: 'Derivar a orientación nutricional profesional antes de generar una dieta automática.',
+      safetySummary: safetyNotes.join(' '),
+      qaSummary: buildQaSummary([action]),
       contextSnapshot: socioContext?.contextSnapshot,
       memoryHighlights: socioContext?.memoryHighlights,
       memoryTrace,
@@ -604,19 +811,25 @@ export async function handleUnifiedRagCoachChat(
   suggestedReplies.push('Analizar mi evolución física', 'Quiero cargar mi evolución inicial');
 
   if (actions.length === 0) {
+    const action: RagCoachChatActionResult = {
+      type: 'guidance_only',
+      ok: true,
+      title: 'Orientación inicial',
+      message: 'El Coach necesita algunos datos más antes de generar una rutina o dieta.',
+      safetyNotes,
+      qualityAudit: buildQualityAudit({
+        domain: 'orientacion',
+        message,
+        context: socioContext,
+        safetyNotes,
+      }),
+    };
+
     return {
       greeting,
       intent,
       reply: `${buildContextAwareGuidance(name, message, socioContext, conversationMemory)}\n\n${evolutionSuggestion}`,
-      actions: [
-        {
-          type: 'guidance_only',
-          ok: true,
-          title: 'Orientación inicial',
-          message: 'El Coach necesita algunos datos más antes de generar una rutina o dieta.',
-          safetyNotes,
-        },
-      ],
+      actions: [action],
       suggestedReplies: ['Quiero una rutina', 'Quiero una dieta', 'Quiero revisar mi evolución física'],
       missingParams: ['objetivo', 'días disponibles', 'nivel o experiencia', 'restricciones'],
       coachNotes: [...coachNotes, 'El usuario todavía no pidió una acción concreta o faltan parámetros.'],
@@ -624,6 +837,7 @@ export async function handleUnifiedRagCoachChat(
       contextHints: socioContext?.hints,
       nextBestStep: 'Pedir objetivo, disponibilidad semanal y restricciones.',
       safetySummary: safetyNotes.join(' '),
+      qaSummary: buildQaSummary([action]),
       contextSnapshot: socioContext?.contextSnapshot,
       memoryHighlights: socioContext?.memoryHighlights,
       memoryTrace,
@@ -655,6 +869,7 @@ export async function handleUnifiedRagCoachChat(
       ? 'Ofrecer dieta complementaria y seguimiento de evolución física.'
       : 'Sugerir seguimiento mensual de evolución física si el socio está comprometido.',
     safetySummary: safetyNotes.join(' '),
+    qaSummary: buildQaSummary(actions),
     contextSnapshot: socioContext?.contextSnapshot,
     memoryHighlights: socioContext?.memoryHighlights,
     memoryTrace,

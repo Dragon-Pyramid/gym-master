@@ -53,6 +53,7 @@ type ChatMessage = {
   coachNotes?: string[];
   nextBestStep?: string;
   safetySummary?: string;
+  qaSummary?: string;
   intent?: RagCoachChatIntent;
   missingParams?: string[];
   contextSnapshot?: RagCoachContextSnapshot;
@@ -219,6 +220,7 @@ function renderSources(sources: RagCoachChatSource[]) {
 function renderAction(action: RagCoachChatActionResult) {
   const visual = actionVisual(action);
   const Icon = visual.icon;
+  const qualityAudit = action.qualityAudit;
 
   return (
     <div key={`${action.type}-${action.title}`} className={`rounded-xl border p-3 ${visual.className}`}>
@@ -248,6 +250,31 @@ function renderAction(action: RagCoachChatActionResult) {
       )}
 
       {renderSources(action.sources ?? [])}
+
+      {qualityAudit && (
+        <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-950 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 font-semibold">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              QA calidad {qualityAudit.domain}
+            </div>
+            <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-bold text-emerald-900 dark:bg-slate-950/50 dark:text-emerald-100">
+              {qualityAudit.score}% · {qualityAudit.statusLabel}
+            </span>
+          </div>
+          <p className="mb-2 leading-relaxed">{qualityAudit.summary}</p>
+          <div className="grid gap-1.5 sm:grid-cols-2">
+            {qualityAudit.checks.slice(0, 6).map((check) => (
+              <div key={`${qualityAudit.domain}-${check.label}`} className="rounded-md bg-white/70 p-2 dark:bg-slate-950/40">
+                <div className="font-semibold">
+                  {check.status === 'blocked' ? 'Bloqueado' : check.status === 'warning' ? 'Advertencia' : 'OK'} · {check.label}
+                </div>
+                <div className="mt-0.5 opacity-90">{check.detail}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {(action.safetyNotes?.length ?? 0) > 0 && (
         <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
@@ -368,6 +395,7 @@ export default function CoachIaPage() {
         coachNotes: res.data.coachNotes,
         nextBestStep: res.data.nextBestStep,
         safetySummary: res.data.safetySummary,
+        qaSummary: res.data.qaSummary,
         intent: res.data.intent,
         missingParams: res.data.missingParams,
         contextSnapshot: res.data.contextSnapshot,
@@ -550,6 +578,12 @@ export default function CoachIaPage() {
                               {message.safetySummary && message.role === 'assistant' && (
                                 <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
                                   <strong>Seguridad:</strong> {message.safetySummary}
+                                </div>
+                              )}
+
+                              {message.qaSummary && message.role === 'assistant' && (
+                                <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-emerald-950 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100">
+                                  <strong>QA IA/RAG:</strong> {message.qaSummary}
                                 </div>
                               )}
 
