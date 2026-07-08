@@ -49,6 +49,7 @@ import {
 import { cn } from '@/lib/utils';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { useI18n } from '@/i18n/I18nProvider';
+import { translateAuthMessage } from '@/i18n/authErrorMessages';
 
 type LoginRole = 'admin' | 'socio' | 'usuario' | 'masteradmin';
 
@@ -117,7 +118,7 @@ export default function GymMasterLoginForm({
   allowedRoles = ['admin', 'socio', 'usuario'],
   defaultRole,
   backHref = '/auth/login',
-  backLabel = 'Volver',
+  backLabel = 'Back',
   backLabelKey = 'common.back',
   successRedirectHref = '/dashboard',
   titleKey,
@@ -173,11 +174,12 @@ export default function GymMasterLoginForm({
 
   useEffect(() => {
     if (error) {
-      setLoginAlert(error);
-      toast.error(error);
+      const translatedError = translateAuthMessage(error, t, 'auth.errors.authentication');
+      setLoginAlert(translatedError);
+      toast.error(translatedError);
       clearError();
     }
-  }, [error, clearError]);
+  }, [error, clearError, t]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

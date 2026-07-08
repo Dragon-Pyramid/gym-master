@@ -17,14 +17,13 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
+import { useI18n } from '@/i18n/I18nProvider';
+import { translateAuthMessage } from '@/i18n/authErrorMessages';
 
 type LoginRole = 'admin' | 'usuario' | 'socio';
 
-const roleOptions: Array<{ value: LoginRole; label: string }> = [
-  { value: 'admin', label: 'Administrador' },
-  { value: 'usuario', label: 'Usuario interno / empleado' },
-  { value: 'socio', label: 'Socio' },
-];
+const roleValues: LoginRole[] = ['admin', 'usuario', 'socio'];
 
 function useDarkMode() {
   const [dark, setDark] = useState(false);
@@ -52,15 +51,23 @@ function useDarkMode() {
 function ForgotPasswordContent() {
   const searchParams = useSearchParams();
   const { dark, toggle } = useDarkMode();
+  const { t } = useI18n();
   const initialRole = searchParams.get('rol') as LoginRole | null;
-  const safeInitialRole = roleOptions.some((option) => option.value === initialRole)
-    ? initialRole
-    : 'socio';
+  const safeInitialRole = roleValues.includes(initialRole as LoginRole) ? initialRole : 'socio';
 
   const [email, setEmail] = useState('');
   const [rol, setRol] = useState<LoginRole>(safeInitialRole ?? 'socio');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+
+  const roleOptions = useMemo(
+    () => [
+      { value: 'admin' as const, label: t('preferences.roleAdmin') },
+      { value: 'usuario' as const, label: t('preferences.roleInternalUser') },
+      { value: 'socio' as const, label: t('preferences.roleMember') },
+    ],
+    [t],
+  );
 
   const backHref = useMemo(() => {
     if (rol === 'socio') return '/auth/login/socio';
@@ -72,7 +79,7 @@ function ForgotPasswordContent() {
     event.preventDefault();
 
     if (!email.trim()) {
-      toast.error('Ingresá tu email para recuperar la contraseña.');
+      toast.error(t('auth.forgot.emailRequired'));
       return;
     }
 
@@ -87,13 +94,15 @@ function ForgotPasswordContent() {
       const payload = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(payload.error || 'No se pudo procesar la solicitud');
+        throw new Error(payload.error || t('auth.errors.requestFailed'));
       }
 
       setSent(true);
-      toast.success(payload.message || 'Solicitud procesada correctamente.');
+      toast.success(
+        translateAuthMessage(payload.message, t, 'auth.recovery.requestProcessedToast'),
+      );
     } catch (error: any) {
-      toast.error(error.message || 'No se pudo procesar la solicitud');
+      toast.error(translateAuthMessage(error.message, t, 'auth.errors.requestFailed'));
     } finally {
       setLoading(false);
     }
@@ -105,21 +114,22 @@ function ForgotPasswordContent() {
         <Button variant='ghost' asChild>
           <Link href={backHref}>
             <ArrowLeft className='mr-2 h-4 w-4' />
-            Volver al login
+            {t('auth.common.backToLogin')}
           </Link>
         </Button>
       </div>
 
-      <div className='absolute right-4 top-4'>
+      <div className='absolute right-4 top-4 flex items-center gap-2'>
         <Button
           variant='ghost'
           size='icon'
           onClick={toggle}
-          aria-label='Cambiar modo claro/oscuro'
-          title='Cambiar modo claro/oscuro'
+          aria-label={t('auth.common.themeToggle')}
+          title={t('auth.common.themeToggle')}
         >
           {dark ? <Moon className='h-6 w-6' /> : <Sun className='h-6 w-6' />}
         </Button>
+        <LanguageSwitcher compact />
       </div>
 
       <div className='mb-2 text-center'>
@@ -139,27 +149,24 @@ function ForgotPasswordContent() {
           <div className='mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary'>
             <MailCheck className='h-6 w-6' />
           </div>
-          <CardTitle>Recuperar contraseña</CardTitle>
-          <CardDescription>
-            Ingresá tu email y te enviaremos un enlace seguro para definir una nueva contraseña.
-          </CardDescription>
+          <CardTitle>{t('auth.forgot.title')}</CardTitle>
+          <CardDescription>{t('auth.forgot.description')}</CardDescription>
         </CardHeader>
 
         <CardContent>
           {sent ? (
             <div className='space-y-4'>
               <div className='rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-100'>
-                Si el email corresponde a una cuenta válida, recibirás un enlace para restablecer la contraseña.
-                Revisá tu bandeja de entrada y spam.
+                {t('auth.forgot.sentMessage')}
               </div>
               <Button asChild className='w-full'>
-                <Link href={backHref}>Volver al login</Link>
+                <Link href={backHref}>{t('auth.common.backToLogin')}</Link>
               </Button>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className='space-y-4'>
               <div className='grid gap-2'>
-                <Label htmlFor='rol'>Tipo de acceso</Label>
+                <Label htmlFor='rol'>{t('auth.common.accessType')}</Label>
                 <select
                   id='rol'
                   value={rol}
@@ -175,7 +182,7 @@ function ForgotPasswordContent() {
               </div>
 
               <div className='grid gap-2'>
-                <Label htmlFor='email'>Email</Label>
+                <Label htmlFor='email'>{t('auth.common.email')}</Label>
                 <Input
                   id='email'
                   type='email'
@@ -188,11 +195,11 @@ function ForgotPasswordContent() {
               </div>
 
               <div className='rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground'>
-                Por seguridad, el sistema no confirma si el email existe o no. El enlace vence y solo puede usarse una vez.
+                {t('auth.forgot.privacyNotice')}
               </div>
 
               <Button type='submit' className='w-full' disabled={loading}>
-                {loading ? 'Enviando...' : 'Enviar enlace de recuperación'}
+                {loading ? t('auth.forgot.submitting') : t('auth.forgot.submit')}
               </Button>
             </form>
           )}

@@ -2,8 +2,11 @@
 
 import Link from 'next/link';
 import { WifiOff } from 'lucide-react';
+import { useI18n } from '@/i18n/I18nProvider';
 
 export default function OfflinePage() {
+  const { t } = useI18n();
+
   return (
     <main className='flex min-h-screen items-center justify-center bg-slate-950 px-4 py-[calc(2.5rem+env(safe-area-inset-top))] text-white'>
       <section className='w-full max-w-md rounded-3xl border border-white/10 bg-white/10 p-6 text-center shadow-2xl'>
@@ -11,9 +14,9 @@ export default function OfflinePage() {
           <WifiOff className='h-7 w-7' aria-hidden='true' />
         </div>
 
-        <h1 className='mt-5 text-2xl font-black tracking-tight'>Estás sin conexión</h1>
+        <h1 className='mt-5 text-2xl font-black tracking-tight'>{t('publicPages.offline.title')}</h1>
         <p className='mt-3 text-sm leading-6 text-slate-200'>
-          Gym Master no pudo cargar esta pantalla porque el dispositivo está offline. Revisá tu conexión e intentá nuevamente.
+          {t('publicPages.offline.description')}
         </p>
 
         <div className='mt-6 grid gap-3'>
@@ -21,14 +24,14 @@ export default function OfflinePage() {
             href='/dashboard'
             className='rounded-full bg-white px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-slate-100'
           >
-            Volver al inicio
+            {t('publicPages.offline.home')}
           </Link>
           <button
             type='button'
             className='rounded-full border border-white/20 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10'
             onClick={() => window.location.reload()}
           >
-            Reintentar
+            {t('publicPages.offline.retry')}
           </button>
         </div>
       </section>
