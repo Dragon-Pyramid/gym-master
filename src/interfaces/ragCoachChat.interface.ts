@@ -42,6 +42,22 @@ export interface RagCoachChatSource {
   contentPreview?: string;
 }
 
+export type RagCoachQualityCheckStatus = 'passed' | 'warning' | 'blocked';
+
+export interface RagCoachQualityCheckItem {
+  label: string;
+  status: RagCoachQualityCheckStatus;
+  detail: string;
+}
+
+export interface RagCoachQualityAudit {
+  domain: 'rutina' | 'dieta' | 'orientacion';
+  score: number;
+  statusLabel: string;
+  summary: string;
+  checks: RagCoachQualityCheckItem[];
+}
+
 export interface RagCoachContextSnapshot {
   socioName?: string | null;
   nivelLabel?: string;
@@ -76,6 +92,7 @@ export interface RagCoachChatActionResult {
   sources?: RagCoachChatSource[];
   warnings?: string[];
   safetyNotes?: string[];
+  qualityAudit?: RagCoachQualityAudit;
 }
 
 export interface RagCoachChatResponseData {
@@ -90,6 +107,7 @@ export interface RagCoachChatResponseData {
   contextHints?: string[];
   nextBestStep?: string;
   safetySummary?: string;
+  qaSummary?: string;
   contextSnapshot?: RagCoachContextSnapshot;
   memoryHighlights?: string[];
   memoryTrace?: string[];
