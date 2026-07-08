@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from 'next';
+import { cookies } from 'next/headers';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { Toaster } from 'sonner';
 import { SessionWrapper } from '@/components/SessionWrapper';
 import { QaCurrentPageBadge } from '@/components/qa/QaCurrentPageBadge';
+import { DEFAULT_LOCALE, I18N_COOKIE_KEY, normalizeLocale } from '@/i18n/config';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -52,10 +54,14 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const initialLocale = normalizeLocale(
+    cookies().get(I18N_COOKIE_KEY)?.value ?? DEFAULT_LOCALE,
+  );
+
   return (
-    <html lang='es'>
+    <html lang={initialLocale} suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`}>
-        <SessionWrapper>
+        <SessionWrapper initialLocale={initialLocale}>
           {children}
           <QaCurrentPageBadge />
           <Toaster position='top-right' richColors />

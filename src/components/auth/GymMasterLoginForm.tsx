@@ -47,15 +47,10 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type LoginRole = 'admin' | 'socio' | 'usuario' | 'masteradmin';
-
-const roleLabels: Record<LoginRole, string> = {
-  admin: 'Administrador',
-  socio: 'Socio',
-  usuario: 'Usuario interno',
-  masteradmin: 'Master Admin Dragon Pyramid',
-};
 
 const allUserTypes: Array<{ value: LoginRole; label: string }> = [
   {
@@ -104,11 +99,14 @@ function useDarkMode() {
 type GymMasterLoginFormProps = {
   title: string;
   description: string;
+  titleKey?: string;
+  descriptionKey?: string;
   lockedRole?: LoginRole;
   allowedRoles?: LoginRole[];
   defaultRole?: LoginRole;
   backHref?: string;
   backLabel?: string;
+  backLabelKey?: string;
   successRedirectHref?: string;
 };
 
@@ -120,9 +118,13 @@ export default function GymMasterLoginForm({
   defaultRole,
   backHref = '/auth/login',
   backLabel = 'Volver',
+  backLabelKey = 'common.back',
   successRedirectHref = '/dashboard',
+  titleKey,
+  descriptionKey,
 }: GymMasterLoginFormProps) {
   const router = useRouter();
+  const { t } = useI18n();
   const {
     login: authLogin,
     isLoading,
@@ -142,9 +144,19 @@ export default function GymMasterLoginForm({
   const [loginAlert, setLoginAlert] = useState<string | null>(null);
   const { dark, toggle } = useDarkMode();
 
-  const userTypes = allUserTypes.filter((type) =>
-    allowedRoles.includes(type.value)
-  );
+  const titleText = titleKey ? t(titleKey) : title;
+  const descriptionText = descriptionKey ? t(descriptionKey) : description;
+  const backLabelText = backLabelKey ? t(backLabelKey) : backLabel;
+  const getRoleLabel = (role: LoginRole) => {
+    if (role === 'admin') return t('preferences.roleAdmin');
+    if (role === 'usuario') return t('preferences.roleInternalUser');
+    if (role === 'socio') return t('preferences.roleMember');
+    return 'Master Admin Dragon Pyramid';
+  };
+
+  const userTypes = allUserTypes
+    .filter((type) => allowedRoles.includes(type.value))
+    .map((type) => ({ ...type, label: getRoleLabel(type.value) }));
   const shouldShowRoleSelector = !lockedRole && userTypes.length > 1;
   const recoveryRole = lockedRole ?? userType ?? defaultRole ?? '';
   const forgotPasswordHref = recoveryRole
@@ -174,22 +186,22 @@ export default function GymMasterLoginForm({
     const selectedRole = lockedRole ?? userType;
 
     if (!email.trim()) {
-      toast.error('El campo Usuario es obligatorio');
+      toast.error(t('login.usernameRequired'));
       return;
     }
 
     if (!password.trim()) {
-      toast.error('El campo Contraseña es obligatorio');
+      toast.error(t('login.passwordRequired'));
       return;
     }
 
     if (!selectedRole) {
-      toast.error('Debe seleccionar un tipo de usuario');
+      toast.error(t('login.userTypeRequired'));
       return;
     }
 
     if (!allowedRoles.includes(selectedRole)) {
-      toast.error('El tipo de usuario seleccionado no corresponde a esta pantalla');
+      toast.error(t('login.userTypeInvalid'));
       return;
     }
 
@@ -201,12 +213,12 @@ export default function GymMasterLoginForm({
 
     if (result.success) {
       if (result.mustChangePassword) {
-        toast.info('Por seguridad, debés cambiar tu contraseña inicial.');
+        toast.info(t('login.mustChangePassword'));
         router.push('/auth/change-password');
         return;
       }
 
-      toast.success('Inicio de sesión exitoso');
+      toast.success(t('login.success'));
       router.push(successRedirectHref);
     }
   };
@@ -217,12 +229,12 @@ export default function GymMasterLoginForm({
         <Button variant='ghost' asChild>
           <Link href={backHref}>
             <ArrowLeft className='mr-2 h-4 w-4' />
-            {backLabel}
+            {backLabelText}
           </Link>
         </Button>
       </div>
 
-      <div className='absolute right-4 top-4'>
+      <div className='absolute right-4 top-4 flex items-center gap-2'>
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -231,7 +243,7 @@ export default function GymMasterLoginForm({
                 size='icon'
                 className='text-muted-foreground hover:text-foreground'
                 onClick={toggle}
-                aria-label='Cambiar modo claro/oscuro'
+                aria-label={t('header.toggleTheme')}
               >
                 {dark ? (
                   <Moon className='size-7' />
@@ -241,13 +253,14 @@ export default function GymMasterLoginForm({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {dark ? 'Modo claro' : 'Modo oscuro'}
+              {dark ? t('header.lightMode') : t('header.darkMode')}
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
+        <LanguageSwitcher compact />
       </div>
 
-      <div className='text-center'>
+      <div className='mt-12 text-center md:mt-0'>
         <div className='relative mx-auto h-52 w-52 md:h-64 md:w-64'>
           <Image
             src='/gm_logo.svg'
@@ -263,17 +276,17 @@ export default function GymMasterLoginForm({
         <Card className='w-full overflow-hidden rounded-xl shadow-md'>
           <CardHeader className='space-y-1'>
             <CardTitle className='text-center text-2xl font-bold'>
-              {title}
+              {titleText}
             </CardTitle>
             <CardDescription className='text-center'>
-              {description}
+              {descriptionText}
             </CardDescription>
           </CardHeader>
 
           <CardContent>
             <form onSubmit={handleSubmit} className='grid gap-4'>
               <div className='grid gap-2'>
-                <Label htmlFor='email'>Usuario</Label>
+                <Label htmlFor='email'>{t('login.username')}</Label>
                 <Input
                   id='email'
                   type='email'
@@ -288,7 +301,7 @@ export default function GymMasterLoginForm({
               </div>
 
               <div className='grid gap-2'>
-                <Label htmlFor='password'>Contraseña</Label>
+                <Label htmlFor='password'>{t('login.password')}</Label>
                 <div className='relative'>
                   <Input
                     id='password'
@@ -309,8 +322,8 @@ export default function GymMasterLoginForm({
                     size='icon'
                     className='absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-muted-foreground hover:text-foreground'
                     onClick={() => setShowPassword((value) => !value)}
-                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                    title={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    aria-label={showPassword ? t('login.hidePassword') : t('login.showPassword')}
+                    title={showPassword ? t('login.hidePassword') : t('login.showPassword')}
                     tabIndex={0}
                   >
                     {showPassword ? (
@@ -327,17 +340,17 @@ export default function GymMasterLoginForm({
                   href={forgotPasswordHref}
                   className='text-sm font-medium text-primary underline-offset-4 hover:underline'
                 >
-                  ¿Olvidaste tu contraseña?
+                  {t('login.forgotPassword')}
                 </Link>
               </div>
 
               {lockedRole ? (
                 <div className='rounded-lg border bg-muted/40 p-3 text-sm'>
-                  Acceso directo como <strong>{roleLabels[lockedRole]}</strong>.
+                  {t('login.directAccessAs', { role: getRoleLabel(lockedRole) })}
                 </div>
               ) : shouldShowRoleSelector ? (
                 <div className='grid gap-2'>
-                  <Label>Tipo de Usuario</Label>
+                  <Label>{t('login.userType')}</Label>
                   <Popover open={userTypeOpen} onOpenChange={setUserTypeOpen}>
                     <PopoverTrigger asChild>
                       <Button
@@ -349,19 +362,19 @@ export default function GymMasterLoginForm({
                         {userType
                           ? userTypes.find((type) => type.value === userType)
                               ?.label
-                          : 'Seleccione el tipo de usuario...'}
+                          : t('login.selectUserType')}
                         <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className='w-[352px] p-0' align='start'>
                       <Command>
                         <CommandInput
-                          placeholder='Buscar tipo de usuario...'
+                          placeholder={t('login.searchUserType')}
                           className='h-9'
                         />
                         <CommandList>
                           <CommandEmpty>
-                            No se encontró ningún tipo de usuario.
+                            {t('login.userTypeNotFound')}
                           </CommandEmpty>
                           <CommandGroup>
                             {userTypes.map((type) => (
@@ -403,7 +416,7 @@ export default function GymMasterLoginForm({
                 >
                   <AlertTriangle className='mt-0.5 h-5 w-5 flex-shrink-0' />
                   <div>
-                    <p className='font-semibold'>Acceso restringido</p>
+                    <p className='font-semibold'>{t('login.restrictedAccess')}</p>
                     <p className='mt-1 leading-relaxed'>{loginAlert}</p>
                   </div>
                 </div>
@@ -417,10 +430,10 @@ export default function GymMasterLoginForm({
                 {isLoading ? (
                   <div className='flex items-center gap-2'>
                     <div className='h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent'></div>
-                    <span>Ingresando...</span>
+                    <span>{t('login.submitting')}</span>
                   </div>
                 ) : (
-                  'Iniciar sesión'
+                  t('login.submit')
                 )}
               </Button>
             </form>

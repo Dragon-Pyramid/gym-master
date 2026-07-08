@@ -5,6 +5,8 @@ export default function LoginAdminPage() {
     <GymMasterLoginForm
       title='Ingreso Administración'
       description='Acceso para administradores y usuarios internos.'
+      titleKey='login.adminFormTitle'
+      descriptionKey='login.adminFormDescription'
       allowedRoles={['admin', 'usuario']}
       defaultRole='admin'
     />
