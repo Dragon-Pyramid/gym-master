@@ -20,6 +20,8 @@ import {
 } from "@/interfaces/otros_gastos.interface";
 import { toast } from "sonner";
 import { FileUp, Link as LinkIcon } from "lucide-react";
+import { useI18n } from '@/i18n/I18nProvider';
+import { translateCommercialUi } from '@/i18n/commercialUi';
 
 export interface OtrosGastosFormProps {
   gasto?: OtrosGastos | null;
@@ -70,6 +72,9 @@ function normalizeNullable(value?: string | null) {
 }
 
 export default function OtrosGastosForm({ gasto, onCreated }: OtrosGastosFormProps) {
+  const { locale } = useI18n();
+  const c = (text: string) => translateCommercialUi(locale, text);
+
   const [form, setForm] = useState<CreateOtrosGastosDto>(emptyForm);
   const [tiposGasto, setTiposGasto] = useState<TipoGastoLite[]>([]);
   const [loading, setLoading] = useState(false);
@@ -214,7 +219,7 @@ export default function OtrosGastosForm({ gasto, onCreated }: OtrosGastosFormPro
             name="descripcion"
             value={form.descripcion}
             onChange={handleChange}
-            placeholder="Ej.: Factura de luz, reparación, insumos de limpieza..."
+            placeholder={c("Ej.: Factura de luz, reparación, insumos de limpieza...")}
             required
           />
         </div>
@@ -322,7 +327,7 @@ export default function OtrosGastosForm({ gasto, onCreated }: OtrosGastosFormPro
             name="proveedor_nombre"
             value={form.proveedor_nombre ?? ""}
             onChange={handleChange}
-            placeholder="Ej.: Edesur, AFIP, alquiler, técnico..."
+            placeholder={c("Ej.: Edesur, AFIP, alquiler, técnico...")}
           />
         </div>
 
@@ -419,7 +424,7 @@ export default function OtrosGastosForm({ gasto, onCreated }: OtrosGastosFormPro
       </div>
 
       <Button type="submit" disabled={loading || uploading} className="w-full bg-[#02a8e1] hover:bg-[#0288b1]">
-        {loading ? "Guardando..." : gasto ? "Actualizar Gasto" : "Crear Gasto"}
+        {loading ? c("Guardando...") : gasto ? "Actualizar Gasto" : "Crear Gasto"}
       </Button>
     </form>
   );

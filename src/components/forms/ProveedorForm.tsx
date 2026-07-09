@@ -13,6 +13,8 @@ import {
 } from "@/interfaces/proveedor.interface";
 import { createProveedor, updateProveedor } from "@/services/proveedorService";
 import { toast } from "sonner";
+import { useI18n } from '@/i18n/I18nProvider';
+import { translateCommercialUi } from '@/i18n/commercialUi';
 
 export interface ProveedorFormProps {
   proveedor?: Proveedor | null;
@@ -47,6 +49,9 @@ export default function ProveedorForm({
   onCreated,
   onCancel,
 }: ProveedorFormProps) {
+  const { locale } = useI18n();
+  const c = (text: string) => translateCommercialUi(locale, text);
+
   const [form, setForm] = useState<CreateProveedorDto>(emptyForm);
   const [loading, setLoading] = useState(false);
 
@@ -96,19 +101,19 @@ export default function ProveedorForm({
       if (proveedor && proveedor.id) {
         const updateData: UpdateProveedorDto = { ...form };
         await updateProveedor(proveedor.id, updateData);
-        toast.success("Proveedor actualizado");
+        toast.success(c("Proveedor actualizado"));
       } else {
         const createData: CreateProveedorDto = { ...form };
         await createProveedor(createData);
-        toast.success("Proveedor creado");
+        toast.success(c("Proveedor creado"));
       }
       setForm(emptyForm);
       onCreated();
     } catch (error: unknown) {
-      let msg = (error as Error).message || "Error al guardar proveedor";
+      let msg = (error as Error).message || c("Error al guardar proveedor");
       if (msg.includes("value too long")) {
         msg =
-          "Uno de los campos excede la cantidad máxima de caracteres permitidos.";
+          c("Uno de los campos excede la cantidad máxima de caracteres permitidos.");
       }
       toast.error(msg);
     } finally {
@@ -127,11 +132,11 @@ export default function ProveedorForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="nombre">Nombre comercial</Label>
+        <Label htmlFor="nombre">{c("Nombre comercial")}</Label>
         <Input
           id="nombre"
           name="nombre"
-          placeholder="Ej: Suplementos Córdoba"
+          placeholder={c("Ej: Suplementos Córdoba")}
           value={form.nombre ?? ""}
           onChange={handleChange}
           required
@@ -139,18 +144,18 @@ export default function ProveedorForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="razon_social">Razón social</Label>
+        <Label htmlFor="razon_social">{c("Razón social")}</Label>
         <Input
           id="razon_social"
           name="razon_social"
-          placeholder="Ej: Suplementos Córdoba S.A."
+          placeholder={c("Ej: Suplementos Córdoba S.A.")}
           value={form.razon_social ?? ""}
           onChange={handleChange}
         />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="identificacion_fiscal">CUIT / RUC / identificación fiscal</Label>
+        <Label htmlFor="identificacion_fiscal">{c("CUIT / RUC / identificación fiscal")}</Label>
         <Input
           id="identificacion_fiscal"
           name="identificacion_fiscal"
@@ -161,7 +166,7 @@ export default function ProveedorForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="condicion_fiscal">Condición fiscal</Label>
+        <Label htmlFor="condicion_fiscal">{c("Condición fiscal")}</Label>
         <Input
           id="condicion_fiscal"
           name="condicion_fiscal"
@@ -176,14 +181,14 @@ export default function ProveedorForm({
         <Input
           id="contacto"
           name="contacto"
-          placeholder="Ej: Laura Gómez"
+          placeholder={c("Ej: Laura Gómez")}
           value={form.contacto ?? ""}
           onChange={handleChange}
         />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="rubro">Rubro / categoría</Label>
+        <Label htmlFor="rubro">{c("Rubro / categoría")}</Label>
         <Input
           id="rubro"
           name="rubro"
@@ -194,7 +199,7 @@ export default function ProveedorForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="telefono">Teléfono</Label>
+        <Label htmlFor="telefono">{c("Teléfono")}</Label>
         <Input
           id="telefono"
           name="telefono"
@@ -247,11 +252,11 @@ export default function ProveedorForm({
       </div>
 
       <div className="flex flex-col gap-1.5 md:col-span-2">
-        <Label htmlFor="direccion">Dirección</Label>
+        <Label htmlFor="direccion">{c("Dirección")}</Label>
         <Input
           id="direccion"
           name="direccion"
-          placeholder="Ingrese dirección comercial"
+          placeholder={c("Ingrese dirección comercial")}
           value={form.direccion ?? ""}
           onChange={handleChange}
         />
@@ -280,7 +285,7 @@ export default function ProveedorForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="pais">País</Label>
+        <Label htmlFor="pais">{c("País")}</Label>
         <Input
           id="pais"
           name="pais"
@@ -328,7 +333,7 @@ export default function ProveedorForm({
         <Input
           id="titular_cuenta"
           name="titular_cuenta"
-          placeholder="Nombre/Razón social titular de la cuenta"
+          placeholder={c("Nombre/Razón social titular de la cuenta")}
           value={form.titular_cuenta ?? ""}
           onChange={handleChange}
         />
@@ -357,7 +362,7 @@ export default function ProveedorForm({
         </Button>
         <Button type="submit" disabled={loading}>
           {loading
-            ? "Guardando..."
+            ? c("Guardando...")
             : proveedor
             ? "Actualizar Proveedor"
             : "Crear Proveedor"}
