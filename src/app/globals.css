@@ -173,6 +173,14 @@
   .gm-dashboard-page-evolucion-fisica .gm-evolucion-fisica-footer {
     margin-top: 0 !important;
   }
+
+  .gm-socio-mobile-feed {
+    scroll-padding-bottom: calc(7.5rem + env(safe-area-inset-bottom));
+  }
+
+  .gm-socio-mobile-section {
+    min-width: 0;
+  }
 }
 
 @media (max-width: 1023px) {
