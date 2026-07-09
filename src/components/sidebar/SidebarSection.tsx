@@ -83,6 +83,7 @@ const SIDEBAR_ITEM_KEYS: Record<string, string> = {
   Notificaciones: 'sidebar.items.notifications',
   'Mensajes Socios': 'sidebar.items.memberMessages',
   Avisos: 'sidebar.items.notices',
+  'Ayuda / Manuales': 'sidebar.items.helpManuals',
   'Soporte Dragon Pyramid': 'sidebar.items.dragonSupport',
   'Respaldo / Exportación': 'sidebar.items.backupExport',
   Usuarios: 'sidebar.items.users',

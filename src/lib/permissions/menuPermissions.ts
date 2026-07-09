@@ -407,6 +407,13 @@ export const MENU_PERMISSION_GROUPS: Array<{
         roles: ["admin", "usuario"],
       },
       {
+        key: "Ayuda / Manuales",
+        label: "Ayuda / Manuales",
+        path: "/dashboard/ayuda",
+        group: "Comunicación y Soporte",
+        roles: ["admin", "usuario", "socio"],
+      },
+      {
         key: "Soporte Dragon Pyramid",
         label: "Soporte Dragon Pyramid",
         path: "/dashboard/soporte-dragon-pyramid",
@@ -492,6 +499,7 @@ export const DEFAULT_MENU_PERMISSIONS_BY_ROLE: Record<AppRole, string[]> = {
     "Mensajes Socios",
     "Ficha Médica",
     "Soporte Dragon Pyramid",
+    "Ayuda / Manuales",
     "Perfil",
     "Preferencias",
   ],
@@ -507,6 +515,7 @@ export const DEFAULT_MENU_PERMISSIONS_BY_ROLE: Record<AppRole, string[]> = {
     "Historial de pagos",
     "Evolución Física",
     "Coach IA",
+    "Ayuda / Manuales",
     "Perfil",
     "Preferencias",
   ],
@@ -617,6 +626,12 @@ function withImplicitCoachPermission(role: AppRole, permissions: string[]) {
   // personal del socio, no una operación administrativa.
   if (role === "socio" && !merged.includes("Actividades")) {
     merged.push("Actividades");
+  }
+
+  // El centro de ayuda es transversal y no debe quedar oculto por
+  // permisos_menu persistidos antes de existir el módulo.
+  if (role !== "masteradmin" && !merged.includes("Ayuda / Manuales")) {
+    merged.push("Ayuda / Manuales");
   }
 
   return merged;
