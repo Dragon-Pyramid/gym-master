@@ -27,6 +27,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PaginationControls } from "@/components/ui/PaginationControls";
 import { downloadCommercialReportPdf } from "@/utils/commercialReportPdf";
+import { useI18n } from '@/i18n/I18nProvider';
+import { translateCommercialUi } from '@/i18n/commercialUi';
 
 const SERVICIOS_PAGE_SIZE = 10;
 
@@ -42,6 +44,9 @@ const CATEGORIA_LABELS: Record<string, string> = {
 };
 
 export default function ServiciosPage() {
+  const { locale } = useI18n();
+  const c = (text: string) => translateCommercialUi(locale, text);
+
   const { user, isAuthenticated, initializeAuth, isInitialized } =
     useAuthStore();
   const router = useRouter();
@@ -80,62 +85,62 @@ export default function ServiciosPage() {
   const handleDownloadPdf = async () => {
     try {
       await downloadCommercialReportPdf({
-        title: "Listado de Servicios",
-        subtitle: "Reporte de servicios adicionales disponibles para venta.",
+        title: c("Listado de Servicios"),
+        subtitle: c("Reporte de servicios adicionales disponibles para venta."),
         fileName: "listado-servicios-gym-master",
         rows: filteredServicios,
         metrics: [
-          { label: "Servicios filtrados", value: filteredServicios.length },
-          { label: "Activos", value: filteredServicios.filter((s) => s.activo).length },
-          { label: "Requieren reserva", value: filteredServicios.filter((s) => s.requiere_reserva).length },
+          { label: c("Servicios filtrados"), value: filteredServicios.length },
+          { label: c("Activos"), value: filteredServicios.filter((s) => s.activo).length },
+          { label: c("Requieren reserva"), value: filteredServicios.filter((s) => s.requiere_reserva).length },
         ],
-        filtersLabel: `Estado: ${filtroLabel} · Categoría: ${categoriaLabel}${searchTerm.trim() ? ` · Búsqueda: ${searchTerm.trim()}` : ""}`,
+        filtersLabel: `${c("Estado")}: ${c(filtroLabel)} · ${c("Categoría")}: ${c(categoriaLabel)}${searchTerm.trim() ? ` · ${c("Búsqueda")}: ${searchTerm.trim()}` : ""}`,
         columns: [
-          { header: "Servicio", width: 42, getValue: (s) => s.nombre },
-          { header: "Categoría", width: 26, getValue: (s) => CATEGORIA_LABELS[String(s.categoria ?? "otro")] ?? "Otro" },
-          { header: "Descripción", width: 60, getValue: (s) => s.descripcion || "-" },
-          { header: "Precio", width: 20, getValue: (s) => `$${Number(s.precio || 0).toLocaleString("es-AR")}`, align: "right" },
-          { header: "Duración", width: 18, getValue: (s) => s.duracion_minutos ? `${s.duracion_minutos} min` : "-" },
-          { header: "Reserva", width: 18, getValue: (s) => (s.requiere_reserva ? "Sí" : "No") },
-          { header: "Estado", width: 20, getValue: (s) => (s.activo ? "Activo" : "Inactivo") },
+          { header: c("Servicio"), width: 42, getValue: (s) => c(s.nombre) },
+          { header: c("Categoría"), width: 26, getValue: (s) => c(CATEGORIA_LABELS[String(s.categoria ?? "otro")] ?? "Otro") },
+          { header: c("Descripción"), width: 60, getValue: (s) => s.descripcion ? c(s.descripcion) : "-" },
+          { header: c("Precio"), width: 20, getValue: (s) => `$${Number(s.precio || 0).toLocaleString("es-AR")}`, align: "right" },
+          { header: c("Duración"), width: 18, getValue: (s) => s.duracion_minutos ? `${s.duracion_minutos} min` : "-" },
+          { header: c("Reserva"), width: 18, getValue: (s) => (s.requiere_reserva ? c("Sí") : c("No")) },
+          { header: c("Estado"), width: 20, getValue: (s) => (s.activo ? c("Activo") : c("Inactivo")) },
         ],
       });
     } catch {
-      toast.error("No se pudo generar el PDF de servicios");
+      toast.error(c("No se pudo generar el PDF de servicios"));
     }
   };
 
   const handleExportExcel = async () => {
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Servicios");
+    const worksheet = workbook.addWorksheet(c("Servicios"));
 
     worksheet.columns = [
-      { header: "Nombre", key: "nombre", width: 30 },
-      { header: "Categoría", key: "categoria", width: 24 },
-      { header: "Descripción", key: "descripcion", width: 40 },
-      { header: "Precio", key: "precio", width: 15 },
-      { header: "Duración minutos", key: "duracion_minutos", width: 18 },
-      { header: "Requiere reserva", key: "requiere_reserva", width: 18 },
-      { header: "Cupo máximo", key: "cupo_maximo", width: 14 },
-      { header: "Modalidad", key: "modalidad", width: 16 },
-      { header: "Disponible online", key: "disponible_online", width: 18 },
-      { header: "Observaciones", key: "observaciones", width: 40 },
-      { header: "Activo", key: "activo", width: 10 },
+      { header: c("Nombre"), key: "nombre", width: 30 },
+      { header: c("Categoría"), key: "categoria", width: 24 },
+      { header: c("Descripción"), key: "descripcion", width: 40 },
+      { header: c("Precio"), key: "precio", width: 15 },
+      { header: c("Duración minutos"), key: "duracion_minutos", width: 18 },
+      { header: c("Requiere reserva"), key: "requiere_reserva", width: 18 },
+      { header: c("Cupo máximo"), key: "cupo_maximo", width: 14 },
+      { header: c("Modalidad"), key: "modalidad", width: 16 },
+      { header: c("Disponible online"), key: "disponible_online", width: 18 },
+      { header: c("Observaciones"), key: "observaciones", width: 40 },
+      { header: c("Activo"), key: "activo", width: 10 },
     ];
 
     filteredServicios.forEach((s) => {
       worksheet.addRow({
-        nombre: s.nombre,
-        categoria: CATEGORIA_LABELS[String(s.categoria ?? "otro")] ?? "Otro",
-        descripcion: s.descripcion,
+        nombre: c(s.nombre),
+        categoria: c(CATEGORIA_LABELS[String(s.categoria ?? "otro")] ?? "Otro"),
+        descripcion: s.descripcion ? c(s.descripcion) : "",
         precio: s.precio,
         duracion_minutos: s.duracion_minutos ?? "",
-        requiere_reserva: s.requiere_reserva ? "Sí" : "No",
+        requiere_reserva: s.requiere_reserva ? c("Sí") : c("No"),
         cupo_maximo: s.cupo_maximo ?? "",
-        modalidad: s.modalidad ?? "presencial",
-        disponible_online: s.disponible_online ? "Sí" : "No",
-        observaciones: s.observaciones ?? "",
-        activo: s.activo ? "Sí" : "No",
+        modalidad: c(s.modalidad ?? "presencial"),
+        disponible_online: s.disponible_online ? c("Sí") : c("No"),
+        observaciones: s.observaciones ? c(s.observaciones) : "",
+        activo: s.activo ? c("Sí") : c("No"),
       });
     });
 
@@ -209,7 +214,7 @@ export default function ServiciosPage() {
     : CATEGORIA_LABELS[filtroCategoria] ?? "Otro";
 
   if (!isInitialized) {
-    return <div>Cargando...</div>;
+    return <div>{c('Cargando...')}</div>;
   }
 
   if (!isAuthenticated) {
@@ -221,17 +226,17 @@ export default function ServiciosPage() {
       <div className="flex w-full min-h-screen">
         <AppSidebar />
         <SidebarInset>
-          <AppHeader title="Servicios" />
+          <AppHeader title={c("Servicios")} />
           <main className="flex-1 p-6 space-y-6">
             <Card className="w-full">
               <CardHeader className="flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap">
-                <h2 className="text-xl font-bold">Listado de Servicios</h2>
+                <h2 className="text-xl font-bold">{c("Listado de Servicios")}</h2>
                 <div className="flex flex-wrap items-center w-full gap-2 md:w-auto">
                   <div className="flex gap-2 items-center flex-grow md:flex-grow-0">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="min-w-[120px]">
-                          {filtroLabel}
+                          {c(filtroLabel)}
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="start">
@@ -264,7 +269,7 @@ export default function ServiciosPage() {
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="min-w-[150px]">
-                          {categoriaLabel}
+                          {c(categoriaLabel)}
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="start">
@@ -280,7 +285,7 @@ export default function ServiciosPage() {
                             onSelect={() => setFiltroCategoria(value)}
                             className={filtroCategoria === value ? "font-bold" : ""}
                           >
-                            {label}
+                            {c(label)}
                           </DropdownMenuItem>
                         ))}
                       </DropdownMenuContent>
@@ -289,7 +294,7 @@ export default function ServiciosPage() {
                       <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                       <Input
                         type="search"
-                        placeholder="Buscar por nombre, descripción..."
+                        placeholder={c("Buscar por nombre, descripción...")}
                         className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] w-full"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -302,7 +307,7 @@ export default function ServiciosPage() {
                     className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
                   >
                     <FileText className="w-4 h-4" />
-                    <span className="hidden sm:inline">Descargar PDF</span>
+                    <span className="hidden sm:inline">{c("Descargar PDF")}</span>
                   </Button>
                   <Button
                     variant="outline"
@@ -310,14 +315,14 @@ export default function ServiciosPage() {
                     className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
                   >
                     <FileSpreadsheet className="w-4 h-4" />
-                    <span className="hidden sm:inline">Exportar</span>
+                    <span className="hidden sm:inline">{c("Exportar")}</span>
                   </Button>
                   <Button
                     onClick={() => setOpenModal(true)}
                     className="bg-[#02a8e1] hover:bg-[#0288b1]"
                   >
-                    <span className="hidden sm:inline">Añadir Servicio</span>
-                    <span className="sm:hidden">Añadir</span>
+                    <span className="hidden sm:inline">{c("Añadir Servicio")}</span>
+                    <span className="sm:hidden">{c("Añadir")}</span>
                   </Button>
                 </div>
               </CardHeader>
@@ -337,21 +342,19 @@ export default function ServiciosPage() {
                     onDelete={async (servicio) => {
                       const confirmar = window.confirm(
                         servicio.activo
-                          ? "¿Está seguro de desactivar el servicio?"
-                          : "¿Está seguro de activar el servicio?"
+                          ? c("¿Está seguro de desactivar el servicio?")
+                          : c("¿Está seguro de activar el servicio?")
                       );
                       if (!confirmar) return;
 
                       try {
                         await deleteServicio(servicio.id);
                         toast.success(
-                          `Servicio ${
-                            servicio.activo ? "desactivado" : "activado"
-                          } correctamente`
+                          `${c("Servicio")} ${servicio.activo ? c("desactivado") : c("activado")} ${c("correctamente")}`
                         );
                         await loadServicios();
                       } catch (err) {
-                        toast.error("Error al actualizar estado del servicio");
+                        toast.error(c("Error al actualizar estado del servicio"));
                       }
                     }}
                   />

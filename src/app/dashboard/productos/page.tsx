@@ -34,6 +34,8 @@ import {
   getProductoStockEstado,
   isProductoStockCritico,
 } from "@/lib/comercial/productos";
+import { useI18n } from '@/i18n/I18nProvider';
+import { translateCommercialUi } from '@/i18n/commercialUi';
 
 const PRODUCTOS_PAGE_SIZE = 10;
 
@@ -51,6 +53,9 @@ const fallbackCategoriasProducto: CatalogoParametrizableItem[] = [
 ];
 
 export default function ProductoPage() {
+  const { locale } = useI18n();
+  const c = (text: string) => translateCommercialUi(locale, text);
+
   const { isAuthenticated, initializeAuth, isInitialized } =
     useAuthStore();
   const router = useRouter();
@@ -104,10 +109,10 @@ export default function ProductoPage() {
   }, [proveedores]);
 
   const getProveedorNombre = (proveedorId?: string | null) => {
-    if (!proveedorId) return "Sin proveedor asignado";
+    if (!proveedorId) return c("Sin proveedor asignado");
 
     const proveedor = proveedorById.get(proveedorId);
-    return proveedor?.nombre || "Proveedor no encontrado";
+    return proveedor?.nombre || c("Proveedor no encontrado");
   };
 
   const categoriaById = useMemo(() => {
@@ -115,10 +120,10 @@ export default function ProductoPage() {
   }, [categoriasProducto]);
 
   const getCategoriaNombre = (categoriaId?: string | null) => {
-    if (!categoriaId) return "Sin categoría";
+    if (!categoriaId) return c("Sin categoría");
 
     const categoria = categoriaById.get(categoriaId);
-    return categoria?.nombre || "Categoría no encontrada";
+    return categoria?.nombre || c("Categoría no encontrada");
   };
 
   const metrics = useMemo(() => {
@@ -137,17 +142,17 @@ export default function ProductoPage() {
 
   const handleExportExcel = async () => {
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Productos");
+    const worksheet = workbook.addWorksheet(c("Productos"));
 
     worksheet.columns = [
-      { header: "Nombre", key: "nombre", width: 30 },
-      { header: "Descripción", key: "descripcion", width: 30 },
-      { header: "Precio", key: "precio", width: 15 },
-      { header: "Costo", key: "costo", width: 15 },
-      { header: "Margen", key: "margen", width: 15 },
-      { header: "Stock", key: "stock", width: 10 },
-      { header: "Proveedor", key: "proveedor", width: 30 },
-      { header: "Activo", key: "activo", width: 12 },
+      { header: c("Nombre"), key: "nombre", width: 30 },
+      { header: c("Descripción"), key: "descripcion", width: 30 },
+      { header: c("Precio"), key: "precio", width: 15 },
+      { header: c("Costo"), key: "costo", width: 15 },
+      { header: c("Margen"), key: "margen", width: 15 },
+      { header: c("Stock"), key: "stock", width: 10 },
+      { header: c("Proveedor"), key: "proveedor", width: 30 },
+      { header: c("Activo"), key: "activo", width: 12 },
     ];
 
     filteredProductos.forEach((p) => {
@@ -159,7 +164,7 @@ export default function ProductoPage() {
         margen: Number(p.precio ?? 0) - Number(p.costo ?? 0),
         stock: p.stock,
         proveedor: getProveedorNombre(p.proveedor_id),
-        activo: p.activo === false ? "No" : "Sí",
+        activo: p.activo === false ? c("No") : c("Sí"),
       });
     });
 
@@ -178,33 +183,33 @@ export default function ProductoPage() {
   const handleDownloadPdf = async () => {
     try {
       await downloadCommercialReportPdf({
-        title: "Listado de Productos",
-        subtitle: "Control operativo de productos, stock, proveedores y estado comercial.",
+        title: c("Listado de Productos"),
+        subtitle: c("Control operativo de productos, stock, proveedores y estado comercial."),
         fileName: "listado-productos-gym-master",
         rows: filteredProductos,
         metrics: [
-          { label: "Productos activos", value: metrics.activos },
-          { label: "Stock crítico", value: metrics.criticos },
-          { label: "Sin stock", value: metrics.sinStock },
-          { label: "Inventario estimado", value: formatCurrencyARS(metrics.valorInventario) },
+          { label: c("Productos activos"), value: metrics.activos },
+          { label: c("Stock crítico"), value: metrics.criticos },
+          { label: c("Sin stock"), value: metrics.sinStock },
+          { label: c("Inventario estimado"), value: formatCurrencyARS(metrics.valorInventario) },
         ],
-        filtersLabel: `Filtro: ${stockFilter.replace(/_/g, " ")}${searchTerm.trim() ? ` · Búsqueda: ${searchTerm.trim()}` : ""}`,
+        filtersLabel: `${c("Filtro")}: ${c(stockFilter.replace(/_/g, " "))}${searchTerm.trim() ? ` · ${c("Búsqueda")}: ${searchTerm.trim()}` : ""}`,
         columns: [
-          { header: "Producto", width: 34, getValue: (p) => p.nombre },
-          { header: "Descripción", width: 38, getValue: (p) => p.descripcion || "-" },
-          { header: "Categoría", width: 28, getValue: (p) => getCategoriaNombre(p.id_categoria_producto) },
-          { header: "Proveedor", width: 34, getValue: (p) => getProveedorNombre(p.proveedor_id) },
-          { header: "Precio", width: 20, getValue: (p) => formatCurrencyARS(p.precio), align: "right" },
-          { header: "Costo", width: 20, getValue: (p) => formatCurrencyARS(p.costo ?? 0), align: "right" },
-          { header: "Margen", width: 20, getValue: (p) => formatCurrencyARS((p.precio ?? 0) - (p.costo ?? 0)), align: "right" },
-          { header: "Stock", width: 15, getValue: (p) => p.stock, align: "right" },
-          { header: "Stock mínimo", width: 20, getValue: (p) => p.stock_minimo ?? 5, align: "right" },
-          { header: "Estado", width: 24, getValue: (p) => getProductoStockEstado(p).replace(/_/g, " ") },
-          { header: "Activo", width: 16, getValue: (p) => (p.activo === false ? "No" : "Sí") },
+          { header: c("Producto"), width: 34, getValue: (p) => c(p.nombre) },
+          { header: c("Descripción"), width: 38, getValue: (p) => (p.descripcion ? c(p.descripcion) : "-") },
+          { header: c("Categoría"), width: 28, getValue: (p) => getCategoriaNombre(p.id_categoria_producto) },
+          { header: c("Proveedor"), width: 34, getValue: (p) => getProveedorNombre(p.proveedor_id) },
+          { header: c("Precio"), width: 20, getValue: (p) => formatCurrencyARS(p.precio), align: "right" },
+          { header: c("Costo"), width: 20, getValue: (p) => formatCurrencyARS(p.costo ?? 0), align: "right" },
+          { header: c("Margen"), width: 20, getValue: (p) => formatCurrencyARS((p.precio ?? 0) - (p.costo ?? 0)), align: "right" },
+          { header: c("Stock"), width: 15, getValue: (p) => p.stock, align: "right" },
+          { header: c("Stock mínimo"), width: 20, getValue: (p) => p.stock_minimo ?? 5, align: "right" },
+          { header: c("Estado"), width: 24, getValue: (p) => c(getProductoStockEstado(p).replace(/_/g, " ")) },
+          { header: c("Activo"), width: 16, getValue: (p) => (p.activo === false ? c("No") : c("Sí")) },
         ],
       });
     } catch {
-      toast.error("No se pudo generar el PDF de productos");
+      toast.error(c("No se pudo generar el PDF de productos"));
     }
   };
 
@@ -256,7 +261,7 @@ export default function ProductoPage() {
   }, [currentPage, totalPages]);
 
   if (!isInitialized) {
-    return <div>Cargando...</div>;
+    return <div>{c('Cargando...')}</div>;
   }
 
   if (!isAuthenticated) {
@@ -268,30 +273,30 @@ export default function ProductoPage() {
       <div className="flex w-full min-h-screen">
         <AppSidebar />
         <SidebarInset>
-          <AppHeader title="Productos" />
+          <AppHeader title={c("Productos")} />
           <main className="flex-1 p-6 space-y-6">
             <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
               <Card>
                 <CardContent className="p-5">
-                  <p className="text-sm text-muted-foreground">Productos activos</p>
+                  <p className="text-sm text-muted-foreground">{c("Productos activos")}</p>
                   <p className="text-2xl font-bold">{metrics.activos}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-5">
-                  <p className="text-sm text-muted-foreground">Stock crítico</p>
+                  <p className="text-sm text-muted-foreground">{c("Stock crítico")}</p>
                   <p className="text-2xl font-bold text-amber-700">{metrics.criticos}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-5">
-                  <p className="text-sm text-muted-foreground">Sin stock</p>
+                  <p className="text-sm text-muted-foreground">{c("Sin stock")}</p>
                   <p className="text-2xl font-bold text-red-700">{metrics.sinStock}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-5">
-                  <p className="text-sm text-muted-foreground">Inventario estimado</p>
+                  <p className="text-sm text-muted-foreground">{c("Inventario estimado")}</p>
                   <p className="text-2xl font-bold">{formatCurrencyARS(metrics.valorInventario)}</p>
                 </CardContent>
               </Card>
@@ -301,7 +306,7 @@ export default function ProductoPage() {
               <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
                 <AlertTriangle className="h-5 w-5 shrink-0" />
                 <p>
-                  Hay productos con stock crítico. Revisá reposición para evitar quiebres de stock en ventas del kiosco.
+                  {c("Hay productos con stock crítico. Revisá reposición para evitar quiebres de stock en ventas del kiosco.")}
                 </p>
               </div>
             )}
@@ -309,23 +314,23 @@ export default function ProductoPage() {
             <Card className="w-full">
               <CardHeader className="flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap">
                 <div className="space-y-1">
-                  <h2 className="text-xl font-bold">Productos del kiosco</h2>
+                  <h2 className="text-xl font-bold">{c("Productos del kiosco")}</h2>
                   <p className="text-sm text-muted-foreground">
-                    Control operativo de productos, stock y estado comercial.
+                    {c("Control operativo de productos, stock y estado comercial.")}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center w-full gap-2 md:w-auto">
                   <Button asChild variant="outline" className="flex items-center gap-2">
                     <Link href="/dashboard/comercial">
                       <Store className="w-4 h-4" />
-                      <span className="hidden sm:inline">Comercial</span>
+                      <span className="hidden sm:inline">{c("Comercial")}</span>
                     </Link>
                   </Button>
                   <div className="relative flex-grow md:flex-grow-0">
                     <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                       type="search"
-                      placeholder="Buscar producto, descripción o proveedor..."
+                      placeholder={c("Buscar producto, descripción o proveedor...")}
                       className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] w-full"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
@@ -337,7 +342,7 @@ export default function ProductoPage() {
                     className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
                   >
                     <FileText className="w-4 h-4" />
-                    <span className="hidden sm:inline">Descargar PDF</span>
+                    <span className="hidden sm:inline">{c("Descargar PDF")}</span>
                   </Button>
                   <Button
                     variant="outline"
@@ -345,15 +350,15 @@ export default function ProductoPage() {
                     className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
                   >
                     <FileSpreadsheet className="w-4 h-4" />
-                    <span className="hidden sm:inline">Exportar</span>
+                    <span className="hidden sm:inline">{c("Exportar")}</span>
                   </Button>
                   <Button
                     onClick={() => setOpenModal(true)}
                     className="bg-[#02a8e1] hover:bg-[#0288b1]"
                   >
                     <Package className="w-4 h-4" />
-                    <span className="hidden sm:inline">Añadir Producto</span>
-                    <span className="sm:hidden">Añadir</span>
+                    <span className="hidden sm:inline">{c("Añadir Producto")}</span>
+                    <span className="sm:hidden">{c("Añadir")}</span>
                   </Button>
                 </div>
               </CardHeader>
@@ -373,7 +378,7 @@ export default function ProductoPage() {
                       variant={stockFilter === value ? "default" : "outline"}
                       onClick={() => setStockFilter(value as StockFilter)}
                     >
-                      {label}
+                      {c(label)}
                     </Button>
                   ))}
                 </div>
@@ -396,16 +401,16 @@ export default function ProductoPage() {
                     getProveedorNombre={getProveedorNombre}
                     onDelete={async (producto) => {
                       const confirmar = window.confirm(
-                        "¿Querés desactivar este producto? No se borra el histórico."
+                        c("¿Querés desactivar este producto? No se borra el histórico.")
                       );
                       if (!confirmar) return;
 
                       try {
                         await deleteProducto(producto.id);
-                        toast.success("Producto desactivado correctamente");
+                        toast.success(c("Producto desactivado correctamente"));
                         await loadProductos();
                       } catch (err) {
-                        toast.error("Error al desactivar producto");
+                        toast.error(c("Error al desactivar producto"));
                       }
                     }}
                   />
@@ -415,7 +420,7 @@ export default function ProductoPage() {
                   totalItems={totalProductos}
                   pageSize={PRODUCTOS_PAGE_SIZE}
                   onPageChange={setCurrentPage}
-                  itemLabel="productos"
+                  itemLabel={c("productos")}
                 />
               </CardContent>
             </Card>

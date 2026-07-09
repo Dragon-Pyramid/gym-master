@@ -14,6 +14,8 @@ import {
   TableCaption,
 } from "@/components/ui/table";
 import { Proveedor, ProveedorEstado } from "@/interfaces/proveedor.interface";
+import { useI18n } from '@/i18n/I18nProvider';
+import { translateCommercialUi } from '@/i18n/commercialUi';
 
 const estadoLabel: Record<ProveedorEstado, string> = {
   activo: "Activo",
@@ -40,9 +42,16 @@ export default function ProveedoresTable({
   onView?: (proveedor: Proveedor) => void;
   onDelete?: (proveedor: Proveedor) => void | Promise<void>;
 }) {
+  const { locale } = useI18n();
+  const c = (text: string) => translateCommercialUi(locale, text);
+
   if (loading) {
     return (
-      <div className="space-y-2">
+      <div className="space-y-3" role="status" aria-live="polite" aria-busy="true">
+        <div className="rounded-md border border-border bg-muted/20 px-4 py-3">
+          <p className="text-sm font-medium text-foreground">{c("Cargando proveedores...")}</p>
+          <p className="text-xs text-muted-foreground">{c("Estamos preparando el listado comercial de proveedores.")}</p>
+        </div>
         {[...Array(5)].map((_, i) => (
           <Skeleton key={i} className="w-full h-9 rounded-md" />
         ))}
@@ -53,7 +62,7 @@ export default function ProveedoresTable({
   if (proveedores.length === 0 && !loading) {
     return (
       <div className="py-10 text-center text-muted-foreground">
-        No hay proveedores registrados aún.
+        {c("No hay proveedores registrados aún.")}
       </div>
     );
   }
@@ -62,12 +71,12 @@ export default function ProveedoresTable({
     <Table className="overflow-hidden w-full text-sm rounded-md border border-border">
       <TableHeader>
         <TableRow className="bg-muted/50 text-muted-foreground">
-          <TableHead>Proveedor</TableHead>
-          <TableHead>Fiscal</TableHead>
-          <TableHead>Contacto</TableHead>
-          <TableHead>Ubicación</TableHead>
-          <TableHead>Estado</TableHead>
-          <TableHead>Acciones</TableHead>
+          <TableHead>{c("Proveedor")}</TableHead>
+          <TableHead>{c("Fiscal")}</TableHead>
+          <TableHead>{c("Contacto")}</TableHead>
+          <TableHead>{c("Ubicación")}</TableHead>
+          <TableHead>{c("Estado")}</TableHead>
+          <TableHead>{c("Acciones")}</TableHead>
         </TableRow>
       </TableHeader>
 
@@ -82,30 +91,30 @@ export default function ProveedoresTable({
               <TableCell className="min-w-[220px]">
                 <div className="font-medium">{p.nombre}</div>
                 <div className="text-xs text-muted-foreground">
-                  {p.razon_social || p.rubro || "Sin razón social/rubro"}
+                  {p.razon_social || (p.rubro ? c(p.rubro) : c("Sin razón social/rubro"))}
                 </div>
               </TableCell>
               <TableCell className="min-w-[170px]">
                 <div>{p.identificacion_fiscal || "-"}</div>
                 <div className="text-xs text-muted-foreground">
-                  {p.condicion_fiscal || "Sin condición fiscal"}
+                  {p.condicion_fiscal ? c(p.condicion_fiscal) : c("Sin condición fiscal")}
                 </div>
               </TableCell>
               <TableCell className="min-w-[190px]">
                 <div>{p.contacto || "-"}</div>
                 <div className="text-xs text-muted-foreground">
-                  {p.email || p.whatsapp || p.telefono || "Sin contacto"}
+                  {p.email || p.whatsapp || p.telefono || c("Sin contacto")}
                 </div>
               </TableCell>
               <TableCell className="min-w-[180px]">
                 <div>{p.ciudad || p.provincia || p.pais || "-"}</div>
                 <div className="text-xs text-muted-foreground line-clamp-1">
-                  {p.direccion || "Sin dirección"}
+                  {p.direccion || c("Sin dirección")}
                 </div>
               </TableCell>
               <TableCell>
                 <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-medium ${estadoClassName(estado)}`}>
-                  {estadoLabel[estado] ?? "Activo"}
+                  {c(estadoLabel[estado] ?? "Activo")}
                 </span>
               </TableCell>
               <TableCell className="flex gap-2">
@@ -114,13 +123,13 @@ export default function ProveedoresTable({
                   variant="outline"
                   onClick={() => onView && onView(p)}
                 >
-                  Ver
+                  {c("Ver")}
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => onEdit(p)}
-                  title="Editar"
+                  title={c("Editar")}
                 >
                   <Pencil className="w-4 h-4" />
                 </Button>
@@ -130,7 +139,7 @@ export default function ProveedoresTable({
                   onClick={() => onDelete && onDelete(p)}
                   disabled={estado === "inactivo"}
                 >
-                  {estado === "inactivo" ? "Inactivo" : "Desactivar"}
+                  {estado === "inactivo" ? c("Inactivo") : c("Desactivar")}
                 </Button>
               </TableCell>
             </TableRow>
@@ -140,12 +149,12 @@ export default function ProveedoresTable({
 
       <TableFooter>
         <TableRow>
-          <TableCell colSpan={5}>Total de proveedores</TableCell>
+          <TableCell colSpan={5}>{c("Total de proveedores")}</TableCell>
           <TableCell className="text-right">{proveedores.length}</TableCell>
         </TableRow>
       </TableFooter>
 
-      <TableCaption>Listado de proveedores registrados.</TableCaption>
+      <TableCaption>{c("Listado de proveedores registrados.")}</TableCaption>
     </Table>
   );
 }

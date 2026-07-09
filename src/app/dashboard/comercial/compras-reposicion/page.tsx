@@ -483,11 +483,11 @@ export default function ComercialComprasReposicionPage() {
                         <div>
                           <p className='font-semibold'>{orden.numero_orden}</p>
                           <p className='text-sm text-muted-foreground'>{orden.proveedor?.nombre ?? c('Proveedor')} · {c(estadoLabel(orden.estado))} · {formatCurrencyARS(orden.total_estimado)}</p>
-                          <p className='text-xs text-muted-foreground'>{c('Destino')}: {orden.ubicacion_destino?.nombre ?? c('Sin ubicación fija')}</p>
+                          <p className='text-xs text-muted-foreground'>{c('Destino')}: {orden.ubicacion_destino?.nombre ? c(orden.ubicacion_destino.nombre) : c('Sin ubicación fija')}</p>
                         </div>
                         <Button onClick={() => handleReceiveOrder(orden)} disabled={receivingId === orden.id}>
                           {receivingId === orden.id ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <CheckCircle2 className='mr-2 h-4 w-4' />}
-                          Recibir cantidades
+                          {c('Recibir cantidades')}
                         </Button>
                       </div>
                       <div className='space-y-2'>

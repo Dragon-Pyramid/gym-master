@@ -24,6 +24,8 @@ import ExcelJS from "exceljs";
 import { buildTimestampedDownloadFileName } from '@/utils/downloadFileName';
 import { downloadCommercialReportPdf } from "@/utils/commercialReportPdf";
 import { PaginationControls } from "@/components/ui/PaginationControls";
+import { useI18n } from '@/i18n/I18nProvider';
+import { translateCommercialUi } from '@/i18n/commercialUi';
 
 const PROVEEDORES_PAGE_SIZE = 10;
 
@@ -36,6 +38,12 @@ const estadoLabel: Record<ProveedorEstado, string> = {
 };
 
 export default function ProveedoresPage() {
+  const { locale } = useI18n();
+  const c = useCallback(
+    (text: string) => translateCommercialUi(locale, text),
+    [locale],
+  );
+
   const { isAuthenticated, initializeAuth, isInitialized } =
     useAuthStore();
   const router = useRouter();
@@ -65,19 +73,20 @@ export default function ProveedoresPage() {
   }, [isAuthenticated, isInitialized, router]);
 
   const loadProveedores = useCallback(async () => {
+    // `c` is memoized to avoid re-triggering this effect on every render.
     setLoading(true);
     try {
       const data = await getAllProveedores();
       setProveedores(data ?? []);
       setFilteredProveedores(data ?? []);
     } catch {
-      toast.error("Error al cargar proveedores");
+      toast.error(c("Error al cargar proveedores"));
       setProveedores([]);
       setFilteredProveedores([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [c]);
 
   const metrics = useMemo(() => {
     const activos = proveedores.filter((p) => (p.estado ?? "activo") === "activo").length;
@@ -95,59 +104,59 @@ export default function ProveedoresPage() {
   const handleDownloadPdf = async () => {
     try {
       await downloadCommercialReportPdf({
-        title: "Listado de Proveedores",
-        subtitle: "Perfil comercial, fiscal, contacto, ubicación y datos bancarios opcionales.",
+        title: c("Listado de Proveedores"),
+        subtitle: c("Perfil comercial, fiscal, contacto, ubicación y datos bancarios opcionales."),
         fileName: "listado-proveedores-gym-master",
         rows: filteredProveedores,
         metrics: [
-          { label: "Total", value: metrics.total },
-          { label: "Activos", value: metrics.activos },
-          { label: "Inactivos", value: metrics.inactivos },
-          { label: "Discontinuados", value: metrics.discontinuados },
+          { label: c("Total"), value: metrics.total },
+          { label: c("Activos"), value: metrics.activos },
+          { label: c("Inactivos"), value: metrics.inactivos },
+          { label: c("Discontinuados"), value: metrics.discontinuados },
         ],
-        filtersLabel: `Filtro de estado: ${estadoFiltro === "todos" ? "Todos" : estadoLabel[estadoFiltro]}${searchTerm.trim() ? ` · Búsqueda: ${searchTerm.trim()}` : ""}`,
+        filtersLabel: `${c("Filtro de estado")}: ${estadoFiltro === "todos" ? c("Todos") : c(estadoLabel[estadoFiltro])}${searchTerm.trim() ? ` · ${c("Búsqueda")}: ${searchTerm.trim()}` : ""}`,
         columns: [
-          { header: "Proveedor", width: 30, getValue: (p) => p.nombre },
-          { header: "Razón social", width: 32, getValue: (p) => p.razon_social || "Sin razón social" },
-          { header: "CUIT/RUC", width: 20, getValue: (p) => p.identificacion_fiscal || "-" },
-          { header: "Cond. fiscal", width: 24, getValue: (p) => p.condicion_fiscal || "-" },
-          { header: "Contacto", width: 28, getValue: (p) => p.contacto || p.telefono || "-" },
-          { header: "WhatsApp", width: 24, getValue: (p) => p.whatsapp || "-" },
-          { header: "Email", width: 34, getValue: (p) => p.email || "-" },
-          { header: "Ubicación", width: 42, getValue: (p) => [p.direccion, p.ciudad, p.provincia, p.pais].filter(Boolean).join(", ") || "-" },
-          { header: "Rubro", width: 24, getValue: (p) => p.rubro || "-" },
-          { header: "Estado", width: 18, getValue: (p) => estadoLabel[p.estado ?? "activo"] ?? "Activo" },
+          { header: c("Proveedor"), width: 30, getValue: (p) => p.nombre },
+          { header: c("Razón social"), width: 32, getValue: (p) => p.razon_social || c("Sin razón social") },
+          { header: c("CUIT/RUC"), width: 20, getValue: (p) => p.identificacion_fiscal || "-" },
+          { header: c("Cond. fiscal"), width: 24, getValue: (p) => p.condicion_fiscal ? c(p.condicion_fiscal) : "-" },
+          { header: c("Contacto"), width: 28, getValue: (p) => p.contacto || p.telefono || "-" },
+          { header: c("WhatsApp"), width: 24, getValue: (p) => p.whatsapp || "-" },
+          { header: c("Email"), width: 34, getValue: (p) => p.email || "-" },
+          { header: c("Ubicación"), width: 42, getValue: (p) => [p.direccion, p.ciudad, p.provincia, p.pais].filter(Boolean).join(", ") || "-" },
+          { header: c("Rubro"), width: 24, getValue: (p) => p.rubro || "-" },
+          { header: c("Estado"), width: 18, getValue: (p) => c(estadoLabel[p.estado ?? "activo"] ?? "Activo") },
         ],
       });
     } catch {
-      toast.error("No se pudo generar el PDF de proveedores");
+      toast.error(c("No se pudo generar el PDF de proveedores"));
     }
   };
 
   const handleExportExcel = async () => {
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Proveedores");
+    const worksheet = workbook.addWorksheet(c("Proveedores"));
 
     worksheet.columns = [
-      { header: "Nombre comercial", key: "nombre", width: 30 },
-      { header: "Razón social", key: "razon_social", width: 35 },
-      { header: "CUIT/RUC", key: "identificacion_fiscal", width: 20 },
-      { header: "Condición fiscal", key: "condicion_fiscal", width: 25 },
-      { header: "Contacto", key: "contacto", width: 24 },
-      { header: "Teléfono", key: "telefono", width: 20 },
-      { header: "WhatsApp", key: "whatsapp", width: 20 },
-      { header: "Email", key: "email", width: 30 },
-      { header: "Dirección", key: "direccion", width: 40 },
-      { header: "Ciudad", key: "ciudad", width: 20 },
-      { header: "Provincia", key: "provincia", width: 20 },
-      { header: "País", key: "pais", width: 18 },
-      { header: "Rubro", key: "rubro", width: 24 },
-      { header: "Estado", key: "estado", width: 18 },
-      { header: "Banco", key: "banco", width: 24 },
-      { header: "Alias CBU/CVU", key: "alias_cbu", width: 24 },
-      { header: "CBU/CVU", key: "cbu_cvu", width: 28 },
-      { header: "Titular cuenta", key: "titular_cuenta", width: 30 },
-      { header: "Observaciones", key: "observaciones", width: 45 },
+      { header: c("Nombre comercial"), key: "nombre", width: 30 },
+      { header: c("Razón social"), key: "razon_social", width: 35 },
+      { header: c("CUIT/RUC"), key: "identificacion_fiscal", width: 20 },
+      { header: c("Condición fiscal"), key: "condicion_fiscal", width: 25 },
+      { header: c("Contacto"), key: "contacto", width: 24 },
+      { header: c("Teléfono"), key: "telefono", width: 20 },
+      { header: c("WhatsApp"), key: "whatsapp", width: 20 },
+      { header: c("Email"), key: "email", width: 30 },
+      { header: c("Dirección"), key: "direccion", width: 40 },
+      { header: c("Ciudad"), key: "ciudad", width: 20 },
+      { header: c("Provincia"), key: "provincia", width: 20 },
+      { header: c("País"), key: "pais", width: 18 },
+      { header: c("Rubro"), key: "rubro", width: 24 },
+      { header: c("Estado"), key: "estado", width: 18 },
+      { header: c("Banco"), key: "banco", width: 24 },
+      { header: c("Alias CBU/CVU"), key: "alias_cbu", width: 24 },
+      { header: c("CBU/CVU"), key: "cbu_cvu", width: 28 },
+      { header: c("Titular cuenta"), key: "titular_cuenta", width: 30 },
+      { header: c("Observaciones"), key: "observaciones", width: 45 },
     ];
 
     filteredProveedores.forEach((p) => {
@@ -166,7 +175,7 @@ export default function ProveedoresPage() {
         provincia: p.provincia ?? "",
         pais: p.pais ?? "",
         rubro: p.rubro ?? "",
-        estado: estadoLabel[estado] ?? "Activo",
+        estado: c(estadoLabel[estado] ?? "Activo"),
         banco: p.banco ?? "",
         alias_cbu: p.alias_cbu ?? "",
         cbu_cvu: p.cbu_cvu ?? "",
@@ -189,16 +198,16 @@ export default function ProveedoresPage() {
 
   const handleDeleteProveedor = async (proveedor: Proveedor) => {
     const confirmar = window.confirm(
-      `¿Está seguro de desactivar al proveedor ${proveedor.nombre}? No se borrará el histórico ni las relaciones comerciales.`
+      `${c("¿Está seguro de desactivar al proveedor")} ${proveedor.nombre}? ${c("No se borrará el histórico ni las relaciones comerciales.")}`
     );
     if (!confirmar) return;
 
     try {
       await deleteProveedor(proveedor.id);
-      toast.success("Proveedor desactivado correctamente");
+      toast.success(c("Proveedor desactivado correctamente"));
       await loadProveedores();
     } catch (error: unknown) {
-      toast.error("Error al desactivar proveedor");
+      toast.error(c("Error al desactivar proveedor"));
     }
   };
 
@@ -259,7 +268,7 @@ export default function ProveedoresPage() {
   }, [currentPage, totalPages]);
 
   if (!isInitialized) {
-    return <div>Cargando...</div>;
+    return <div>{c("Cargando...")}</div>;
   }
 
   if (!isAuthenticated) {
@@ -271,30 +280,30 @@ export default function ProveedoresPage() {
       <div className="flex w-full min-h-screen">
         <AppSidebar />
         <SidebarInset>
-          <AppHeader title="Proveedores" />
+          <AppHeader title={c("Proveedores")} />
           <main className="flex-1 p-6 space-y-6">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
               <Card>
                 <CardContent className="p-4">
-                  <p className="text-sm text-muted-foreground">Total</p>
+                  <p className="text-sm text-muted-foreground">{c("Total")}</p>
                   <p className="text-2xl font-bold">{metrics.total}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4">
-                  <p className="text-sm text-muted-foreground">Activos</p>
+                  <p className="text-sm text-muted-foreground">{c("Activos")}</p>
                   <p className="text-2xl font-bold text-emerald-600">{metrics.activos}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4">
-                  <p className="text-sm text-muted-foreground">Inactivos</p>
+                  <p className="text-sm text-muted-foreground">{c("Inactivos")}</p>
                   <p className="text-2xl font-bold text-gray-600">{metrics.inactivos}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4">
-                  <p className="text-sm text-muted-foreground">Discontinuados</p>
+                  <p className="text-sm text-muted-foreground">{c("Discontinuados")}</p>
                   <p className="text-2xl font-bold text-amber-600">{metrics.discontinuados}</p>
                 </CardContent>
               </Card>
@@ -303,9 +312,9 @@ export default function ProveedoresPage() {
             <Card className="w-full">
               <CardHeader className="flex flex-wrap gap-4 justify-between items-center p-4 border-b md:flex-nowrap">
                 <div>
-                  <h2 className="text-xl font-bold">Listado de Proveedores</h2>
+                  <h2 className="text-xl font-bold">{c("Listado de Proveedores")}</h2>
                   <p className="text-sm text-muted-foreground">
-                    Gestión comercial, fiscal, contacto, ubicación y datos bancarios opcionales.
+                    {c("Gestión comercial, fiscal, contacto, ubicación y datos bancarios opcionales.")}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2 items-center w-full md:w-auto">
@@ -313,7 +322,7 @@ export default function ProveedoresPage() {
                     <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                       type="search"
-                      placeholder="Buscar proveedor..."
+                      placeholder={c("Buscar proveedor...")}
                       className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] w-full"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
@@ -324,10 +333,10 @@ export default function ProveedoresPage() {
                     onChange={(e) => setEstadoFiltro(e.target.value as EstadoFiltro)}
                     className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
                   >
-                    <option value="todos">Todos los estados</option>
-                    <option value="activo">Activos</option>
-                    <option value="inactivo">Inactivos</option>
-                    <option value="discontinuado">Discontinuados</option>
+                    <option value="todos">{c("Todos los estados")}</option>
+                    <option value="activo">{c("Activos")}</option>
+                    <option value="inactivo">{c("Inactivos")}</option>
+                    <option value="discontinuado">{c("Discontinuados")}</option>
                   </select>
                   <Button
                     onClick={handleDownloadPdf}
@@ -335,7 +344,7 @@ export default function ProveedoresPage() {
                     className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
                   >
                     <FileText className="w-4 h-4" />
-                    <span className="hidden sm:inline">Descargar PDF</span>
+                    <span className="hidden sm:inline">{c("Descargar PDF")}</span>
                   </Button>
                   <Button
                     variant="outline"
@@ -343,14 +352,14 @@ export default function ProveedoresPage() {
                     className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
                   >
                     <FileSpreadsheet className="w-4 h-4" />
-                    <span className="hidden sm:inline">Exportar</span>
+                    <span className="hidden sm:inline">{c("Exportar")}</span>
                   </Button>
                   <Button
                     onClick={() => setOpenModal(true)}
                     className="bg-[#02a8e1] hover:bg-[#0288b1]"
                   >
-                    <span className="hidden sm:inline">Añadir Proveedor</span>
-                    <span className="sm:hidden">Añadir</span>
+                    <span className="hidden sm:inline">{c("Añadir Proveedor")}</span>
+                    <span className="sm:hidden">{c("Añadir")}</span>
                   </Button>
                 </div>
               </CardHeader>
