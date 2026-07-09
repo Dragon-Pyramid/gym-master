@@ -868,17 +868,17 @@ function StudioStat({
   icon: typeof Activity;
 }) {
   return (
-    <div className="rounded-2xl border bg-white/90 p-3 shadow-sm">
+    <div className="rounded-2xl border bg-card/90 p-3 shadow-sm">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
-          <p className="mt-1 text-lg font-bold text-gray-950">{value}</p>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
+          <p className="mt-1 text-lg font-bold text-foreground">{value}</p>
         </div>
         <div className="rounded-xl bg-[#02a8e1]/10 p-2 text-[#02a8e1]">
           <Icon className="h-4 w-4" />
         </div>
       </div>
-      <p className="mt-1 text-xs text-gray-500">{helper}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{helper}</p>
     </div>
   );
 }
@@ -899,7 +899,7 @@ function GroupPill({
       type="button"
       onClick={onClick}
       className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
-        active ? "border-[#02a8e1] bg-[#02a8e1]/10 text-[#036985]" : "bg-white text-gray-600 hover:bg-slate-50"
+        active ? "border-[#02a8e1] bg-[#02a8e1]/10 text-[#036985] dark:text-sky-200" : "bg-background text-muted-foreground hover:bg-muted/60"
       }`}
     >
       <span className="mr-1 inline-block h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
@@ -936,8 +936,8 @@ export default function EvolucionFisicaBeforeAfterStudio({
 
   if (orderedRows.length < 2) {
     return (
-      <Card className="rounded-2xl border bg-white shadow-sm">
-        <CardContent className="p-6 text-sm text-gray-500">
+      <Card className="rounded-2xl border bg-card text-card-foreground shadow-sm">
+        <CardContent className="p-6 text-sm text-muted-foreground">
           El estudio visual antes/después se activará cuando existan al menos dos registros de evolución física.
         </CardContent>
       </Card>
@@ -969,7 +969,7 @@ export default function EvolucionFisicaBeforeAfterStudio({
   const ScoreIcon = compositeScore >= 0 ? TrendingUp : TrendingDown;
 
   return (
-    <Card className="overflow-hidden rounded-2xl border bg-white shadow-sm">
+    <Card className="overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-sm">
       <CardHeader className="space-y-3 border-b bg-gradient-to-r from-slate-950 via-slate-900 to-[#063247] p-5 text-white">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
           <div>
@@ -982,7 +982,7 @@ export default function EvolucionFisicaBeforeAfterStudio({
               Silueta SVG propia, heatmap por grupos corporales y comparación entre dos mediciones. Inspirado en patrones benchmark, sin copiar assets ni componentes externos.
             </p>
           </div>
-          <div className="grid min-w-[260px] grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-white/10 p-3 text-center backdrop-blur">
+          <div className="grid min-w-[260px] grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-background/10 p-3 text-center backdrop-blur">
             <div>
               <p className="text-lg font-bold">{improvedCount}</p>
               <p className="text-[11px] text-cyan-100/80">mejoras</p>
@@ -1002,7 +1002,7 @@ export default function EvolucionFisicaBeforeAfterStudio({
       <CardContent className="space-y-5 p-5">
         <div className="grid gap-3 lg:grid-cols-[1fr_1fr_auto]">
           <div className="space-y-1.5">
-            <label htmlFor="gm-evo-before-date" className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <label htmlFor="gm-evo-before-date" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Medición antes
             </label>
             <select
@@ -1020,7 +1020,7 @@ export default function EvolucionFisicaBeforeAfterStudio({
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="gm-evo-after-date" className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <label htmlFor="gm-evo-after-date" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Medición después
             </label>
             <select
@@ -1152,7 +1152,7 @@ export default function EvolucionFisicaBeforeAfterStudio({
             </div>
 
             {mode === "slider" && (
-              <div className="rounded-2xl border border-cyan-300/20 bg-white/5 p-3">
+              <div className="rounded-2xl border border-cyan-300/20 bg-background/10 p-3">
                 <div className="mb-2 flex items-center justify-between text-xs text-cyan-100">
                   <span>Antes</span>
                   <span>{slider}%</span>
@@ -1199,12 +1199,12 @@ export default function EvolucionFisicaBeforeAfterStudio({
               />
             </div>
 
-            <div className="rounded-2xl border bg-white p-4 shadow-sm">
+            <div className="rounded-2xl border bg-card p-4 text-card-foreground shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="text-xs uppercase tracking-wide text-[#02a8e1]">Grupo seleccionado</p>
-                  <h4 className="mt-1 text-xl font-bold text-gray-950">{activeState.label}</h4>
-                  <p className="mt-1 text-sm text-gray-500">{activeState.description}</p>
+                  <h4 className="mt-1 text-xl font-bold text-foreground">{activeState.label}</h4>
+                  <p className="mt-1 text-sm text-muted-foreground">{activeState.description}</p>
                 </div>
                 <div
                   className="rounded-2xl px-3 py-2 text-sm font-bold"
@@ -1221,29 +1221,29 @@ export default function EvolucionFisicaBeforeAfterStudio({
               </div>
 
               <div className="mt-4 grid gap-3 md:grid-cols-3">
-                <div className="rounded-xl border bg-slate-50 p-3">
-                  <p className="text-xs text-gray-500">Antes</p>
-                  <p className="text-lg font-bold text-gray-950">
+                <div className="rounded-xl border bg-muted/40 p-3">
+                  <p className="text-xs text-muted-foreground">Antes</p>
+                  <p className="text-lg font-bold text-foreground">
                     {formatNumber(activeState.before, activeState.before === null ? "" : ` ${activeState.unit}`)}
                   </p>
                 </div>
-                <div className="rounded-xl border bg-slate-50 p-3">
-                  <p className="text-xs text-gray-500">Después</p>
-                  <p className="text-lg font-bold text-gray-950">
+                <div className="rounded-xl border bg-muted/40 p-3">
+                  <p className="text-xs text-muted-foreground">Después</p>
+                  <p className="text-lg font-bold text-foreground">
                     {formatNumber(activeState.after, activeState.after === null ? "" : ` ${activeState.unit}`)}
                   </p>
                 </div>
-                <div className="rounded-xl border bg-slate-50 p-3">
-                  <p className="text-xs text-gray-500">Cambio</p>
-                  <p className="text-lg font-bold text-gray-950">
+                <div className="rounded-xl border bg-muted/40 p-3">
+                  <p className="text-xs text-muted-foreground">Cambio</p>
+                  <p className="text-lg font-bold text-foreground">
                     {formatSigned(activeState.delta, activeState.delta === null ? "" : ` ${activeState.unit}`)}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-2xl border bg-slate-50 p-4">
-              <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-950">
+            <div className="rounded-2xl border bg-muted/40 p-4">
+              <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
                 <UserRound className="h-4 w-4 text-[#02a8e1]" />
                 Mapa de grupos corporales
               </div>
@@ -1257,23 +1257,23 @@ export default function EvolucionFisicaBeforeAfterStudio({
                   />
                 ))}
               </div>
-              <div className="mt-4 grid gap-2 text-xs text-gray-500 md:grid-cols-3">
-                <div className="rounded-xl border bg-white p-3">
+              <div className="mt-4 grid gap-2 text-xs text-muted-foreground md:grid-cols-3">
+                <div className="rounded-xl border bg-card p-3">
                   <span className="mr-1 inline-block h-2 w-2 rounded-full bg-emerald-500" />
                   Verde: evolución favorable según objetivo de la métrica.
                 </div>
-                <div className="rounded-xl border bg-white p-3">
+                <div className="rounded-xl border bg-card p-3">
                   <span className="mr-1 inline-block h-2 w-2 rounded-full bg-orange-500" />
                   Naranja: revisar contexto, adherencia o plan.
                 </div>
-                <div className="rounded-xl border bg-white p-3">
+                <div className="rounded-xl border bg-card p-3">
                   <span className="mr-1 inline-block h-2 w-2 rounded-full bg-sky-400" />
                   Celeste: cambio estable o métrica neutral.
                 </div>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/30 dark:text-amber-100">
               <p className="font-semibold">Representación visual estimativa</p>
               <p className="mt-1">
                 La silueta y el heatmap son una guía visual basada en mediciones cargadas. No reemplaza evaluación médica, antropométrica profesional ni criterio del entrenador.

@@ -415,13 +415,13 @@ export default function EvolucionFisicaPage() {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full">
+      <div className="gm-dashboard-page-evolucion-fisica gm-dashboard-shell flex min-h-[100dvh] w-full bg-background">
         <AppSidebar />
-        <SidebarInset>
+        <SidebarInset className="gm-evolucion-fisica-inset min-h-[100dvh]">
           <AppHeader title="Evolución física" />
-          <section className="flex-1 space-y-4 p-3 sm:p-4 md:space-y-8 md:p-6">
+          <section data-gm-dashboard-content="true" className="gm-evolucion-fisica-content flex-1 space-y-4 p-3 pb-4 sm:p-4 sm:pb-5 md:space-y-8 md:p-6 md:pb-6">
             <Card className="w-full overflow-hidden rounded-2xl">
-              <CardHeader className="space-y-2 border-b bg-gradient-to-r from-[#f0fbff] to-white p-4">
+              <CardHeader className="space-y-2 border-b bg-gradient-to-r from-sky-50 to-background p-4 dark:from-slate-900 dark:to-background">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#02a8e1]">
                   Progreso del socio
                 </p>
@@ -515,7 +515,7 @@ export default function EvolucionFisicaPage() {
                 socioNombre={selectedSocioName}
               />
             ) : (
-              <Card className="w-full rounded-2xl border bg-white shadow-sm">
+              <Card className="w-full rounded-2xl border bg-card text-card-foreground shadow-sm">
                 <CardContent className="p-6 text-sm text-muted-foreground">
                   Seleccioná un socio para consultar su evolución física.
                 </CardContent>
@@ -546,7 +546,7 @@ export default function EvolucionFisicaPage() {
                     onClick={handleDownloadPdf}
                     variant="outline"
                     disabled={!exportRows.length || generatingPdf}
-                    className="flex items-center gap-2 border-[#02a8e1] bg-white text-[#02a8e1] hover:bg-[#e6f7fd]"
+                    className="flex items-center gap-2 border-[#02a8e1] bg-background text-[#02a8e1] hover:bg-[#e6f7fd] dark:bg-slate-950 dark:hover:bg-sky-950/60"
                   >
                     <Download className="h-4 w-4" />
                     <span className="hidden sm:inline">
@@ -561,7 +561,7 @@ export default function EvolucionFisicaPage() {
                       onClick={handleExportExcel}
                       variant="outline"
                       disabled={!exportRows.length}
-                      className="hidden items-center gap-2 border-[#02a8e1] bg-white text-[#02a8e1] hover:bg-[#e6f7fd] sm:flex"
+                      className="hidden items-center gap-2 border-[#02a8e1] bg-background text-[#02a8e1] hover:bg-[#e6f7fd] dark:bg-slate-950 dark:hover:bg-sky-950/60 sm:flex"
                     >
                       <FileSpreadsheet className="h-4 w-4" />
                       <span>Exportar</span>
@@ -582,7 +582,7 @@ export default function EvolucionFisicaPage() {
             </Card>
             )}
           </section>
-          <AppFooter />
+          <AppFooter className="gm-evolucion-fisica-footer mt-0" />
         </SidebarInset>
         <EvolucionFisicaViewModal
           open={Boolean(selectedEvolucion)}

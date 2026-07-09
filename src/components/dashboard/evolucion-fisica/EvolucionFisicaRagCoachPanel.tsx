@@ -50,13 +50,13 @@ export default function EvolucionFisicaRagCoachPanel({
   };
 
   return (
-    <Card className="w-full rounded-2xl border bg-white shadow-sm">
+    <Card className="w-full rounded-2xl border bg-card text-card-foreground shadow-sm">
       <CardHeader className="space-y-1 border-b p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
               <Brain className="h-5 w-5 text-[#02a8e1]" />
-              <h2 className="text-xl font-bold text-gray-950">RAG Coach evolución física</h2>
+              <h2 className="text-xl font-bold text-foreground">RAG Coach evolución física</h2>
             </div>
             <p className="text-sm text-muted-foreground">
               Analiza el progreso de {socioNombre} y sugiere ajustes prudentes sin reemplazar criterio profesional.
@@ -78,7 +78,7 @@ export default function EvolucionFisicaRagCoachPanel({
             <Label htmlFor="rag-evolucion-objetivo">Objetivo actual</Label>
             <textarea
               id="rag-evolucion-objetivo"
-              className="min-h-24 w-full rounded-md border px-3 py-2 text-sm"
+              className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
               placeholder="Ejemplo: bajar grasa, ganar masa muscular, recomposición corporal."
               value={objetivo}
               maxLength={1200}
@@ -89,7 +89,7 @@ export default function EvolucionFisicaRagCoachPanel({
             <Label htmlFor="rag-evolucion-mensaje">Pedido o consulta</Label>
             <textarea
               id="rag-evolucion-mensaje"
-              className="min-h-24 w-full rounded-md border px-3 py-2 text-sm"
+              className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
               placeholder="Ejemplo: quiero saber si voy bien y qué debería ajustar esta semana."
               value={mensajeSocio}
               maxLength={1200}
@@ -100,7 +100,7 @@ export default function EvolucionFisicaRagCoachPanel({
             <Label htmlFor="rag-evolucion-restricciones">Restricciones o cuidados</Label>
             <textarea
               id="rag-evolucion-restricciones"
-              className="min-h-24 w-full rounded-md border px-3 py-2 text-sm"
+              className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
               placeholder="Ejemplo: dolor de rodilla, lesión, hipertensión, fatiga."
               value={restricciones}
               maxLength={1200}
@@ -110,7 +110,7 @@ export default function EvolucionFisicaRagCoachPanel({
         </div>
 
         {error && (
-          <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-950/30 dark:text-red-100">
             {error}
           </div>
         )}
@@ -126,23 +126,23 @@ export default function EvolucionFisicaRagCoachPanel({
             </div>
 
             <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
-              <div className="rounded-md border bg-white p-3">
+              <div className="rounded-md border bg-background p-3">
                 <p className="text-xs text-muted-foreground">Peso</p>
                 <p className="font-semibold">{formatDelta(result.progreso.peso.diferencia, " kg")}</p>
               </div>
-              <div className="rounded-md border bg-white p-3">
+              <div className="rounded-md border bg-background p-3">
                 <p className="text-xs text-muted-foreground">Cintura</p>
                 <p className="font-semibold">{formatDelta(result.progreso.cintura.diferencia, " cm")}</p>
               </div>
-              <div className="rounded-md border bg-white p-3">
+              <div className="rounded-md border bg-background p-3">
                 <p className="text-xs text-muted-foreground">IMC</p>
                 <p className="font-semibold">{formatDelta(result.progreso.imc.diferencia)}</p>
               </div>
-              <div className="rounded-md border bg-white p-3">
+              <div className="rounded-md border bg-background p-3">
                 <p className="text-xs text-muted-foreground">% grasa</p>
                 <p className="font-semibold">{formatDelta(result.progreso.porcentajeGrasa.diferencia, "%")}</p>
               </div>
-              <div className="rounded-md border bg-white p-3">
+              <div className="rounded-md border bg-background p-3">
                 <p className="text-xs text-muted-foreground">Masa muscular</p>
                 <p className="font-semibold">{formatDelta(result.progreso.masaMuscular.diferencia, " kg")}</p>
               </div>

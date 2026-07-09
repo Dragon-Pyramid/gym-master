@@ -120,10 +120,13 @@
   html,
   body {
     max-width: 100%;
+    min-height: 100%;
     overflow-x: hidden;
+    background: var(--background);
   }
 
   body {
+    min-height: 100dvh;
     @apply bg-background text-foreground;
   }
 }
@@ -137,20 +140,59 @@
   .gm-safe-bottom {
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
+
+  .gm-dashboard-shell {
+    min-height: 100dvh;
+    align-items: stretch;
+    background: var(--background);
+  }
+
+  .gm-dashboard-inset,
+  .gm-dashboard-scroll-root {
+    min-height: 100dvh;
+    background: var(--background);
+  }
+
+  .gm-dashboard-footer {
+    background: var(--background);
+  }
+
+  .gm-dashboard-page-evolucion-fisica {
+    min-height: 100dvh;
+    background: var(--background);
+  }
+
+  .gm-dashboard-page-evolucion-fisica .gm-evolucion-fisica-inset {
+    min-height: 100dvh;
+  }
+
+  .gm-dashboard-page-evolucion-fisica .gm-evolucion-fisica-content {
+    min-height: auto;
+  }
+
+  .gm-dashboard-page-evolucion-fisica .gm-evolucion-fisica-footer {
+    margin-top: 0 !important;
+  }
 }
 
 @media (max-width: 1023px) {
   /*
    * La barra inferior del socio necesita aire al final del contenido,
-   * pero no debe agregar padding al shell/SidebarInset que contiene el footer.
-   * Si el padding cae sobre el contenedor externo, aparece una franja blanca
+   * pero ese aire no debe caer sobre el shell ni sobre el footer.
+   * Si el padding cae en el contenedor externo, aparece una franja vacía
    * después de "Desarrollado por DRAGONPYRAMID".
    */
-  body.gm-socio-bottom-nav main:not([data-slot="sidebar-inset"]) {
+  body.gm-socio-bottom-nav .gm-dashboard-inset > main.flex-1,
+  body.gm-socio-bottom-nav .gm-dashboard-scroll-root > main.flex-1,
+  body.gm-socio-bottom-nav [data-gm-dashboard-content="true"] {
     padding-bottom: calc(6.75rem + env(safe-area-inset-bottom)) !important;
   }
 
+  body.gm-socio-bottom-nav .gm-dashboard-shell,
+  body.gm-socio-bottom-nav .gm-dashboard-inset,
+  body.gm-socio-bottom-nav .gm-dashboard-footer,
   body.gm-socio-bottom-nav main[data-slot="sidebar-inset"] {
+    margin-bottom: 0 !important;
     padding-bottom: 0 !important;
   }
 }

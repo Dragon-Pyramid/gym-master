@@ -169,11 +169,11 @@ function StatCard({
   const DeltaIcon = getDeltaIcon(deltaValue ?? null);
 
   return (
-    <div className="rounded-2xl border bg-white p-4 shadow-sm">
+    <div className="rounded-2xl border bg-card p-4 text-card-foreground shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-wide text-gray-500">{title}</p>
-          <p className="mt-2 text-2xl font-bold text-gray-950">{value}</p>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">{title}</p>
+          <p className="mt-2 text-2xl font-bold text-foreground">{value}</p>
         </div>
         <div className="rounded-xl bg-[#02a8e1]/10 p-2 text-[#02a8e1]">
           <Icon className="h-5 w-5" />
@@ -192,7 +192,7 @@ function StatCard({
         </p>
       ) : null}
 
-      {helper ? <p className="mt-1 text-xs text-gray-500">{helper}</p> : null}
+      {helper ? <p className="mt-1 text-xs text-muted-foreground">{helper}</p> : null}
     </div>
   );
 }
@@ -212,10 +212,10 @@ function ChartCard({
       data-chart-title={title}
       data-chart-description={description}
     >
-      <Card className="rounded-2xl border bg-white shadow-sm">
+      <Card className="rounded-2xl border bg-card text-card-foreground shadow-sm">
         <CardHeader className="space-y-1 border-b p-4">
-          <h3 className="text-lg font-semibold text-gray-950">{title}</h3>
-          <p className="text-sm text-gray-500">{description}</p>
+          <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+          <p className="text-sm text-muted-foreground">{description}</p>
         </CardHeader>
         <CardContent className="h-[260px] p-3 sm:h-[320px] sm:p-4">{children}</CardContent>
       </Card>
@@ -323,8 +323,8 @@ export default function EvolucionFisicaDashboard({
 
   if (!rows.length) {
     return (
-      <Card className="rounded-2xl border bg-white shadow-sm">
-        <CardContent className="p-6 text-sm text-gray-500">
+      <Card className="rounded-2xl border bg-card text-card-foreground shadow-sm">
+        <CardContent className="p-6 text-sm text-muted-foreground">
           El dashboard se activará cuando el socio tenga al menos un registro de evolución física.
         </CardContent>
       </Card>
@@ -333,18 +333,18 @@ export default function EvolucionFisicaDashboard({
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+      <section className="rounded-2xl border bg-card p-4 text-card-foreground shadow-sm sm:p-6">
         <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-xs uppercase tracking-wide text-[#02a8e1]">
               Dashboard de evolución física
             </p>
-            <h2 className="mt-1 text-xl font-bold text-gray-950 sm:text-2xl">
+            <h2 className="mt-1 text-xl font-bold text-foreground sm:text-2xl">
               Progreso corporal de {socioNombre}
             </h2>
-            <p className="mt-2 max-w-3xl text-sm text-gray-500">{insight}</p>
+            <p className="mt-2 max-w-3xl text-sm text-muted-foreground">{insight}</p>
           </div>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-muted-foreground">
             Registros: {orderedRows.length} · Última medición: {formatDate(current?.fecha)}
           </p>
         </div>
@@ -468,29 +468,29 @@ export default function EvolucionFisicaDashboard({
           </ResponsiveContainer>
         </ChartCard>
 
-        <Card className="rounded-2xl border bg-white shadow-sm">
+        <Card className="rounded-2xl border bg-card text-card-foreground shadow-sm">
           <CardHeader className="space-y-1 border-b p-4">
-            <h3 className="text-lg font-semibold text-gray-950">Antes vs. ahora</h3>
-            <p className="text-sm text-gray-500">
+            <h3 className="text-lg font-semibold text-foreground">Antes vs. ahora</h3>
+            <p className="text-sm text-muted-foreground">
               Lectura comparativa entre el primer registro y la última medición.
             </p>
           </CardHeader>
           <CardContent className="p-4">
             <div className="space-y-3 md:hidden">
               {comparisonRows.map(([label, initialValue, currentValue, change]) => (
-                <div key={`mobile-${label}`} className="rounded-2xl border bg-slate-50 p-3">
+                <div key={`mobile-${label}`} className="rounded-2xl border bg-muted/40 p-3">
                   <div className="flex items-start justify-between gap-3">
-                    <p className="font-semibold text-gray-950">{label}</p>
+                    <p className="font-semibold text-foreground">{label}</p>
                     <p className="text-sm font-bold text-[#02a8e1]">{change}</p>
                   </div>
-                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-gray-600">
-                    <div className="rounded-xl bg-white p-2">
-                      <p className="uppercase text-gray-400">Inicial</p>
-                      <p className="mt-1 font-semibold text-gray-800">{initialValue}</p>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                    <div className="rounded-xl bg-card p-2">
+                      <p className="uppercase text-muted-foreground">Inicial</p>
+                      <p className="mt-1 font-semibold text-foreground">{initialValue}</p>
                     </div>
-                    <div className="rounded-xl bg-white p-2">
-                      <p className="uppercase text-gray-400">Actual</p>
-                      <p className="mt-1 font-semibold text-gray-800">{currentValue}</p>
+                    <div className="rounded-xl bg-card p-2">
+                      <p className="uppercase text-muted-foreground">Actual</p>
+                      <p className="mt-1 font-semibold text-foreground">{currentValue}</p>
                     </div>
                   </div>
                 </div>
@@ -499,7 +499,7 @@ export default function EvolucionFisicaDashboard({
 
             <div className="hidden overflow-hidden rounded-xl border md:block">
               <table className="w-full text-left text-sm">
-                <thead className="bg-muted/50 text-xs uppercase text-gray-500">
+                <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3">Métrica</th>
                     <th className="px-4 py-3">Inicial</th>
@@ -510,10 +510,10 @@ export default function EvolucionFisicaDashboard({
                 <tbody>
                   {comparisonRows.map(([label, initialValue, currentValue, change]) => (
                     <tr key={label} className="border-b last:border-0">
-                      <td className="px-4 py-3 font-medium text-gray-950">{label}</td>
-                      <td className="px-4 py-3 text-gray-600">{initialValue}</td>
-                      <td className="px-4 py-3 text-gray-600">{currentValue}</td>
-                      <td className="px-4 py-3 font-semibold text-gray-950">{change}</td>
+                      <td className="px-4 py-3 font-medium text-foreground">{label}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{initialValue}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{currentValue}</td>
+                      <td className="px-4 py-3 font-semibold text-foreground">{change}</td>
                     </tr>
                   ))}
                 </tbody>

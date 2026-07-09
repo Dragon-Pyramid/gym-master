@@ -38,9 +38,9 @@ export default function AdminDashboardPage() {
   return (
     <SidebarProvider>
       <AppSidebar />
-      <div className="flex flex-col w-full min-h-screen">
+      <div className="gm-dashboard-scroll-root flex min-h-[100dvh] w-full flex-col bg-background">
         <div className="flex flex-1">
-          <div className="overflow-x-auto flex-1 p-6 space-y-4 max-w-full">
+          <div data-gm-dashboard-content="true" className="flex-1 overflow-x-auto p-6 space-y-4 max-w-full">
             <AppHeader title={t("adminDashboard.adminPage.title")} />
 
             <Card className="w-full">
