@@ -10,6 +10,8 @@ import { formatCurrencyARS, getProductoStockEstadoLabel } from "@/lib/comercial/
 import { createProductoStockMovimiento } from "@/services/productoStockMovimientoService";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { useI18n } from "@/i18n/I18nProvider";
+import { translateCommercialUi } from "@/i18n/commercialUi";
 
 const operacionOptions: Array<{
   value: ProductoStockOperacionTipo;
@@ -68,6 +70,9 @@ export default function ProductoStockMovimientoForm({
   producto: Producto;
   onSaved: () => void | Promise<void>;
 }) {
+  const { locale } = useI18n();
+  const c = (text: string) => translateCommercialUi(locale, text);
+
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
 
@@ -241,11 +246,11 @@ export default function ProductoStockMovimientoForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="motivo">Motivo / observación</Label>
+        <Label htmlFor="motivo">{c("Motivo / observación")}</Label>
         <Input
           id="motivo"
           name="motivo"
-          placeholder="Ej: recuento físico semanal, devolución vendible, producto vencido, reposición proveedor"
+          placeholder={c("Ej: recuento físico semanal, devolución vendible, producto vencido, reposición proveedor")}
           value={form.motivo}
           onChange={(event) => setForm((prev) => ({ ...prev, motivo: event.target.value }))}
           required

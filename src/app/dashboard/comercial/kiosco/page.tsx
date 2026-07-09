@@ -130,11 +130,11 @@ function escapeHtml(value: unknown) {
     .replace(/'/g, '&#39;');
 }
 
-function buildTicketHtml(sale: ComercialPosVentaResumen) {
+function buildTicketHtml(sale: ComercialPosVentaResumen, c: (text: string) => string) {
   const detalles = sale.venta_detalle ?? sale.detalles ?? [];
   const rows = detalles
     .map((detalle) => {
-      const nombre = escapeHtml(detalle.producto?.nombre || detalle.servicio?.nombre || (detalle.item_tipo === 'servicio' ? 'Servicio' : 'Producto'));
+      const nombre = escapeHtml(detalle.producto?.nombre || detalle.servicio?.nombre || (detalle.item_tipo === 'servicio' ? c('Servicio') : c('Producto')));
       const lineTotal = Number(detalle.total_linea ?? (Number(detalle.cantidad) * Number(detalle.precio_unitario) - Number(detalle.descuento ?? 0)));
       return `<tr><td>${detalle.cantidad} x ${nombre}</td><td style="text-align:right">${formatCurrencyARS(lineTotal)}</td></tr>`;
     })
@@ -142,7 +142,7 @@ function buildTicketHtml(sale: ComercialPosVentaResumen) {
 
   return `<!doctype html>
   <html><head><meta charset="utf-8" />
-  <title>Ticket ${escapeHtml(sale.comprobante_codigo || '')}</title>
+  <title>${c('Ticket')} ${escapeHtml(sale.comprobante_codigo || '')}</title>
   <style>
     body { font-family: Arial, sans-serif; width: 280px; margin: 0 auto; padding: 16px; color: #111; }
     h1 { font-size: 18px; text-align: center; margin: 0 0 4px; }
@@ -155,10 +155,10 @@ function buildTicketHtml(sale: ComercialPosVentaResumen) {
   <body>
     <h1>Gym Master</h1>
     <div class="sub">{c('POS / Kiosco')}<br/>${escapeHtml(sale.comprobante_codigo || '')}<br/>${escapeHtml(sale.fecha || '')}</div>
-    <div style="font-size:11px;margin-bottom:8px">Cliente: ${escapeHtml(getClientLabel(sale))}<br/>Pago: ${escapeHtml(sale.metodo_pago)}</div>
+    <div style="font-size:11px;margin-bottom:8px">${c('Cliente')}: ${escapeHtml(c(getClientLabel(sale)))}<br/>${c('Pago')}: ${escapeHtml(c(sale.metodo_pago))}</div>
     <table>${rows}</table>
-    <div class="total">Total: ${formatCurrencyARS(sale.total)}</div>
-    <div class="footer">Gracias por tu compra</div>
+    <div class="total">${c('Total')}: ${formatCurrencyARS(sale.total)}</div>
+    <div class="footer">${c('Gracias por tu compra')}</div>
     <script>window.print();</script>
   </body></html>`;
 }
@@ -489,7 +489,7 @@ export default function ComercialKioscoPosPage() {
       toast.error(c('El navegador bloqueó la ventana de impresión'));
       return;
     }
-    ticket.document.write(buildTicketHtml(sale));
+    ticket.document.write(buildTicketHtml(sale, c));
     ticket.document.close();
   }
 
@@ -540,34 +540,34 @@ export default function ComercialKioscoPosPage() {
       if (event.item_tipo === 'producto' && event.producto_id) {
         const product = dashboard.productos.find((item) => item.producto_id === event.producto_id);
         if (!product) {
-          toast.error(`Producto escaneado no disponible en el POS: ${event.item_nombre || event.codigo}`);
+          toast.error(`${c('Producto escaneado no disponible en el POS')}: ${event.item_nombre || event.codigo}`);
         } else {
           addToCart({
             ...product,
             stock_ubicacion: ubicacionId ? getStockForLocation(product.producto_id, ubicacionId, dashboard) : product.stock_total,
           });
-          toast.success(`Agregado al carrito: ${product.producto_nombre}`);
+          toast.success(`${c('Agregado al carrito')}: ${product.producto_nombre}`);
         }
       } else if (event.item_tipo === 'servicio' && event.servicio_id) {
         addScannedServiceToCart(event);
-        toast.success(`Servicio agregado al carrito: ${event.item_nombre || event.codigo}`);
+        toast.success(`${c('Servicio agregado al carrito')}: ${event.item_nombre || event.codigo}`);
       } else if (event.item_tipo === 'pack' && event.pack_id) {
         const pack = dashboard.packs.find((item) => item.id === event.pack_id);
         if (!pack) {
-          toast.error(`Pack escaneado no disponible en el POS: ${event.item_nombre || event.codigo}`);
+          toast.error(`${c('Pack escaneado no disponible en el POS')}: ${event.item_nombre || event.codigo}`);
         } else {
           addPackToCart(pack);
-          toast.success(`Pack agregado al carrito: ${pack.nombre}`);
+          toast.success(`${c('Pack agregado al carrito')}: ${pack.nombre}`);
         }
       } else if (event.tipo_resuelto === 'infraestructura') {
-        toast.info(`Código recibido pero no es vendible en POS: ${event.item_nombre || event.codigo}`);
+        toast.info(`${c('Código recibido pero no es vendible en POS')}: ${event.item_nombre || event.codigo}`);
       } else {
-        toast.error(`Código no encontrado: ${event.codigo}`);
+        toast.error(`${c('Código no encontrado')}: ${event.codigo}`);
       }
 
       await markComercialMobileScannerEventProcessed(event.id);
     } catch (error: any) {
-      toast.error(error?.message || 'No se pudo procesar evento del scanner');
+      toast.error(error?.message || c('No se pudo procesar evento del scanner'));
     }
   }
 
@@ -642,10 +642,9 @@ export default function ComercialKioscoPosPage() {
                   <p className='text-[0.68rem] font-semibold uppercase tracking-[0.32em] text-cyan-300'>
                     {c('POS móvil final · Comercial y Stock')}
                   </p>
-                  <h1 className='text-2xl font-black leading-tight sm:text-3xl'>Punto de Venta / Kiosco</h1>
+                  <h1 className='text-2xl font-black leading-tight sm:text-3xl'>{c('Punto de Venta / Kiosco')}</h1>
                   <p className='max-w-4xl text-sm leading-relaxed text-slate-200'>
-                    {c('Venta rápida con carrito, búsqueda por producto/servicio/pack, scanner móvil, cupones, validación de stock por ubicación,')}
-                    descuento por stock ledger, ticket imprimible y trazabilidad BI de packs/promos.
+                    {c('Venta rápida con carrito, búsqueda por producto/servicio/pack, scanner móvil, cupones, validación de stock por ubicación, descuento por stock ledger, ticket imprimible y trazabilidad BI de packs/promos.')}
                   </p>
                   <div className='grid grid-cols-2 gap-2 text-xs sm:grid-cols-4'>
                     <div className='rounded-2xl border border-white/10 bg-white/10 p-3'>
@@ -653,15 +652,15 @@ export default function ComercialKioscoPosPage() {
                       <p className='mt-1 text-lg font-black'>{cartTotals.items}</p>
                     </div>
                     <div className='rounded-2xl border border-white/10 bg-white/10 p-3'>
-                      <span className='text-slate-300'>Total actual</span>
+                      <span className='text-slate-300'>{c('Total actual')}</span>
                       <p className='mt-1 text-lg font-black'>{formatCurrencyARS(cartTotals.total)}</p>
                     </div>
                     <div className='rounded-2xl border border-white/10 bg-white/10 p-3'>
-                      <span className='text-slate-300'>Pago</span>
+                      <span className='text-slate-300'>{c('Pago')}</span>
                       <p className='mt-1 text-lg font-black'>{paymentLabel}</p>
                     </div>
                     <div className={`rounded-2xl border p-3 ${posReadinessClass}`}>
-                      <span className='opacity-80'>Estado POS</span>
+                      <span className='opacity-80'>{c('Estado POS')}</span>
                       <p className='mt-1 text-base font-black'>{posReadiness.label}</p><p className='mt-1 text-[0.68rem] font-medium opacity-80'>{posReadiness.detail}</p>
                     </div>
                   </div>
@@ -669,7 +668,7 @@ export default function ComercialKioscoPosPage() {
                 <div className='grid grid-cols-2 gap-2 sm:flex sm:flex-wrap xl:justify-end'>
                   <Button variant='secondary' onClick={loadDashboard} disabled={loading} className='w-full sm:w-auto'>
                     {loading ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <RefreshCw className='mr-2 h-4 w-4' />}
-                    Actualizar
+                    {c('Actualizar')}
                   </Button>
                   <Button variant='secondary' onClick={handleCreateScannerSession} disabled={scannerLoading} className='w-full sm:w-auto'>
                     {scannerLoading ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <Smartphone className='mr-2 h-4 w-4' />}
@@ -679,7 +678,7 @@ export default function ComercialKioscoPosPage() {
                     <Link href='/dashboard/comercial/stock-ledger'>Stock</Link>
                   </Button>
                   <Button asChild className='w-full bg-[#02a8e1] hover:bg-[#0288b1] sm:w-auto'>
-                    <Link href='/dashboard/ventas'>Ventas</Link>
+                    <Link href='/dashboard/ventas'>{c('Ventas')}</Link>
                   </Button>
                 </div>
               </div>
@@ -692,7 +691,7 @@ export default function ComercialKioscoPosPage() {
               </div>
               <div className='rounded-2xl border bg-white p-3 shadow-sm dark:bg-slate-900'>
                 <p className='text-xs text-muted-foreground'>Scanner</p>
-                <p className='text-xl font-black'>{scannerSession?.estado ?? 'No conectado'}</p>
+                <p className='text-xl font-black'>{c(scannerSession?.estado ?? 'No conectado')}</p>
               </div>
             </section>
 
@@ -707,11 +706,11 @@ export default function ComercialKioscoPosPage() {
                     <div className='flex flex-col justify-between gap-3 md:flex-row md:items-start'>
                       <div>
                         <p className='text-xs font-semibold uppercase tracking-[0.24em] text-emerald-600'>{c('Scanner móvil')}</p>
-                        <h2 className='text-xl font-bold'>Celular conectado al POS</h2>
+                        <h2 className='text-xl font-bold'>{c('Celular conectado al POS')}</h2>
                         <p className='mt-1 text-sm text-muted-foreground'>{c('El celular envía códigos al carrito en tiempo casi real. Funciona con productos por SKU/barcode, QR internos de producto/servicio y códigos de packs.')}</p>
                       </div>
                       <div className='flex flex-wrap gap-2'>
-                        <Button variant='outline' onClick={pollScannerEvents}>Verificar ahora</Button>
+                        <Button variant='outline' onClick={pollScannerEvents}>{c('Verificar ahora')}</Button>
                         <Button variant='outline' onClick={handleCloseScannerSession} disabled={scannerLoading || scannerSession.estado !== 'activa'}>{c('Cerrar sesión')}</Button>
                       </div>
                     </div>
@@ -719,9 +718,9 @@ export default function ComercialKioscoPosPage() {
                       {scannerUrl}
                     </div>
                     <div className='grid grid-cols-1 gap-3 md:grid-cols-3'>
-                      <div className='rounded-xl border p-3 text-sm'><span className='text-muted-foreground'>Estado</span><p className='font-semibold'>{scannerSession.estado}</p></div>
-                      <div className='rounded-xl border p-3 text-sm'><span className='text-muted-foreground'>Eventos</span><p className='font-semibold'>{scannerEvents.length}</p></div>
-                      <div className='rounded-xl border p-3 text-sm'><span className='text-muted-foreground'>Expira</span><p className='font-semibold'>{new Date(scannerSession.expira_en).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</p></div>
+                      <div className='rounded-xl border p-3 text-sm'><span className='text-muted-foreground'>{c('Estado')}</span><p className='font-semibold'>{c(scannerSession.estado)}</p></div>
+                      <div className='rounded-xl border p-3 text-sm'><span className='text-muted-foreground'>{c('Eventos')}</span><p className='font-semibold'>{scannerEvents.length}</p></div>
+                      <div className='rounded-xl border p-3 text-sm'><span className='text-muted-foreground'>{c('Expira')}</span><p className='font-semibold'>{new Date(scannerSession.expira_en).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</p></div>
                     </div>
                     {scannerEvents.length > 0 && (
                       <div className='space-y-2'>
@@ -729,7 +728,7 @@ export default function ComercialKioscoPosPage() {
                         {scannerEvents.slice(0, 5).map((event) => (
                           <div key={event.id} className='flex items-center justify-between rounded-lg border p-2 text-sm'>
                             <span>{event.item_nombre || event.codigo}</span>
-                            <span className='text-xs text-muted-foreground'>{event.estado}</span>
+                            <span className='text-xs text-muted-foreground'>{c(event.estado)}</span>
                           </div>
                         ))}
                       </div>
@@ -740,12 +739,12 @@ export default function ComercialKioscoPosPage() {
             )}
 
             <section className='grid grid-cols-2 gap-3 md:grid-cols-4 2xl:grid-cols-8'>
-              <Card className='bg-white/95 dark:bg-slate-900'><CardContent className='flex items-center justify-between p-4'><div><p className='text-sm text-muted-foreground'>Ventas hoy</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.ventasHoy}</p></div><Store className='h-6 w-6 text-sky-600' /></CardContent></Card>
-              <Card className='bg-white/95 dark:bg-slate-900'><CardContent className='flex items-center justify-between p-4'><div><p className='text-sm text-muted-foreground'>Total hoy</p><p className='text-xl font-bold'>{loading ? '...' : formatCurrencyARS(dashboard.metricas.totalHoy)}</p></div><CreditCard className='h-6 w-6 text-emerald-600' /></CardContent></Card>
+              <Card className='bg-white/95 dark:bg-slate-900'><CardContent className='flex items-center justify-between p-4'><div><p className='text-sm text-muted-foreground'>{c('Ventas hoy')}</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.ventasHoy}</p></div><Store className='h-6 w-6 text-sky-600' /></CardContent></Card>
+              <Card className='bg-white/95 dark:bg-slate-900'><CardContent className='flex items-center justify-between p-4'><div><p className='text-sm text-muted-foreground'>{c('Total hoy')}</p><p className='text-xl font-bold'>{loading ? '...' : formatCurrencyARS(dashboard.metricas.totalHoy)}</p></div><CreditCard className='h-6 w-6 text-emerald-600' /></CardContent></Card>
               <Card className='bg-white/95 dark:bg-slate-900'><CardContent className='flex items-center justify-between p-4'><div><p className='text-sm text-muted-foreground'>{c('Ítems hoy')}</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.itemsHoy}</p></div><ShoppingCart className='h-6 w-6 text-indigo-600' /></CardContent></Card>
-              <Card className='bg-white/95 dark:bg-slate-900'><CardContent className='flex items-center justify-between p-4'><div><p className='text-sm text-muted-foreground'>Productos</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.productosDisponibles}</p></div><PackagePlus className='h-6 w-6 text-violet-600' /></CardContent></Card>
+              <Card className='bg-white/95 dark:bg-slate-900'><CardContent className='flex items-center justify-between p-4'><div><p className='text-sm text-muted-foreground'>{c('Productos')}</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.productosDisponibles}</p></div><PackagePlus className='h-6 w-6 text-violet-600' /></CardContent></Card>
               <Card className='bg-white/95 dark:bg-slate-900'><CardContent className='flex items-center justify-between p-4'><div><p className='text-sm text-muted-foreground'>{c('Servicios')}</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.serviciosDisponibles}</p></div><Store className='h-6 w-6 text-cyan-600' /></CardContent></Card>
-              <Card className='bg-white/95 dark:bg-slate-900'><CardContent className='flex items-center justify-between p-4'><div><p className='text-sm text-muted-foreground'>Packs POS</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.packsDisponibles}</p></div><PackagePlus className='h-6 w-6 text-fuchsia-600' /></CardContent></Card>
+              <Card className='bg-white/95 dark:bg-slate-900'><CardContent className='flex items-center justify-between p-4'><div><p className='text-sm text-muted-foreground'>{c('Packs POS')}</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.packsDisponibles}</p></div><PackagePlus className='h-6 w-6 text-fuchsia-600' /></CardContent></Card>
               <Card className='bg-white/95 dark:bg-slate-900'><CardContent className='flex items-center justify-between p-4'><div><p className='text-sm text-muted-foreground'>{c('Promos')}</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.promocionesActivas}</p></div><Percent className='h-6 w-6 text-rose-600' /></CardContent></Card>
               <Card className='bg-white/95 dark:bg-slate-900'><CardContent className='flex items-center justify-between p-4'><div><p className='text-sm text-muted-foreground'>{c('Críticos')}</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.productosCriticos}</p></div><Warehouse className='h-6 w-6 text-orange-600' /></CardContent></Card>
             </section>
@@ -756,7 +755,7 @@ export default function ComercialKioscoPosPage() {
                   <CardHeader>
                     <div className='grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_240px] lg:items-end'>
                       <div className='space-y-2'>
-                        <Label>Buscar producto, servicio o pack</Label>
+                        <Label>{c('Buscar producto, servicio o pack')}</Label>
                         <div className='relative'>
                           <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
                           <Input className='pl-9' value={searchTerm} placeholder={c('Nombre, SKU, código de barras, servicio o pack...')} onChange={(event) => setSearchTerm(event.target.value)} />
@@ -765,7 +764,7 @@ export default function ComercialKioscoPosPage() {
                       <div className='space-y-2'>
                         <Label>{c('Ubicación de venta')}</Label>
                         <select className='h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm' value={ubicacionId} onChange={(event) => setUbicacionId(event.target.value)}>
-                          {dashboard.ubicaciones.map((ubicacion) => <option key={ubicacion.id} value={ubicacion.id}>{ubicacion.nombre}</option>)}
+                          {dashboard.ubicaciones.map((ubicacion) => <option key={ubicacion.id} value={ubicacion.id}>{c(ubicacion.nombre)}</option>)}
                         </select>
                       </div>
                     </div>
@@ -776,7 +775,7 @@ export default function ComercialKioscoPosPage() {
                         <Barcode className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
                         <Input className='pl-9' value={barcodeTerm} placeholder={c('Escanear o pegar código/SKU/servicio/pack y presionar Enter')} onChange={(event) => setBarcodeTerm(event.target.value)} />
                       </div>
-                      <Button type='submit' variant='outline' className='sm:w-auto'>Agregar</Button>
+                      <Button type='submit' variant='outline' className='sm:w-auto'>{c('Agregar')}</Button>
                     </form>
 
                     <div className='grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3'>
@@ -785,24 +784,24 @@ export default function ComercialKioscoPosPage() {
                           <div className='flex items-start justify-between gap-2'>
                             <div>
                               <p className='font-semibold'>{product.producto_nombre}</p>
-                              <p className='text-xs text-muted-foreground'>{product.sku || 'Sin SKU'} {product.codigo_barras ? `· ${product.codigo_barras}` : ''}</p>
+                              <p className='text-xs text-muted-foreground'>{product.sku || c('Sin SKU')} {product.codigo_barras ? `· ${product.codigo_barras}` : ''}</p>
                             </div>
                             <span className={`rounded-full px-2 py-1 text-xs ${getProductStatusClass(product)}`}>{product.stock_ubicacion}</span>
                           </div>
                           <div className='mt-3 flex items-center justify-between'>
                             <span className='text-lg font-bold'>{formatCurrencyARS(product.precio)}</span>
-                            <span className='text-xs text-muted-foreground'>Stock total {product.stock_total}</span>
+                            <span className='text-xs text-muted-foreground'>{c('Stock total')} {product.stock_total}</span>
                           </div>
                         </button>
                       ))}
-                      {!loading && filteredProducts.length === 0 && <p className='text-sm text-muted-foreground'>No hay productos para mostrar.</p>}
+                      {!loading && filteredProducts.length === 0 && <p className='text-sm text-muted-foreground'>{c('No hay productos para mostrar.')}</p>}
                     </div>
 
                     {filteredServices.length > 0 && (
                       <div className='mt-6 space-y-3'>
                         <div className='flex items-center justify-between'>
-                          <h3 className='text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700'>Servicios vendibles</h3>
-                          <span className='text-xs text-muted-foreground'>No descuentan stock y quedan registrados en venta_detalle</span>
+                          <h3 className='text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700'>{c('Servicios vendibles')}</h3>
+                          <span className='text-xs text-muted-foreground'>{c('No descuentan stock y quedan registrados en venta_detalle')}</span>
                         </div>
                         <div className='grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3'>
                           {filteredServices.map((service) => (
@@ -812,7 +811,7 @@ export default function ComercialKioscoPosPage() {
                                   <p className='font-semibold'>{service.nombre}</p>
                                   <p className='text-xs text-muted-foreground'>{service.codigo || c('Sin código')} {service.categoria ? `· ${service.categoria}` : ''}</p>
                                 </div>
-                                <span className='rounded-full bg-cyan-100 px-2 py-1 text-xs text-cyan-700'>Servicio</span>
+                                <span className='rounded-full bg-cyan-100 px-2 py-1 text-xs text-cyan-700'>{c('Servicio')}</span>
                               </div>
                               <div className='mt-3 flex items-center justify-between'>
                                 <span className='text-lg font-bold'>{formatCurrencyARS(service.precio)}</span>
@@ -827,8 +826,8 @@ export default function ComercialKioscoPosPage() {
                     {filteredPacks.length > 0 && (
                       <div className='mt-6 space-y-3'>
                         <div className='flex items-center justify-between'>
-                          <h3 className='text-sm font-semibold uppercase tracking-[0.18em] text-fuchsia-700'>Packs / promociones vendibles</h3>
-                          <span className='text-xs text-muted-foreground'>Se expanden en productos/servicios al vender</span>
+                          <h3 className='text-sm font-semibold uppercase tracking-[0.18em] text-fuchsia-700'>{c('Packs / promociones vendibles')}</h3>
+                          <span className='text-xs text-muted-foreground'>{c('Se expanden en productos/servicios al vender')}</span>
                         </div>
                         <div className='grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3'>
                           {filteredPacks.map((pack) => (
@@ -838,7 +837,7 @@ export default function ComercialKioscoPosPage() {
                                   <p className='font-semibold'>{pack.nombre}</p>
                                   <p className='text-xs text-muted-foreground'>{pack.codigo} · {(pack.items ?? []).length} {c('ítems')}</p>
                                 </div>
-                                <span className='rounded-full bg-fuchsia-100 px-2 py-1 text-xs text-fuchsia-700'>Pack</span>
+                                <span className='rounded-full bg-fuchsia-100 px-2 py-1 text-xs text-fuchsia-700'>{c('Pack')}</span>
                               </div>
                               <div className='mt-3 flex items-center justify-between'>
                                 <span className='text-lg font-bold'>{formatCurrencyARS(pack.precio)}</span>
@@ -853,18 +852,18 @@ export default function ComercialKioscoPosPage() {
                 </Card>
 
                 <Card className='bg-white/95 dark:bg-slate-900'>
-                  <CardHeader><CardTitle className='text-lg'>Ventas recientes</CardTitle></CardHeader>
+                  <CardHeader><CardTitle className='text-lg'>{c('Ventas recientes')}</CardTitle></CardHeader>
                   <CardContent>
                     <div className='space-y-3'>
                       {dashboard.ventasRecientes.slice(0, 8).map((sale) => (
                         <div key={sale.id} className='flex flex-col justify-between gap-3 rounded-xl border p-3 text-sm sm:flex-row sm:items-center'>
                           <div>
                             <p className='font-medium'>{sale.comprobante_codigo || sale.id}</p>
-                            <p className='text-xs text-muted-foreground'>{getClientLabel(sale)} · {sale.metodo_pago}</p>
+                            <p className='text-xs text-muted-foreground'>{c(getClientLabel(sale))} · {c(sale.metodo_pago)}</p>
                           </div>
                           <div className='text-right'>
                             <p className='font-semibold'>{formatCurrencyARS(sale.total)}</p>
-                            <Button size='sm' variant='ghost' onClick={() => handlePrintTicket(sale)}>Imprimir</Button>
+                            <Button size='sm' variant='ghost' onClick={() => handlePrintTicket(sale)}>{c('Imprimir')}</Button>
                           </div>
                         </div>
                       ))}
@@ -903,7 +902,7 @@ export default function ComercialKioscoPosPage() {
                     {cart.map((item) => (
                       <div key={item.key} className='rounded-2xl border bg-slate-50/70 p-3 dark:bg-slate-950/40'>
                         <div className='flex items-start justify-between gap-2'>
-                          <div><p className='font-medium'>{item.nombre}</p><p className='text-xs text-muted-foreground'>{getCartTypeLabel(item.item_tipo)}{item.item_tipo === 'producto' ? ` · Disponible: ${item.stockDisponible}` : ' POS'}</p></div>
+                          <div><p className='font-medium'>{item.nombre}</p><p className='text-xs text-muted-foreground'>{c(getCartTypeLabel(item.item_tipo))}{item.item_tipo === 'producto' ? ` · ${c('Disponible')}: ${item.stockDisponible}` : ' POS'}</p></div>
                           <Button size='icon' variant='ghost' onClick={() => removeFromCart(item.key)}><Trash2 className='h-4 w-4' /></Button>
                         </div>
                         <div className='mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3'>
@@ -918,14 +917,14 @@ export default function ComercialKioscoPosPage() {
                   </div>
 
                   <div className='rounded-2xl bg-slate-50 p-4 text-sm dark:bg-slate-950'>
-                    <div className='flex justify-between'><span>Subtotal</span><strong>{formatCurrencyARS(cartTotals.subtotal)}</strong></div>
-                    <div className='flex justify-between'><span>Descuentos</span><strong>{formatCurrencyARS(cartTotals.descuento)}</strong></div>
-                    <div className='mt-2 flex justify-between border-t pt-2 text-lg'><span>Total</span><strong>{formatCurrencyARS(cartTotals.total)}</strong></div>
+                    <div className='flex justify-between'><span>{c('Subtotal')}</span><strong>{formatCurrencyARS(cartTotals.subtotal)}</strong></div>
+                    <div className='flex justify-between'><span>{c('Descuentos')}</span><strong>{formatCurrencyARS(cartTotals.descuento)}</strong></div>
+                    <div className='mt-2 flex justify-between border-t pt-2 text-lg'><span>{c('Total')}</span><strong>{formatCurrencyARS(cartTotals.total)}</strong></div>
                   </div>
 
                   <Button className='w-full bg-[#02a8e1] hover:bg-[#0288b1]' disabled={saving || cart.length === 0} onClick={handleSubmitSale}>
                     {saving ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <CreditCard className='mr-2 h-4 w-4' />}
-                    Confirmar venta
+                    {c('Confirmar venta')}
                   </Button>
 
                   {lastSale && (

@@ -16,6 +16,8 @@ import {
 import { Venta } from '@/interfaces/venta.interface';
 import { VentaDetalle } from '@/interfaces/venta_detalle.interface';
 import { formatCurrencyARS } from '@/lib/comercial/productos';
+import { useI18n } from '@/i18n/I18nProvider';
+import { translateCommercialUi } from '@/i18n/commercialUi';
 
 function getVentaClienteLabel(venta: Venta) {
   if (venta.socio?.nombre_completo) return venta.socio.nombre_completo;
@@ -28,18 +30,18 @@ function getVentaDetalles(venta: Venta): VentaDetalle[] {
   return venta.venta_detalle ?? venta.detalles ?? [];
 }
 
-function getItemsResumen(venta: Venta) {
+function getItemsResumen(venta: Venta, c: (text: string) => string) {
   const detalles = getVentaDetalles(venta);
 
-  if (!detalles.length) return 'Sin detalle cargado';
+  if (!detalles.length) return c('Sin detalle cargado');
 
   const resumen = detalles
     .slice(0, 2)
     .map((detalle) => {
       const nombre =
         detalle.item_tipo === 'servicio'
-          ? detalle.servicio?.nombre ?? 'Servicio'
-          : detalle.producto?.nombre ?? 'Producto';
+          ? detalle.servicio?.nombre ?? c('Servicio')
+          : detalle.producto?.nombre ?? c('Producto');
       return `${detalle.cantidad} x ${nombre}`;
     })
     .join(', ');
@@ -48,6 +50,8 @@ function getItemsResumen(venta: Venta) {
 }
 
 function EstadoBadge({ venta }: { venta: Venta }) {
+  const { locale } = useI18n();
+  const c = (text: string) => translateCommercialUi(locale, text);
   const estado = venta.estado ?? (venta.activo === false ? 'anulada' : 'pagada');
   const className =
     estado === 'anulada'
@@ -58,7 +62,7 @@ function EstadoBadge({ venta }: { venta: Venta }) {
 
   return (
     <span className={`rounded-full border px-2 py-1 text-xs font-semibold ${className}`}>
-      {estado === 'anulada' ? 'Anulada' : estado === 'pendiente' ? 'Pendiente' : 'Pagada'}
+      {estado === 'anulada' ? c('Anulada') : estado === 'pendiente' ? c('Pendiente') : c('Pagada')}
     </span>
   );
 }
@@ -76,6 +80,9 @@ export default function VentaTable({
   onView?: (venta: Venta) => void;
   onDelete?: (venta: Venta) => void;
 }) {
+  const { locale } = useI18n();
+  const c = (text: string) => translateCommercialUi(locale, text);
+
   if (loading) {
     return (
       <div className='space-y-2'>
@@ -89,7 +96,7 @@ export default function VentaTable({
   if (ventas.length === 0 && !loading) {
     return (
       <div className='py-10 text-center text-muted-foreground'>
-        No hay ventas registradas aún.
+        {c("No hay ventas registradas aún.")}
       </div>
     );
   }
@@ -98,13 +105,13 @@ export default function VentaTable({
     <Table className='w-full overflow-hidden rounded-md border border-border text-sm'>
       <TableHeader>
         <TableRow className='bg-muted/50 text-muted-foreground'>
-          <TableHead>Cliente</TableHead>
-          <TableHead>Detalle</TableHead>
-          <TableHead>Método</TableHead>
-          <TableHead>Total</TableHead>
-          <TableHead>Fecha</TableHead>
-          <TableHead>Estado</TableHead>
-          <TableHead>Acciones</TableHead>
+          <TableHead>{c("Cliente")}</TableHead>
+          <TableHead>{c("Detalle")}</TableHead>
+          <TableHead>{c("Método")}</TableHead>
+          <TableHead>{c("Total")}</TableHead>
+          <TableHead>{c("Fecha")}</TableHead>
+          <TableHead>{c("Estado")}</TableHead>
+          <TableHead>{c("Acciones")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -115,18 +122,18 @@ export default function VentaTable({
           >
             <TableCell>
               <div className='space-y-1'>
-                <p className='font-medium'>{getVentaClienteLabel(venta)}</p>
+                <p className='font-medium'>{c(getVentaClienteLabel(venta))}</p>
                 <p className='text-xs capitalize text-muted-foreground'>
-                  {(venta.cliente_tipo ?? 'consumidor_final').replace('_', ' ')}
+                  {c((venta.cliente_tipo ?? 'consumidor_final').replace('_', ' '))}
                   {venta.cliente_documento ? ` · ${venta.cliente_documento}` : ''}
                 </p>
               </div>
             </TableCell>
             <TableCell className='max-w-[320px]'>
-              <p className='truncate'>{getItemsResumen(venta)}</p>
+              <p className='truncate'>{getItemsResumen(venta, c)}</p>
             </TableCell>
             <TableCell className='capitalize'>
-              {(venta.metodo_pago ?? 'efectivo').replace('_', ' ')}
+              {c((venta.metodo_pago ?? 'efectivo').replace('_', ' '))}
             </TableCell>
             <TableCell className='font-semibold'>{formatCurrencyARS(venta.total)}</TableCell>
             <TableCell>{venta.fecha}</TableCell>
@@ -135,9 +142,9 @@ export default function VentaTable({
             </TableCell>
             <TableCell className='flex gap-2'>
               <Button size='sm' variant='outline' onClick={() => onView && onView(venta)}>
-                Ver
+                {c('Ver')}
               </Button>
-              <Button size='sm' variant='outline' onClick={() => onEdit(venta)} title='Editar'>
+              <Button size='sm' variant='outline' onClick={() => onEdit(venta)} title={c('Editar')}>
                 <Pencil className='h-4 w-4' />
               </Button>
               <Button
@@ -146,7 +153,7 @@ export default function VentaTable({
                 onClick={() => onDelete && onDelete(venta)}
                 disabled={venta.activo === false || venta.estado === 'anulada'}
               >
-                Anular
+                {c('Anular')}
               </Button>
             </TableCell>
           </TableRow>
@@ -154,11 +161,11 @@ export default function VentaTable({
       </TableBody>
       <TableFooter>
         <TableRow>
-          <TableCell colSpan={6}>Total de ventas</TableCell>
+          <TableCell colSpan={6}>{c('Total de ventas')}</TableCell>
           <TableCell className='text-right'>{ventas.length}</TableCell>
         </TableRow>
       </TableFooter>
-      <TableCaption>Listado de ventas registradas.</TableCaption>
+      <TableCaption>{c("Listado de ventas registradas.")}</TableCaption>
     </Table>
   );
 }

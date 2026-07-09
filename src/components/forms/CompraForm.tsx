@@ -12,6 +12,8 @@ import { formatCurrencyARS } from '@/lib/comercial/productos';
 import { Plus, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { useI18n } from '@/i18n/I18nProvider';
+import { translateCommercialUi } from '@/i18n/commercialUi';
 
 type CompraItemForm = {
   producto_id: string;
@@ -52,6 +54,9 @@ export default function CompraForm({
   onCreated: () => void;
   onCancel: () => void;
 }) {
+  const { locale } = useI18n();
+  const c = (text: string) => translateCommercialUi(locale, text);
+
   const [proveedorId, setProveedorId] = useState('');
   const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
   const [estado, setEstado] = useState<CompraEstado>('pagada');
@@ -146,7 +151,7 @@ export default function CompraForm({
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="proveedor_id">Proveedor</Label>
+          <Label htmlFor="proveedor_id">{c("Proveedor")}</Label>
           <select
             id="proveedor_id"
             className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -197,7 +202,7 @@ export default function CompraForm({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="numero_comprobante">Número de comprobante</Label>
+          <Label htmlFor="numero_comprobante">{c("Número de comprobante")}</Label>
           <Input
             id="numero_comprobante"
             placeholder="Factura / remito / ticket"
@@ -305,7 +310,7 @@ export default function CompraForm({
           className="min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
           value={observaciones}
           onChange={(event) => setObservaciones(event.target.value)}
-          placeholder="Detalle de la compra, reposición, factura o condiciones del proveedor"
+          placeholder={c("Detalle de la compra, reposición, factura o condiciones del proveedor")}
         />
       </div>
 

@@ -20,8 +20,12 @@ import {
   TableRow,
   TableCaption,
 } from "@/components/ui/table";
+import { useI18n } from '@/i18n/I18nProvider';
+import { translateCommercialUi } from '@/i18n/commercialUi';
 
 function StockBadge({ producto }: { producto: Producto }) {
+  const { locale } = useI18n();
+  const c = (text: string) => translateCommercialUi(locale, text);
   const estado = getProductoStockEstado(producto);
   const label = getProductoStockEstadoLabel(producto);
 
@@ -36,7 +40,7 @@ function StockBadge({ producto }: { producto: Producto }) {
 
   return (
     <span className={`rounded-full border px-2 py-1 text-xs font-semibold ${className}`}>
-      {label}
+      {c(label)}
     </span>
   );
 }
@@ -58,6 +62,9 @@ export default function ProductoTable({
   onStockMovement?: (producto: Producto) => void;
   getProveedorNombre?: (proveedorId?: string | null) => string;
 }) {
+  const { locale } = useI18n();
+  const c = (text: string) => translateCommercialUi(locale, text);
+
   if (loading) {
     return (
       <div className="space-y-2">
@@ -71,7 +78,7 @@ export default function ProductoTable({
   if (productos.length === 0 && !loading) {
     return (
       <div className="py-10 text-center text-muted-foreground">
-        No hay productos registrados aún.
+        {c("No hay productos registrados aún.")}
       </div>
     );
   }
@@ -80,15 +87,15 @@ export default function ProductoTable({
     <Table className="w-full overflow-hidden text-sm border rounded-md border-border">
       <TableHeader>
         <TableRow className="bg-muted/50 text-muted-foreground">
-          <TableHead>Producto</TableHead>
-          <TableHead>Códigos</TableHead>
-          <TableHead>Precio</TableHead>
-          <TableHead>Costo</TableHead>
-          <TableHead>Margen</TableHead>
-          <TableHead>Stock</TableHead>
-          <TableHead>Estado</TableHead>
-          <TableHead>Proveedor</TableHead>
-          <TableHead>Acciones</TableHead>
+          <TableHead>{c("Producto")}</TableHead>
+          <TableHead>{c("Códigos")}</TableHead>
+          <TableHead>{c("Precio")}</TableHead>
+          <TableHead>{c("Costo")}</TableHead>
+          <TableHead>{c("Margen")}</TableHead>
+          <TableHead>{c("Stock")}</TableHead>
+          <TableHead>{c("Estado")}</TableHead>
+          <TableHead>{c("Proveedor")}</TableHead>
+          <TableHead>{c("Acciones")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -99,16 +106,16 @@ export default function ProductoTable({
           >
             <TableCell>
               <div className="space-y-1">
-                <p className="font-medium">{p.nombre}</p>
+                <p className="font-medium">{c(p.nombre)}</p>
                 <p className="max-w-[320px] truncate text-xs text-muted-foreground">
-                  {p.descripcion || "Sin descripción"}
+                  {p.descripcion ? c(p.descripcion) : c("Sin descripción")}
                 </p>
               </div>
             </TableCell>
             <TableCell>
               <div className="space-y-1 text-xs">
-                <p><span className="text-muted-foreground">SKU:</span> {p.sku || "-"}</p>
-                <p><span className="text-muted-foreground">Barra:</span> {p.codigo_barras || "-"}</p>
+                <p><span className="text-muted-foreground">{c("SKU")}:</span> {p.sku || "-"}</p>
+                <p><span className="text-muted-foreground">{c("Barra")}:</span> {p.codigo_barras || "-"}</p>
               </div>
             </TableCell>
             <TableCell>{formatCurrencyARS(p.precio)}</TableCell>
@@ -118,27 +125,27 @@ export default function ProductoTable({
               <div className="space-y-1">
                 <p className="font-semibold">{p.stock}</p>
                 <p className="text-xs text-muted-foreground">
-                  mínimo operativo: {getProductoStockMinimo(p)}
+                  {c("mínimo operativo")}: {getProductoStockMinimo(p)}
                 </p>
               </div>
             </TableCell>
             <TableCell>
               <StockBadge producto={p} />
             </TableCell>
-            <TableCell>{getProveedorNombre?.(p.proveedor_id) ?? p.proveedor_id ?? "Sin proveedor asignado"}</TableCell>
+            <TableCell>{getProveedorNombre?.(p.proveedor_id) ?? p.proveedor_id ?? c("Sin proveedor asignado")}</TableCell>
             <TableCell className="flex gap-2">
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => onView && onView(p)}
               >
-                Ver
+                {c("Ver")}
               </Button>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => onStockMovement && onStockMovement(p)}
-                title="Movimiento de stock"
+                title={c("Movimiento de stock")}
               >
                 <ClipboardList className="w-4 h-4" />
               </Button>
@@ -146,7 +153,7 @@ export default function ProductoTable({
                 size="sm"
                 variant="outline"
                 onClick={() => onEdit(p)}
-                title="Editar"
+                title={c("Editar")}
               >
                 <Pencil className="w-4 h-4" />
               </Button>
@@ -155,7 +162,7 @@ export default function ProductoTable({
                 className="bg-red-500 hover:bg-red-600 text-white w-[110px]"
                 onClick={() => onDelete && onDelete(p)}
               >
-                Desactivar
+                {c("Desactivar")}
               </Button>
             </TableCell>
           </TableRow>
@@ -163,11 +170,11 @@ export default function ProductoTable({
       </TableBody>
       <TableFooter>
         <TableRow>
-          <TableCell colSpan={8}>Total de productos</TableCell>
+          <TableCell colSpan={8}>{c("Total de productos")}</TableCell>
           <TableCell className="text-right">{productos.length}</TableCell>
         </TableRow>
       </TableFooter>
-      <TableCaption>Listado de productos registrados.</TableCaption>
+      <TableCaption>{c("Listado de productos registrados.")}</TableCaption>
     </Table>
   );
 }
