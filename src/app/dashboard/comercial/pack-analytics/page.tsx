@@ -27,6 +27,8 @@ import { useAuthStore } from "@/stores/authStore";
 import type { ComercialPackAnalyticsDashboard } from "@/interfaces/comercialPackAnalytics.interface";
 import { getComercialPackAnalytics } from "@/services/comercialPackAnalyticsService";
 import { formatCurrencyARS } from "@/lib/comercial/productos";
+import { useI18n } from "@/i18n/I18nProvider";
+import { translateCommercialUi } from "@/i18n/commercialUi";
 
 const emptyDashboard: ComercialPackAnalyticsDashboard = {
   registros: [],
@@ -82,6 +84,8 @@ function MetricCard({ title, value, description, icon: Icon }: any) {
 }
 
 export default function ComercialPackAnalyticsPage() {
+  const { locale } = useI18n();
+  const c = (text: string) => translateCommercialUi(locale, text);
   const { isAuthenticated, initializeAuth, isInitialized } = useAuthStore();
   const router = useRouter();
   const [dashboard, setDashboard] =
@@ -103,7 +107,7 @@ export default function ComercialPackAnalyticsPage() {
       const data = await getComercialPackAnalytics({ desde, hasta });
       setDashboard(data);
     } catch (error: any) {
-      toast.error(error.message || "No se pudo cargar analítica de packs");
+      toast.error(error.message || c('No se pudo cargar analítica de packs'));
     } finally {
       setLoading(false);
     }
@@ -130,10 +134,10 @@ export default function ComercialPackAnalyticsPage() {
       : 0;
   const executiveSignal =
     dashboard.metricas.ingresoPacks > 0
-      ? "Packs con tracción comercial"
-      : "Sin movimiento comercial de packs";
+      ? c('Packs con tracción comercial')
+      : c('Sin movimiento comercial de packs');
 
-  if (!isInitialized) return <div>Cargando...</div>;
+  if (!isInitialized) return <div>{c('Cargando...')}</div>;
   if (!isAuthenticated) return null;
 
   return (
@@ -141,30 +145,28 @@ export default function ComercialPackAnalyticsPage() {
       <div className="flex h-[100dvh] max-h-[100dvh] w-full overflow-hidden">
         <AppSidebar />
         <SidebarInset className="!grid !min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden">
-          <AppHeader title="BI Packs / Promos" />
+          <AppHeader title={c('BI Packs / Promos')} />
           <main className="min-h-0 space-y-6 overflow-y-auto overflow-x-hidden p-4 pb-8 sm:p-6">
-            <section className="rounded-2xl border bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+            <section className="rounded-3xl border border-sky-200 bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950 p-6 text-white shadow-sm dark:border-cyan-800/70">
               <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
                 <div className="space-y-2">
                   <p className="text-xs font-semibold uppercase tracking-[0.24em] text-fuchsia-600">
-                    Comercial y Stock
+                    {c('Comercial y Stock')}
                   </p>
                   <h1 className="text-2xl font-bold">
-                    Analítica de packs, promociones y cupones
+                    {c('Analítica de packs, promociones y cupones')}
                   </h1>
-                  <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-                    Medí qué packs se venden, cuántas unidades se movieron, qué
-                    cupones se usaron y cuánto ingreso generan las promociones
-                    del POS/Kiosco.
+                  <p className="max-w-3xl text-sm leading-relaxed text-cyan-50/85">
+                    {c('Medí qué packs se venden, cuántas unidades se movieron, qué cupones se usaron y cuánto ingreso generan las promociones del POS/Kiosco.')}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button asChild variant="outline">
-                    <Link href="/dashboard/comercial/kiosco">Abrir POS</Link>
+                    <Link href="/dashboard/comercial/kiosco">{c('Abrir POS')}</Link>
                   </Button>
                   <Button asChild variant="outline">
                     <Link href="/dashboard/comercial/servicios-promociones">
-                      Gestionar packs
+                      {c('Gestionar packs')}
                     </Link>
                   </Button>
                   <Button
@@ -177,7 +179,7 @@ export default function ComercialPackAnalyticsPage() {
                     ) : (
                       <RefreshCw className="mr-2 h-4 w-4" />
                     )}
-                    Actualizar
+                    {c('Actualizar')}
                   </Button>
                 </div>
               </div>
@@ -186,7 +188,7 @@ export default function ComercialPackAnalyticsPage() {
             <Card>
               <CardContent className="grid gap-4 p-5 md:grid-cols-[1fr_1fr_auto] md:items-end">
                 <div className="space-y-2">
-                  <Label>Desde</Label>
+                  <Label>{c('Desde')}</Label>
                   <Input
                     type="date"
                     value={desde}
@@ -194,7 +196,7 @@ export default function ComercialPackAnalyticsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Hasta</Label>
+                  <Label>{c('Hasta')}</Label>
                   <Input
                     type="date"
                     value={hasta}
@@ -206,44 +208,44 @@ export default function ComercialPackAnalyticsPage() {
                   disabled={loading}
                   variant="outline"
                 >
-                  Aplicar filtros
+                  {c('Aplicar filtros')}
                 </Button>
               </CardContent>
             </Card>
 
             <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <MetricCard
-                title="Ventas con pack"
+                title={c('Ventas con pack')}
                 value={
                   loading ? "..." : String(dashboard.metricas.ventasConPack)
                 }
-                description="Ventas POS que incluyeron al menos un pack"
+                description={c('Ventas POS que incluyeron al menos un pack')}
                 icon={ReceiptText}
               />
               <MetricCard
-                title="Packs vendidos"
+                title={c('Packs vendidos')}
                 value={
                   loading ? "..." : String(dashboard.metricas.packsVendidos)
                 }
-                description="Unidades vendidas en el período"
+                description={c('Unidades vendidas en el período')}
                 icon={PackageCheck}
               />
               <MetricCard
-                title="Ingreso packs"
+                title={c('Ingreso packs')}
                 value={
                   loading
                     ? "..."
                     : formatCurrencyARS(dashboard.metricas.ingresoPacks)
                 }
-                description="Ingreso atribuido a packs activos"
+                description={c('Ingreso atribuido a packs activos')}
                 icon={TrendingUp}
               />
               <MetricCard
-                title="Cupones usados"
+                title={c('Cupones usados')}
                 value={
                   loading ? "..." : String(dashboard.metricas.cuponesUsados)
                 }
-                description={`Descuento estimado: ${formatCurrencyARS(dashboard.metricas.descuentoCuponEstimado)}`}
+                description={`${c('Descuento estimado:')} ${formatCurrencyARS(dashboard.metricas.descuentoCuponEstimado)}`}
                 icon={Gift}
               />
             </section>
@@ -254,20 +256,18 @@ export default function ComercialPackAnalyticsPage() {
                   <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200">
-                        Lectura ejecutiva comercial
+                        {c('Lectura ejecutiva comercial')}
                       </p>
                       <h2 className="mt-2 text-xl font-bold">
                         {executiveSignal}
                       </h2>
                       <p className="mt-2 text-sm leading-relaxed text-cyan-50/80">
-                        Consolidado para decidir si conviene empujar packs,
-                        ajustar promociones o priorizar productos de mayor
-                        margen en el POS.
+                        {c('Consolidado para decidir si conviene empujar packs, ajustar promociones o priorizar productos de mayor margen en el POS.')}
                       </p>
                     </div>
                     <div className="rounded-2xl border border-cyan-300/30 bg-white/10 px-4 py-3 text-right">
                       <p className="text-xs text-cyan-100/80">
-                        Ticket pack promedio
+                        {c('Ticket pack promedio')}
                       </p>
                       <p className="text-lg font-bold">
                         {formatCurrencyARS(
@@ -280,42 +280,41 @@ export default function ComercialPackAnalyticsPage() {
                   <div className="grid gap-3 md:grid-cols-3">
                     <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
                       <p className="text-xs uppercase tracking-wide text-cyan-100/70">
-                        Pack líder
+                        {c('Pack líder')}
                       </p>
                       <p className="mt-2 font-semibold">
-                        {topPack?.pack_nombre ?? "Sin pack destacado"}
+                        {topPack?.pack_nombre ?? c('Sin pack destacado')}
                       </p>
                       <p className="mt-1 text-xs text-cyan-50/70">
                         {topPack
-                          ? `${topPack.cantidad_vendida} unidades · ${formatCurrencyARS(topPack.ingreso_total)}`
-                          : "Esperando ventas del período."}
+                          ? `${topPack.cantidad_vendida} ${c('unidades')} · ${formatCurrencyARS(topPack.ingreso_total)}`
+                          : c('Esperando ventas del período.')}
                       </p>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
                       <p className="text-xs uppercase tracking-wide text-cyan-100/70">
-                        Uso de cupones
+                        {c('Uso de cupones')}
                       </p>
                       <p className="mt-2 font-semibold">
                         {promoShare}% de ventas con pack
                       </p>
                       <p className="mt-1 text-xs text-cyan-50/70">
                         {topCoupon?.cupon_codigo
-                          ? `Cupón líder: ${topCoupon.cupon_codigo}`
-                          : "Sin cupones aplicados."}
+                          ? `${c('Cupón líder:')} ${topCoupon.cupon_codigo}`
+                          : c('Sin cupones aplicados.')}
                       </p>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
                       <p className="text-xs uppercase tracking-wide text-cyan-100/70">
-                        Decisión sugerida
+                        {c('Decisión sugerida')}
                       </p>
                       <p className="mt-2 font-semibold">
                         {dashboard.metricas.packsVendidos > 0
-                          ? "Reforzar packs rentables"
-                          : "Activar promoción inicial"}
+                          ? c('Reforzar packs rentables')
+                          : c('Activar promoción inicial')}
                       </p>
                       <p className="mt-1 text-xs text-cyan-50/70">
-                        Usá este reporte junto al stock crítico antes de lanzar
-                        campañas.
+                        {c('Usá este reporte junto al stock crítico antes de lanzar campañas.')}
                       </p>
                     </div>
                   </div>
@@ -325,24 +324,22 @@ export default function ComercialPackAnalyticsPage() {
               <Card className="border-amber-200 bg-amber-50/70 dark:border-amber-900 dark:bg-amber-950/20">
                 <CardContent className="space-y-3 p-5">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700 dark:text-amber-300">
-                    Próximo paso operativo
+                    {c('Próximo paso operativo')}
                   </p>
                   <h3 className="text-lg font-bold">
-                    Cruzar packs con inventario
+                    {c('Cruzar packs con inventario')}
                   </h3>
                   <p className="text-sm leading-relaxed text-muted-foreground">
-                    Si el pack líder consume productos críticos, priorizá
-                    reposición antes de sostener descuentos. Si el inventario
-                    está sano, mantené la promo activa.
+                    {c('Si el pack líder consume productos críticos, priorizá reposición antes de sostener descuentos. Si el inventario está sano, mantené la promo activa.')}
                   </p>
                   <div className="flex flex-wrap gap-2 pt-2">
                     <Button asChild size="sm" variant="outline">
                       <Link href="/dashboard/comercial/stock-ledger">
-                        Ver stock
+                        {c('Ver stock')}
                       </Link>
                     </Button>
                     <Button asChild size="sm" variant="outline">
-                      <Link href="/dashboard/finanzas">Ver finanzas</Link>
+                      <Link href="/dashboard/finanzas">{c('Ver finanzas')}</Link>
                     </Button>
                   </div>
                 </CardContent>
@@ -353,15 +350,13 @@ export default function ComercialPackAnalyticsPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5 text-fuchsia-600" /> Top packs
-                    vendidos
+                    <BarChart3 className="h-5 w-5 text-fuchsia-600" /> {c('Top packs vendidos')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {dashboard.topPacks.length === 0 && (
                     <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-                      Todavía no hay packs vendidos para el período
-                      seleccionado.
+                      {c('Todavía no hay packs vendidos para el período seleccionado.')}
                     </p>
                   )}
                   {dashboard.topPacks.map((pack) => (
@@ -373,7 +368,7 @@ export default function ComercialPackAnalyticsPage() {
                         <div>
                           <p className="font-semibold">{pack.pack_nombre}</p>
                           <p className="text-xs text-muted-foreground">
-                            {pack.pack_codigo} · Última venta:{" "}
+                            {pack.pack_codigo} · {c('Última venta:')}{" "}
                             {formatDate(pack.ultima_venta)}
                           </p>
                         </div>
@@ -382,11 +377,11 @@ export default function ComercialPackAnalyticsPage() {
                         </p>
                       </div>
                       <div className="mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
-                        <span>{pack.cantidad_vendida} unidades</span>
-                        <span>{pack.ventas} registros</span>
+                        <span>{pack.cantidad_vendida} {c('unidades')}</span>
+                        <span>{pack.ventas} {c('registros')}</span>
                         <span>
                           {formatCurrencyARS(pack.descuento_cupon_estimado)}{" "}
-                          desc.
+                          {c('desc.')}
                         </span>
                       </div>
                     </div>
@@ -397,14 +392,13 @@ export default function ComercialPackAnalyticsPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Tags className="h-5 w-5 text-fuchsia-600" /> Cupones y
-                    promociones
+                    <Tags className="h-5 w-5 text-fuchsia-600" /> {c('Cupones y promociones')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {dashboard.cupones.length === 0 && (
                     <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-                      No hay cupones aplicados a packs en el período.
+                      {c('No hay cupones aplicados a packs en el período.')}
                     </p>
                   )}
                   {dashboard.cupones.map((cupon) => (
@@ -416,7 +410,7 @@ export default function ComercialPackAnalyticsPage() {
                         <div>
                           <p className="font-semibold">{cupon.cupon_codigo}</p>
                           <p className="text-xs text-muted-foreground">
-                            {cupon.promocion_nombre ?? "Promoción sin nombre"}
+                            {cupon.promocion_nombre ?? c('Promoción sin nombre')}
                           </p>
                         </div>
                         <p className="font-bold text-emerald-600">
@@ -424,8 +418,8 @@ export default function ComercialPackAnalyticsPage() {
                         </p>
                       </div>
                       <p className="mt-2 text-sm text-muted-foreground">
-                        {cupon.usos} usos · {cupon.packs_vendidos} packs ·{" "}
-                        {formatCurrencyARS(cupon.ingreso_asociado)} asociado
+                        {cupon.usos} {c('usos')} · {cupon.packs_vendidos} {c('Packs')} ·{' '}
+                        {formatCurrencyARS(cupon.ingreso_asociado)} {c('asociado')}
                       </p>
                     </div>
                   ))}
@@ -437,18 +431,18 @@ export default function ComercialPackAnalyticsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <CalendarDays className="h-5 w-5 text-fuchsia-600" />{" "}
-                  Evolución mensual
+                  {c('Evolución mensual')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="overflow-x-auto">
                 <table className="w-full min-w-[720px] text-sm">
-                  <thead className="border-b bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                  <thead className="border-b bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-900/70 dark:text-slate-300">
                     <tr>
-                      <th className="p-3">Período</th>
-                      <th className="p-3">Packs vendidos</th>
-                      <th className="p-3">Ventas</th>
-                      <th className="p-3">Ingreso</th>
-                      <th className="p-3">Descuento</th>
+                      <th className="p-3">{c('Período')}</th>
+                      <th className="p-3">{c('Packs vendidos')}</th>
+                      <th className="p-3">{c('Ventas')}</th>
+                      <th className="p-3">{c('Ingreso')}</th>
+                      <th className="p-3">{c('Descuento')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -471,7 +465,7 @@ export default function ComercialPackAnalyticsPage() {
                           colSpan={5}
                           className="p-6 text-center text-muted-foreground"
                         >
-                          Sin datos mensuales para mostrar.
+                          {c('Sin datos mensuales para mostrar.')}
                         </td>
                       </tr>
                     )}
@@ -482,19 +476,19 @@ export default function ComercialPackAnalyticsPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Últimas ventas con packs</CardTitle>
+                <CardTitle>{c('Últimas ventas con packs')}</CardTitle>
               </CardHeader>
               <CardContent className="overflow-x-auto">
                 <table className="w-full min-w-[960px] text-sm">
-                  <thead className="border-b bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                  <thead className="border-b bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-900/70 dark:text-slate-300">
                     <tr>
-                      <th className="p-3">Fecha</th>
-                      <th className="p-3">Pack</th>
-                      <th className="p-3">Cantidad</th>
-                      <th className="p-3">Total pack</th>
-                      <th className="p-3">Cupón</th>
-                      <th className="p-3">Venta</th>
-                      <th className="p-3">Componentes</th>
+                      <th className="p-3">{c('Fecha')}</th>
+                      <th className="p-3">{c('Pack')}</th>
+                      <th className="p-3">{c('Cantidad')}</th>
+                      <th className="p-3">{c('Total pack')}</th>
+                      <th className="p-3">{c('Cupón')}</th>
+                      <th className="p-3">{c('Venta')}</th>
+                      <th className="p-3">{c('Componentes')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -526,7 +520,7 @@ export default function ComercialPackAnalyticsPage() {
                           <p className="text-xs text-muted-foreground">
                             {row.venta?.cliente_nombre ??
                               row.venta?.cliente_tipo ??
-                              "Cliente"}
+                              c('Cliente')}
                           </p>
                         </td>
                         <td className="p-3 text-xs text-muted-foreground">
@@ -542,7 +536,7 @@ export default function ComercialPackAnalyticsPage() {
                           colSpan={7}
                           className="p-6 text-center text-muted-foreground"
                         >
-                          No hay ventas con packs en el período.
+                          {c('No hay ventas con packs en el período.')}
                         </td>
                       </tr>
                     )}
