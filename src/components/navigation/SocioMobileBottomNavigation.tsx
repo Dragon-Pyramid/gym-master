@@ -83,7 +83,7 @@ export function SocioMobileBottomNavigation() {
   return (
     <nav
       aria-label={t('socioDashboard.bottomNav.aria')}
-      className='gm-pwa-bottom-nav fixed inset-x-0 bottom-0 z-[80] border-t border-slate-200 bg-white px-2 pb-[calc(0.55rem+env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_22px_rgba(15,23,42,0.12)] md:hidden dark:border-slate-800 dark:bg-slate-950'
+      className='gm-pwa-bottom-nav fixed inset-x-0 bottom-0 z-[80] border-t border-slate-200 bg-white/95 px-2 pb-[calc(0.6rem+env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_28px_rgba(15,23,42,0.16)] backdrop-blur supports-[backdrop-filter]:bg-white/85 md:hidden dark:border-slate-800 dark:bg-slate-950/95 dark:supports-[backdrop-filter]:bg-slate-950/85'
     >
       <div className='mx-auto grid max-w-md grid-cols-5 gap-1'>
         {socioBottomNavItems.map((item) => {
@@ -95,9 +95,10 @@ export function SocioMobileBottomNavigation() {
               key={item.href}
               href={item.href}
               aria-current={active ? 'page' : undefined}
-              className={`group flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1.5 py-1.5 text-[10px] font-semibold transition ${
+              aria-label={t(item.labelKey)}
+              className={`group flex min-h-[3.45rem] min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1.5 py-1.5 text-[10px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                 active
-                  ? 'bg-sky-50 text-sky-700 shadow-sm ring-1 ring-sky-100 dark:bg-sky-950/50 dark:text-sky-200 dark:ring-sky-800'
+                  ? 'bg-sky-50 text-sky-700 shadow-sm ring-1 ring-sky-100 dark:bg-sky-950/60 dark:text-sky-100 dark:ring-sky-800'
                   : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-100'
               }`}
             >
@@ -107,7 +108,7 @@ export function SocioMobileBottomNavigation() {
                 }`}
                 aria-hidden='true'
               />
-              <span className='max-w-full truncate leading-none'>{t(item.labelKey)}</span>
+              <span className='max-w-full truncate leading-none tracking-[-0.01em]'>{t(item.labelKey)}</span>
             </Link>
           );
         })}

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import Image from 'next/image';
 import { Card } from '@/components/ui/card';
-import { Activity, AlertCircle, CheckCircle2, ChevronRight, Clock, CreditCard, Dumbbell, FileWarning, HeartPulse, MessageCircle, QrCode, Star, ClipboardCheck, Utensils } from 'lucide-react';
+import { Activity, AlertCircle, CheckCircle2, ChevronRight, Clock, CreditCard, Dumbbell, FileWarning, HeartPulse, HelpCircle, MessageCircle, QrCode, Star, ClipboardCheck, Utensils } from 'lucide-react';
 import ProfileImage from '@/components/perfil/ProfileImage';
 import { formatFrontendDate, formatFrontendTime } from '@/utils/dateFormat';
 import SocioEvolucionProgressInsights from '@/components/dashboard/evolucion-fisica/SocioEvolucionProgressInsights';
@@ -45,7 +45,7 @@ const SocioMobileFeedSection = ({
   badge,
   accentClassName = 'bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-200',
 }: SocioMobileFeedSectionProps) => (
-  <section className='space-y-3'>
+  <section className='gm-socio-mobile-section space-y-3'>
     <div className='flex items-start justify-between gap-3 px-1'>
       <div className='flex min-w-0 items-start gap-3'>
         <div className={`mt-0.5 rounded-2xl p-2 ${accentClassName}`}>
@@ -93,7 +93,7 @@ const SocioMobileQuickActionRail = ({
         </p>
         <h2 className='text-base font-black leading-tight'>{title}</h2>
       </div>
-      <span className='rounded-full bg-sky-50 px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.12em] text-sky-700 dark:bg-sky-950 dark:text-sky-200'>
+      <span className='rounded-full bg-sky-50 px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.12em] text-sky-700 ring-1 ring-sky-100 dark:bg-sky-950 dark:text-sky-200 dark:ring-sky-900/70'>
         App
       </span>
     </div>
@@ -106,7 +106,8 @@ const SocioMobileQuickActionRail = ({
             key={item.title}
             type='button'
             onClick={() => onNavigate(item.href)}
-            className={`min-w-[8.4rem] rounded-2xl border p-3 text-left shadow-sm transition active:scale-[0.98] ${item.className}`}
+            aria-label={`${item.title}: ${item.description}`}
+            className={`min-w-[8.4rem] rounded-2xl border p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98] ${item.className}`}
           >
             <div className='mb-3 flex items-center justify-between gap-2'>
               <Icon className='h-5 w-5' />
@@ -357,56 +358,63 @@ const DashboardInitialContent = () => {
       description: cuotaAlDia ? t('socioDashboard.quickActions.viewHistory') : t('socioDashboard.quickActions.regularize'),
       href: cuotaAlDia ? '/dashboard/mi-cuenta/historial-pagos' : '/dashboard/mi-cuenta/pagar-cuota',
       icon: CreditCard,
-      className: cuotaAlDia ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-sky-200 bg-sky-50 text-sky-900',
+      className: cuotaAlDia ? 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900/70 dark:bg-emerald-950/30 dark:text-emerald-100' : 'border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-900/70 dark:bg-sky-950/30 dark:text-sky-100',
     },
     {
       title: t('socioDashboard.quickActions.qrAttendance'),
       description: t('socioDashboard.quickActions.gymEntry'),
       href: '/dashboard/control-asistencia',
       icon: QrCode,
-      className: 'border-indigo-200 bg-indigo-50 text-indigo-900',
+      className: 'border-indigo-200 bg-indigo-50 text-indigo-900 dark:border-indigo-900/70 dark:bg-indigo-950/30 dark:text-indigo-100',
     },
     {
       title: t('socioDashboard.quickActions.coach'),
       description: t('socioDashboard.quickActions.coachDescription'),
       href: '/dashboard/coach',
       icon: MessageCircle,
-      className: 'border-cyan-200 bg-cyan-50 text-cyan-900',
+      className: 'border-cyan-200 bg-cyan-50 text-cyan-900 dark:border-cyan-900/70 dark:bg-cyan-950/30 dark:text-cyan-100',
     },
     {
       title: t('socioDashboard.quickActions.routine'),
       description: t('socioDashboard.quickActions.training'),
       href: '/dashboard/rutinas/asistente',
       icon: Dumbbell,
-      className: 'border-orange-200 bg-orange-50 text-orange-900',
+      className: 'border-orange-200 bg-orange-50 text-orange-900 dark:border-orange-900/70 dark:bg-orange-950/30 dark:text-orange-100',
     },
     {
       title: t('socioDashboard.quickActions.diet'),
       description: t('socioDashboard.quickActions.mealPlan'),
       href: '/dashboard/dietas',
       icon: Utensils,
-      className: 'border-lime-200 bg-lime-50 text-lime-900',
+      className: 'border-lime-200 bg-lime-50 text-lime-900 dark:border-lime-700/70 dark:bg-gradient-to-br dark:from-lime-950 dark:via-lime-900/95 dark:to-emerald-950 dark:text-lime-50 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]',
     },
     {
       title: t('socioDashboard.quickActions.evolution'),
       description: t('socioDashboard.quickActions.physicalProgress'),
       href: '/dashboard/evolucion-fisica',
       icon: Activity,
-      className: 'border-violet-200 bg-violet-50 text-violet-900',
+      className: 'border-violet-200 bg-violet-50 text-violet-900 dark:border-violet-900/70 dark:bg-violet-950/30 dark:text-violet-100',
     },
     {
       title: t('socioDashboard.quickActions.medicalRecord'),
       description: tieneFichaMedica === false ? t('socioDashboard.quickActions.complete') : t('socioDashboard.quickActions.consult'),
       href: '/dashboard/ficha-medica',
       icon: HeartPulse,
-      className: tieneFichaMedica === false ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-rose-200 bg-rose-50 text-rose-900',
+      className: tieneFichaMedica === false ? 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-100' : 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-900/70 dark:bg-rose-950/30 dark:text-rose-100',
     },
     {
       title: t('socioDashboard.quickActions.messages'),
       description: t('socioDashboard.quickActions.inbox'),
       href: '/dashboard/mensajes',
       icon: MessageCircle,
-      className: 'border-slate-200 bg-slate-50 text-slate-900',
+      className: 'border-slate-200 bg-slate-50 text-slate-900 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-100',
+    },
+    {
+      title: t('socioDashboard.quickActions.help'),
+      description: t('socioDashboard.quickActions.helpDescription'),
+      href: '/dashboard/ayuda',
+      icon: HelpCircle,
+      className: 'border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-900/70 dark:bg-sky-950/30 dark:text-sky-100',
     },
   ];
 
@@ -418,7 +426,7 @@ const DashboardInitialContent = () => {
     <div className='bg-gradient-to-br from-background via-background to-muted/20 p-4 md:flex md:min-h-[calc(100dvh-10.5rem)] md:items-center md:p-8'>
       <div className='mx-auto max-w-7xl'>
         {isSocio && (
-          <section className='space-y-5 pb-4 md:hidden'>
+          <section className='gm-socio-mobile-feed space-y-5 pb-4 md:hidden'>
             <div className='overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-slate-900 to-sky-900 p-5 text-white shadow-xl'>
               <div className='flex items-start justify-between gap-3'>
                 <div className='flex min-w-0 items-center gap-3'>
