@@ -11,6 +11,8 @@ import { CatalogoParametrizableItem } from "@/interfaces/parametrizacion.interfa
 import { Proveedor } from "@/interfaces/proveedor.interface";
 import { useCatalogoParametrizable } from "@/hooks/useCatalogosParametrizables";
 import { toast } from "sonner";
+import { useI18n } from '@/i18n/I18nProvider';
+import { translateCommercialUi } from '@/i18n/commercialUi';
 
 export interface ProductoFormProps {
   producto?: {
@@ -61,6 +63,9 @@ export default function ProductoForm({
   producto,
   onCreated,
 }: ProductoFormProps) {
+  const { locale } = useI18n();
+  const c = (text: string) => translateCommercialUi(locale, text);
+
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
@@ -155,19 +160,19 @@ export default function ProductoForm({
       const stock_minimo = Number(form.stock_minimo || 5);
 
       if (!Number.isInteger(precio) || precio < 0) {
-        throw new Error("El precio debe ser un número entero en pesos argentinos");
+        throw new Error(c("El precio debe ser un número entero en pesos argentinos"));
       }
 
       if (!Number.isInteger(costo) || costo < 0) {
-        throw new Error("El costo debe ser un número entero mayor o igual a 0");
+        throw new Error(c("El costo debe ser un número entero mayor o igual a 0"));
       }
 
       if (!Number.isInteger(stock) || stock < 0) {
-        throw new Error("El stock debe ser un número entero mayor o igual a 0");
+        throw new Error(c("El stock debe ser un número entero mayor o igual a 0"));
       }
 
       if (!Number.isInteger(stock_minimo) || stock_minimo < 0) {
-        throw new Error("El stock mínimo debe ser un número entero mayor o igual a 0");
+        throw new Error(c("El stock mínimo debe ser un número entero mayor o igual a 0"));
       }
 
       const payload = {
@@ -184,15 +189,15 @@ export default function ProductoForm({
 
       if (producto && producto.id) {
         await updateProducto(producto.id, payload);
-        toast.success("Producto actualizado");
+        toast.success(c("Producto actualizado"));
       } else {
         await createProducto(payload);
-        toast.success("Producto creado");
+        toast.success(c("Producto creado"));
       }
       setForm(emptyForm);
       onCreated();
     } catch (error: any) {
-      const msg = error.message || "Error al guardar producto";
+      const msg = error.message || c("Error al guardar producto");
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -231,29 +236,29 @@ export default function ProductoForm({
     >
       <QaFileNameBadge file="src/components/forms/ProductoForm.tsx" />
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="nombre">Nombre comercial</Label>
+        <Label htmlFor="nombre">{c("Nombre comercial")}</Label>
         <Input
           id="nombre"
           name="nombre"
-          placeholder="Ej: Proteína Whey 1 kg"
+          placeholder={c("Ej: Proteína Whey 1 kg")}
           value={form.nombre}
           onChange={handleChange}
           required
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="descripcion">Descripción / presentación</Label>
+        <Label htmlFor="descripcion">{c("Descripción / presentación")}</Label>
         <Input
           id="descripcion"
           name="descripcion"
-          placeholder="Ej: vainilla, 1 kg, frasco"
+          placeholder={c("Ej: vainilla, 1 kg, frasco")}
           value={form.descripcion}
           onChange={handleChange}
           required
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="id_categoria_producto">Categoría</Label>
+        <Label htmlFor="id_categoria_producto">{c("Categoría")}</Label>
         <select
           id="id_categoria_producto"
           name="id_categoria_producto"
@@ -261,7 +266,7 @@ export default function ProductoForm({
           onChange={handleChange}
           className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
         >
-          <option value="">Sin categoría</option>
+          <option value="">{c("Sin categoría")}</option>
           {categoriasProducto.map((categoria) => (
             <option key={categoria.id} value={categoria.id}>
               {categoria.nombre}
@@ -270,7 +275,7 @@ export default function ProductoForm({
         </select>
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="proveedor_id">Proveedor</Label>
+        <Label htmlFor="proveedor_id">{c("Proveedor")}</Label>
         {proveedores.length > 0 ? (
           <select
             id="proveedor_id"
@@ -280,7 +285,7 @@ export default function ProductoForm({
             className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
             required
           >
-            <option value="">Seleccionar proveedor activo</option>
+            <option value="">{c("Seleccionar proveedor activo")}</option>
             {proveedores
               .filter(
                 (proveedor) =>
@@ -309,7 +314,7 @@ export default function ProductoForm({
       </div>
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between gap-2">
-          <Label htmlFor="sku">SKU / código interno</Label>
+          <Label htmlFor="sku">{c("SKU / código interno")}</Label>
           <Button type="button" size="sm" variant="outline" onClick={generarSku}>
             Generar
           </Button>
@@ -324,7 +329,7 @@ export default function ProductoForm({
         <p className="text-xs text-muted-foreground">El POS y el scanner móvil pueden resolver productos por SKU.</p>
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="codigo_barras">Código de barras / QR externo</Label>
+        <Label htmlFor="codigo_barras">{c("Código de barras / QR externo")}</Label>
         <Input
           id="codigo_barras"
           name="codigo_barras"
@@ -376,7 +381,7 @@ export default function ProductoForm({
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="stock_minimo">Stock mínimo operativo</Label>
+        <Label htmlFor="stock_minimo">{c("Stock mínimo operativo")}</Label>
         <Input
           id="stock_minimo"
           name="stock_minimo"
@@ -399,7 +404,7 @@ export default function ProductoForm({
             <Input
               id="motivo_cambio_precio"
               name="motivo_cambio_precio"
-              placeholder="Ej: actualización de proveedor, inflación, cambio de costo"
+              placeholder={c("Ej: actualización de proveedor, inflación, cambio de costo")}
               value={form.motivo_cambio_precio}
               onChange={handleChange}
             />
@@ -428,7 +433,7 @@ export default function ProductoForm({
             />
           </div>
           <div className="flex flex-col gap-1.5 md:col-span-2">
-            <Label htmlFor="cotizacion_usada">Cotización usada (opcional)</Label>
+            <Label htmlFor="cotizacion_usada">{c("Cotización usada (opcional)")}</Label>
             <Input
               id="cotizacion_usada"
               name="cotizacion_usada"
@@ -458,10 +463,10 @@ export default function ProductoForm({
         disabled={loading}
       >
         {loading
-          ? "Guardando..."
+          ? c("Guardando...")
           : producto
-          ? "Actualizar Producto"
-          : "Crear Producto"}
+          ? c("Actualizar Producto")
+          : c("Crear Producto")}
       </Button>
     </form>
   );

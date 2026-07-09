@@ -10,6 +10,8 @@ import {
 import ProveedorForm from "../forms/ProveedorForm";
 import FechaHora from "@/components/ui/FechaHora";
 import { Proveedor } from "@/interfaces/proveedor.interface";
+import { useI18n } from '@/i18n/I18nProvider';
+import { translateCommercialUi } from '@/i18n/commercialUi';
 
 export default function ProveedorModal({
   open,
@@ -22,6 +24,9 @@ export default function ProveedorModal({
   onCreated: () => void;
   proveedor?: Proveedor | null;
 }) {
+  const { locale } = useI18n();
+  const c = (text: string) => translateCommercialUi(locale, text);
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="w-full max-w-5xl sm:max-w-4xl">
@@ -29,7 +34,7 @@ export default function ProveedorModal({
         <DialogHeader>
           <div className="flex gap-4 justify-between items-center w-full">
             <DialogTitle>
-              {proveedor ? "Editar Proveedor" : "Nuevo Proveedor"}
+              {proveedor ? c("Editar Proveedor") : c("Nuevo Proveedor")}
             </DialogTitle>
             <FechaHora />
           </div>

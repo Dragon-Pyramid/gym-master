@@ -9,6 +9,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { createServicio, updateServicio } from "@/services/servicioService";
 import { Servicio } from "@/interfaces/servicio.interface";
 import { toast } from "sonner";
+import { useI18n } from '@/i18n/I18nProvider';
+import { translateCommercialUi } from '@/i18n/commercialUi';
 
 export interface ServicioFormProps {
   servicio?: Servicio | null;
@@ -50,6 +52,9 @@ export default function ServicioForm({
   servicio,
   onCreated,
 }: ServicioFormProps) {
+  const { locale } = useI18n();
+  const c = (text: string) => translateCommercialUi(locale, text);
+
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
 
@@ -103,15 +108,15 @@ export default function ServicioForm({
       const cupo = form.cupo_maximo.trim() ? Number(form.cupo_maximo) : null;
 
       if (!Number.isFinite(precio) || precio < 0) {
-        throw new Error("El precio debe ser un número válido mayor o igual a cero.");
+        throw new Error(c("El precio debe ser un número válido mayor o igual a cero."));
       }
 
       if (duracion !== null && (!Number.isInteger(duracion) || duracion <= 0)) {
-        throw new Error("La duración debe ser un número entero positivo.");
+        throw new Error(c("La duración debe ser un número entero positivo."));
       }
 
       if (cupo !== null && (!Number.isInteger(cupo) || cupo <= 0)) {
-        throw new Error("El cupo máximo debe ser un número entero positivo.");
+        throw new Error(c("El cupo máximo debe ser un número entero positivo."));
       }
 
       const payload = {
@@ -130,18 +135,18 @@ export default function ServicioForm({
 
       if (servicio && servicio.id) {
         await updateServicio(servicio.id, payload);
-        toast.success("Servicio actualizado");
+        toast.success(c("Servicio actualizado"));
       } else {
         await createServicio(payload);
-        toast.success("Servicio creado");
+        toast.success(c("Servicio creado"));
       }
       setForm(emptyForm);
       onCreated();
     } catch (error: any) {
-      let msg = error.message || "Error al guardar servicio";
+      let msg = error.message || c("Error al guardar servicio");
       if (msg.includes("value too long")) {
         msg =
-          "Uno de los campos excede la cantidad máxima de caracteres permitidos.";
+          c("Uno de los campos excede la cantidad máxima de caracteres permitidos.");
       }
       toast.error(msg);
     } finally {
@@ -167,24 +172,24 @@ export default function ServicioForm({
     >
       <QaFileNameBadge file="src/components/forms/ServicioForm.tsx" />
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="nombre">Nombre</Label>
+        <Label htmlFor="nombre">{c("Nombre")}</Label>
         <Input
           id="nombre"
           name="nombre"
-          placeholder="Ej: Personal trainer 1 hora"
+          placeholder={c("Ej: Personal trainer 1 hora")}
           value={form.nombre}
           onChange={handleChange}
           required
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="precio">Precio</Label>
+        <Label htmlFor="precio">{c("Precio")}</Label>
         <Input
           id="precio"
           name="precio"
           type="number"
           inputMode="decimal"
-          placeholder="Ingrese precio"
+          placeholder={c("Ingrese precio")}
           value={form.precio}
           onChange={handleChange}
           required
@@ -194,7 +199,7 @@ export default function ServicioForm({
       </div>
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between gap-2">
-          <Label htmlFor="codigo">Código comercial / QR</Label>
+          <Label htmlFor="codigo">{c("Código comercial / QR")}</Label>
           <Button type="button" size="sm" variant="outline" onClick={generarCodigoServicio}>
             Generar
           </Button>
@@ -202,14 +207,14 @@ export default function ServicioForm({
         <Input
           id="codigo"
           name="codigo"
-          placeholder="Ej: SERV-EVALUACION-001"
+          placeholder={c("Ej: SERV-EVALUACION-001")}
           value={form.codigo}
           onChange={handleChange}
         />
         <p className="text-xs text-muted-foreground">El scanner móvil/POS puede resolver servicios por este código.</p>
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="categoria">Categoría</Label>
+        <Label htmlFor="categoria">{c("Categoría")}</Label>
         <select
           id="categoria"
           name="categoria"
@@ -225,7 +230,7 @@ export default function ServicioForm({
         </select>
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="modalidad">Modalidad</Label>
+        <Label htmlFor="modalidad">{c("Modalidad")}</Label>
         <select
           id="modalidad"
           name="modalidad"
@@ -241,7 +246,7 @@ export default function ServicioForm({
         </select>
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="duracion_minutos">Duración estimada (minutos)</Label>
+        <Label htmlFor="duracion_minutos">{c("Duración estimada (minutos)")}</Label>
         <Input
           id="duracion_minutos"
           name="duracion_minutos"
@@ -255,13 +260,13 @@ export default function ServicioForm({
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="cupo_maximo">Cupo máximo</Label>
+        <Label htmlFor="cupo_maximo">{c("Cupo máximo")}</Label>
         <Input
           id="cupo_maximo"
           name="cupo_maximo"
           type="number"
           inputMode="numeric"
-          placeholder="Opcional"
+          placeholder={c("Opcional")}
           value={form.cupo_maximo}
           onChange={handleChange}
           min={1}
@@ -293,11 +298,11 @@ export default function ServicioForm({
         </Label>
       </div>
       <div className="flex flex-col gap-1.5 md:col-span-2">
-        <Label htmlFor="descripcion">Descripción</Label>
+        <Label htmlFor="descripcion">{c("Descripción")}</Label>
         <textarea
           id="descripcion"
           name="descripcion"
-          placeholder="Describí qué incluye el servicio, condiciones y alcance."
+          placeholder={c("Describí qué incluye el servicio, condiciones y alcance.")}
           value={form.descripcion}
           onChange={handleChange}
           className="border rounded-md p-2 min-h-[80px]"
@@ -305,11 +310,11 @@ export default function ServicioForm({
         />
       </div>
       <div className="flex flex-col gap-1.5 md:col-span-2">
-        <Label htmlFor="observaciones">Observaciones internas</Label>
+        <Label htmlFor="observaciones">{c("Observaciones internas")}</Label>
         <textarea
           id="observaciones"
           name="observaciones"
-          placeholder="Notas internas, requisitos, disponibilidad o aclaraciones comerciales."
+          placeholder={c("Notas internas, requisitos, disponibilidad o aclaraciones comerciales.")}
           value={form.observaciones}
           onChange={handleChange}
           className="border rounded-md p-2 min-h-[70px]"
@@ -321,10 +326,10 @@ export default function ServicioForm({
         disabled={loading}
       >
         {loading
-          ? "Guardando..."
+          ? c("Guardando...")
           : servicio
-          ? "Actualizar Servicio"
-          : "Crear Servicio"}
+          ? c("Actualizar Servicio")
+          : c("Crear Servicio")}
       </Button>
     </form>
   );

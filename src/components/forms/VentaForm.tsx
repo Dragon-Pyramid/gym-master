@@ -21,6 +21,8 @@ import { VentaDetalleItemTipo } from '@/interfaces/venta_detalle.interface';
 import { formatCurrencyARS } from '@/lib/comercial/productos';
 import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useI18n } from '@/i18n/I18nProvider';
+import { translateCommercialUi } from '@/i18n/commercialUi';
 
 export interface VentaFormProps {
   venta?: ResponseVenta | null;
@@ -59,6 +61,9 @@ const onlyIntegerText = (value: string) =>
   value.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
 
 export default function VentaForm({ venta, onCreated }: VentaFormProps) {
+  const { locale } = useI18n();
+  const c = (text: string) => translateCommercialUi(locale, text);
+
   const [form, setForm] = useState(emptyForm);
   const [detalles, setDetalles] = useState<VentaDetalleFormRow[]>([
     emptyDetalle(),
@@ -218,7 +223,7 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
 
     try {
       if (form.cliente_tipo === 'socio' && !form.socio_id) {
-        throw new Error('Seleccioná un socio para esta venta');
+        throw new Error(c("Seleccioná un socio para esta venta"));
       }
 
       const parsedDetalles = detalles.map((detalle) => {
@@ -232,7 +237,7 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
         }
 
         if (!Number.isInteger(cantidad) || cantidad <= 0) {
-          throw new Error('La cantidad debe ser un número entero mayor a 0');
+          throw new Error(c("La cantidad debe ser un número entero mayor a 0"));
         }
 
         if (detalle.item_tipo === 'producto' && stock !== null && cantidad > stock) {
@@ -345,7 +350,7 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
               <Input
                 id='cliente_documento'
                 name='cliente_documento'
-                placeholder='Opcional'
+                placeholder={c('Opcional')}
                 value={form.cliente_documento}
                 onChange={handleFormChange}
               />
@@ -365,7 +370,7 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
           />
         </div>
         <div className='flex flex-col gap-1.5'>
-          <Label htmlFor='metodo_pago'>Método de pago</Label>
+          <Label htmlFor='metodo_pago'>{c("Método de pago")}</Label>
           <select
             id='metodo_pago'
             name='metodo_pago'
@@ -393,7 +398,7 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
       <section className='space-y-3 rounded-xl border p-4'>
         <div className='flex flex-wrap items-center justify-between gap-3'>
           <div>
-            <h3 className='font-semibold'>Ítems de la venta</h3>
+            <h3 className='font-semibold'>{c("Ítems de la venta")}</h3>
             <p className='text-sm text-muted-foreground'>
               Agregá productos o servicios. Los productos descuentan stock al registrar la venta.
             </p>
