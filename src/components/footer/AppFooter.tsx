@@ -1,9 +1,14 @@
 'use client';
 
 import React from 'react';
+import { cn } from '@/lib/utils';
 import { useI18n } from '@/i18n/I18nProvider';
 
-export const AppFooter = () => {
+interface AppFooterProps {
+  className?: string;
+}
+
+export const AppFooter = ({ className }: AppFooterProps) => {
   const { locale, t } = useI18n();
   const translated = t('footer.developedBy');
   const label =
@@ -14,7 +19,12 @@ export const AppFooter = () => {
       : translated;
 
   return (
-    <footer className='mt-auto w-full shrink-0 border-t py-4 text-center text-sm text-muted-foreground'>
+    <footer
+      className={cn(
+        'gm-dashboard-footer mt-auto w-full shrink-0 border-t bg-background py-4 text-center text-sm text-muted-foreground',
+        className,
+      )}
+    >
       {label}
     </footer>
   );

@@ -568,7 +568,7 @@ export default function DashboardPage() {
 
   return (
     <SidebarProvider>
-      <div className='relative flex min-h-[100dvh] w-full items-stretch overflow-x-hidden'>
+      <div className='gm-dashboard-scroll-root relative flex min-h-[100dvh] w-full items-stretch overflow-x-hidden'>
         {showQr && (
           <div
             className='fixed inset-0 z-50 transition-opacity duration-300 bg-black'
@@ -617,7 +617,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          <main className='min-h-0 w-full min-w-0 max-w-full overflow-y-auto overflow-x-hidden px-3 py-4 pb-8 space-y-5 sm:px-4 md:px-8 md:py-6 md:pb-10 md:space-y-6'>
+          <main data-gm-dashboard-content='true' className='min-h-0 w-full min-w-0 max-w-full overflow-y-auto overflow-x-hidden px-3 py-4 pb-8 space-y-5 sm:px-4 md:px-8 md:py-6 md:pb-10 md:space-y-6'>
             {(userType === 'socio' || userType === 'usuario') && (
               <DashboardInitialContent />
             )}

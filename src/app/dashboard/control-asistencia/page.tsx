@@ -34,11 +34,11 @@ export default function ControlAsistenciaPage() {
 
   return (
     <SidebarProvider>
-      <div className="flex w-full min-h-screen">
+      <div className="gm-dashboard-scroll-root flex min-h-[100dvh] w-full bg-background">
         <AppSidebar />
         <div className="flex flex-col flex-1 w-full">
           <AppHeader title="Control de Asistencia" />
-          <main className="flex-1 w-full max-w-full px-4 py-6 space-y-6 md:px-8">
+          <main data-gm-dashboard-content="true" className="flex-1 w-full max-w-full px-4 py-6 space-y-6 md:px-8">
             <RegistrarAsistenciaQR />
           </main>
           <AppFooter />

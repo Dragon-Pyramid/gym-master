@@ -88,10 +88,10 @@ export default function HelpCenterPage() {
   return (
     <SidebarProvider>
       <AppSidebar />
-      <div className='flex min-h-screen w-full flex-col bg-background'>
+      <div className='gm-dashboard-scroll-root flex min-h-[100dvh] w-full flex-col bg-background'>
         <AppHeader title={copy.pageTitle} />
 
-        <main className='flex-1 space-y-6 overflow-x-hidden px-4 py-5 sm:px-6 lg:px-8'>
+        <main data-gm-dashboard-content='true' className='flex-1 space-y-6 overflow-x-hidden px-4 py-5 sm:px-6 lg:px-8'>
           {!manualRole ? (
             <Card className='border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-50'>
               <CardHeader>

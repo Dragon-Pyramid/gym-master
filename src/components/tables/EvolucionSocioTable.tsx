@@ -175,14 +175,14 @@ export default function EvolucionSocioTable({
         {filtered.map((e, i) => (
           <article
             key={`mobile-${getRowKey(e, i)}`}
-            className="rounded-2xl border bg-white p-4 shadow-sm"
+            className="rounded-2xl border bg-card p-4 text-card-foreground shadow-sm"
           >
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-wide text-[#02a8e1]">
                   {e.es_registro_inicial ? "Registro inicial" : "Medición"}
                 </p>
-                <h3 className="mt-1 text-lg font-bold text-gray-950">
+                <h3 className="mt-1 text-lg font-bold text-foreground">
                   {formatDate(e.fecha)}
                 </h3>
               </div>
@@ -198,35 +198,35 @@ export default function EvolucionSocioTable({
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
-              <div className="rounded-xl bg-slate-50 p-3">
-                <p className="text-[11px] uppercase text-gray-500">Peso</p>
-                <p className="font-bold text-gray-950">{formatNumber(e.peso, " kg")}</p>
+              <div className="rounded-xl bg-muted/40 p-3">
+                <p className="text-[11px] uppercase text-muted-foreground">Peso</p>
+                <p className="font-bold text-foreground">{formatNumber(e.peso, " kg")}</p>
               </div>
-              <div className="rounded-xl bg-slate-50 p-3">
-                <p className="text-[11px] uppercase text-gray-500">IMC</p>
-                <p className="font-bold text-gray-950">{formatNumber(e.imc)}</p>
+              <div className="rounded-xl bg-muted/40 p-3">
+                <p className="text-[11px] uppercase text-muted-foreground">IMC</p>
+                <p className="font-bold text-foreground">{formatNumber(e.imc)}</p>
               </div>
-              <div className="rounded-xl bg-slate-50 p-3">
-                <p className="text-[11px] uppercase text-gray-500">Cintura</p>
-                <p className="font-bold text-gray-950">{formatNumber(e.cintura, " cm")}</p>
+              <div className="rounded-xl bg-muted/40 p-3">
+                <p className="text-[11px] uppercase text-muted-foreground">Cintura</p>
+                <p className="font-bold text-foreground">{formatNumber(e.cintura, " cm")}</p>
               </div>
-              <div className="rounded-xl bg-slate-50 p-3">
-                <p className="text-[11px] uppercase text-gray-500">Masa muscular</p>
-                <p className="font-bold text-gray-950">{formatNumber(e.masa_muscular, " kg")}</p>
+              <div className="rounded-xl bg-muted/40 p-3">
+                <p className="text-[11px] uppercase text-muted-foreground">Masa muscular</p>
+                <p className="font-bold text-foreground">{formatNumber(e.masa_muscular, " kg")}</p>
               </div>
             </div>
 
-            <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-600">
-              <span className="rounded-full bg-slate-100 px-2.5 py-1">
+            <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+              <span className="rounded-full bg-muted px-2.5 py-1">
                 Grasa: {formatNumber(e.porcentaje_grasa, "%")}
               </span>
-              <span className="rounded-full bg-slate-100 px-2.5 py-1">
+              <span className="rounded-full bg-muted px-2.5 py-1">
                 Tipo: {e.tipo_corporal || "-"}
               </span>
             </div>
 
             {e.observaciones ? (
-              <p className="mt-3 rounded-xl border bg-slate-50 p-3 text-xs leading-relaxed text-gray-600">
+              <p className="mt-3 rounded-xl border bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground">
                 {e.observaciones}
               </p>
             ) : null}
@@ -261,7 +261,7 @@ export default function EvolucionSocioTable({
             {filtered.map((e, i) => (
               <TableRow
                 key={getRowKey(e, i)}
-                className="odd:bg-muted/40 transition-colors hover:bg-[#a8d9f9]"
+                className="odd:bg-muted/40 transition-colors hover:bg-[#a8d9f9]/60 dark:hover:bg-sky-950/60"
               >
                 <TableCell>{formatDate(e.fecha)}</TableCell>
                 <TableCell>{formatNumber(e.peso, " kg")}</TableCell>

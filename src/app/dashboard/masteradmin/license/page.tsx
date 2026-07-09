@@ -878,7 +878,7 @@ export default function MasterAdminLicensePage() {
         </div>
       </section>
 
-      <div className='shrink-0'>
+      <div className='gm-dashboard-footer shrink-0 bg-slate-950'>
         <AppFooter />
       </div>
     </main>
