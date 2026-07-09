@@ -10,6 +10,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { useAuthStore } from '@/stores/authStore';
+import { useI18n } from '@/i18n/I18nProvider';
+import { translateCommercialUi } from '@/i18n/commercialUi';
 import type { ComercialCodigoLabelItem, ComercialCodigoTargetType, ComercialCodigosLabelsDashboard } from '@/interfaces/comercialCodigos.interface';
 import { generateComercialQrCodeClient, getComercialCodigosLabelsDashboardClient } from '@/services/comercialCodigosService';
 
@@ -48,10 +50,10 @@ function escapeHtml(value?: string | null) {
     .replaceAll("'", '&#039;');
 }
 
-function typeLabel(type: string) {
-  if (type === 'producto') return 'Producto';
-  if (type === 'servicio') return 'Servicio';
-  if (type === 'pack') return 'Pack';
+function typeLabel(type: string, c?: (text: string) => string) {
+  if (type === 'producto') return c ? c('Producto') : 'Producto';
+  if (type === 'servicio') return c ? c('Servicio') : 'Servicio';
+  if (type === 'pack') return c ? c('Pack') : 'Pack';
   return type;
 }
 
@@ -130,6 +132,8 @@ function printLabels(items: ComercialCodigoLabelItem[], columns: number) {
 }
 
 export default function ComercialCodigosEtiquetasPage() {
+  const { locale } = useI18n();
+  const c = (text: string) => translateCommercialUi(locale, text);
   const { isAuthenticated, initializeAuth, isInitialized } = useAuthStore();
   const [dashboard, setDashboard] = useState<ComercialCodigosLabelsDashboard>(emptyDashboard);
   const [loading, setLoading] = useState(true);
@@ -147,7 +151,7 @@ export default function ComercialCodigosEtiquetasPage() {
       const data = await getComercialCodigosLabelsDashboardClient();
       setDashboard(data);
     } catch (error: any) {
-      toast.error(error?.message || 'No se pudieron cargar códigos comerciales');
+      toast.error(error?.message || c('No se pudieron cargar códigos comerciales'));
     } finally {
       setLoading(false);
     }
@@ -186,23 +190,23 @@ export default function ComercialCodigosEtiquetasPage() {
 
   async function handleGenerateQr(item: ComercialCodigoLabelItem) {
     if (item.target_type === 'pack') {
-      toast.info('Los packs ya usan su código comercial como QR/código escaneable.');
+      toast.info(c('Los packs ya usan su código comercial como QR/código escaneable.'));
       return;
     }
     const key = `${item.target_type}:${item.id}`;
     setSavingKey(key);
     try {
       const qr = await generateComercialQrCodeClient({ target_type: item.target_type, target_id: item.id });
-      toast.success(`QR generado: ${qr.codigo}`);
+      toast.success(`${c('QR generado:')} ${qr.codigo}`);
       await loadDashboard();
     } catch (error: any) {
-      toast.error(error?.message || 'No se pudo generar QR comercial');
+      toast.error(error?.message || c('No se pudo generar QR comercial'));
     } finally {
       setSavingKey(null);
     }
   }
 
-  if (!isInitialized) return <div>Cargando...</div>;
+  if (!isInitialized) return <div>{c('Cargando...')}</div>;
   if (!isAuthenticated) return null;
 
   return (
@@ -210,91 +214,91 @@ export default function ComercialCodigosEtiquetasPage() {
       <div className='flex min-h-screen w-full'>
         <AppSidebar />
         <SidebarInset>
-          <AppHeader title='Códigos y etiquetas comerciales' />
+          <AppHeader title={c('Códigos y etiquetas comerciales')} />
           <main className='flex-1 space-y-6 p-6'>
-            <section className='rounded-2xl border bg-white p-6 shadow-sm'>
+            <section className='rounded-3xl border border-sky-200 bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950 p-6 text-white shadow-sm dark:border-cyan-800/70'>
               <div className='flex flex-col justify-between gap-4 lg:flex-row lg:items-center'>
                 <div className='space-y-2'>
-                  <p className='text-xs font-semibold uppercase tracking-[0.24em] text-sky-600'>Comercial y Stock</p>
-                  <h1 className='text-2xl font-bold'>Códigos, QR y etiquetas para POS</h1>
+                  <p className='text-xs font-semibold uppercase tracking-[0.24em] text-sky-600'>{c('Comercial y Stock')}</p>
+                  <h1 className='text-2xl font-bold'>{c('Códigos, QR y etiquetas para POS')}</h1>
                   <p className='max-w-3xl text-sm leading-relaxed text-muted-foreground'>
-                    Relacioná productos, servicios y packs con códigos reales para que el scanner móvil y el POS puedan agregarlos al carrito.
+                    {c('Relacioná productos, servicios y packs con códigos reales para que el scanner móvil y el POS puedan agregarlos al carrito.')}
                   </p>
                 </div>
                 <div className='flex flex-wrap gap-2'>
-                  <Button variant='outline' onClick={loadDashboard} disabled={loading}>
-                    {loading ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <RefreshCw className='mr-2 h-4 w-4' />}Actualizar
+                  <Button variant='outline' className='border-white/30 bg-white/10 text-white hover:bg-white/20' onClick={loadDashboard} disabled={loading}>
+                    {loading ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <RefreshCw className='mr-2 h-4 w-4' />}{c('Actualizar')}
                   </Button>
                   <Button onClick={() => printLabels(selectedItems.length ? selectedItems : filteredItems.slice(0, 24), columns)} disabled={!filteredItems.length}>
-                    <Printer className='mr-2 h-4 w-4' /> Imprimir etiquetas
+                    <Printer className='mr-2 h-4 w-4' /> {c('Imprimir etiquetas')}
                   </Button>
                 </div>
               </div>
             </section>
 
             <section className='grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6'>
-              <MetricCard title='Productos con código' value={dashboard.metricas.productosConCodigo} description='SKU, barra o QR' />
-              <MetricCard title='Productos sin código' value={dashboard.metricas.productosSinCodigo} description='Pendientes para scanner' />
-              <MetricCard title='Servicios con código' value={dashboard.metricas.serviciosConCodigo} description='Código o QR' />
-              <MetricCard title='Servicios sin código' value={dashboard.metricas.serviciosSinCodigo} description='Pendientes POS' />
-              <MetricCard title='Packs con código' value={dashboard.metricas.packsConCodigo} description='Código comercial' />
-              <MetricCard title='QR generados' value={dashboard.metricas.etiquetasQrGeneradas} description='Productos/servicios' />
+              <MetricCard title={c('Productos con código')} value={dashboard.metricas.productosConCodigo} description={c('SKU, barra o QR')} />
+              <MetricCard title={c('Productos sin código')} value={dashboard.metricas.productosSinCodigo} description={c('Pendientes para scanner')} />
+              <MetricCard title={c('Servicios con código')} value={dashboard.metricas.serviciosConCodigo} description={c('Código o QR')} />
+              <MetricCard title={c('Servicios sin código')} value={dashboard.metricas.serviciosSinCodigo} description={c('Pendientes POS')} />
+              <MetricCard title={c('Packs con código')} value={dashboard.metricas.packsConCodigo} description={c('Código comercial')} />
+              <MetricCard title={c('QR generados')} value={dashboard.metricas.etiquetasQrGeneradas} description={c('Productos/servicios')} />
             </section>
 
-            <section className='rounded-2xl border bg-white p-4 shadow-sm'>
+            <section className='rounded-2xl border bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/80'>
               <div className='grid grid-cols-1 gap-3 md:grid-cols-[1fr_180px_160px]'>
                 <div className='relative'>
                   <Search className='absolute left-3 top-3 h-4 w-4 text-muted-foreground' />
-                  <Input className='pl-9' value={search} onChange={(event) => setSearch(event.target.value)} placeholder='Buscar por nombre, SKU, código de barras o QR' />
+                  <Input className='pl-9' value={search} onChange={(event) => setSearch(event.target.value)} placeholder={c('Buscar por nombre, SKU, código de barras o QR')} />
                 </div>
                 <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as any)} className='h-10 rounded-md border border-input bg-background px-3 text-sm'>
-                  <option value='todos'>Todos</option>
-                  <option value='producto'>Productos</option>
-                  <option value='servicio'>Servicios</option>
-                  <option value='pack'>Packs</option>
+                  <option value='todos'>{c('Todos')}</option>
+                  <option value='producto'>{c('Productos')}</option>
+                  <option value='servicio'>{c('Servicios')}</option>
+                  <option value='pack'>{c('Packs')}</option>
                 </select>
                 <select value={columns} onChange={(event) => setColumns(Number(event.target.value))} className='h-10 rounded-md border border-input bg-background px-3 text-sm'>
-                  <option value={3}>A4 · 3 columnas</option>
-                  <option value={2}>A4 · 2 columnas</option>
+                  <option value={3}>{c('A4 · 3 columnas')}</option>
+                  <option value={2}>{c('A4 · 2 columnas')}</option>
                 </select>
               </div>
             </section>
 
-            <section className='rounded-2xl border bg-white shadow-sm'>
+            <section className='rounded-2xl border bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950/80'>
               <div className='border-b p-4 text-sm text-muted-foreground'>
-                {selectedItems.length ? `${selectedItems.length} seleccionados para imprimir` : 'Seleccioná etiquetas o imprimí el listado filtrado.'}
+                {selectedItems.length ? `${selectedItems.length} ${c('seleccionados para imprimir')}` : c('Seleccioná etiquetas o imprimí el listado filtrado.')}
               </div>
               <div className='divide-y'>
                 {loading ? (
-                  <div className='p-6 text-sm text-muted-foreground'>Cargando códigos comerciales...</div>
+                  <div className='p-6 text-sm text-muted-foreground'>{c('Cargando códigos comerciales...')}</div>
                 ) : filteredItems.length === 0 ? (
-                  <div className='p-6 text-sm text-muted-foreground'>No hay ítems para el filtro seleccionado.</div>
+                  <div className='p-6 text-sm text-muted-foreground'>{c('No hay ítems para el filtro seleccionado.')}</div>
                 ) : filteredItems.map((item) => {
                   const key = `${item.target_type}:${item.id}`;
                   const selected = selectedKeys.includes(key);
                   const code = item.codigo_principal || item.qr_codigo || item.sku || item.codigo_barras || '';
                   return (
-                    <article key={key} className={`grid grid-cols-1 gap-4 p-4 md:grid-cols-[36px_1fr_260px_220px] md:items-center ${selected ? 'bg-sky-50/60' : ''}`}>
+                    <article key={key} className={`grid grid-cols-1 gap-4 p-4 md:grid-cols-[36px_1fr_260px_220px] md:items-center ${selected ? 'bg-sky-50/60 dark:bg-sky-950/20' : ''}`}>
                       <input type='checkbox' checked={selected} onChange={() => toggleSelected(item)} className='h-4 w-4' />
                       <div>
                         <div className='flex flex-wrap items-center gap-2'>
                           <p className='font-semibold'>{item.nombre}</p>
-                          <span className='rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700'>{typeLabel(item.target_type)}</span>
-                          {!code && <span className='rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800'>Sin código</span>}
+                          <span className='rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700'>{typeLabel(item.target_type, c)}</span>
+                          {!code && <span className='rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800'>{c('Sin código')}</span>}
                         </div>
-                        <p className='text-sm text-muted-foreground'>{item.subtitulo || item.descripcion || 'Sin detalle'}</p>
+                        <p className='text-sm text-muted-foreground'>{item.subtitulo || item.descripcion || c('Sin detalle')}</p>
                       </div>
                       <div className='space-y-1 text-xs'>
-                        <p><span className='text-muted-foreground'>Principal:</span> <span className='font-mono font-semibold'>{code || '-'}</span></p>
+                        <p><span className='text-muted-foreground'>{c('Principal')}:</span> <span className='font-mono font-semibold'>{code || '-'}</span></p>
                         {item.sku && <p><span className='text-muted-foreground'>SKU:</span> <span className='font-mono'>{item.sku}</span></p>}
-                        {item.codigo_barras && <p><span className='text-muted-foreground'>Barra:</span> <span className='font-mono'>{item.codigo_barras}</span></p>}
+                        {item.codigo_barras && <p><span className='text-muted-foreground'>{c('Barra')}:</span> <span className='font-mono'>{item.codigo_barras}</span></p>}
                       </div>
                       <div className='flex flex-wrap justify-end gap-2'>
                         <Button type='button' size='sm' variant='outline' onClick={() => handleGenerateQr(item)} disabled={item.target_type === 'pack' || savingKey === key}>
-                          {savingKey === key ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <QrCode className='mr-2 h-4 w-4' />}Generar QR
+                          {savingKey === key ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <QrCode className='mr-2 h-4 w-4' />}{c('Generar QR')}
                         </Button>
                         <Button type='button' size='sm' variant='outline' onClick={() => printLabels([item], columns)} disabled={!code}>
-                          <Barcode className='mr-2 h-4 w-4' />Etiqueta
+                          <Barcode className='mr-2 h-4 w-4' />{c('Etiqueta')}
                         </Button>
                       </div>
                     </article>

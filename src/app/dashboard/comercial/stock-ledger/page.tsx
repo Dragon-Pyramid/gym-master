@@ -30,6 +30,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuthStore } from '@/stores/authStore';
+import { useI18n } from '@/i18n/I18nProvider';
+import { translateCommercialUi } from '@/i18n/commercialUi';
 import type {
   ComercialStockLedgerDashboard,
   ComercialStockMovimientoTipo,
@@ -126,12 +128,94 @@ function getEstadoClass(item: ComercialStockResumenItem) {
   return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-200';
 }
 
-function MovementTypeHelp({ tipo }: { tipo: ComercialStockMovimientoTipo }) {
+
+function normalizeStockRuntimeText(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function translateStockRuntimeText(locale: string, value: string | null | undefined, fallback?: (text: string) => string) {
+  if (!value) return '';
+
+  const original = String(value).trim();
+  if (!original) return original;
+
+  const translatedByDictionary = fallback?.(original);
+  if (translatedByDictionary && translatedByDictionary !== original) {
+    return translatedByDictionary;
+  }
+
+  if (locale !== 'en') return original;
+
+  const normalized = normalizeStockRuntimeText(original);
+
+  const directMap: Record<string, string> = {
+    compra: 'purchase',
+    venta: 'sale',
+    ajuste: 'adjustment',
+    'ajuste entrada': 'inbound adjustment',
+    'ajuste salida': 'outbound adjustment',
+    transferencia: 'transfer',
+    devolucion: 'return',
+    merma: 'shrinkage',
+    vencimiento: 'expiration',
+    'conteo fisico': 'physical count',
+    'uso interno': 'internal use',
+    'compra ingreso': 'purchase / inbound',
+    'compra / ingreso': 'purchase / inbound',
+    deposito: 'Warehouse',
+    kiosco: 'Kiosk',
+    recepcion: 'Reception',
+    heladera: 'Cooler',
+    vitrina: 'Display',
+    'sala profesores': 'Staff room',
+    'sin origen': 'No origin',
+    'sin destino': 'No destination',
+    'sin ubicacion': 'No location',
+    'stock principal de reposicion y mercaderia guardada': 'Main replenishment stock and stored merchandise.',
+    'stock disponible para venta directa en mostrador': 'Stock available for direct counter sales.',
+    'stock disponible en recepcion o caja': 'Stock available in reception or cash register.',
+    'bebidas o productos refrigerados': 'Chilled drinks or refrigerated products.',
+    'productos exhibidos para venta': 'Products displayed for sale.',
+    'productos o insumos reservados para uso interno': 'Products or supplies reserved for internal use.',
+  };
+
+  const mapped = directMap[normalized];
+  if (mapped) return mapped;
+
+  const minimumReplenishment = normalized.match(/^reposicion sugerida por alerta bajo minimo\s*[·.-]?\s*(\d+)\s*unidades?$/);
+  if (minimumReplenishment) {
+    return `Suggested replenishment due to below-minimum alert · ${minimumReplenishment[1]} units`;
+  }
+
+  const purchaseOrderReceipt = normalized.match(/^recepcion orden de compra\s+(.+)$/);
+  if (purchaseOrderReceipt) {
+    const code = original.replace(/^Recepción orden de compra\s+/i, '').trim();
+    return `Purchase order receipt ${code}`;
+  }
+
+  const posSale = normalized.match(/^venta pos\/?kiosco\s+(.+)$/);
+  if (posSale) {
+    const code = original.replace(/^Venta POS\/?Kiosco\s+/i, '').trim();
+    return `POS/Kiosk sale ${code}`;
+  }
+
+  return original;
+}
+
+function MovementTypeHelp({ tipo, c }: { tipo: ComercialStockMovimientoTipo; c: (text: string) => string }) {
   const selected = tiposMovimiento.find((item) => item.value === tipo);
-  return <p className='text-xs text-muted-foreground'>{selected?.help}</p>;
+  return <p className='text-xs text-muted-foreground'>{selected?.help ? c(selected.help) : null}</p>;
 }
 
 export default function ComercialStockLedgerPage() {
+  const { locale } = useI18n();
+  const c = (text: string) => translateCommercialUi(locale, text);
   const { isAuthenticated, initializeAuth, isInitialized } = useAuthStore();
   const router = useRouter();
   const [dashboard, setDashboard] = useState<ComercialStockLedgerDashboard>(initialDashboard);
@@ -165,7 +249,7 @@ export default function ComercialStockLedgerPage() {
       const data = await getComercialStockLedgerDashboard();
       setDashboard(data ?? initialDashboard);
     } catch (error: any) {
-      toast.error(error?.message || 'No se pudo cargar stock ledger');
+      toast.error(error?.message || c('No se pudo cargar stock ledger'));
     } finally {
       setLoading(false);
     }
@@ -242,7 +326,7 @@ export default function ComercialStockLedgerPage() {
       ubicacion_destino_id: dashboard.ubicaciones[0]?.id ?? prev.ubicacion_destino_id ?? '',
       motivo: `Reposición sugerida por alerta ${getEstadoLabel(item).toLowerCase()} · ${cantidad} unidades`,
     }));
-    toast.info('Producto cargado en el formulario de movimiento');
+    toast.info(c('Producto cargado en el formulario de movimiento'));
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -256,7 +340,7 @@ export default function ComercialStockLedgerPage() {
         ubicacion_origen_id: form.ubicacion_origen_id || null,
         ubicacion_destino_id: form.ubicacion_destino_id || null,
       });
-      toast.success('Movimiento de stock registrado');
+      toast.success(c('Movimiento de stock registrado'));
       setForm((prev) => ({
         ...prev,
         cantidad: 1,
@@ -265,13 +349,13 @@ export default function ComercialStockLedgerPage() {
       }));
       await loadDashboard();
     } catch (error: any) {
-      toast.error(error?.message || 'No se pudo registrar movimiento');
+      toast.error(error?.message || c('No se pudo registrar movimiento'));
     } finally {
       setSaving(false);
     }
   }
 
-  if (!isInitialized) return <div>Cargando...</div>;
+  if (!isInitialized) return <div>{c('Cargando...')}</div>;
   if (!isAuthenticated) return null;
 
   return (
@@ -279,27 +363,26 @@ export default function ComercialStockLedgerPage() {
       <div className='flex h-[100dvh] max-h-[100dvh] w-full overflow-hidden bg-slate-50 text-slate-950 dark:bg-slate-950 dark:text-slate-100'>
         <AppSidebar />
         <SidebarInset className='grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden'>
-          <AppHeader title='Alertas de stock comercial' />
+          <AppHeader title={c('Alertas de stock comercial')} />
           <main className='min-h-0 space-y-6 overflow-y-auto overflow-x-hidden p-4 sm:p-6'>
             <section className='rounded-3xl border border-sky-200 bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950 p-6 text-white shadow-sm dark:border-cyan-800/70'>
               <div className='flex flex-col justify-between gap-4 lg:flex-row lg:items-center'>
                 <div className='space-y-2'>
                   <p className='text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300'>
-                    Centro final de alertas · Stock comercial
+                    {c('Centro final de alertas · Stock comercial')}
                   </p>
-                  <h1 className='text-2xl font-bold'>Alertas de stock, reposición y movimientos</h1>
+                  <h1 className='text-2xl font-bold'>{c('Alertas de stock, reposición y movimientos')}</h1>
                   <p className='max-w-4xl text-sm leading-relaxed text-cyan-50/85'>
-                    Detectá productos sin stock, críticos o bajo mínimo antes de que impacten el POS.
-                    Priorizá reposición, compras y ajustes desde un único tablero operativo.
+                    {c('Detectá productos sin stock, críticos o bajo mínimo antes de que impacten el POS. Priorizá reposición, compras y ajustes desde un único tablero operativo.')}
                   </p>
                 </div>
                 <div className='flex flex-wrap gap-2'>
                   <Button variant='outline' className='border-white/30 bg-white/10 text-white hover:bg-white/20' onClick={loadDashboard} disabled={loading}>
                     {loading ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <RefreshCw className='mr-2 h-4 w-4' />}
-                    Actualizar
+                    {c('Actualizar')}
                   </Button>
                   <Button asChild variant='outline' className='border-white/30 bg-white/10 text-white hover:bg-white/20'>
-                    <Link href='/dashboard/productos'>Productos</Link>
+                    <Link href='/dashboard/productos'>{c('Productos')}</Link>
                   </Button>
                   <Button asChild className='bg-cyan-400 text-slate-950 hover:bg-cyan-300'>
                     <Link href='/dashboard/comercial'>Comercial</Link>
@@ -312,7 +395,7 @@ export default function ComercialStockLedgerPage() {
               <Card>
                 <CardContent className='flex items-center justify-between p-5'>
                   <div>
-                    <p className='text-sm text-muted-foreground'>Productos</p>
+                    <p className='text-sm text-muted-foreground'>{c('Productos')}</p>
                     <p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.productos}</p>
                   </div>
                   <Package className='h-6 w-6 text-sky-600' />
@@ -321,7 +404,7 @@ export default function ComercialStockLedgerPage() {
               <Card>
                 <CardContent className='flex items-center justify-between p-5'>
                   <div>
-                    <p className='text-sm text-muted-foreground'>Stock total</p>
+                    <p className='text-sm text-muted-foreground'>{c('Stock total')}</p>
                     <p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.stockTotal}</p>
                   </div>
                   <Boxes className='h-6 w-6 text-emerald-600' />
@@ -330,7 +413,7 @@ export default function ComercialStockLedgerPage() {
               <Card>
                 <CardContent className='flex items-center justify-between p-5'>
                   <div>
-                    <p className='text-sm text-muted-foreground'>Valor inventario</p>
+                    <p className='text-sm text-muted-foreground'>{c('Valor inventario')}</p>
                     <p className='text-xl font-bold'>{loading ? '...' : formatCurrencyARS(dashboard.metricas.valorInventario)}</p>
                   </div>
                   <BarChart3 className='h-6 w-6 text-indigo-600' />
@@ -339,7 +422,7 @@ export default function ComercialStockLedgerPage() {
               <Card>
                 <CardContent className='flex items-center justify-between p-5'>
                   <div>
-                    <p className='text-sm text-muted-foreground'>Bajo/Crítico</p>
+                    <p className='text-sm text-muted-foreground'>{c('Bajo/Crítico')}</p>
                     <p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.productosCriticos}</p>
                   </div>
                   <AlertTriangle className='h-6 w-6 text-orange-600' />
@@ -348,7 +431,7 @@ export default function ComercialStockLedgerPage() {
               <Card>
                 <CardContent className='flex items-center justify-between p-5'>
                   <div>
-                    <p className='text-sm text-muted-foreground'>Ubicaciones</p>
+                    <p className='text-sm text-muted-foreground'>{c('Ubicaciones')}</p>
                     <p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.ubicacionesActivas}</p>
                   </div>
                   <Warehouse className='h-6 w-6 text-slate-600' />
@@ -357,7 +440,7 @@ export default function ComercialStockLedgerPage() {
               <Card>
                 <CardContent className='flex items-center justify-between p-5'>
                   <div>
-                    <p className='text-sm text-muted-foreground'>Movimientos</p>
+                    <p className='text-sm text-muted-foreground'>{c('Movimientos')}</p>
                     <p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.movimientos}</p>
                   </div>
                   <ClipboardList className='h-6 w-6 text-violet-600' />
@@ -372,14 +455,14 @@ export default function ComercialStockLedgerPage() {
                     <div className='space-y-1'>
                       <CardTitle className='flex items-center gap-2 text-lg'>
                         <ShieldAlert className='h-5 w-5 text-orange-600' />
-                        Alertas prioritarias de stock
+                        {c('Alertas prioritarias de stock')}
                       </CardTitle>
                       <p className='text-sm text-muted-foreground'>
-                        Productos que pueden frenar ventas en POS o requieren reposición inmediata.
+                        {c('Productos que pueden frenar ventas en POS o requieren reposición inmediata.')}
                       </p>
                     </div>
                     <div className='rounded-full border border-orange-300 bg-white px-3 py-1 text-xs font-semibold text-orange-700 dark:border-orange-800 dark:bg-slate-950 dark:text-orange-200'>
-                      {highPriorityAlerts.length} críticas
+                      {highPriorityAlerts.length} {c('críticas')}
                     </div>
                   </div>
                 </CardHeader>
@@ -387,7 +470,7 @@ export default function ComercialStockLedgerPage() {
                   {stockAlerts.length === 0 ? (
                     <div className='rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900/70 dark:bg-emerald-950/30 dark:text-emerald-100'>
                       <CheckCircle2 className='mb-2 h-5 w-5' />
-                      No hay alertas de stock. El catálogo comercial está dentro de parámetros operativos.
+                      {c('No hay alertas de stock. El catálogo comercial está dentro de parámetros operativos.')}
                     </div>
                   ) : (
                     <div className='grid grid-cols-1 gap-3 md:grid-cols-2'>
@@ -399,20 +482,20 @@ export default function ComercialStockLedgerPage() {
                               <div className='min-w-0'>
                                 <p className='truncate font-semibold'>{item.producto_nombre}</p>
                                 <p className='text-xs opacity-80'>
-                                  {item.sku ? `SKU ${item.sku}` : 'Sin SKU'} · Stock {item.stock_total} / mín. {item.stock_minimo}
+                                  {item.sku ? `SKU ${item.sku}` : c('Sin SKU')} · {c('Stock')} {item.stock_total} / {c('mín.')} {item.stock_minimo}
                                 </p>
                               </div>
                               <span className='shrink-0 rounded-full bg-white/70 px-2 py-1 text-xs font-semibold text-slate-800 dark:bg-slate-950/70 dark:text-slate-100'>
-                                {getEstadoLabel(item)}
+                                {c(getEstadoLabel(item))}
                               </span>
                             </div>
                             <div className='mt-3 grid grid-cols-2 gap-2 text-xs'>
                               <div className='rounded-xl bg-white/55 p-2 dark:bg-slate-950/40'>
-                                <p className='opacity-70'>Reponer sugerido</p>
+                                <p className='opacity-70'>{c('Reponer sugerido')}</p>
                                 <p className='text-base font-bold'>{reorderQty}</p>
                               </div>
                               <div className='rounded-xl bg-white/55 p-2 dark:bg-slate-950/40'>
-                                <p className='opacity-70'>Valor actual</p>
+                                <p className='opacity-70'>{c('Valor actual')}</p>
                                 <p className='text-base font-bold'>{formatCurrencyARS(item.valor_inventario)}</p>
                               </div>
                             </div>
@@ -437,32 +520,32 @@ export default function ComercialStockLedgerPage() {
                 <CardHeader>
                   <CardTitle className='flex items-center gap-2 text-lg'>
                     <Target className='h-5 w-5 text-sky-600' />
-                    Salud de inventario
+                    {c('Salud de inventario')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className='space-y-4'>
                   <div className='grid grid-cols-2 gap-3'>
                     <div className='rounded-2xl border bg-white p-4 dark:bg-slate-950/50'>
-                      <p className='text-xs uppercase tracking-wide text-muted-foreground'>Salud stock</p>
+                      <p className='text-xs uppercase tracking-wide text-muted-foreground'>{c('Salud stock')}</p>
                       <p className='text-2xl font-bold'>{stockHealthPercent}%</p>
                     </div>
                     <div className='rounded-2xl border bg-white p-4 dark:bg-slate-950/50'>
-                      <p className='text-xs uppercase tracking-wide text-muted-foreground'>Unidades sugeridas</p>
+                      <p className='text-xs uppercase tracking-wide text-muted-foreground'>{c('Unidades sugeridas')}</p>
                       <p className='text-2xl font-bold'>{suggestedReorderUnits}</p>
                     </div>
                     <div className='rounded-2xl border bg-white p-4 dark:bg-slate-950/50'>
-                      <p className='text-xs uppercase tracking-wide text-muted-foreground'>Sin stock</p>
+                      <p className='text-xs uppercase tracking-wide text-muted-foreground'>{c('Sin stock')}</p>
                       <p className='text-2xl font-bold text-red-600'>{dashboard.metricas.productosSinStock}</p>
                     </div>
                     <div className='rounded-2xl border bg-white p-4 dark:bg-slate-950/50'>
-                      <p className='text-xs uppercase tracking-wide text-muted-foreground'>Bajo/crítico</p>
+                      <p className='text-xs uppercase tracking-wide text-muted-foreground'>{c('Bajo/crítico')}</p>
                       <p className='text-2xl font-bold text-orange-600'>{dashboard.metricas.productosCriticos}</p>
                     </div>
                   </div>
                   <div className='rounded-2xl border border-sky-200 bg-white p-4 text-sm leading-relaxed text-muted-foreground dark:border-sky-900/70 dark:bg-slate-950/50'>
                     {stockAlerts.length > 0
-                      ? 'Priorizá productos sin stock o críticos antes de impulsar promociones o packs de alto movimiento.'
-                      : 'El inventario no presenta alertas críticas. Revisá movimientos recientes para mantener trazabilidad.'}
+                      ? c('Priorizá productos sin stock o críticos antes de impulsar promociones o packs de alto movimiento.')
+                      : c('El inventario no presenta alertas críticas. Revisá movimientos recientes para mantener trazabilidad.')}
                   </div>
                 </CardContent>
               </Card>
@@ -473,20 +556,20 @@ export default function ComercialStockLedgerPage() {
                 <CardHeader>
                   <CardTitle className='flex items-center gap-2 text-lg'>
                     <Plus className='h-5 w-5 text-sky-600' />
-                    Registrar movimiento
+                    {c('Registrar movimiento')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <form className='space-y-4' onSubmit={handleSubmit}>
                     <div className='space-y-2'>
-                      <Label>Producto</Label>
+                      <Label>{c('Producto')}</Label>
                       <select
                         className='h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm'
                         value={form.producto_id}
                         onChange={(event) => setForm((prev) => ({ ...prev, producto_id: event.target.value }))}
                         required
                       >
-                        <option value=''>Seleccionar producto</option>
+                        <option value=''>{c('Seleccionar producto')}</option>
                         {dashboard.resumen.map((item) => (
                           <option key={item.producto_id} value={item.producto_id}>
                             {item.producto_nombre} · Stock {item.stock_total}
@@ -496,7 +579,7 @@ export default function ComercialStockLedgerPage() {
                     </div>
 
                     <div className='space-y-2'>
-                      <Label>Tipo de movimiento</Label>
+                      <Label>{c('Tipo de movimiento')}</Label>
                       <select
                         className='h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm'
                         value={form.tipo}
@@ -506,26 +589,26 @@ export default function ComercialStockLedgerPage() {
                       >
                         {tiposMovimiento.map((tipo) => (
                           <option key={tipo.value} value={tipo.value}>
-                            {tipo.label}
+                            {c(tipo.label)}
                           </option>
                         ))}
                       </select>
-                      <MovementTypeHelp tipo={form.tipo} />
+                      <MovementTypeHelp tipo={form.tipo} c={c} />
                     </div>
 
                     {needsOrigin && (
                       <div className='space-y-2'>
-                        <Label>Ubicación origen</Label>
+                        <Label>{c('Ubicación origen')}</Label>
                         <select
                           className='h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm'
                           value={form.ubicacion_origen_id || ''}
                           onChange={(event) => setForm((prev) => ({ ...prev, ubicacion_origen_id: event.target.value }))}
                           required={needsOrigin}
                         >
-                          <option value=''>Seleccionar origen</option>
+                          <option value=''>{c('Seleccionar origen')}</option>
                           {dashboard.ubicaciones.map((ubicacion) => (
                             <option key={ubicacion.id} value={ubicacion.id}>
-                              {ubicacion.nombre}
+                              {translateStockRuntimeText(locale, ubicacion.nombre, c)}
                             </option>
                           ))}
                         </select>
@@ -534,17 +617,17 @@ export default function ComercialStockLedgerPage() {
 
                     {needsDestination && (
                       <div className='space-y-2'>
-                        <Label>Ubicación destino</Label>
+                        <Label>{c('Ubicación destino')}</Label>
                         <select
                           className='h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm'
                           value={form.ubicacion_destino_id || ''}
                           onChange={(event) => setForm((prev) => ({ ...prev, ubicacion_destino_id: event.target.value }))}
                           required={needsDestination}
                         >
-                          <option value=''>Seleccionar destino</option>
+                          <option value=''>{c('Seleccionar destino')}</option>
                           {dashboard.ubicaciones.map((ubicacion) => (
                             <option key={ubicacion.id} value={ubicacion.id}>
-                              {ubicacion.nombre}
+                              {translateStockRuntimeText(locale, ubicacion.nombre, c)}
                             </option>
                           ))}
                         </select>
@@ -554,7 +637,7 @@ export default function ComercialStockLedgerPage() {
                     <div className='grid grid-cols-1 gap-3 md:grid-cols-2'>
                       {!isConteo && (
                         <div className='space-y-2'>
-                          <Label>Cantidad</Label>
+                          <Label>{c('Cantidad')}</Label>
                           <Input
                             type='number'
                             min={1}
@@ -566,7 +649,7 @@ export default function ComercialStockLedgerPage() {
                       )}
                       {isConteo && (
                         <div className='space-y-2'>
-                          <Label>Stock real</Label>
+                          <Label>{c('Stock real')}</Label>
                           <Input
                             type='number'
                             min={0}
@@ -579,10 +662,10 @@ export default function ComercialStockLedgerPage() {
                     </div>
 
                     <div className='space-y-2'>
-                      <Label>Motivo</Label>
+                      <Label>{c('Motivo')}</Label>
                       <Input
                         value={form.motivo}
-                        placeholder='Ej: Compra a proveedor, ajuste por conteo, merma por vencimiento...'
+                        placeholder={c('Ej: Compra a proveedor, ajuste por conteo, merma por vencimiento...')}
                         onChange={(event) => setForm((prev) => ({ ...prev, motivo: event.target.value }))}
                         required
                       />
@@ -590,7 +673,7 @@ export default function ComercialStockLedgerPage() {
 
                     <Button type='submit' className='w-full bg-[#02a8e1] hover:bg-[#0288b1]' disabled={saving}>
                       {saving ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <ArrowRightLeft className='mr-2 h-4 w-4' />}
-                      Registrar movimiento
+                      {c('Registrar movimiento')}
                     </Button>
                   </form>
                 </CardContent>
@@ -599,7 +682,7 @@ export default function ComercialStockLedgerPage() {
               <Card>
                 <CardHeader>
                   <div className='flex flex-col justify-between gap-3 md:flex-row md:items-center'>
-                    <CardTitle className='text-lg'>Resumen por producto</CardTitle>
+                    <CardTitle className='text-lg'>{c('Resumen por producto')}</CardTitle>
                     <div className='flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center'>
                       <select
                         className='h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm md:w-44'
@@ -607,7 +690,7 @@ export default function ComercialStockLedgerPage() {
                         onChange={(event) => setStockAlertFilter(event.target.value as StockAlertFilter)}
                       >
                         {stockAlertFilters.map((filter) => (
-                          <option key={filter.value} value={filter.value}>{filter.label}</option>
+                          <option key={filter.value} value={filter.value}>{c(filter.label)}</option>
                         ))}
                       </select>
                       <div className='relative w-full md:w-80'>
@@ -615,7 +698,7 @@ export default function ComercialStockLedgerPage() {
                         <Input
                           className='pl-9'
                           value={searchTerm}
-                          placeholder='Buscar producto, SKU o barcode...'
+                          placeholder={c('Buscar producto, SKU o barcode...')}
                           onChange={(event) => setSearchTerm(event.target.value)}
                         />
                       </div>
@@ -630,7 +713,7 @@ export default function ComercialStockLedgerPage() {
                           }}
                         >
                           <FilterX className='mr-2 h-4 w-4' />
-                          Limpiar
+                          {c('Limpiar')}
                         </Button>
                       )}
                     </div>
@@ -641,27 +724,27 @@ export default function ComercialStockLedgerPage() {
                     <table className='w-full min-w-[880px] text-sm'>
                       <thead className='bg-slate-50 text-left text-xs uppercase tracking-wide text-muted-foreground dark:bg-slate-900/70'>
                         <tr>
-                          <th className='px-4 py-3'>Producto</th>
-                          <th className='px-4 py-3 text-right'>Stock</th>
-                          <th className='px-4 py-3 text-right'>Mínimo</th>
-                          <th className='px-4 py-3 text-right'>Objetivo</th>
-                          <th className='px-4 py-3 text-right'>Valor</th>
-                          <th className='px-4 py-3 text-right'>Margen unit.</th>
-                          <th className='px-4 py-3'>Estado</th>
-                          <th className='px-4 py-3'>Ubicaciones</th>
+                          <th className='px-4 py-3'>{c('Producto')}</th>
+                          <th className='px-4 py-3 text-right'>{c('Stock')}</th>
+                          <th className='px-4 py-3 text-right'>{c('Mínimo')}</th>
+                          <th className='px-4 py-3 text-right'>{c('Objetivo')}</th>
+                          <th className='px-4 py-3 text-right'>{c('Valor')}</th>
+                          <th className='px-4 py-3 text-right'>{c('Margen unit.')}</th>
+                          <th className='px-4 py-3'>{c('Estado')}</th>
+                          <th className='px-4 py-3'>{c('Ubicaciones')}</th>
                         </tr>
                       </thead>
                       <tbody className='divide-y'>
                         {loading ? (
                           <tr>
                             <td colSpan={8} className='px-4 py-8 text-center text-muted-foreground'>
-                              Cargando stock...
+                              {c('Cargando stock...')}
                             </td>
                           </tr>
                         ) : filteredResumen.length === 0 ? (
                           <tr>
                             <td colSpan={8} className='px-4 py-8 text-center text-muted-foreground'>
-                              No hay productos para mostrar con los filtros actuales.
+                              {c('No hay productos para mostrar con los filtros actuales.')}
                             </td>
                           </tr>
                         ) : (
@@ -672,7 +755,7 @@ export default function ComercialStockLedgerPage() {
                                 <td className='px-4 py-3'>
                                   <p className='font-medium'>{item.producto_nombre}</p>
                                   <p className='text-xs text-muted-foreground'>
-                                    {item.sku ? `SKU ${item.sku}` : 'Sin SKU'} {item.codigo_barras ? `· ${item.codigo_barras}` : ''}
+                                    {item.sku ? `SKU ${item.sku}` : c('Sin SKU')} {item.codigo_barras ? `· ${item.codigo_barras}` : ''}
                                   </p>
                                 </td>
                                 <td className='px-4 py-3 text-right font-semibold'>{item.stock_total}</td>
@@ -682,13 +765,13 @@ export default function ComercialStockLedgerPage() {
                                 <td className='px-4 py-3 text-right'>{formatCurrencyARS(item.margen_unitario)}</td>
                                 <td className='px-4 py-3'>
                                   <span className={`rounded-full px-2 py-1 text-xs font-medium ${getEstadoClass(item)}`}>
-                                    {getEstadoLabel(item)}
+                                    {c(getEstadoLabel(item))}
                                   </span>
                                 </td>
                                 <td className='px-4 py-3 text-xs text-muted-foreground'>
-                                  {locations.length === 0 ? 'Sin ubicación' : locations.map((location) => (
+                                  {locations.length === 0 ? c('Sin ubicación') : locations.map((location) => (
                                     <div key={location.id}>
-                                      {location.ubicacion?.nombre || 'Ubicación'}: {location.cantidad}
+                                      {translateStockRuntimeText(locale, location.ubicacion?.nombre || 'Ubicación', c)}: {location.cantidad}
                                     </div>
                                   ))}
                                 </td>
@@ -706,27 +789,27 @@ export default function ComercialStockLedgerPage() {
             <section className='grid grid-cols-1 gap-6 xl:grid-cols-2'>
               <Card>
                 <CardHeader>
-                  <CardTitle className='text-lg'>Movimientos recientes</CardTitle>
+                  <CardTitle className='text-lg'>{c('Movimientos recientes')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className='space-y-3'>
                     {dashboard.movimientos.slice(0, 12).map((movimiento) => (
                       <div key={movimiento.id} className='rounded-lg border p-3 text-sm'>
                         <div className='flex items-center justify-between gap-2'>
-                          <p className='font-medium'>{movimiento.producto?.nombre || 'Producto'}</p>
-                          <span className='rounded-full bg-slate-100 px-2 py-1 text-xs dark:bg-slate-800'>{movimiento.tipo.replace(/_/g, ' ')}</span>
+                          <p className='font-medium'>{movimiento.producto?.nombre || c('Producto')}</p>
+                          <span className='rounded-full bg-slate-100 px-2 py-1 text-xs dark:bg-slate-800'>{translateStockRuntimeText(locale, tiposMovimiento.find((item) => item.value === movimiento.tipo)?.label ?? movimiento.tipo.replace(/_/g, ' '), c)}</span>
                         </div>
                         <p className='mt-1 text-xs text-muted-foreground'>
-                          Cantidad {movimiento.cantidad} · Stock {movimiento.stock_anterior_total} → {movimiento.stock_nuevo_total}
+                          {c('Cantidad')} {movimiento.cantidad} · {c('Stock')} {movimiento.stock_anterior_total} → {movimiento.stock_nuevo_total}
                         </p>
                         <p className='mt-1 text-xs text-muted-foreground'>
-                          {movimiento.ubicacion_origen?.nombre || 'Sin origen'} → {movimiento.ubicacion_destino?.nombre || 'Sin destino'}
+                          {translateStockRuntimeText(locale, movimiento.ubicacion_origen?.nombre || 'Sin origen', c)} → {translateStockRuntimeText(locale, movimiento.ubicacion_destino?.nombre || 'Sin destino', c)}
                         </p>
-                        {movimiento.motivo && <p className='mt-1 text-xs'>{movimiento.motivo}</p>}
+                        {movimiento.motivo && <p className='mt-1 text-xs'>{translateStockRuntimeText(locale, movimiento.motivo, c)}</p>}
                       </div>
                     ))}
                     {!loading && dashboard.movimientos.length === 0 && (
-                      <p className='text-sm text-muted-foreground'>Aún no hay movimientos comerciales registrados.</p>
+                      <p className='text-sm text-muted-foreground'>{c('Aún no hay movimientos comerciales registrados.')}</p>
                     )}
                   </div>
                 </CardContent>
@@ -734,7 +817,7 @@ export default function ComercialStockLedgerPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle className='text-lg'>Ubicaciones de stock</CardTitle>
+                  <CardTitle className='text-lg'>{c('Ubicaciones de stock')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className='grid grid-cols-1 gap-3 md:grid-cols-2'>
@@ -742,11 +825,11 @@ export default function ComercialStockLedgerPage() {
                       <div key={ubicacion.id} className='rounded-lg border p-4'>
                         <div className='flex items-center gap-2'>
                           <Warehouse className='h-4 w-4 text-sky-600' />
-                          <p className='font-medium'>{ubicacion.nombre}</p>
+                          <p className='font-medium'>{translateStockRuntimeText(locale, ubicacion.nombre, c)}</p>
                         </div>
                         <p className='mt-1 text-xs uppercase tracking-wide text-muted-foreground'>{ubicacion.codigo}</p>
                         {ubicacion.descripcion && (
-                          <p className='mt-2 text-sm text-muted-foreground'>{ubicacion.descripcion}</p>
+                          <p className='mt-2 text-sm text-muted-foreground'>{translateStockRuntimeText(locale, ubicacion.descripcion, c)}</p>
                         )}
                       </div>
                     ))}
