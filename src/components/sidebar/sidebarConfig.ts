@@ -226,6 +226,11 @@ export const sections: SidebarSectionType[] = [
       { title: "Mensajes Socios", link: "/dashboard/mensajes-admin", level: 2 },
       { title: "Avisos", link: "/dashboard/avisos", level: 2 },
       {
+        title: "Ayuda / Manuales",
+        link: "/dashboard/ayuda",
+        level: 2,
+      },
+      {
         title: "Soporte Dragon Pyramid",
         link: "/dashboard/soporte-dragon-pyramid",
         level: 2,

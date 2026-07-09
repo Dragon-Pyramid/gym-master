@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useSidebar } from '../ui/sidebar';
-import { Lock, Menu, Moon, Search, Settings, SlidersHorizontal, Sun, User } from 'lucide-react';
+import { CircleHelp, Lock, Menu, Moon, Search, Settings, SlidersHorizontal, Sun, User } from 'lucide-react';
 import ProfileImage from '@/components/perfil/ProfileImage';
 import { HeaderNotificationsBell } from '@/components/header/HeaderNotificationsBell';
 import { SocioMobileBottomNavigation } from '@/components/navigation/SocioMobileBottomNavigation';
@@ -117,6 +117,23 @@ export const AppHeader = ({ title }: AppHeaderProps) => {
           </TooltipProvider>
 
           <LanguageSwitcher compact />
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  className='text-muted-foreground hover:text-foreground'
+                  onClick={() => router.push('/dashboard/ayuda')}
+                  aria-label={t('header.helpCenter')}
+                >
+                  <CircleHelp className='h-5 w-5' />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('header.helpCenter')}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
           <div className='hidden md:block'>
             <FechaHora />
