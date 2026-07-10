@@ -691,6 +691,8 @@ const enCommercialUi: Record<string, string> = {
   'Página': 'Page',
   'Anterior': 'Previous',
   'Siguiente': 'Next',
+  'actividades': 'activities',
+  'socios': 'members',
   'Productos activos': 'Active products',
   'Sin stock': 'Out of stock',
   'Inventario estimado': 'Estimated inventory',

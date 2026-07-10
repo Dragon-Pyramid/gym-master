@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
+import { useI18n } from "@/i18n/I18nProvider";
 import { AppHeader } from "@/components/header/AppHeader";
 import { AppFooter } from "@/components/footer/AppFooter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -47,6 +48,47 @@ function getAsistenciaSortValue(asistencia: Asistencia) {
   return `${fecha}T${hora}`;
 }
 
+
+function translateAforoEstado(value: string | undefined, isEnglish: boolean) {
+  if (!value) return "--";
+
+  if (!isEnglish) {
+    return value;
+  }
+
+  const normalized = value.toLowerCase();
+
+  if (normalized === "normal") return "Normal";
+  if (normalized === "moderado") return "Moderate";
+  if (normalized === "alto") return "High";
+  if (normalized === "critico" || normalized === "crítico") return "Critical";
+
+  return value;
+}
+
+function translateAforoMessage(message: string | undefined, isEnglish: boolean) {
+  if (!message) {
+    return isEnglish ? "No capacity data." : "Sin datos de aforo.";
+  }
+
+  if (!isEnglish) {
+    return message;
+  }
+
+  const translations: Record<string, string> = {
+    "Ocupación normal. Hay disponibilidad operativa.":
+      "Normal occupancy. Operational capacity is available.",
+    "Ocupación moderada. El gimnasio opera con margen disponible.":
+      "Moderate occupancy. The gym is operating with available margin.",
+    "Ocupación alta. Recomendado monitorear accesos y horarios pico.":
+      "High occupancy. Monitor access points and peak hours.",
+    "Ocupación crítica. Activar control de aforo y limitar nuevos ingresos.":
+      "Critical occupancy. Activate capacity control and limit new entries.",
+  };
+
+  return translations[message] ?? message;
+}
+
 function sortAsistenciasByIngresoDesc(asistencias: Asistencia[]) {
   return [...asistencias].sort((a, b) =>
     getAsistenciaSortValue(b).localeCompare(getAsistenciaSortValue(a)),
@@ -57,6 +99,9 @@ export default function AsistenciasPage() {
   const { user, isAuthenticated, initializeAuth, isInitialized } =
     useAuthStore();
   const router = useRouter();
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const attendanceText = (es: string, en: string) => (isEnglish ? en : es);
   const [asistencias, setAsistencias] = useState<Asistencia[]>([]);
   const [filteredAsistencias, setFilteredAsistencias] = useState<Asistencia[]>(
     [],
@@ -312,7 +357,7 @@ export default function AsistenciasPage() {
   }, [currentPage, totalPages]);
 
   if (!isInitialized) {
-    return <div>Cargando...</div>;
+    return <div>{attendanceText("Cargando...", "Loading...")}</div>;
   }
 
   if (!isAuthenticated) {
@@ -324,7 +369,7 @@ export default function AsistenciasPage() {
       <div className="flex w-full min-h-screen">
         <AppSidebar />
         <SidebarInset>
-          <AppHeader title="Asistencias" />
+          <AppHeader title={attendanceText("Asistencias", "Attendances")} />
           <main className="flex-1 p-6 space-y-6">
             <div className="grid gap-4 md:grid-cols-4">
               <Card className="border-emerald-100 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/20">
@@ -332,7 +377,7 @@ export default function AsistenciasPage() {
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">
-                        Dentro ahora
+                        {attendanceText("Dentro ahora", "Inside now")}
                       </p>
                       <p className="text-3xl font-black">
                         {aforo?.aforo_actual ?? "--"}
@@ -345,7 +390,7 @@ export default function AsistenciasPage() {
               <Card>
                 <CardContent className="p-4">
                   <p className="text-sm font-medium text-muted-foreground">
-                    Capacidad configurada
+                    {attendanceText("Capacidad configurada", "Configured capacity")}
                   </p>
                   <p className="text-3xl font-black">
                     {aforo?.capacidad_maxima ?? "--"}
@@ -358,7 +403,7 @@ export default function AsistenciasPage() {
               <Card>
                 <CardContent className="p-4">
                   <p className="text-sm font-medium text-muted-foreground">
-                    Ocupación
+                    {attendanceText("Ocupación", "Occupancy")}
                   </p>
                   <p className="text-3xl font-black">
                     {aforo ? `${aforo.porcentaje_ocupacion}%` : "--"}
@@ -384,14 +429,14 @@ export default function AsistenciasPage() {
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="h-5 w-5 text-amber-500" />
                     <p className="text-sm font-medium text-muted-foreground">
-                      Estado
+                      {attendanceText("Estado", "Status")}
                     </p>
                   </div>
                   <p className="mt-1 text-xl font-black capitalize">
-                    {aforo?.estado ?? "--"}
+                    {translateAforoEstado(aforo?.estado, isEnglish)}
                   </p>
                   <p className="line-clamp-2 text-xs text-muted-foreground">
-                    {aforo?.mensaje_estado ?? "Sin datos de aforo."}
+                    {translateAforoMessage(aforo?.mensaje_estado, isEnglish)}
                   </p>
                 </CardContent>
               </Card>
@@ -399,13 +444,13 @@ export default function AsistenciasPage() {
 
             <Card className="w-full">
               <CardHeader className="flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap">
-                <h2 className="text-xl font-bold">Listado de Asistencias</h2>
+                <h2 className="text-xl font-bold">{attendanceText("Listado de Asistencias", "Attendance roster")}</h2>
                 <div className="flex flex-wrap items-center w-full gap-2 md:w-auto">
                   <div className="relative flex-grow md:flex-grow-0">
                     <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                       type="search"
-                      placeholder="Buscar..."
+                      placeholder={attendanceText("Buscar...", "Search...")}
                       className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] w-full"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
@@ -416,25 +461,25 @@ export default function AsistenciasPage() {
                     onChange={(e) => setPeriodFilter(e.target.value)}
                     className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
                   >
-                    <option value="todos">Todos los períodos</option>
-                    <option value="dia">Hoy</option>
-                    <option value="semana">Últimos 7 días</option>
-                    <option value="mes">Mes actual</option>
-                    <option value="anio">Año actual</option>
+                    <option value="todos">{attendanceText("Todos los períodos", "All periods")}</option>
+                    <option value="dia">{attendanceText("Hoy", "Today")}</option>
+                    <option value="semana">{attendanceText("Últimos 7 días", "Last 7 days")}</option>
+                    <option value="mes">{attendanceText("Mes actual", "Current month")}</option>
+                    <option value="anio">{attendanceText("Año actual", "Current year")}</option>
                   </select>
                   <Input
                     type="date"
                     value={fechaDesde}
                     onChange={(e) => setFechaDesde(e.target.value)}
                     className="w-[150px]"
-                    title="Fecha desde"
+                    title={attendanceText("Fecha desde", "Date from")}
                   />
                   <Input
                     type="date"
                     value={fechaHasta}
                     onChange={(e) => setFechaHasta(e.target.value)}
                     className="w-[150px]"
-                    title="Fecha hasta"
+                    title={attendanceText("Fecha hasta", "Date to")}
                   />
                   <Button
                     onClick={handleDownloadPdf}
@@ -442,7 +487,7 @@ export default function AsistenciasPage() {
                     className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
                   >
                     <FileText className="w-4 h-4" />
-                    <span className="hidden sm:inline">Descargar PDF</span>
+                    <span className="hidden sm:inline">{attendanceText("Descargar PDF", "Download PDF")}</span>
                   </Button>
                   <Button
                     variant="outline"
@@ -450,7 +495,7 @@ export default function AsistenciasPage() {
                     className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
                   >
                     <FileSpreadsheet className="w-4 h-4" />
-                    <span className="hidden sm:inline">Exportar</span>
+                    <span className="hidden sm:inline">{attendanceText("Exportar", "Export")}</span>
                   </Button>
                   <Button
                     type="button"
@@ -459,8 +504,8 @@ export default function AsistenciasPage() {
                     className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
                   >
                     <Users className="w-4 h-4" />
-                    <span className="hidden sm:inline">Salida / Aforo</span>
-                    <span className="sm:hidden">Aforo</span>
+                    <span className="hidden sm:inline">{attendanceText("Salida / Aforo", "Exit / Capacity")}</span>
+                    <span className="sm:hidden">{attendanceText("Aforo", "Capacity")}</span>
                   </Button>
                   <Button
                     type="button"
@@ -475,29 +520,31 @@ export default function AsistenciasPage() {
                     className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
                   >
                     <MonitorUp className="w-4 h-4" />
-                    <span className="hidden sm:inline">Modo terminal</span>
+                    <span className="hidden sm:inline">{attendanceText("Modo terminal", "Terminal mode")}</span>
                     <span className="sm:hidden">Terminal</span>
                   </Button>
                   <Button
                     onClick={() => setOpenModal(true)}
                     className="bg-[#02a8e1] hover:bg-[#0288b1]"
                   >
-                    <span className="hidden sm:inline">Añadir Asistencia</span>
-                    <span className="sm:hidden">Añadir</span>
+                    <span className="hidden sm:inline">{attendanceText("Añadir Asistencia", "Add attendance")}</span>
+                    <span className="sm:hidden">{attendanceText("Añadir", "Add")}</span>
                   </Button>
                 </div>
               </CardHeader>
               <CardContent className="p-4 space-y-4">
                 <div className="flex flex-col gap-1 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
                   <span>
-                    Actualización automática cada{" "}
+                    {attendanceText("Actualización automática cada", "Automatic refresh every")}{" "}
                     {ASISTENCIAS_AUTO_REFRESH_MS / 1000}
                     s.
-                    {isAutoRefreshing ? " Sincronizando asistencias..." : ""}
+                    {isAutoRefreshing
+                      ? attendanceText(" Sincronizando asistencias...", " Syncing attendances...")
+                      : ""}
                   </span>
                   {lastUpdatedAt && (
                     <span>
-                      Última actualización: {formatFrontendTime(lastUpdatedAt)}
+                      {attendanceText("Última actualización", "Last update")}: {formatFrontendTime(lastUpdatedAt)}
                     </span>
                   )}
                 </div>
@@ -523,14 +570,15 @@ export default function AsistenciasPage() {
                 {!loading && totalAsistencias > 0 && (
                   <div className="flex flex-col gap-3 border-t pt-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
                     <span>
-                      Mostrando{" "}
-                      {(safeCurrentPage - 1) * ASISTENCIAS_PAGE_SIZE + 1} -{" "}
-                      {Math.min(
-                        safeCurrentPage * ASISTENCIAS_PAGE_SIZE,
-                        totalAsistencias,
-                      )}{" "}
-                      de {totalAsistencias} asistencias ordenadas por ingreso
-                      reciente.
+                      {isEnglish
+                        ? `Showing ${(safeCurrentPage - 1) * ASISTENCIAS_PAGE_SIZE + 1} - ${Math.min(
+                            safeCurrentPage * ASISTENCIAS_PAGE_SIZE,
+                            totalAsistencias,
+                          )} of ${totalAsistencias} attendances ordered by recent check-in.`
+                        : `Mostrando ${(safeCurrentPage - 1) * ASISTENCIAS_PAGE_SIZE + 1} - ${Math.min(
+                            safeCurrentPage * ASISTENCIAS_PAGE_SIZE,
+                            totalAsistencias,
+                          )} de ${totalAsistencias} asistencias ordenadas por ingreso reciente.`}
                     </span>
                     <div className="flex items-center gap-2">
                       <Button
@@ -541,11 +589,9 @@ export default function AsistenciasPage() {
                         onClick={() =>
                           setCurrentPage((page) => Math.max(1, page - 1))
                         }
-                      >
-                        Anterior
-                      </Button>
+                      >{attendanceText("Anterior", "Previous")}</Button>
                       <span className="min-w-[92px] text-center font-medium text-foreground">
-                        Página {safeCurrentPage} de {totalPages}
+                        {attendanceText("Página", "Page")} {safeCurrentPage} {attendanceText("de", "of")} {totalPages}
                       </span>
                       <Button
                         type="button"
@@ -557,9 +603,7 @@ export default function AsistenciasPage() {
                             Math.min(totalPages, page + 1),
                           )
                         }
-                      >
-                        Siguiente
-                      </Button>
+                      >{attendanceText("Siguiente", "Next")}</Button>
                     </div>
                   </div>
                 )}

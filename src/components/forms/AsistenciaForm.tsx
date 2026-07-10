@@ -15,6 +15,7 @@ import {
   updateAsistencia,
 } from "@/services/asistenciaService";
 import { toast } from "sonner";
+import { useI18n } from "@/i18n/I18nProvider";
 
 export interface AsistenciaFormProps {
   asistencia?: Asistencia | null;
@@ -36,6 +37,9 @@ export default function AsistenciaForm({
 }: AsistenciaFormProps) {
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const attendanceText = (es: string, en: string) => (isEnglish ? en : es);
 
   useEffect(() => {
     if (asistencia) {
@@ -67,7 +71,7 @@ export default function AsistenciaForm({
           hora_egreso: form.hora_egreso || null,
         };
         await updateAsistencia(undefined as any, asistencia.id, updateData);
-        toast.success("Asistencia actualizada");
+        toast.success(attendanceText("Asistencia actualizada", "Attendance updated"));
       } else {
         const createData: CreateAsistenciaDto = {
           socio_id: form.id_socio,
@@ -76,15 +80,19 @@ export default function AsistenciaForm({
           hora_egreso: form.hora_egreso || null,
         };
         await createAsistencia(undefined as any, createData);
-        toast.success("Asistencia creada");
+        toast.success(attendanceText("Asistencia creada", "Attendance created"));
       }
       setForm(emptyForm);
       onCreated();
     } catch (error: unknown) {
-      let msg = (error as Error).message || "Error al guardar asistencia";
+      let msg =
+        (error as Error).message ||
+        attendanceText("Error al guardar asistencia", "Error saving attendance");
       if (msg.includes("value too long")) {
-        msg =
-          "Uno de los campos excede la cantidad máxima de caracteres permitidos.";
+        msg = attendanceText(
+          "Uno de los campos excede la cantidad máxima de caracteres permitidos.",
+          "One of the fields exceeds the maximum allowed number of characters.",
+        );
       }
       toast.error(msg);
     } finally {
@@ -99,11 +107,11 @@ export default function AsistenciaForm({
     >
       <QaFileNameBadge file="src/components/forms/AsistenciaForm.tsx" />
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="id_socio">ID Socio</Label>
+        <Label htmlFor="id_socio">{attendanceText("ID Socio", "Member ID")}</Label>
         <Input
           id="id_socio"
           name="id_socio"
-          placeholder="Ingrese ID del socio"
+          placeholder={attendanceText("Ingrese ID del socio", "Enter member ID")}
           value={form.id_socio}
           onChange={handleChange}
           required
@@ -111,7 +119,7 @@ export default function AsistenciaForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="fecha">Fecha</Label>
+        <Label htmlFor="fecha">{attendanceText("Fecha", "Date")}</Label>
         <Input
           id="fecha"
           name="fecha"
@@ -123,7 +131,7 @@ export default function AsistenciaForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="hora_ingreso">Hora Ingreso</Label>
+        <Label htmlFor="hora_ingreso">{attendanceText("Hora Ingreso", "Check-in time")}</Label>
         <Input
           id="hora_ingreso"
           name="hora_ingreso"
@@ -136,12 +144,12 @@ export default function AsistenciaForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="hora_egreso">Hora Egreso</Label>
+        <Label htmlFor="hora_egreso">{attendanceText("Hora Egreso", "Check-out time")}</Label>
         <Input
           id="hora_egreso"
           name="hora_egreso"
           type="time"
-          placeholder="HH:MM (Opcional)"
+          placeholder={attendanceText("HH:MM (Opcional)", "HH:MM (Optional)")}
           value={form.hora_egreso}
           onChange={handleChange}
         />
@@ -153,10 +161,10 @@ export default function AsistenciaForm({
         disabled={loading}
       >
         {loading
-          ? "Guardando..."
+          ? attendanceText("Guardando...", "Saving...")
           : asistencia
-            ? "Actualizar Asistencia"
-            : "Registrar Asistencia"}
+            ? attendanceText("Actualizar Asistencia", "Update attendance")
+            : attendanceText("Registrar Asistencia", "Register attendance")}
       </Button>
 
       <Button
@@ -165,7 +173,7 @@ export default function AsistenciaForm({
         className="text-gray-800 bg-gray-200 col-span-full justify-self-end hover:bg-gray-300"
         disabled={loading}
       >
-        Cancelar
+        {attendanceText("Cancelar", "Cancel")}
       </Button>
     </form>
   );

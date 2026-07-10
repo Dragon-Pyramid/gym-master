@@ -29,6 +29,7 @@ import {
 } from "@/services/qrService";
 import { formatFrontendDate, formatFrontendTime } from "@/utils/dateFormat";
 import { useAuthStore } from "@/stores/authStore";
+import { useI18n } from "@/i18n/I18nProvider";
 import {
   getTerminalToken,
   getToken,
@@ -296,6 +297,78 @@ function getIdleEvent(): TerminalEvent {
   };
 }
 
+
+function translateTerminalText(value: string, isEnglish: boolean) {
+  if (!isEnglish) return value;
+
+  const translations: Record<string, string> = {
+    "Socio": "Member",
+    "Escaneo disponible": "Scan available",
+    "Escaneá el QR para registrar asistencia": "Scan the QR to register attendance",
+    "Abrí la cámara de tu celular, escaneá el código y seguí el flujo de ingreso desde Gym Master.":
+      "Open your phone camera, scan the code and follow the check-in flow from Gym Master.",
+    "Salida registrada": "Exit registered",
+    "Debe regularizar": "Payment required",
+    "Acceso bloqueado": "Access blocked",
+    "No se pudo registrar": "Could not register",
+    "Acceso permitido": "Access allowed",
+    "Egreso registrado correctamente. Aforo actualizado.":
+      "Exit registered successfully. Capacity updated.",
+    "El socio debe dirigirse a administración para regularizar su situación.":
+      "The member must go to administration to regularize their status.",
+    "El socio está desactivado. Debe dirigirse a administración.":
+      "The member is deactivated and must go to administration.",
+    "No se pudo registrar la asistencia.": "Attendance could not be registered.",
+    "Asistencia registrada correctamente. Bienvenido al gimnasio.":
+      "Attendance registered successfully. Welcome to the gym.",
+    "Preparando sesión extendida de Terminal...":
+      "Preparing extended terminal session...",
+    "La sesión de Terminal expiró. Iniciá sesión nuevamente para reactivar la pantalla.":
+      "The terminal session expired. Sign in again to reactivate the screen.",
+    "Sesión de Terminal expirada.": "Terminal session expired.",
+    "No hay sesión activa para la Terminal. Iniciá sesión nuevamente.":
+      "There is no active terminal session. Sign in again.",
+    "Sesión de Terminal activa.": "Terminal session active.",
+    "Renovando sesión segura de Terminal...":
+      "Renewing secure terminal session...",
+    "Sesión de Terminal renovada correctamente.":
+      "Terminal session renewed successfully.",
+    "No se pudieron cargar las asistencias recientes.":
+      "Recent attendances could not be loaded.",
+    "No se pudo cargar el QR diario de asistencia.":
+      "The daily attendance QR could not be loaded.",
+    "No se pudieron cargar avisos de Terminal:":
+      "Terminal notices could not be loaded:",
+  };
+
+  return translations[value] ?? value;
+}
+
+function getTerminalStatusLabel(
+  status: TerminalVariant,
+  tipoMovimiento: "entrada" | "salida" | undefined,
+  isEnglish: boolean,
+) {
+  if (tipoMovimiento === "salida") return isEnglish ? "Exit" : "Salida";
+  if (status === "success") return "OK";
+  if (status === "debt") return isEnglish ? "Debt" : "Deuda";
+  if (status === "inactive") return isEnglish ? "Blocked" : "Bloqueado";
+  return "Info";
+}
+
+function getTerminalMovementLabel(
+  tipoMovimiento: "entrada" | "salida" | undefined,
+  isEnglish: boolean,
+) {
+  return tipoMovimiento === "salida"
+    ? isEnglish
+      ? "Exit"
+      : "Salida"
+    : isEnglish
+      ? "Check-in"
+      : "Ingreso";
+}
+
 function TerminalIcon({ variant }: { variant: TerminalVariant }) {
   if (variant === "success")
     return <CheckCircle2 className="h-20 w-20 md:h-28 md:w-28" />;
@@ -307,6 +380,11 @@ function TerminalIcon({ variant }: { variant: TerminalVariant }) {
 }
 
 export default function AsistenciaTerminalDisplay() {
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const terminalText = (es: string, en: string) => (isEnglish ? en : es);
+  const translateText = (value: string) => translateTerminalText(value, isEnglish);
+
   const [event, setEvent] = useState<TerminalEvent>(() => getIdleEvent());
   const [recent, setRecent] = useState<AsistenciaReciente[]>([]);
   const [now, setNow] = useState(() => new Date());
@@ -692,7 +770,7 @@ export default function AsistenciaTerminalDisplay() {
                 Gym Master
               </p>
               <h1 className="text-2xl font-black tracking-tight md:text-3xl 2xl:text-4xl">
-                Terminal de asistencia
+                {terminalText("Terminal de asistencia", "Attendance terminal")}
               </h1>
             </div>
           </div>
@@ -711,7 +789,7 @@ export default function AsistenciaTerminalDisplay() {
               variant="outline"
               onClick={requestFullscreen}
               className="border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-              title="Pantalla completa"
+              title={terminalText("Pantalla completa", "Fullscreen")}
             >
               <Maximize2 className="h-5 w-5" />
             </Button>
@@ -727,7 +805,7 @@ export default function AsistenciaTerminalDisplay() {
             }`}
           >
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <span>{sessionState.message}</span>
+              <span>{translateText(sessionState.message)}</span>
               {sessionState.status === "expired" && (
                 <div className="flex gap-2">
                   <Button
@@ -743,7 +821,7 @@ export default function AsistenciaTerminalDisplay() {
                     }}
                     className="border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white"
                   >
-                    Reintentar renovación
+                    {terminalText("Reintentar renovación", "Retry renewal")}
                   </Button>
                   <Button
                     type="button"
@@ -755,7 +833,7 @@ export default function AsistenciaTerminalDisplay() {
                     }}
                     className="bg-white text-slate-950 hover:bg-slate-100"
                   >
-                    Iniciar sesión
+                    {terminalText("Iniciar sesión", "Sign in")}
                   </Button>
                 </div>
               )}
@@ -774,7 +852,7 @@ export default function AsistenciaTerminalDisplay() {
                     {qrDataUrl ? (
                       <Image
                         src={qrDataUrl}
-                        alt="QR diario para registrar asistencia"
+                        alt={terminalText("QR diario para registrar asistencia", "Daily QR to register attendance")}
                         width={410}
                         height={410}
                         priority
@@ -784,18 +862,18 @@ export default function AsistenciaTerminalDisplay() {
                         <QrCode className="h-40 w-40" />
                         <span className="text-sm font-bold">
                           {qrLoading
-                            ? "Cargando QR diario..."
-                            : "QR no disponible"}
+                            ? terminalText("Cargando QR diario...", "Loading daily QR...")
+                            : terminalText("QR no disponible", "QR unavailable")}
                         </span>
                       </div>
                     )}
                   </div>
                   <div className="mt-3 rounded-2xl bg-slate-950 p-3 text-center text-white">
                     <p className="text-xs font-bold uppercase tracking-[0.24em] text-cyan-300">
-                      Ingreso con celular
+                      {terminalText("Ingreso con celular", "Mobile check-in")}
                     </p>
                     <p className="mt-1 text-base font-black 2xl:text-lg">
-                      Escaneá este QR
+                      {terminalText("Escaneá este QR", "Scan this QR")}
                     </p>
                   </div>
                 </div>
@@ -805,17 +883,17 @@ export default function AsistenciaTerminalDisplay() {
                     className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-black uppercase tracking-[0.2em] 2xl:px-4 2xl:py-2 2xl:text-sm ${styles.badge}`}
                   >
                     <Smartphone className="h-4 w-4" />
-                    Terminal listo
+                    {terminalText("Terminal listo", "Terminal ready")}
                   </span>
 
                   <h2
                     className={`mt-4 text-4xl font-black leading-tight tracking-tight md:text-5xl 2xl:text-6xl ${styles.title}`}
                   >
-                    {event.title}
+                    {translateText(event.title)}
                   </h2>
 
                   <p className="mt-4 max-w-4xl text-xl font-semibold leading-relaxed md:text-2xl 2xl:text-3xl">
-                    {event.message}
+                    {translateText(event.message)}
                   </p>
 
                   <div className="mt-5 space-y-2 rounded-3xl border border-cyan-200 bg-white/70 p-4 text-left text-slate-800 dark:border-cyan-700/60 dark:bg-slate-900/70 dark:text-slate-100 2xl:mt-6 2xl:space-y-3">
@@ -823,25 +901,25 @@ export default function AsistenciaTerminalDisplay() {
                       <span className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan-500 text-sm text-white">
                         1
                       </span>
-                      El socio escanea el QR con su celular.
+                      {terminalText("El socio escanea el QR con su celular.", "The member scans the QR with their phone.")}
                     </p>
                     <p className="flex items-start gap-3 text-base font-bold 2xl:text-lg">
                       <span className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan-500 text-sm text-white">
                         2
                       </span>
-                      Gym Master valida su cuota y registra la asistencia.
+                      {terminalText("Gym Master valida su cuota y registra la asistencia.", "Gym Master validates their fee status and registers attendance.")}
                     </p>
                     <p className="flex items-start gap-3 text-base font-bold 2xl:text-lg">
                       <span className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan-500 text-sm text-white">
                         3
                       </span>
-                      Esta pantalla muestra bienvenida, deuda o bloqueo.
+                      {terminalText("Esta pantalla muestra bienvenida, deuda o bloqueo.", "This screen shows welcome, debt or blocked status.")}
                     </p>
                   </div>
 
                   {checkInUrl && (
                     <p className="mt-5 break-all rounded-2xl bg-black/10 p-3 text-xs font-semibold opacity-70 dark:bg-white/10">
-                      Token diario activo: {checkInUrl}
+                      {terminalText("Token diario activo", "Active daily token")}: {checkInUrl}
                     </p>
                   )}
                 </div>
@@ -868,24 +946,28 @@ export default function AsistenciaTerminalDisplay() {
                     className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-black uppercase tracking-[0.2em] 2xl:px-4 2xl:py-2 2xl:text-sm ${styles.badge}`}
                   >
                     {event.tipoMovimiento === "salida"
-                      ? "Salida registrada"
+                      ? terminalText("Salida registrada", "Exit registered")
                       : event.variant === "success"
-                        ? "Ingreso autorizado"
+                        ? terminalText("Ingreso autorizado", "Check-in authorized")
                         : event.variant === "debt"
-                          ? "Cuota pendiente"
+                          ? terminalText("Cuota pendiente", "Pending fee")
                           : event.variant === "inactive"
-                            ? "Ingreso bloqueado"
-                            : "Atención"}
+                            ? terminalText("Ingreso bloqueado", "Check-in blocked")
+                            : terminalText("Atención", "Attention")}
                   </span>
 
                   <h2
                     className={`mt-4 text-4xl font-black leading-tight tracking-tight md:text-5xl 2xl:text-6xl ${styles.title}`}
                   >
                     {event.tipoMovimiento === "salida"
-                      ? `¡Hasta luego, ${event.nombre}!`
+                      ? isEnglish
+                        ? `See you soon, ${event.nombre}!`
+                        : `¡Hasta luego, ${event.nombre}!`
                       : event.variant === "success"
-                        ? `¡Bienvenido, ${event.nombre}!`
-                        : event.title}
+                        ? isEnglish
+                          ? `Welcome, ${event.nombre}!`
+                          : `¡Bienvenido, ${event.nombre}!`
+                        : translateText(event.title)}
                   </h2>
 
                   {event.variant !== "success" && (
@@ -895,21 +977,21 @@ export default function AsistenciaTerminalDisplay() {
                   )}
 
                   <p className="mt-4 max-w-4xl text-xl font-semibold leading-relaxed md:text-2xl 2xl:text-3xl">
-                    {event.message}
+                    {translateText(event.message)}
                   </p>
 
                   <div className="mt-8 flex flex-wrap items-center justify-center gap-3 text-sm font-semibold opacity-80 lg:justify-start">
                     <span className="inline-flex items-center gap-2 rounded-full bg-black/10 px-4 py-2 dark:bg-white/10">
                       <Clock className="h-4 w-4" />
-                      Evento: {formatTime(event.timestamp)}
+                      {terminalText("Evento", "Event")}: {formatTime(event.timestamp)}
                     </span>
                     {event.idSocio && (
                       <span className="rounded-full bg-black/10 px-4 py-2 dark:bg-white/10">
-                        ID socio: {event.idSocio}
+                        {terminalText("ID socio", "Member ID")}: {event.idSocio}
                       </span>
                     )}
                     <span className="rounded-full bg-black/10 px-4 py-2 dark:bg-white/10">
-                      Volviendo al QR en 5 segundos
+                      {terminalText("Volviendo al QR en 5 segundos", "Returning to the QR in 5 seconds")}
                     </span>
                   </div>
                 </div>
@@ -921,10 +1003,10 @@ export default function AsistenciaTerminalDisplay() {
             <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 pb-3">
               <div>
                 <p className="text-sm font-bold uppercase tracking-[0.25em] text-cyan-300">
-                  Monitor externo
+                  {terminalText("Monitor externo", "External monitor")}
                 </p>
                 <h3 className="text-2xl font-black leading-tight 2xl:text-3xl">
-                  Actividad reciente
+                  {terminalText("Actividad reciente", "Recent activity")}
                 </h3>
               </div>
               <Wifi className="h-8 w-8 text-emerald-300" />
@@ -949,7 +1031,7 @@ export default function AsistenciaTerminalDisplay() {
                     }}
                   >
                     <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/50 px-3 py-1.5 text-xs font-black uppercase tracking-[0.2em] text-cyan-100 backdrop-blur 2xl:px-4 2xl:py-2 2xl:text-sm">
-                      <Megaphone className="h-4 w-4" /> Aviso
+                      <Megaphone className="h-4 w-4" /> {terminalText("Aviso", "Notice")}
                     </span>
                   </div>
                   <div className="space-y-3 p-5 pt-4 text-center 2xl:space-y-4 2xl:p-6 2xl:pt-5">
@@ -962,13 +1044,13 @@ export default function AsistenciaTerminalDisplay() {
                       {activeTerminalAd.cuerpo}
                     </p>
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 2xl:text-sm">
-                      El QR permanece activo para asistencia
+                      {terminalText("El QR permanece activo para asistencia", "The QR remains active for attendance")}
                     </p>
                   </div>
                 </div>
               ) : recentItems.length === 0 ? (
                 <p className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-slate-300">
-                  Todavía no hay ingresos recientes para mostrar.
+                  {terminalText("Todavía no hay ingresos recientes para mostrar.", "There are no recent check-ins to show yet.")}
                 </p>
               ) : (
                 recentItems.map((item) => (
@@ -1011,21 +1093,18 @@ export default function AsistenciaTerminalDisplay() {
                                     : "bg-slate-400/20 text-slate-200"
                             }`}
                           >
-                            {item.tipoMovimiento === "salida"
-                              ? "Salida"
-                              : item.status === "success"
-                                ? "OK"
-                                : item.status === "debt"
-                                  ? "Deuda"
-                                  : item.status === "inactive"
-                                    ? "Bloqueado"
-                                    : "Info"}
+                            {getTerminalStatusLabel(
+                              item.status,
+                              item.tipoMovimiento,
+                              isEnglish,
+                            )}
                           </span>
                         </div>
                         <p className="mt-1 font-mono text-base font-bold text-slate-200 2xl:text-lg">
-                          {item.tipoMovimiento === "salida"
-                            ? "Salida"
-                            : "Ingreso"}
+                          {getTerminalMovementLabel(
+                            item.tipoMovimiento,
+                            isEnglish,
+                          )}
                           : {item.hora}
                         </p>
                       </div>
@@ -1036,9 +1115,10 @@ export default function AsistenciaTerminalDisplay() {
             </div>
 
             <div className="mt-auto shrink-0 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-3 text-sm font-semibold leading-6 text-cyan-50 2xl:p-4 2xl:text-base">
-              Esta pantalla está pensada para el monitor externo. Muestra el QR
-              de ingreso y luego el resultado de la asistencia sin exponer menú,
-              pagos, usuarios ni datos administrativos.
+              {terminalText(
+                "Esta pantalla está pensada para el monitor externo. Muestra el QR de ingreso y luego el resultado de la asistencia sin exponer menú, pagos, usuarios ni datos administrativos.",
+                "This screen is designed for the external monitor. It shows the check-in QR and then the attendance result without exposing menus, payments, users or administrative data.",
+              )}
             </div>
           </aside>
         </div>

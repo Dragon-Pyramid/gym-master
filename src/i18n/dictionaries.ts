@@ -111,6 +111,23 @@ export const dictionaries: Record<GymMasterLocale, I18nDictionary> = {
       },
       logout: 'Cerrar sesión',
     },
+    navigationTitles: {
+      myActivities: 'Mis actividades',
+      routines: 'Rutinas',
+      diets: 'Dietas',
+      routineManager: 'Gestor de Rutinas',
+      dietManager: 'Gestor de Dietas',
+      physicalEvolutionManager: 'Gestor de Evolución Física',
+      equipmentPreventiveDetail: 'Preventivos de Equipamientos',
+      monthlyRankingBonus: 'Ranking y bonificación mensual',
+      saleDetails: 'Detalles de Venta',
+      routineDetail: 'Detalle de Rutina',
+      physicalEvolutionDetail: 'Detalle de Evolución Física',
+      dietDetail: 'Detalle de Dieta',
+      commercialCodesLabels: 'Códigos y etiquetas comerciales',
+      commercialStockAlerts: 'Alertas de stock comercial',
+    },
+
     header: {
       toggleTheme: 'Cambiar modo claro/oscuro',
       lightMode: 'Modo claro',
@@ -130,6 +147,17 @@ export const dictionaries: Record<GymMasterLocale, I18nDictionary> = {
       editProfile: 'Editar perfil',
       logout: 'Cerrar sesión',
     },
+    users: {
+      form: {
+        menuPermissions: {
+          title: 'Permisos de menú',
+          description: 'Definí qué módulos verá este usuario al iniciar sesión. El administrador conserva acceso total.',
+          adminFullAccess: 'El rol administrador tiene control total del panel.',
+          internalUserHint: 'Este usuario interno puede representar a un empleado administrativo. Marcá solo los módulos que podrá ver y utilizar. El menú lateral mostrará únicamente las opciones habilitadas y las rutas no permitidas quedarán bloqueadas por seguridad.',
+        },
+      },
+    },
+
     login: {
       entryTitle: 'Elegí cómo ingresar',
       entryDescription: 'Seleccioná el acceso correspondiente para continuar en Gym Master.',
@@ -899,6 +927,23 @@ export const dictionaries: Record<GymMasterLocale, I18nDictionary> = {
       },
       logout: 'Log out',
     },
+    navigationTitles: {
+      myActivities: 'My activities',
+      routines: 'Routines',
+      diets: 'Diets',
+      routineManager: 'Routine manager',
+      dietManager: 'Diet manager',
+      physicalEvolutionManager: 'Physical evolution manager',
+      equipmentPreventiveDetail: 'Equipment preventive tasks',
+      monthlyRankingBonus: 'Monthly ranking and bonus',
+      saleDetails: 'Sale details',
+      routineDetail: 'Routine detail',
+      physicalEvolutionDetail: 'Physical evolution detail',
+      dietDetail: 'Diet detail',
+      commercialCodesLabels: 'Commercial codes and labels',
+      commercialStockAlerts: 'Commercial stock alerts',
+    },
+
     header: {
       toggleTheme: 'Toggle light/dark mode',
       lightMode: 'Light mode',
@@ -915,6 +960,17 @@ export const dictionaries: Record<GymMasterLocale, I18nDictionary> = {
       editProfile: 'Edit profile',
       logout: 'Log out',
     },
+    users: {
+      form: {
+        menuPermissions: {
+          title: 'Menu permissions',
+          description: 'Define which modules this user will see when signing in. Administrators keep full access.',
+          adminFullAccess: 'The administrator role has full control of the dashboard.',
+          internalUserHint: 'This internal user can represent an administrative employee. Select only the modules they can view and use. The sidebar will show only enabled options and unauthorized routes will remain blocked for security.',
+        },
+      },
+    },
+
     login: {
       entryTitle: 'Choose how to sign in',
       entryDescription: 'Select the right access point to continue in Gym Master.',

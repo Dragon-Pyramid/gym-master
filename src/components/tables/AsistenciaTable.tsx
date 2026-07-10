@@ -14,6 +14,7 @@ import {
   TableCaption,
 } from "@/components/ui/table";
 import { Asistencia } from "@/interfaces/asistencia.interface";
+import { useI18n } from "@/i18n/I18nProvider";
 
 export default function AsistenciaTable({
   asistencias,
@@ -32,6 +33,10 @@ export default function AsistenciaTable({
   onRegisterExit?: (asistencia: Asistencia) => void | Promise<void>;
   totalAsistencias?: number;
 }) {
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const attendanceText = (es: string, en: string) => (isEnglish ? en : es);
+
   if (loading) {
     return (
       <div className="space-y-2">
@@ -45,7 +50,7 @@ export default function AsistenciaTable({
   if (asistencias.length === 0 && !loading) {
     return (
       <div className="py-10 text-center text-muted-foreground">
-        No hay asistencias registradas aún.
+        {attendanceText("No hay asistencias registradas aún.", "No attendances registered yet.")}
       </div>
     );
   }
@@ -54,11 +59,11 @@ export default function AsistenciaTable({
     <Table className="w-full overflow-hidden text-sm border rounded-md border-border">
       <TableHeader>
         <TableRow className="bg-muted/50 text-muted-foreground">
-          <TableHead>Nombre de Socio</TableHead>
-          <TableHead>Fecha</TableHead>
-          <TableHead>Hora Ingreso</TableHead>
-          <TableHead>Hora Egreso</TableHead>
-          <TableHead>Acciones</TableHead>
+          <TableHead>{attendanceText("Nombre de Socio", "Member name")}</TableHead>
+          <TableHead>{attendanceText("Fecha", "Date")}</TableHead>
+          <TableHead>{attendanceText("Hora Ingreso", "Check-in time")}</TableHead>
+          <TableHead>{attendanceText("Hora Egreso", "Check-out time")}</TableHead>
+          <TableHead>{attendanceText("Acciones", "Actions")}</TableHead>
         </TableRow>
       </TableHeader>
 
@@ -81,15 +86,13 @@ export default function AsistenciaTable({
                 size="sm"
                 variant="outline"
                 onClick={() => onView && onView(a)}
-              >
-                Ver
-              </Button>
+              >{attendanceText("Ver", "View")}</Button>
               {!a.hora_egreso && onRegisterExit && (
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => onRegisterExit(a)}
-                  title="Registrar salida"
+                  title={attendanceText("Registrar salida", "Register exit")}
                   className="border-emerald-200 text-emerald-700 hover:bg-emerald-50"
                 >
                   <LogOut className="w-4 h-4" />
@@ -110,14 +113,14 @@ export default function AsistenciaTable({
 
       <TableFooter>
         <TableRow>
-          <TableCell colSpan={4}>Total de asistencias</TableCell>
+          <TableCell colSpan={4}>{attendanceText("Total de asistencias", "Total attendances")}</TableCell>
           <TableCell className="text-right">
             {totalAsistencias ?? asistencias.length}
           </TableCell>
         </TableRow>
       </TableFooter>
 
-      <TableCaption>Listado de asistencias registradas.</TableCaption>
+      <TableCaption>{attendanceText("Listado de asistencias registradas.", "Registered attendance list.")}</TableCaption>
     </Table>
   );
 }

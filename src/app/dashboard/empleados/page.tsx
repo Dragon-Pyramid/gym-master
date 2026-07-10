@@ -24,6 +24,7 @@ import { downloadCommercialReportPdf } from "@/utils/commercialReportPdf";
 import ExcelJS from "exceljs";
 import { FileSpreadsheet, FileText, Search, UserCog, UsersRound } from "lucide-react";
 import { toast } from "sonner";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const EMPLEADOS_PAGE_SIZE = 10;
 type EstadoFilter = "todos" | "activos" | "inactivos";
@@ -38,6 +39,7 @@ const fallbackTiposEmpleado: CatalogoParametrizableItem[] = [
 
 export default function EmpleadosPage() {
   const { isAuthenticated, initializeAuth, isInitialized } = useAuthStore();
+  const { locale } = useI18n();
   const router = useRouter();
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -243,7 +245,11 @@ export default function EmpleadosPage() {
   };
 
   if (loading || !isInitialized) {
-    return <div className="flex h-screen items-center justify-center">Cargando empleados...</div>;
+    return (
+      <div className="flex h-screen items-center justify-center">
+        {locale === "en" ? "Loading employees..." : "Cargando empleados..."}
+      </div>
+    );
   }
 
   if (!isAuthenticated) return null;
