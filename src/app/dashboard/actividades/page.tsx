@@ -1554,7 +1554,7 @@ export default function ActividadesPage() {
                       <div className="space-y-1.5 md:col-span-2">
                         <Label>Actividad</Label>
                         <select
-                          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                          className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm text-slate-950 dark:bg-slate-950/80 dark:text-slate-50"
                           value={turnoForm.actividad_id}
                           onChange={(event) =>
                             setTurnoForm((prev) => ({
@@ -1589,7 +1589,7 @@ export default function ActividadesPage() {
                       <div className="space-y-1.5">
                         <Label>Día</Label>
                         <select
-                          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                          className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm text-slate-950 dark:bg-slate-950/80 dark:text-slate-50"
                           value={turnoForm.dia_semana}
                           onChange={(event) =>
                             setTurnoForm((prev) => ({
@@ -1608,7 +1608,7 @@ export default function ActividadesPage() {
                       <div className="space-y-1.5">
                         <Label>Estado</Label>
                         <select
-                          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                          className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm text-slate-950 dark:bg-slate-950/80 dark:text-slate-50"
                           value={turnoForm.estado}
                           onChange={(event) =>
                             setTurnoForm((prev) => ({
@@ -1685,7 +1685,7 @@ export default function ActividadesPage() {
                       <div className="space-y-1.5">
                         <Label>Instructor</Label>
                         <select
-                          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                          className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm text-slate-950 dark:bg-slate-950/80 dark:text-slate-50"
                           value={turnoForm.instructor_id}
                           onChange={(event) =>
                             setTurnoForm((prev) => ({
@@ -1706,7 +1706,7 @@ export default function ActividadesPage() {
                         <Label>Ubicación</Label>
                         {ubicacionesOptions.length ? (
                           <select
-                            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                            className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm text-slate-950 dark:bg-slate-950/80 dark:text-slate-50"
                             value={turnoForm.ubicacion}
                             onChange={(event) =>
                               setTurnoForm((prev) => ({
@@ -2214,7 +2214,7 @@ export default function ActividadesPage() {
                     <div className="space-y-1.5">
                       <Label>Turno</Label>
                       <select
-                        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                        className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm text-slate-950 dark:bg-slate-950/80 dark:text-slate-50"
                         value={inscripcionForm.turno_id}
                         onChange={(event) =>
                           setInscripcionForm((prev) => ({
@@ -2238,7 +2238,7 @@ export default function ActividadesPage() {
                     </div>
                     <div className="space-y-1.5">
                       <Label>Socio</Label>
-                      <div className="rounded-lg border bg-white p-3 shadow-sm">
+                      <div className="rounded-lg border bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/70">
                         <div className="relative">
                           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                           <Input
@@ -2280,7 +2280,7 @@ export default function ActividadesPage() {
                           </div>
                         ) : null}
 
-                        <div className="mt-2 max-h-52 overflow-auto rounded-md border">
+                        <div className="mt-2 max-h-52 overflow-auto rounded-md border border-border bg-white dark:bg-slate-950/70">
                           {filteredSociosOptions.length === 0 ? (
                             <div className="px-3 py-4 text-center text-sm text-muted-foreground">
                               No se encontraron socios para esa búsqueda.
@@ -2295,8 +2295,8 @@ export default function ActividadesPage() {
                                   type="button"
                                   className={`flex w-full items-center justify-between border-b px-3 py-2 text-left text-sm transition last:border-b-0 ${
                                     isSelected
-                                      ? "bg-[#e6f7fd] text-slate-950"
-                                      : "bg-white hover:bg-slate-50"
+                                      ? "bg-cyan-50 text-cyan-900 hover:bg-cyan-100 dark:bg-cyan-500/15 dark:text-cyan-50 dark:hover:bg-cyan-500/20"
+                                      : "bg-white text-slate-900 hover:bg-slate-50 dark:bg-slate-950/70 dark:text-slate-100 dark:hover:bg-slate-900"
                                   }`}
                                   onClick={() => {
                                     setInscripcionForm((prev) => ({
@@ -2330,7 +2330,7 @@ export default function ActividadesPage() {
                             Selector rápido
                           </Label>
                           <select
-                            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                            className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm text-slate-950 dark:bg-slate-950/80 dark:text-slate-50"
                             value={inscripcionForm.socio_id}
                             onChange={(event) => {
                               const socio = sociosOptions.find(

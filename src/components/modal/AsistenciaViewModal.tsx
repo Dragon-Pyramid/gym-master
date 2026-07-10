@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Asistencia } from "@/interfaces/asistencia.interface";
+import { useI18n } from "@/i18n/I18nProvider";
 
 export default function AsistenciaViewModal({
   open,
@@ -19,6 +20,10 @@ export default function AsistenciaViewModal({
   onClose: () => void;
   asistencia?: Asistencia | null;
 }) {
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const attendanceText = (es: string, en: string) => (isEnglish ? en : es);
+
   if (!open || !asistencia) return null;
 
   return (
@@ -27,28 +32,28 @@ export default function AsistenciaViewModal({
         <QaFileNameBadge file="src/components/modal/AsistenciaViewModal.tsx" />
         <DialogHeader>
           <DialogTitle className="text-foreground">
-            Detalles de Asistencia
+            {attendanceText("Detalles de Asistencia", "Attendance details")}
           </DialogTitle>
         </DialogHeader>
         <div className="mt-4 space-y-3">
           <p className="text-foreground">
-            <strong>ID Asistencia:</strong> {asistencia.id}
+            <strong>{attendanceText("ID Asistencia", "Attendance ID")}:</strong> {asistencia.id}
           </p>
           <p className="text-foreground">
-            <strong>ID Socio:</strong> {asistencia.socio_id}
+            <strong>{attendanceText("ID Socio", "Member ID")}:</strong> {asistencia.socio_id}
           </p>
           <p className="text-foreground">
-            <strong>Fecha:</strong> {asistencia.fecha}
+            <strong>{attendanceText("Fecha", "Date")}:</strong> {asistencia.fecha}
           </p>
           <p className="text-foreground">
-            <strong>Hora Ingreso:</strong> {asistencia.hora_ingreso}
+            <strong>{attendanceText("Hora Ingreso", "Check-in time")}:</strong> {asistencia.hora_ingreso}
           </p>
           <p className="text-foreground">
-            <strong>Hora Egreso:</strong> {asistencia.hora_egreso || "-"}
+            <strong>{attendanceText("Hora Egreso", "Check-out time")}:</strong> {asistencia.hora_egreso || "-"}
           </p>
         </div>
         <div className="flex justify-end mt-6">
-          <Button onClick={onClose}>Cerrar</Button>
+          <Button onClick={onClose}>{attendanceText("Cerrar", "Close")}</Button>
         </div>
       </DialogContent>
     </Dialog>

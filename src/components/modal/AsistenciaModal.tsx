@@ -10,6 +10,7 @@ import {
 import AsistenciaForm from "../forms/AsistenciaForm";
 import FechaHora from "@/components/ui/FechaHora";
 import { Asistencia } from "@/interfaces/asistencia.interface";
+import { useI18n } from "@/i18n/I18nProvider";
 
 export default function AsistenciaModal({
   open,
@@ -22,6 +23,10 @@ export default function AsistenciaModal({
   onCreated: () => void;
   asistencia?: Asistencia | null;
 }) {
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const attendanceText = (es: string, en: string) => (isEnglish ? en : es);
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="w-full max-w-5xl sm:max-w-4xl">
@@ -29,7 +34,9 @@ export default function AsistenciaModal({
         <DialogHeader>
           <div className="flex gap-4 justify-between items-center w-full">
             <DialogTitle>
-              {asistencia ? "Editar Asistencia" : "Nueva Asistencia"}
+              {asistencia
+                ? attendanceText("Editar Asistencia", "Edit attendance")
+                : attendanceText("Nueva Asistencia", "New attendance")}
             </DialogTitle>
             <FechaHora />
           </div>

@@ -30,6 +30,7 @@ import Image from 'next/image';
 import { useAuthStore } from '@/stores/authStore';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { useI18n } from '@/i18n/I18nProvider';
+import { translateNavigationTitle } from '@/i18n/navigationLabels';
 
 function useDarkMode() {
   const [dark, setDark] = React.useState(false);
@@ -64,6 +65,7 @@ export const AppHeader = ({ title }: AppHeaderProps) => {
   const { isMobile, setOpenMobile } = useSidebar();
   const { dark, toggle } = useDarkMode();
   const { t } = useI18n();
+  const translatedTitle = translateNavigationTitle(title, t);
 
   const handleLogout = () => {
     logout();
@@ -94,7 +96,7 @@ export const AppHeader = ({ title }: AppHeaderProps) => {
             className='shrink-0 rounded-sm dark:invert'
           />
           <h1 className='max-w-[34vw] truncate text-sm font-semibold tracking-tight sm:max-w-[46vw] sm:text-base md:max-w-none md:text-xl'>
-            {title}
+            {translatedTitle}
           </h1>
         </div>
 

@@ -229,55 +229,138 @@ export default function DashboardPage() {
   }, [isAuthenticated, isInitialized, router]);
 
   useEffect(() => {
+    if (!isInitialized) return;
+
+    if (!isAuthenticated) {
+      setLoadingDatos(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    function withDashboardTimeout<T>(
+      promise: Promise<T>,
+      label: string,
+      timeoutMs = 10000,
+    ): Promise<T> {
+      return new Promise<T>((resolve, reject) => {
+        const timeoutId = window.setTimeout(() => {
+          reject(new Error(`Dashboard load timeout: ${label}`));
+        }, timeoutMs);
+
+        promise
+          .then((value) => {
+            window.clearTimeout(timeoutId);
+            resolve(value);
+          })
+          .catch((error) => {
+            window.clearTimeout(timeoutId);
+            reject(error);
+          });
+      });
+    }
+
     async function fetchData() {
       setLoadingDatos(true);
-      const eqs = await getAllEquipamientos();
-      const mants = await getAllMantenimientos();
-      setEquipos(eqs || []);
-      setMantenimientos(mants || []);
 
-      if (user?.rol === 'admin') {
-        const [
-          adherencia,
-          evolucion,
-          concurrencia,
-          fallos,
-          estado,
-          segmentacion,
-          histograma,
-        ] = await Promise.all([
-          getAdherenciaRutinas(),
-          getEvolucionPromedioRutinas(),
-          getConcurrenciaAsistencia('semanal'),
-          getTopFallosEquipamiento(),
-          getEstadoActualEquipamiento(),
-          getSegmentacionPagos(),
-          getHistogramaPagos(),
+      try {
+        const [equiposResult, mantenimientosResult] = await Promise.allSettled([
+          withDashboardTimeout(getAllEquipamientos(), 'equipamientos'),
+          withDashboardTimeout(getAllMantenimientos(), 'mantenimientos'),
         ]);
 
-        setAdherenciaRutinas(
-          adherencia.ok && adherencia.data ? adherencia.data : []
-        );
-        setEvolucionRutinas(
-          evolucion.ok && evolucion.data ? evolucion.data : []
-        );
-        setConcurrenciaSemanal(
-          concurrencia.ok && concurrencia.data ? concurrencia.data : []
-        );
-        setTopFallos(fallos.ok && fallos.data ? fallos.data : []);
-        setEstadoEquipamiento(estado.ok && estado.data ? estado.data : []);
-        setSegmentacionPagos(
-          segmentacion.ok && segmentacion.data ? segmentacion.data : []
-        );
-        setHistogramaPagos(
-          histograma.ok && histograma.data ? histograma.data : []
-        );
-      }
+        if (cancelled) return;
 
-      setLoadingDatos(false);
+        setEquipos(
+          equiposResult.status === 'fulfilled' ? equiposResult.value || [] : [],
+        );
+        setMantenimientos(
+          mantenimientosResult.status === 'fulfilled'
+            ? mantenimientosResult.value || []
+            : [],
+        );
+
+        if (user?.rol === 'admin') {
+          const [
+            adherenciaResult,
+            evolucionResult,
+            concurrenciaResult,
+            fallosResult,
+            estadoResult,
+            segmentacionResult,
+            histogramaResult,
+          ] = await Promise.allSettled([
+            withDashboardTimeout(getAdherenciaRutinas(), 'adherencia rutinas'),
+            withDashboardTimeout(getEvolucionPromedioRutinas(), 'evolución rutinas'),
+            withDashboardTimeout(getConcurrenciaAsistencia('semanal'), 'concurrencia asistencia'),
+            withDashboardTimeout(getTopFallosEquipamiento(), 'top fallos equipamiento'),
+            withDashboardTimeout(getEstadoActualEquipamiento(), 'estado actual equipamiento'),
+            withDashboardTimeout(getSegmentacionPagos(), 'segmentación pagos'),
+            withDashboardTimeout(getHistogramaPagos(), 'histograma pagos'),
+          ]);
+
+          if (cancelled) return;
+
+          const adherencia =
+            adherenciaResult.status === 'fulfilled' ? adherenciaResult.value : null;
+          const evolucion =
+            evolucionResult.status === 'fulfilled' ? evolucionResult.value : null;
+          const concurrencia =
+            concurrenciaResult.status === 'fulfilled' ? concurrenciaResult.value : null;
+          const fallos =
+            fallosResult.status === 'fulfilled' ? fallosResult.value : null;
+          const estado =
+            estadoResult.status === 'fulfilled' ? estadoResult.value : null;
+          const segmentacion =
+            segmentacionResult.status === 'fulfilled' ? segmentacionResult.value : null;
+          const histograma =
+            histogramaResult.status === 'fulfilled' ? histogramaResult.value : null;
+
+          setAdherenciaRutinas(
+            adherencia?.ok && adherencia.data ? adherencia.data : [],
+          );
+          setEvolucionRutinas(
+            evolucion?.ok && evolucion.data ? evolucion.data : [],
+          );
+          setConcurrenciaSemanal(
+            concurrencia?.ok && concurrencia.data ? concurrencia.data : [],
+          );
+          setTopFallos(fallos?.ok && fallos.data ? fallos.data : []);
+          setEstadoEquipamiento(estado?.ok && estado.data ? estado.data : []);
+          setSegmentacionPagos(
+            segmentacion?.ok && segmentacion.data ? segmentacion.data : [],
+          );
+          setHistogramaPagos(
+            histograma?.ok && histograma.data ? histograma.data : [],
+          );
+        }
+      } catch (error) {
+        console.error('Error cargando dashboard:', error);
+
+        if (!cancelled) {
+          setEquipos([]);
+          setMantenimientos([]);
+          setAdherenciaRutinas([]);
+          setEvolucionRutinas([]);
+          setConcurrenciaSemanal([]);
+          setTopFallos([]);
+          setEstadoEquipamiento([]);
+          setSegmentacionPagos([]);
+          setHistogramaPagos([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingDatos(false);
+        }
+      }
     }
+
     fetchData();
-  }, [user?.rol]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, isInitialized, user?.rol]);
 
   useEffect(() => {
     if (user?.rol !== 'admin') {
@@ -554,7 +637,7 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.rol]);
 
-  if (loadingDatos || !isInitialized) {
+  if (!isInitialized) {
     return (
       <div className='flex items-center justify-center h-screen'>
         {t('common.loadingDashboard')}

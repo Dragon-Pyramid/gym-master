@@ -21,6 +21,7 @@ import { EmpleadoSueldo, EmpleadoSueldoEstado } from "@/interfaces/empleado_suel
 import { formatCurrencyARS } from "@/lib/comercial/productos";
 import { anularEmpleadoSueldo, getEmpleadoSueldos, getEmpleados } from "@/services/apiClient";
 import { useAuthStore } from "@/stores/authStore";
+import { useI18n } from "@/i18n/I18nProvider";
 import { downloadCommercialReportPdf } from "@/utils/commercialReportPdf";
 import { buildTimestampedDownloadFileName } from "@/utils/downloadFileName";
 import { formatFrontendDate } from "@/utils/dateFormat";
@@ -42,6 +43,9 @@ function periodoInRange(periodo: string, desde: string, hasta: string) {
 
 export default function EmpleadosSueldosPage() {
   const { isAuthenticated, initializeAuth, isInitialized } = useAuthStore();
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const salaryText = (es: string, en: string) => (isEnglish ? en : es);
   const router = useRouter();
   const [sueldos, setSueldos] = useState<EmpleadoSueldo[]>([]);
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
@@ -256,30 +260,30 @@ export default function EmpleadosSueldosPage() {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <AppHeader title="Sueldos" />
+        <AppHeader title={salaryText("Sueldos", "Salaries")} />
         <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-5 p-4 md:p-6">
           <div className="grid gap-4 md:grid-cols-4">
             <Card>
               <CardContent className="p-5">
-                <p className="text-sm text-muted-foreground">Registros</p>
+                <p className="text-sm text-muted-foreground">{salaryText("Registros", "Records")}</p>
                 <p className="text-2xl font-bold">{totals.total}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-5">
-                <p className="text-sm text-muted-foreground">Total neto</p>
+                <p className="text-sm text-muted-foreground">{salaryText("Total neto", "Total net")}</p>
                 <p className="text-2xl font-bold">{formatCurrencyARS(totals.neto)}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-5">
-                <p className="text-sm text-muted-foreground">Pagado</p>
+                <p className="text-sm text-muted-foreground">{salaryText("Pagado", "Paid")}</p>
                 <p className="text-2xl font-bold text-emerald-600">{formatCurrencyARS(totals.pagado)}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-5">
-                <p className="text-sm text-muted-foreground">Pendiente</p>
+                <p className="text-sm text-muted-foreground">{salaryText("Pendiente", "Pending")}</p>
                 <p className="text-2xl font-bold text-amber-600">{formatCurrencyARS(totals.pendiente)}</p>
               </CardContent>
             </Card>
@@ -292,20 +296,20 @@ export default function EmpleadosSueldosPage() {
                   <WalletCards className="h-5 w-5" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-semibold">Sueldos de empleados</h1>
+                  <h1 className="text-xl font-semibold">{salaryText("Sueldos de empleados", "Employee salaries")}</h1>
                   <p className="text-sm text-muted-foreground">
-                    Registro opcional de liquidaciones, pagos y recibos del personal.
+                    {salaryText("Registro opcional de liquidaciones, pagos y recibos del personal.", "Optional record of payroll settlements, payments and staff receipts.")}
                   </p>
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button type="button" variant="outline" onClick={downloadPdf}>
                   <FileText className="mr-2 h-4 w-4" />
-                  Descargar PDF
+                  {salaryText("Descargar PDF", "Download PDF")}
                 </Button>
                 <Button type="button" variant="outline" onClick={exportExcel}>
                   <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Exportar
+                  {salaryText("Exportar", "Export")}
                 </Button>
                 <Button
                   type="button"
@@ -315,7 +319,7 @@ export default function EmpleadosSueldosPage() {
                   }}
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  Nuevo sueldo
+                  {salaryText("Nuevo sueldo", "New salary")}
                 </Button>
               </div>
             </CardHeader>
@@ -326,26 +330,26 @@ export default function EmpleadosSueldosPage() {
                   onChange={(event) => setEstadoFilter(event.target.value as EstadoFilter)}
                   className="rounded-md border bg-background px-3 py-2 text-sm"
                 >
-                  <option value="todos">Todos los estados</option>
-                  <option value="pendiente">Pendientes</option>
-                  <option value="pagado">Pagados</option>
-                  <option value="anulado">Anulados</option>
+                  <option value="todos">{salaryText("Todos los estados", "All statuses")}</option>
+                  <option value="pendiente">{salaryText("Pendientes", "Pending")}</option>
+                  <option value="pagado">{salaryText("Pagados", "Paid")}</option>
+                  <option value="anulado">{salaryText("Anulados", "Canceled")}</option>
                 </select>
-                <Input type="month" value={periodoDesde} onChange={(event) => setPeriodoDesde(event.target.value)} />
-                <Input type="month" value={periodoHasta} onChange={(event) => setPeriodoHasta(event.target.value)} />
+                <Input type="month" lang={isEnglish ? "en" : "es"} aria-label={salaryText("Período desde", "Period from")} value={periodoDesde} onChange={(event) => setPeriodoDesde(event.target.value)} />
+                <Input type="month" lang={isEnglish ? "en" : "es"} aria-label={salaryText("Período hasta", "Period to")} value={periodoHasta} onChange={(event) => setPeriodoHasta(event.target.value)} />
                 <div className="relative md:col-span-2">
                   <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}
-                    placeholder="Buscar empleado, DNI, concepto, medio..."
+                    placeholder={salaryText("Buscar empleado, DNI, concepto, medio...", "Search employee, ID, concept, payment method...")}
                     className="pl-9"
                   />
                 </div>
               </div>
 
               {loading ? (
-                <div className="py-10 text-center text-muted-foreground">Cargando sueldos...</div>
+                <div className="py-10 text-center text-muted-foreground">{salaryText("Cargando sueldos...", "Loading salaries...")}</div>
               ) : (
                 <EmpleadoSueldoTable
                   sueldos={paginatedSueldos}
@@ -369,7 +373,9 @@ export default function EmpleadosSueldosPage() {
                 onPageChange={setCurrentPage}
               />
               <p className="text-sm text-muted-foreground">
-                Mostrando {paginatedSueldos.length} de {filteredSueldos.length} registros.
+                {isEnglish
+                  ? `Showing ${paginatedSueldos.length} of ${filteredSueldos.length} records.`
+                  : `Mostrando ${paginatedSueldos.length} de ${filteredSueldos.length} registros.`}
               </p>
             </CardContent>
           </Card>

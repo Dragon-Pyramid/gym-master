@@ -22,6 +22,8 @@ import {
 import { buildInitialPasswordFromDni, getPasswordPolicyChecks } from '@/utils/passwordPolicy';
 import { useCatalogosParametrizables } from '@/hooks/useCatalogosParametrizables';
 import type { CatalogoParametrizableItem, CatalogoParametrizableKey } from '@/interfaces/parametrizacion.interface';
+import { useI18n } from '@/i18n/I18nProvider';
+import { translateNavigationGroup, translateNavigationItem } from '@/i18n/navigationLabels';
 
 export interface UserFormProps {
   usuario?: Usuario | null;
@@ -204,6 +206,7 @@ export default function UserForm({
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { catalogos } = useCatalogosParametrizables();
+  const { t } = useI18n();
 
   const tiposContratacion = useMemo(
     () => getCatalogItems(catalogos, 'empleado_tipo_contratacion', fallbackTiposContratacion),
@@ -849,30 +852,27 @@ export default function UserForm({
 
       <div className='col-span-full rounded-lg border bg-muted/20 p-4'>
         <div className='mb-3'>
-          <h3 className='text-base font-semibold'>Permisos de menú</h3>
+          <h3 className='text-base font-semibold'>{t('users.form.menuPermissions.title')}</h3>
           <p className='text-sm text-muted-foreground'>
-            Definí qué módulos verá este usuario al iniciar sesión. El administrador conserva acceso total.
+            {t('users.form.menuPermissions.description')}
           </p>
         </div>
 
         {isAdmin ? (
           <div className='rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100'>
-            El rol administrador tiene control total del panel.
+            {t('users.form.menuPermissions.adminFullAccess')}
           </div>
         ) : (
           <>
             {isInternalUser && (
               <div className='mb-4 rounded-md border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900 dark:border-sky-900/70 dark:bg-sky-950/40 dark:text-sky-100'>
-                Este usuario interno puede representar a un empleado administrativo.
-                Marcá solo los módulos que podrá ver y utilizar. El menú lateral
-                mostrará únicamente las opciones habilitadas y las rutas no
-                permitidas quedarán bloqueadas por seguridad.
+{t('users.form.menuPermissions.internalUserHint')}
               </div>
             )}
             <div className='grid gap-4 md:grid-cols-2'>
               {availablePermissions.map((group) => (
               <div key={group.group} className='rounded-md border bg-background p-3'>
-                <p className='mb-2 text-sm font-semibold'>{group.group}</p>
+                <p className='mb-2 text-sm font-semibold'>{translateNavigationGroup(group.group, t)}</p>
                 <div className='space-y-2'>
                   {group.items.map((item) => {
                     const checked = form.permisos_menu.includes(item.key);
@@ -887,7 +887,7 @@ export default function UserForm({
                           onCheckedChange={() => togglePermission(item.key)}
                         />
                         <span>
-                          <span className='font-medium'>{item.label}</span>
+                          <span className='font-medium'>{translateNavigationItem(item.label, t)}</span>
                           <span className='block text-xs text-muted-foreground'>
                             {item.path}
                           </span>
