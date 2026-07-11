@@ -1,0 +1,1 @@
+Equipamientos ES/EN i18n fix.

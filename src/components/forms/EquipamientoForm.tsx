@@ -15,6 +15,7 @@ import { CatalogoParametrizableItem } from "@/interfaces/parametrizacion.interfa
 import { useCatalogoParametrizable } from "@/hooks/useCatalogosParametrizables";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useI18n } from "@/i18n/I18nProvider";
 
 export interface EquipamientoFormValues {
   nombre: string;
@@ -80,6 +81,54 @@ const emptyEquipamientoFormValues: EquipamientoFormValues = {
   observaciones: "",
 };
 
+
+function catalogLabel(item: CatalogoParametrizableItem, isEnglish: boolean) {
+  if (!isEnglish) return item.nombre;
+
+  const normalized = String(item.codigo || item.nombre || "").toLowerCase();
+  const labels: Record<string, string> = {
+    cardio: "Cardio",
+    fuerza: "Strength",
+    accesorio: "Accessory",
+    sala_musculacion: "Weight room",
+    sala_de_musculacion: "Weight room",
+    sala_cardio: "Cardio room",
+    sala_de_cardio: "Cardio room",
+    zona_a: "Zone A",
+    zona_b: "Zone B",
+    zona_c: "Zone C",
+    zona_d: "Zone D",
+  };
+
+  return labels[normalized] ?? item.nombre;
+}
+
+function statusLabel(value: EquipamientoFormValues["estado"], isEnglish: boolean) {
+  if (!isEnglish) {
+    switch (value) {
+      case "operativo":
+        return "Operativo";
+      case "en mantenimiento":
+        return "En mantenimiento";
+      case "fuera de servicio":
+        return "Fuera de servicio";
+      default:
+        return value;
+    }
+  }
+
+  switch (value) {
+    case "operativo":
+      return "Operational";
+    case "en mantenimiento":
+      return "Under maintenance";
+    case "fuera de servicio":
+      return "Out of service";
+    default:
+      return value;
+  }
+}
+
 function toDateInputValue(value?: string | null) {
   return value ? String(value).slice(0, 10) : "";
 }
@@ -112,6 +161,9 @@ export default function EquipamientoForm({
   onCancel?: () => void;
   loading?: boolean;
 }) {
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const tx = (es: string, en: string) => (isEnglish ? en : es);
   const isEdit = !!initialValues;
   const [values, setValues] = useState<EquipamientoFormValues>(() =>
     mapEquipoToFormValues(initialValues)
@@ -209,77 +261,112 @@ export default function EquipamientoForm({
       className="grid grid-cols-1 gap-4 md:grid-cols-2"
     >
       <QaFileNameBadge file="src/components/forms/EquipamientoForm.tsx" />
+
       <div className="flex flex-col gap-1.5">
+        <label htmlFor="equipamiento-nombre" className="text-sm font-medium text-foreground">
+          {tx("Nombre", "Name")}
+        </label>
         <Input
+          id="equipamiento-nombre"
           className="bg-background text-foreground border-border placeholder:text-muted-foreground"
           value={values.nombre}
           onChange={(e) => handleChange("nombre", e.target.value)}
-          placeholder="Nombre del equipo"
+          placeholder={tx("Nombre del equipo", "Equipment name")}
           required
         />
       </div>
+
       <div className="flex flex-col gap-1.5">
+        <label htmlFor="equipamiento-tipo" className="text-sm font-medium text-foreground">
+          {tx("Tipo", "Type")}
+        </label>
         <select
-          className="w-full h-10 px-3 py-2 text-sm border rounded-md border-input bg-background"
+          id="equipamiento-tipo"
+          className="w-full h-10 px-3 py-2 text-sm border rounded-md border-input bg-background text-foreground"
           value={selectedTipoValue}
           onChange={(e) => handleTipoChange(e.target.value)}
           required
         >
-          <option value="">Tipo de equipo</option>
+          <option value="">{tx("Tipo de equipo", "Equipment type")}</option>
           {tiposEquipamiento.map((tipo) => (
             <option key={tipo.id} value={tipo.id}>
-              {tipo.nombre}
+              {catalogLabel(tipo, isEnglish)}
             </option>
           ))}
         </select>
       </div>
+
       <div className="flex flex-col gap-1.5">
+        <label htmlFor="equipamiento-marca" className="text-sm font-medium text-foreground">
+          {tx("Marca", "Brand")}
+        </label>
         <Input
+          id="equipamiento-marca"
           className="bg-background text-foreground border-border placeholder:text-muted-foreground"
           value={values.marca}
           onChange={(e) => handleChange("marca", e.target.value)}
-          placeholder="Marca"
+          placeholder={tx("Marca", "Brand")}
           required
         />
       </div>
+
       <div className="flex flex-col gap-1.5">
+        <label htmlFor="equipamiento-modelo" className="text-sm font-medium text-foreground">
+          {tx("Modelo", "Model")}
+        </label>
         <Input
+          id="equipamiento-modelo"
           className="bg-background text-foreground border-border placeholder:text-muted-foreground"
           value={values.modelo}
           onChange={(e) => handleChange("modelo", e.target.value)}
-          placeholder="Modelo"
+          placeholder={tx("Modelo", "Model")}
           required
         />
       </div>
+
       <div className="flex flex-col gap-1.5">
+        <label htmlFor="equipamiento-estado" className="text-sm font-medium text-foreground">
+          {tx("Estado", "Status")}
+        </label>
         <select
-          className="w-full h-10 px-3 py-2 text-sm border rounded-md border-input bg-background"
+          id="equipamiento-estado"
+          className="w-full h-10 px-3 py-2 text-sm border rounded-md border-input bg-background text-foreground"
           value={values.estado}
           onChange={(e) => handleChange("estado", e.target.value)}
           required
         >
-          <option value="operativo">Operativo</option>
-          <option value="en mantenimiento">En mantenimiento</option>
-          <option value="fuera de servicio">Fuera de servicio</option>
+          <option value="operativo">{statusLabel("operativo", isEnglish)}</option>
+          <option value="en mantenimiento">{statusLabel("en mantenimiento", isEnglish)}</option>
+          <option value="fuera de servicio">{statusLabel("fuera de servicio", isEnglish)}</option>
         </select>
       </div>
+
       <div className="flex flex-col gap-1.5">
+        <label htmlFor="equipamiento-ubicacion" className="text-sm font-medium text-foreground">
+          {tx("Ubicación", "Location")}
+        </label>
         <select
-          className="w-full h-10 px-3 py-2 text-sm border rounded-md border-input bg-background"
+          id="equipamiento-ubicacion"
+          className="w-full h-10 px-3 py-2 text-sm border rounded-md border-input bg-background text-foreground"
           value={selectedUbicacionValue}
           onChange={(e) => handleUbicacionChange(e.target.value)}
           required
         >
-          <option value="">Ubicación</option>
+          <option value="">{tx("Ubicación", "Location")}</option>
           {ubicacionesEquipamiento.map((ubicacion) => (
             <option key={ubicacion.id} value={ubicacion.id}>
-              {ubicacion.nombre}
+              {catalogLabel(ubicacion, isEnglish)}
             </option>
           ))}
         </select>
       </div>
+
       <div className="flex flex-col gap-1.5">
+        <label htmlFor="equipamiento-proxima-revision" className="text-sm font-medium text-foreground">
+          {tx("Próxima revisión", "Next review")}
+        </label>
         <Input
+          id="equipamiento-proxima-revision"
           className="bg-background text-foreground border-border placeholder:text-muted-foreground"
           type="date"
           value={values.proxima_revision}
@@ -287,14 +374,20 @@ export default function EquipamientoForm({
           required
         />
       </div>
+
       <div className="flex flex-col gap-1.5 md:col-span-2">
+        <label htmlFor="equipamiento-observaciones" className="text-sm font-medium text-foreground">
+          {tx("Observaciones", "Notes")}
+        </label>
         <Input
+          id="equipamiento-observaciones"
           className="bg-background text-foreground border-border placeholder:text-muted-foreground"
           value={values.observaciones}
           onChange={(e) => handleChange("observaciones", e.target.value)}
-          placeholder="Observaciones"
+          placeholder={tx("Observaciones", "Notes")}
         />
       </div>
+
       <div className="flex justify-end gap-2 col-span-full">
         <Button
           type="button"
@@ -302,10 +395,10 @@ export default function EquipamientoForm({
           onClick={onCancel}
           disabled={loading || submitting}
         >
-          Cancelar
+          {tx("Cancelar", "Cancel")}
         </Button>
         <Button type="submit" className="" disabled={loading || submitting}>
-          {isEdit ? "Actualizar equipo" : "Guardar equipo"}
+          {isEdit ? tx("Actualizar equipo", "Update equipment") : tx("Guardar equipo", "Save equipment")}
         </Button>
       </div>
     </form>

@@ -16,6 +16,8 @@ import {
 import { Eye, User, Calendar, FileText, Plus } from "lucide-react";
 import DietaForm from "@/components/forms/DietaForm";
 import { formatFrontendDate } from '@/utils/dateFormat';
+import { useI18n } from "@/i18n/I18nProvider";
+import { translateDietGoal, translateDietPlanName } from "@/utils/dietaI18nPresentation";
 
 interface SocioDietaCardProps {
   socio: Socio;
@@ -31,16 +33,19 @@ export default function SocioDietaCard({
   onDietaCreated,
 }: SocioDietaCardProps) {
   const router = useRouter();
+  const { locale } = useI18n();
+  const isEnglish = locale === 'en';
+  const tx = (es: string, en: string) => (isEnglish ? en : es);
   const [createOpen, setCreateOpen] = useState(false);
 
   const formatearFecha = (fecha?: string) => {
-    if (!fecha) return "No disponible";
+    if (!fecha) return tx("No disponible", "Not available");
     return formatFrontendDate(fecha);
   };
 
   const obtenerNombreDieta = (dieta?: Dieta | null) => {
-    if (!dieta) return "Sin dieta asignada";
-    return dieta.nombre_plan || "Dieta sin nombre";
+    if (!dieta) return tx("Sin dieta asignada", "No diet assigned");
+    return translateDietPlanName(dieta.nombre_plan || "Dieta sin nombre", isEnglish);
   };
 
   const calcularDuracionDias = (dieta?: Dieta | null) => {
@@ -88,17 +93,17 @@ export default function SocioDietaCard({
                   : "bg-gray-100 text-gray-800"
               }`}
             >
-              {socio.activo ? "Activo" : "Inactivo"}
+              {socio.activo ? tx("Activo", "Active") : tx("Inactivo", "Inactive")}
             </span>
           </div>
-          <p className="text-sm text-muted-foreground">DNI: {socio.dni}</p>
+          <p className="text-sm text-muted-foreground">{tx("DNI", "ID")}: {socio.dni}</p>
         </CardHeader>
 
         <CardContent className="space-y-4">
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium">Última Dieta</span>
+              <span className="text-sm font-medium">{tx("Última Dieta", "Latest diet")}</span>
             </div>
 
             {loadingDieta ? (
@@ -116,22 +121,22 @@ export default function SocioDietaCard({
                   <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
-                      <span>{calcularDuracionDias(dieta)} días</span>
+                      <span>{calcularDuracionDias(dieta)} {tx("días", "days")}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <FileText className="w-3 h-3" />
-                      <span className="truncate">{dieta.objetivo || "-"}</span>
+                      <span className="truncate">{translateDietGoal(dieta.objetivo || "-", isEnglish)}</span>
                     </div>
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    Este socio no tiene dietas asignadas
+                    {tx("Este socio no tiene dietas asignadas", "This member has no assigned diets")}
                   </p>
                 )}
 
                 {dieta?.fecha_inicio && (
                   <p className="text-xs text-muted-foreground">
-                    Inicio: {formatearFecha(dieta.fecha_inicio)}
+                    {tx("Inicio", "Start")}: {formatearFecha(dieta.fecha_inicio)}
                   </p>
                 )}
               </div>
@@ -147,7 +152,7 @@ export default function SocioDietaCard({
               onClick={handleView}
             >
               <Eye className="w-4 h-4 mr-2" />
-              Ver Dieta
+              {tx("Ver Dieta", "View diet")}
             </Button>
             <Button
               variant="default"
@@ -156,7 +161,7 @@ export default function SocioDietaCard({
               onClick={() => setCreateOpen(true)}
             >
               <Plus className="w-4 h-4 mr-2" />
-              Nueva Dieta
+              {tx("Nueva Dieta", "New diet")}
             </Button>
           </div>
         </CardContent>
@@ -165,12 +170,12 @@ export default function SocioDietaCard({
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Nueva dieta para {socio.nombre_completo}</DialogTitle>
+            <DialogTitle>{tx("Nueva dieta para", "New diet for")} {socio.nombre_completo}</DialogTitle>
           </DialogHeader>
           <DietaForm
             initialSocioId={socio.id_socio}
             socioNombre={socio.nombre_completo}
-            submitLabel="Generar dieta para este socio"
+            submitLabel={tx("Generar dieta para este socio", "Generate diet for this member")}
             onSuccess={handleDietaCreated}
           />
         </DialogContent>

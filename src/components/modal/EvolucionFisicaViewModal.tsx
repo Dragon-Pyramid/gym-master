@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { EvolucionSocio } from "@/interfaces/evolucionSocio.interface";
 import { formatFrontendDate } from '@/utils/dateFormat';
+import { useI18n } from "@/i18n/I18nProvider";
 
 const formatDate = (value?: string | Date | null) => {
   if (!value) return "-";
@@ -35,6 +36,63 @@ const formatNumber = (value?: number | null, suffix = "") => {
 const formatText = (value?: string | null) => {
   if (!value?.trim()) return "-";
   return value.replace(/_/g, " ");
+};
+
+const translateValue = (value: string, tx: (es: string, en: string) => string) => {
+  const normalized = value.trim().toLowerCase();
+  const map: Record<string, string> = {
+    mesomorfo: "Mesomorph",
+    endomorfo: "Endomorph",
+    ectomorfo: "Ectomorph",
+    masculino: "Male",
+    femenino: "Female",
+    manual: "Manual",
+    admin: "Admin",
+    socio: "Member",
+  };
+
+  return tx(value, map[normalized] ?? value);
+};
+
+
+const translateObservation = (
+  value: string | null | undefined,
+  tx: (es: string, en: string) => string
+) => {
+  if (!value?.trim()) return "";
+  const translated = value
+    .replace(
+      "Registro actual con mejora notable:",
+      "Current record with notable improvement:"
+    )
+    .replace(
+      "reducción importante de grasa y cintura",
+      "significant reduction in fat and waist"
+    )
+    .replace("aumento de masa muscular", "increased muscle mass")
+    .replace(
+      "mayor desarrollo de pecho, hombros, brazos, muslos y pantorrillas",
+      "greater development in chest, shoulders, arms, thighs, and calves"
+    )
+    .replace("Registro inicial histórico.", "Historical initial record.")
+    .replace(
+      "Punto de partida con medidas base para comparar la evolución física del socio.",
+      "Starting point with baseline measurements to compare the member's physical evolution."
+    )
+    .replace(
+      "Punto de partida con mediciones base para comparar la evolución física del socio.",
+      "Starting point with baseline measurements to compare the member's physical evolution."
+    )
+    .replace(
+      "Punto de partida con medidas base para comparación.",
+      "Starting point with baseline measurements for comparison."
+    )
+    .replace(
+      "Punto de partida con mediciones base para comparación.",
+      "Starting point with baseline measurements for comparison."
+    )
+    .replace("Punto de partida", "Starting point");
+  return tx(value, translated);
 };
 
 const DetailItem = ({
@@ -83,6 +141,10 @@ export default function EvolucionFisicaViewModal({
   evolucion?: EvolucionSocio | null;
   socioNombre?: string;
 }) {
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const tx = (es: string, en: string) => (isEnglish ? en : es);
+
   if (!evolucion) return null;
 
   return (
@@ -91,101 +153,101 @@ export default function EvolucionFisicaViewModal({
         <QaFileNameBadge file="src/components/modal/EvolucionFisicaViewModal.tsx" />
         <DialogHeader>
           <DialogTitle className="text-lg font-bold sm:text-xl">
-            Detalle de evolución física
+            {tx("Detalle de evolución física", "Physical evolution detail")}
           </DialogTitle>
           <DialogDescription>
             {socioNombre ? `${socioNombre} · ` : ""}
-            Registro del {formatDate(evolucion.fecha)}
+            {tx("Registro del", "Record from")} {formatDate(evolucion.fecha)}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
-          <DetailSection title="Datos principales" icon={CalendarDays}>
-            <DetailItem label="Fecha" value={formatDate(evolucion.fecha)} />
+          <DetailSection title={tx("Datos principales", "Main data")} icon={CalendarDays}>
+            <DetailItem label={tx("Fecha", "Date")} value={formatDate(evolucion.fecha)} />
             <DetailItem
-              label="Registro inicial"
-              value={evolucion.es_registro_inicial ? "Sí" : "No"}
+              label={tx("Registro inicial", "Initial record")}
+              value={evolucion.es_registro_inicial ? tx("Sí", "Yes") : tx("No", "No")}
             />
             <DetailItem
-              label="Origen"
-              value={formatText(evolucion.origen_registro)}
+              label={tx("Origen", "Source")}
+              value={translateValue(formatText(evolucion.origen_registro), tx)}
             />
             <DetailItem
-              label="Tipo corporal"
-              value={formatText(evolucion.tipo_corporal)}
+              label={tx("Tipo corporal", "Body type")}
+              value={translateValue(formatText(evolucion.tipo_corporal), tx)}
             />
             <DetailItem
-              label="Sexo referencia"
-              value={formatText(evolucion.sexo_referencia)}
+              label={tx("Sexo referencia", "Reference sex")}
+              value={translateValue(formatText(evolucion.sexo_referencia), tx)}
             />
             <DetailItem
-              label="Actualizado"
+              label={tx("Actualizado", "Updated")}
               value={formatDate(evolucion.actualizado_en)}
             />
           </DetailSection>
 
-          <DetailSection title="Composición corporal" icon={Scale}>
-            <DetailItem label="Peso" value={formatNumber(evolucion.peso, " kg")} />
-            <DetailItem label="Altura" value={formatNumber(evolucion.altura, " cm")} />
-            <DetailItem label="IMC" value={formatNumber(evolucion.imc)} />
+          <DetailSection title={tx("Composición corporal", "Body composition")} icon={Scale}>
+            <DetailItem label={tx("Peso", "Weight")} value={formatNumber(evolucion.peso, " kg")} />
+            <DetailItem label={tx("Altura", "Height")} value={formatNumber(evolucion.altura, " cm")} />
+            <DetailItem label={tx("IMC", "BMI")} value={formatNumber(evolucion.imc)} />
             <DetailItem
-              label="% grasa"
+              label={tx("% grasa", "Fat %")}
               value={formatNumber(evolucion.porcentaje_grasa, "%")}
             />
             <DetailItem
-              label="Masa muscular"
+              label={tx("Masa muscular", "Muscle mass")}
               value={formatNumber(evolucion.masa_muscular, " kg")}
             />
           </DetailSection>
 
-          <DetailSection title="Medidas centrales" icon={Ruler}>
-            <DetailItem label="Pecho" value={formatNumber(evolucion.pecho, " cm")} />
-            <DetailItem label="Cintura" value={formatNumber(evolucion.cintura, " cm")} />
-            <DetailItem label="Cadera" value={formatNumber(evolucion.cadera, " cm")} />
-            <DetailItem label="Abdomen" value={formatNumber(evolucion.abdomen, " cm")} />
-            <DetailItem label="Cuello" value={formatNumber(evolucion.cuello, " cm")} />
-            <DetailItem label="Hombros" value={formatNumber(evolucion.hombros, " cm")} />
+          <DetailSection title={tx("Medidas centrales", "Core measurements")} icon={Ruler}>
+            <DetailItem label={tx("Pecho", "Chest")} value={formatNumber(evolucion.pecho, " cm")} />
+            <DetailItem label={tx("Cintura", "Waist")} value={formatNumber(evolucion.cintura, " cm")} />
+            <DetailItem label={tx("Cadera", "Hip")} value={formatNumber(evolucion.cadera, " cm")} />
+            <DetailItem label={tx("Abdomen", "Abdomen")} value={formatNumber(evolucion.abdomen, " cm")} />
+            <DetailItem label={tx("Cuello", "Neck")} value={formatNumber(evolucion.cuello, " cm")} />
+            <DetailItem label={tx("Hombros", "Shoulders")} value={formatNumber(evolucion.hombros, " cm")} />
           </DetailSection>
 
-          <DetailSection title="Brazos y piernas" icon={Dumbbell}>
+          <DetailSection title={tx("Brazos y piernas", "Arms and legs")} icon={Dumbbell}>
             <DetailItem
-              label="Antebrazo izquierdo"
+              label={tx("Antebrazo izquierdo", "Left forearm")}
               value={formatNumber(evolucion.antebrazo_izquierdo, " cm")}
             />
             <DetailItem
-              label="Antebrazo derecho"
+              label={tx("Antebrazo derecho", "Right forearm")}
               value={formatNumber(evolucion.antebrazo_derecho, " cm")}
             />
             <DetailItem
-              label="Bíceps izquierdo"
+              label={tx("Bíceps izquierdo", "Left biceps")}
               value={formatNumber(evolucion.biceps_izquierdo, " cm")}
             />
             <DetailItem
-              label="Bíceps derecho"
+              label={tx("Bíceps derecho", "Right biceps")}
               value={formatNumber(evolucion.biceps_derecho, " cm")}
             />
             <DetailItem
-              label="Tríceps izquierdo"
+              label={tx("Tríceps izquierdo", "Left triceps")}
               value={formatNumber(evolucion.triceps_izquierdo, " cm")}
             />
             <DetailItem
-              label="Tríceps derecho"
+              label={tx("Tríceps derecho", "Right triceps")}
               value={formatNumber(evolucion.triceps_derecho, " cm")}
             />
             <DetailItem
-              label="Muslo izquierdo"
+              label={tx("Muslo izquierdo", "Left thigh")}
               value={formatNumber(evolucion.muslo_izquierdo, " cm")}
             />
             <DetailItem
-              label="Muslo derecho"
+              label={tx("Muslo derecho", "Right thigh")}
               value={formatNumber(evolucion.muslo_derecho, " cm")}
             />
             <DetailItem
-              label="Pantorrilla izquierda"
+              label={tx("Pantorrilla izquierda", "Left calf")}
               value={formatNumber(evolucion.pantorrilla_izquierda, " cm")}
             />
             <DetailItem
-              label="Pantorrilla derecha"
+              label={tx("Pantorrilla derecha", "Right calf")}
               value={formatNumber(evolucion.pantorrilla_derecha, " cm")}
             />
           </DetailSection>
@@ -194,12 +256,12 @@ export default function EvolucionFisicaViewModal({
             evolucion.foto_lateral_url ||
             evolucion.foto_espalda_url) && (
             <section className="space-y-3">
-              <h3 className="text-sm font-bold text-foreground">Fotografías</h3>
+              <h3 className="text-sm font-bold text-foreground">{tx("Fotografías", "Photos")}</h3>
               <div className="grid gap-3 md:grid-cols-3">
                 {[
-                  ["Frontal", evolucion.foto_frontal_url],
-                  ["Lateral", evolucion.foto_lateral_url],
-                  ["Espalda", evolucion.foto_espalda_url],
+                  [tx("Frontal", "Front"), evolucion.foto_frontal_url],
+                  [tx("Lateral", "Side"), evolucion.foto_lateral_url],
+                  [tx("Espalda", "Back"), evolucion.foto_espalda_url],
                 ].map(([label, url]) =>
                   url ? (
                     <a
@@ -209,7 +271,7 @@ export default function EvolucionFisicaViewModal({
                       rel="noreferrer"
                       className="rounded-lg border p-3 text-sm font-medium text-[#02a8e1] hover:bg-[#e6f7fd]"
                     >
-                      Ver foto {String(label ?? "foto").toLowerCase()}
+                      {tx("Ver foto", "View photo")} {String(label ?? tx("foto", "photo")).toLowerCase()}
                     </a>
                   ) : null
                 )}
@@ -218,16 +280,16 @@ export default function EvolucionFisicaViewModal({
           )}
 
           <section className="space-y-2">
-            <h3 className="text-sm font-bold text-foreground">Observaciones</h3>
+            <h3 className="text-sm font-bold text-foreground">{tx("Observaciones", "Notes")}</h3>
             <div className="min-h-20 rounded-lg border bg-muted/20 p-4 text-sm leading-relaxed text-muted-foreground">
-              {evolucion.observaciones || "Sin observaciones registradas."}
+              {translateObservation(evolucion.observaciones, tx) || tx("Sin observaciones registradas.", "No notes recorded.")}
             </div>
           </section>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Cerrar
+            {tx("Cerrar", "Close")}
           </Button>
         </DialogFooter>
       </DialogContent>

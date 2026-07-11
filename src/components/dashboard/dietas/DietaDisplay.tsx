@@ -19,6 +19,15 @@ import {
 } from "lucide-react";
 import { descargarDietaPdf } from "@/utils/dietaPdf";
 import { formatFrontendDate } from "@/utils/dateFormat";
+import { useI18n } from "@/i18n/I18nProvider";
+import {
+  translateDietGoal,
+  translateDietPlanName,
+  translateDietProgressLabel,
+  translateFoodItem,
+  translateMealHint,
+  translateMealTitle,
+} from "@/utils/dietaI18nPresentation";
 
 type PlanBlock = {
   key: string;
@@ -251,6 +260,9 @@ export default function DietaDisplay({
   onBack,
   backLabel = "Volver",
 }: DietaDisplayProps) {
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const tx = (es: string, en: string) => (isEnglish ? en : es);
   const plan = useMemo(() => parsePlan(dieta.observaciones), [dieta.observaciones]);
   const duracion = calculateDays(dieta.fecha_inicio, dieta.fecha_fin);
   const [pdfLoading, setPdfLoading] = useState(false);
@@ -258,7 +270,7 @@ export default function DietaDisplay({
   const [completedMeals, setCompletedMeals] = useState<string[]>([]);
   const [followupLoaded, setFollowupLoaded] = useState(false);
   const socioNombre =
-    dieta.socio?.nombre_completo || dieta.socio_id || "Socio no disponible";
+    dieta.socio?.nombre_completo || dieta.socio_id || tx("Socio no disponible", "Member not available");
   const activeBlock = plan.blocks[activeMealIndex] ?? plan.blocks[0];
   const progressLabel = getPlanProgressLabel(dieta.fecha_inicio, dieta.fecha_fin);
   const mealCompletionIds = useMemo(
@@ -336,14 +348,14 @@ export default function DietaDisplay({
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="min-w-0 space-y-2">
             <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-sky-700 ring-1 ring-sky-100 dark:bg-sky-900/60 dark:text-sky-100 dark:ring-sky-800">
-              <Utensils className="h-3.5 w-3.5" /> Mi dieta
+              <Utensils className="h-3.5 w-3.5" /> {tx("Mi dieta", "My diet")}
             </div>
             <div>
               <h1 className="text-2xl font-extrabold leading-tight text-slate-900 dark:text-slate-50 md:text-3xl">
-                {dieta.nombre_plan || "Plan alimentario"}
+                {translateDietPlanName(dieta.nombre_plan || "Plan alimentario", isEnglish)}
               </h1>
               <p className="mt-1 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-                Seguí tu plan comida por comida. Ante dudas, restricciones o malestar, consultá al entrenador o profesional responsable.
+                {tx("Seguí tu plan comida por comida. Ante dudas, restricciones o malestar, consultá al entrenador o profesional responsable.", "Follow your plan meal by meal. If you have questions, restrictions, or discomfort, consult the trainer or responsible professional.")}
               </p>
             </div>
           </div>
@@ -351,7 +363,7 @@ export default function DietaDisplay({
             {onBack && (
               <Button variant="outline" onClick={onBack} className="w-full sm:w-auto">
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                {backLabel}
+                {isEnglish && backLabel === "Volver" ? "Back" : backLabel}
               </Button>
             )}
             <Button
@@ -361,7 +373,7 @@ export default function DietaDisplay({
               className="w-full border-sky-200 bg-white text-sky-700 hover:bg-sky-50 dark:border-sky-800 dark:bg-slate-950 dark:text-sky-100 dark:hover:bg-sky-950/40 sm:w-auto"
             >
               <Download className="mr-2 h-4 w-4" />
-              {pdfLoading ? "Generando..." : "Descargar PDF"}
+              {pdfLoading ? tx("Generando...", "Generating...") : tx("Descargar PDF", "Download PDF")}
             </Button>
           </div>
         </div>
@@ -371,24 +383,24 @@ export default function DietaDisplay({
         <CardContent className="p-4 md:p-5">
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100 dark:bg-emerald-900/50 dark:text-emerald-100 dark:ring-emerald-800">
-              {progressLabel}
+              {translateDietProgressLabel(progressLabel, isEnglish)}
             </span>
             <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 ring-1 ring-sky-100 dark:bg-sky-900/50 dark:text-sky-100 dark:ring-sky-800">
-              {plan.blocks.length} comidas registradas
+              {plan.blocks.length} {tx("comidas registradas", "registered meals")}
             </span>
           </div>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <div className="rounded-2xl border bg-muted/30 p-3 dark:bg-slate-900/70">
               <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                <Target className="h-4 w-4" /> Objetivo
+                <Target className="h-4 w-4" /> {tx("Objetivo", "Goal")}
               </div>
               <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
-                {dieta.objetivo || "No definido"}
+                {translateDietGoal(dieta.objetivo || "No definido", isEnglish)}
               </p>
             </div>
             <div className="rounded-2xl border bg-muted/30 p-3 dark:bg-slate-900/70">
               <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                <Calendar className="h-4 w-4" /> Inicio
+                <Calendar className="h-4 w-4" /> {tx("Inicio", "Start")}
               </div>
               <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
                 {formatDate(dieta.fecha_inicio)}
@@ -396,7 +408,7 @@ export default function DietaDisplay({
             </div>
             <div className="rounded-2xl border bg-muted/30 p-3 dark:bg-slate-900/70">
               <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                <Calendar className="h-4 w-4" /> Fin
+                <Calendar className="h-4 w-4" /> {tx("Fin", "End")}
               </div>
               <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
                 {formatDate(dieta.fecha_fin)}
@@ -404,10 +416,10 @@ export default function DietaDisplay({
             </div>
             <div className="rounded-2xl border bg-muted/30 p-3 dark:bg-slate-900/70">
               <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                <Clock className="h-4 w-4" /> Duración
+                <Clock className="h-4 w-4" /> {tx("Duración", "Duration")}
               </div>
               <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
-                {duracion > 0 ? `${duracion} días` : "No calculable"}
+                {duracion > 0 ? `${duracion} ${tx("días", "days")}` : tx("No calculable", "Not calculable")}
               </p>
             </div>
           </div>
@@ -420,13 +432,13 @@ export default function DietaDisplay({
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <div>
                 <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-100 dark:bg-emerald-900/50 dark:text-emerald-100 dark:ring-emerald-800">
-                  <CheckCircle2 className="h-3.5 w-3.5" /> Seguimiento de hoy
+                  <CheckCircle2 className="h-3.5 w-3.5" /> {tx("Seguimiento de hoy", "Today's follow-up")}
                 </div>
                 <h2 className="mt-2 text-lg font-extrabold text-slate-900 dark:text-slate-50">
-                  {completedMealsCount} de {plan.blocks.length} comidas revisadas
+                  {completedMealsCount} {tx("de", "of")} {plan.blocks.length} {tx("comidas revisadas", "meals reviewed")}
                 </h2>
                 <p className="mt-1 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-                  Marcá las comidas a medida que cumplís el plan. Este seguimiento queda guardado en este dispositivo para el día actual.
+                  {tx("Marcá las comidas a medida que cumplís el plan. Este seguimiento queda guardado en este dispositivo para el día actual.", "Mark meals as you complete the plan. This follow-up is saved on this device for the current day.")}
                 </p>
               </div>
               <div className="rounded-2xl border border-emerald-100 bg-white px-4 py-3 text-center dark:border-emerald-900/60 dark:bg-slate-950">
@@ -434,7 +446,7 @@ export default function DietaDisplay({
                   {dailyProgressPercent}%
                 </p>
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-800/70 dark:text-emerald-200/70">
-                  avance diario
+                  {tx("avance diario", "daily progress")}
                 </p>
               </div>
             </div>
@@ -456,8 +468,8 @@ export default function DietaDisplay({
                 >
                   <CheckCircle2 className="mr-2 h-4 w-4" />
                   {currentMealCompleted
-                    ? "Reabrir comida actual"
-                    : "Marcar comida actual"}
+                    ? tx("Reabrir comida actual", "Reopen current meal")
+                    : tx("Marcar comida actual", "Mark current meal")}
                 </Button>
               ) : null}
               <Button
@@ -468,7 +480,7 @@ export default function DietaDisplay({
                 disabled={completedMealsCount === 0}
               >
                 <RotateCcw className="mr-2 h-4 w-4" />
-                Reiniciar seguimiento
+                {tx("Reiniciar seguimiento", "Restart follow-up")}
               </Button>
             </div>
           </CardContent>
@@ -480,7 +492,7 @@ export default function DietaDisplay({
           <CardHeader className="space-y-3 p-4 md:p-5">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Sparkles className="h-5 w-5 text-sky-600" />
-              Comidas del día
+              {tx("Comidas del día", "Meals of the day")}
             </CardTitle>
             <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:px-0">
               {plan.blocks.map((block, index) => {
@@ -501,7 +513,7 @@ export default function DietaDisplay({
                     }`}
                   >
                     {isCompleted ? <CheckCircle2 className="h-3.5 w-3.5" /> : null}
-                    {block.title}
+                    {translateMealTitle(block.title, isEnglish)}
                   </button>
                 );
               })}
@@ -513,20 +525,20 @@ export default function DietaDisplay({
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div>
                     <h3 className="text-base font-bold text-slate-900 dark:text-slate-50">
-                      {activeBlock.title}
+                      {translateMealTitle(activeBlock.title, isEnglish)}
                     </h3>
                     <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                      {MEAL_HINTS[activeBlock.key] ||
-                        "Revisá esta comida y respetá las indicaciones cargadas."}
+                      {translateMealHint(activeBlock.key, isEnglish) ||
+                        tx("Revisá esta comida y respetá las indicaciones cargadas.", "Review this meal and follow the loaded instructions.")}
                     </p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-2">
                     <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-sky-700 ring-1 ring-sky-100 dark:bg-slate-950 dark:text-sky-100 dark:ring-sky-900">
-                      {activeBlock.items.length} ítems
+                      {activeBlock.items.length} {tx("ítems", "items")}
                     </span>
                     {currentMealCompleted ? (
                       <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-bold text-emerald-800 ring-1 ring-emerald-200 dark:bg-emerald-900/50 dark:text-emerald-100 dark:ring-emerald-800">
-                        Completada
+                        {tx("Completada", "Completed")}
                       </span>
                     ) : null}
                   </div>
@@ -538,7 +550,7 @@ export default function DietaDisplay({
                       className="flex gap-2 rounded-2xl bg-white/85 p-3 text-sm leading-relaxed text-slate-700 ring-1 ring-slate-100 dark:bg-slate-950/90 dark:text-slate-200 dark:ring-slate-800"
                     >
                       <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                      <span>{item}</span>
+                      <span>{translateFoodItem(item, isEnglish)}</span>
                     </li>
                   ))}
                 </ul>
@@ -551,8 +563,8 @@ export default function DietaDisplay({
                   >
                     <CheckCircle2 className="mr-2 h-4 w-4" />
                     {currentMealCompleted
-                      ? "Reabrir esta comida"
-                      : "Marcar esta comida como cumplida"}
+                      ? tx("Reabrir esta comida", "Reopen this meal")
+                      : tx("Marcar esta comida como cumplida", "Mark this meal as completed")}
                   </Button>
                 ) : null}
               </div>
@@ -565,7 +577,7 @@ export default function DietaDisplay({
         <CardHeader className="p-4 md:p-5">
           <CardTitle className="flex items-center gap-2 text-lg">
             <FileText className="h-5 w-5 text-primary" />
-            Detalle completo del plan
+            {tx("Detalle completo del plan", "Full plan detail")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 p-4 pt-0 md:p-5 md:pt-0">
@@ -577,17 +589,17 @@ export default function DietaDisplay({
 
                 return (
                   <div
-                    key={`${block.title}-${index}`}
+                    key={`${translateMealTitle(block.title, isEnglish)}-${index}`}
                     className="rounded-2xl border bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950"
                   >
                     <div className="mb-2 flex items-start justify-between gap-2">
                       <h3 className="flex items-center gap-2 text-sm font-bold text-primary">
                         <Utensils className="h-4 w-4" />
-                        {block.title}
+                        {translateMealTitle(block.title, isEnglish)}
                       </h3>
                       {isCompleted ? (
                         <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-100 dark:bg-emerald-900/50 dark:text-emerald-100 dark:ring-emerald-800">
-                          cumplida
+                          {tx("cumplida", "completed")}
                         </span>
                       ) : null}
                     </div>
@@ -595,7 +607,7 @@ export default function DietaDisplay({
                       {block.items.map((item, itemIndex) => (
                         <li key={itemIndex} className="flex gap-2">
                           <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                          <span>{item}</span>
+                          <span>{translateFoodItem(item, isEnglish)}</span>
                         </li>
                       ))}
                     </ul>
@@ -606,12 +618,12 @@ export default function DietaDisplay({
           ) : plan.raw ? (
             <div className="rounded-2xl border bg-muted/30 p-4 dark:border-slate-800 dark:bg-slate-900/70">
               <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
-                {plan.raw}
+                {isEnglish ? plan.raw : plan.raw}
               </p>
             </div>
           ) : (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
-              Esta dieta no tiene detalle alimentario registrado todavía.
+              {tx("Esta dieta no tiene detalle alimentario registrado todavía.", "This diet has no meal detail registered yet.")}
             </div>
           )}
         </CardContent>
@@ -620,10 +632,10 @@ export default function DietaDisplay({
       <div className="rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-amber-950 print:hidden dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
         <div className="mb-1 flex items-center gap-2 font-bold">
           <ShieldAlert className="h-4 w-4" />
-          Recordatorio importante
+          {tx("Recordatorio importante", "Important reminder")}
         </div>
         <p>
-          Esta información es una guía de acompañamiento para tu entrenamiento. No reemplaza una consulta médica o nutricional profesional. Si tenés una condición clínica, dolor, alergias o malestar, avisá al gimnasio antes de continuar.
+          {tx("Esta información es una guía de acompañamiento para tu entrenamiento. No reemplaza una consulta médica o nutricional profesional. Si tenés una condición clínica, dolor, alergias o malestar, avisá al gimnasio antes de continuar.", "This information is a support guide for your training. It does not replace professional medical or nutritional advice. If you have a clinical condition, pain, allergies, or discomfort, notify the gym before continuing.")}
         </p>
       </div>
     </div>

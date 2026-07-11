@@ -45,6 +45,7 @@ import {
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { AppHeader } from "@/components/header/AppHeader";
 import { AppFooter } from "@/components/footer/AppFooter";
+import { useI18n } from "@/i18n/I18nProvider";
 import ExcelJS from "exceljs";
 import { buildTimestampedDownloadFileName } from "@/utils/downloadFileName";
 import {
@@ -136,6 +137,75 @@ function MetricCard({
 }
 
 export default function EquipamientosPage() {
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const tx = (es: string, en: string) => (isEnglish ? en : es);
+  const tStatus = (value?: string | null) => {
+    switch (String(value ?? "").toLowerCase()) {
+      case "operativo": return tx("operativo", "operational");
+      case "en mantenimiento": return tx("en mantenimiento", "under maintenance");
+      case "fuera de servicio": return tx("fuera de servicio", "out of service");
+      default: return String(value ?? "");
+    }
+  };
+  const tRiskLevel = (value?: string | null) => {
+    switch (String(value ?? "").toLowerCase()) {
+      case "bajo": return tx("bajo", "low");
+      case "medio": return tx("medio", "medium");
+      case "alto": return tx("alto", "high");
+      case "critico":
+      case "crítico": return tx("crítico", "critical");
+      default: return String(value ?? "");
+    }
+  };
+  const tRiskFactor = (value?: string | null) => {
+    switch (String(value ?? "").toLowerCase()) {
+      case "fuera de servicio": return tx("fuera de servicio", "out of service");
+      case "en mantenimiento": return tx("en mantenimiento", "under maintenance");
+      case "sin próxima revisión": return tx("sin próxima revisión", "no next review");
+      case "revisión vencida": return tx("revisión vencida", "overdue review");
+      case "revisión urgente": return tx("revisión urgente", "urgent review");
+      case "revisión próxima": return tx("revisión próxima", "upcoming review");
+      case "score de reemplazo": return tx("score de reemplazo", "replacement score");
+      case "fallas repetidas": return tx("fallas repetidas", "repeated failures");
+      case "costo reciente": return tx("costo reciente", "recent cost");
+      default: return String(value ?? "");
+    }
+  };
+  const tRiskMessage = (value?: string | null) => {
+    switch (String(value ?? "")) {
+      case "Intervención prioritaria: el equipo puede afectar operación, seguridad o costos.":
+        return tx("Intervención prioritaria: el equipo puede afectar operación, seguridad o costos.", "Priority intervention: this equipment may affect operations, safety, or costs.");
+      case "Planificar revisión técnica: hay señales de mantenimiento o reemplazo.":
+        return tx("Planificar revisión técnica: hay señales de mantenimiento o reemplazo.", "Plan a technical review: there are signs of maintenance needs or replacement.");
+      case "Mantener seguimiento preventivo y revisar en la próxima ronda técnica.":
+        return tx("Mantener seguimiento preventivo y revisar en la próxima ronda técnica.", "Maintain preventive follow-up and review in the next technical round.");
+      case "Equipo sin señales críticas con los datos disponibles.":
+        return tx("Equipo sin señales críticas con los datos disponibles.", "This equipment shows no critical signals with the available data.");
+      default:
+        return String(value ?? "");
+    }
+  };
+  const tAlertState = (value?: string | null) => {
+    switch (String(value ?? "").toLowerCase()) {
+      case "vencido": return tx("vencido", "overdue");
+      case "proximo":
+      case "próximo": return tx("próximo", "upcoming");
+      case "sin_fecha":
+      case "sin fecha": return tx("sin fecha", "no date");
+      case "en_mantenimiento":
+      case "en mantenimiento": return tx("en mantenimiento", "under maintenance");
+      default: return String(value ?? "").replaceAll("_", " ");
+    }
+  };
+  const tAlertMessage = (value?: string | null) => {
+    const text = String(value ?? "").trim();
+    let match = text.match(/^La revisión está vencida hace (\d+) días?\.$/i);
+    if (match) return tx(text, `The review is overdue by ${match[1]} day${match[1] === "1" ? "" : "s"}.`);
+    match = text.match(/^Próxima revisión en (\d+) días?\.$/i);
+    if (match) return tx(text, `Next review in ${match[1]} day${match[1] === "1" ? "" : "s"}.`);
+    return text;
+  };
   const { isAuthenticated, initializeAuth, isInitialized } = useAuthStore();
   const router = useRouter();
   const [equipos, setEquipos] = useState<Equipamento[]>([]);
@@ -588,13 +658,14 @@ export default function EquipamientosPage() {
 
   const topRiskRadar = riskRadar.slice(0, 5);
   const riesgoAltoCritico = riskRadar.filter((item) => item.nivel === "critico" || item.nivel === "alto");
+  const stateChartData = useMemo(() => (biMantenimiento?.por_estado ?? []).map((item) => ({ ...item, label: tStatus(item.label) })), [biMantenimiento?.por_estado, isEnglish]);
   const preventivosUrgentes = riskRadar.filter((item) =>
     item.diasParaRevision !== null && item.diasParaRevision <= 5,
   );
   const sinRevisionProgramada = riskRadar.filter((item) => item.diasParaRevision === null);
 
   if (!isInitialized) {
-    return <div>Cargando...</div>;
+    return <div>{tx("Cargando...", "Loading...")}</div>;
   }
 
   if (!isAuthenticated) {
@@ -617,40 +688,40 @@ export default function EquipamientosPage() {
       <div className="flex h-[100dvh] max-h-[100dvh] w-full overflow-hidden">
         <AppSidebar />
         <SidebarInset className="!grid !min-h-0 !flex-1 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden">
-          <AppHeader title="Equipamientos" />
+          <AppHeader title={tx("Equipamientos", "Equipment")} />
           <main className="min-h-0 space-y-6 overflow-y-auto overflow-x-hidden p-4 sm:p-6">
             <section className="overflow-hidden rounded-3xl border border-cyan-500/30 bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950 p-5 text-white shadow-xl shadow-cyan-950/20 sm:p-6">
               <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
                 <div className="max-w-3xl space-y-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.35em] text-cyan-300">
-                    Infraestructura y salud operativa
+                    {tx("Infraestructura y salud operativa", "Infrastructure and operational health")}
                   </p>
-                  <h1 className="text-2xl font-black sm:text-3xl">Equipamiento y mantenimiento final</h1>
+                  <h1 className="text-2xl font-black sm:text-3xl">{tx("Equipamiento y mantenimiento final", "Equipment and maintenance overview")}</h1>
                   <p className="text-sm leading-6 text-cyan-50/85">
-                    Vista ejecutiva para controlar estado del parque, próximos preventivos, alertas técnicas, costos y decisiones de reemplazo sin saltar entre módulos.
+                    {tx("Vista ejecutiva para controlar estado del parque, próximos preventivos, alertas técnicas, costos y decisiones de reemplazo sin saltar entre módulos.", "Executive view to track fleet status, upcoming preventive tasks, technical alerts, costs, and replacement decisions without jumping between modules.")}
                   </p>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[460px]">
                   <Button type="button" onClick={() => router.push('/dashboard/infraestructura/equipamientos/preventivos')} className="bg-cyan-500 text-slate-950 hover:bg-cyan-400">
-                    <CalendarClock className="mr-2 h-4 w-4" /> Preventivos
+                    <CalendarClock className="mr-2 h-4 w-4" /> {tx("Preventivos", "Preventive maintenance")}
                   </Button>
                   <Button type="button" variant="outline" onClick={() => router.push('/dashboard/infraestructura/etiquetas-qr')} className="border-white/20 bg-white/10 text-white hover:bg-white/20">
-                    <FileText className="mr-2 h-4 w-4" /> Etiquetas QR
+                    <FileText className="mr-2 h-4 w-4" /> {tx("Etiquetas QR", "QR labels")}
                   </Button>
                   <Button type="button" variant="outline" onClick={handleRefreshMantenimiento} disabled={loadingAlertas} className="border-white/20 bg-white/10 text-white hover:bg-white/20">
-                    <RefreshCw className={`mr-2 h-4 w-4 ${loadingAlertas ? "animate-spin" : ""}`} /> Actualizar
+                    <RefreshCw className={`mr-2 h-4 w-4 ${loadingAlertas ? "animate-spin" : ""}`} /> {tx("Actualizar", "Refresh")}
                   </Button>
                 </div>
               </div>
             </section>
 
             <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-              <MetricCard title="Vencidos" value={resumenAlertas?.vencidos ?? 0} tone="red" />
-              <MetricCard title="Próximos" value={resumenAlertas?.proximos ?? 0} tone="amber" helper="Umbral 5 días" />
-              <MetricCard title="En mantenimiento" value={resumenAlertas?.en_mantenimiento ?? 0} tone="blue" />
-              <MetricCard title="Sin fecha" value={resumenAlertas?.sin_fecha ?? 0} tone="slate" />
-              <MetricCard title="Costo 90 días" value={formatCurrency(resumenBi?.costo_ultimos_90_dias)} tone="violet" />
-              <MetricCard title="Revisar reemplazo" value={resumenBi?.equipos_revisar_reemplazo ?? 0} tone="red" helper="Score técnico/comercial" />
+              <MetricCard title={tx("Vencidos", "Overdue")} value={resumenAlertas?.vencidos ?? 0} tone="red" />
+              <MetricCard title={tx("Próximos", "Upcoming")} value={resumenAlertas?.proximos ?? 0} tone="amber" helper={tx("Umbral 5 días", "5-day threshold")} />
+              <MetricCard title={tx("En mantenimiento", "Under maintenance")} value={resumenAlertas?.en_mantenimiento ?? 0} tone="blue" />
+              <MetricCard title={tx("Sin fecha", "No date")} value={resumenAlertas?.sin_fecha ?? 0} tone="slate" />
+              <MetricCard title={tx("Costo 90 días", "90-day cost")} value={formatCurrency(resumenBi?.costo_ultimos_90_dias)} tone="violet" />
+              <MetricCard title={tx("Revisar reemplazo", "Review replacement")} value={resumenBi?.equipos_revisar_reemplazo ?? 0} tone="red" helper={tx("Score técnico/comercial", "Technical/commercial score")} />
             </section>
 
             <section className="grid gap-4 lg:grid-cols-3">
@@ -659,20 +730,12 @@ export default function EquipamientosPage() {
                   <div className="flex items-start gap-3">
                     <CheckCircle2 className="mt-1 h-5 w-5" />
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.22em] opacity-75">Lectura ejecutiva</p>
+                      <p className="text-xs font-semibold uppercase tracking-[0.22em] opacity-75">{tx("Lectura ejecutiva", "Executive summary")}</p>
                       <h2 className="mt-1 text-xl font-black">
-                        {riesgoAltoCritico.length > 0
-                          ? 'Atención técnica prioritaria'
-                          : preventivosUrgentes.length > 0
-                            ? 'Preventivos por ejecutar'
-                            : 'Parque controlado'}
+                        {riesgoAltoCritico.length > 0 ? tx('Atención técnica prioritaria', 'Priority technical attention') : preventivosUrgentes.length > 0 ? tx('Preventivos por ejecutar', 'Preventive tasks to schedule') : tx('Parque controlado', 'Fleet under control')}
                       </h2>
                       <p className="mt-2 text-sm leading-6 opacity-85">
-                        {riesgoAltoCritico.length > 0
-                          ? `Hay ${riesgoAltoCritico.length} equipo${riesgoAltoCritico.length === 1 ? '' : 's'} con riesgo alto/crítico. Conviene revisar antes de nuevas promociones o rutinas intensivas.`
-                          : preventivosUrgentes.length > 0
-                            ? `Hay ${preventivosUrgentes.length} preventivo${preventivosUrgentes.length === 1 ? '' : 's'} próximo${preventivosUrgentes.length === 1 ? '' : 's'} o vencido${preventivosUrgentes.length === 1 ? '' : 's'}. Programar atención reduce downtime.`
-                            : 'No se detectan señales críticas con los datos actuales. Mantener revisión periódica y completar fechas faltantes.'}
+                        {riesgoAltoCritico.length > 0 ? tx(`Hay ${riesgoAltoCritico.length} equipo${riesgoAltoCritico.length === 1 ? '' : 's'} con riesgo alto/crítico. Conviene revisar antes de nuevas promociones o rutinas intensivas.`, `There ${riesgoAltoCritico.length === 1 ? 'is' : 'are'} ${riesgoAltoCritico.length} equipment item${riesgoAltoCritico.length === 1 ? '' : 's'} with high/critical risk. It is advisable to review them before new promotions or intensive routines.`) : preventivosUrgentes.length > 0 ? tx(`Hay ${preventivosUrgentes.length} preventivo${preventivosUrgentes.length === 1 ? '' : 's'} próximo${preventivosUrgentes.length === 1 ? '' : 's'} o vencido${preventivosUrgentes.length === 1 ? '' : 's'}. Programar atención reduce downtime.`, `There ${preventivosUrgentes.length === 1 ? 'is' : 'are'} ${preventivosUrgentes.length} upcoming or overdue preventive task${preventivosUrgentes.length === 1 ? '' : 's'}. Scheduling attention reduces downtime.`) : tx('No se detectan señales críticas con los datos actuales. Mantener revisión periódica y completar fechas faltantes.', 'No critical signals were detected with the current data. Maintain periodic reviews and complete missing dates.')}
                       </p>
                     </div>
                   </div>
@@ -680,14 +743,14 @@ export default function EquipamientosPage() {
               </Card>
               <Card className="border-cyan-500/30 bg-cyan-50 text-cyan-950 dark:bg-cyan-500/10 dark:text-cyan-100">
                 <CardContent className="p-5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] opacity-75">Próximo paso</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] opacity-75">{tx("Próximo paso", "Next step")}</p>
                   <p className="mt-2 text-lg font-bold">
-                    {sinRevisionProgramada.length > 0 ? 'Completar fechas de revisión' : 'Actualizar preventivos'}
+                    {sinRevisionProgramada.length > 0 ? tx('Completar fechas de revisión', 'Complete review dates') : tx('Actualizar preventivos', 'Refresh preventive maintenance')}
                   </p>
                   <p className="mt-2 text-sm opacity-80">
                     {sinRevisionProgramada.length > 0
-                      ? `${sinRevisionProgramada.length} equipo${sinRevisionProgramada.length === 1 ? '' : 's'} sin próxima revisión.`
-                      : 'Usá el panel preventivo para programar órdenes técnicas.'}
+                      ? tx(`${sinRevisionProgramada.length} equipo${sinRevisionProgramada.length === 1 ? '' : 's'} sin próxima revisión.`, `${sinRevisionProgramada.length} equipment item${sinRevisionProgramada.length === 1 ? '' : 's'} without a next review.`)
+                      : tx('Usá el panel preventivo para programar órdenes técnicas.', 'Use the preventive panel to schedule technical work orders.')}
                   </p>
                 </CardContent>
               </Card>
@@ -698,24 +761,24 @@ export default function EquipamientosPage() {
                 <CardHeader className="border-b p-4">
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="h-5 w-5 text-amber-600" />
-                    <h2 className="text-xl font-bold">Radar técnico del parque</h2>
+                    <h2 className="text-xl font-bold">{tx("Radar técnico del parque", "Technical fleet radar")}</h2>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Score heurístico inspirado en CMMS: estado, próxima revisión, costos, fallas y señales de reemplazo.
+                    {tx("Score heurístico inspirado en CMMS: estado, próxima revisión, costos, fallas y señales de reemplazo.", "Heuristic score inspired by CMMS: status, next review, costs, failures, and replacement signals.")}
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-3 p-4">
                   <div className="grid gap-3 sm:grid-cols-3">
                     <div className="rounded-xl border bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
-                      <p className="text-xs text-muted-foreground">Alto / crítico</p>
+                      <p className="text-xs text-muted-foreground">{tx("Alto / crítico", "High / critical")}</p>
                       <p className="mt-1 text-2xl font-bold text-red-700">{riesgoAltoCritico.length}</p>
                     </div>
                     <div className="rounded-xl border bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
-                      <p className="text-xs text-muted-foreground">Preventivos urgentes</p>
+                      <p className="text-xs text-muted-foreground">{tx("Preventivos urgentes", "Urgent preventive tasks")}</p>
                       <p className="mt-1 text-2xl font-bold text-amber-700">{preventivosUrgentes.length}</p>
                     </div>
                     <div className="rounded-xl border bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
-                      <p className="text-xs text-muted-foreground">Sin revisión</p>
+                      <p className="text-xs text-muted-foreground">{tx("Sin revisión", "No review")}</p>
                       <p className="mt-1 text-2xl font-bold text-slate-700 dark:text-slate-100">{sinRevisionProgramada.length}</p>
                     </div>
                   </div>
@@ -728,17 +791,17 @@ export default function EquipamientosPage() {
                             <div>
                               <p className="font-semibold text-slate-950 dark:text-slate-100">{item.nombre}</p>
                               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                {item.tipo || "Sin tipo"} · {item.ubicacion || "Sin ubicación"}
+                                {item.tipo || tx("Sin tipo", "No type")} · {item.ubicacion || tx("Sin ubicación", "No location")}
                               </p>
                             </div>
                             <span className={`rounded-full border px-2 py-1 text-xs font-semibold capitalize ${equipamientoRiskTone[item.nivel]}`}>
-                              {item.nivel} · {item.score}
+                              {tRiskLevel(item.nivel)} · {item.score}
                             </span>
                           </div>
-                          <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">{item.mensaje}</p>
+                          <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">{tRiskMessage(item.mensaje)}</p>
                           {item.factores.length > 0 && (
                             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                              Factores: {item.factores.join(", ")}
+                              {tx("Factores", "Factors")}: {item.factores.map((factor) => tRiskFactor(factor)).join(", ")}
                             </p>
                           )}
                         </div>
@@ -756,31 +819,31 @@ export default function EquipamientosPage() {
                 <CardHeader className="border-b p-4">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                    <h2 className="text-xl font-bold">Acciones sugeridas</h2>
+                    <h2 className="text-xl font-bold">{tx("Acciones sugeridas", "Suggested actions")}</h2>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Próximos pasos operativos para reducir downtime, costos y fallas repetidas.
+                    {tx("Próximos pasos operativos para reducir downtime, costos y fallas repetidas.", "Next operational steps to reduce downtime, costs, and repeated failures.")}
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-3 p-4">
                   {riesgoAltoCritico.length > 0 && (
                     <div className="rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-800">
-                      Priorizar diagnóstico de {riesgoAltoCritico.length} equipo{riesgoAltoCritico.length === 1 ? "" : "s"} con riesgo alto/crítico.
+                      {tx(`Priorizar diagnóstico de ${riesgoAltoCritico.length} equipo${riesgoAltoCritico.length === 1 ? "" : "s"} con riesgo alto/crítico.`, `Prioritize diagnosis of ${riesgoAltoCritico.length} equipment item${riesgoAltoCritico.length === 1 ? "" : "s"} with high/critical risk.`)}
                     </div>
                   )}
                   {preventivosUrgentes.length > 0 && (
                     <div className="rounded-xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-800">
-                      Programar preventivos urgentes o vencidos para evitar salida de servicio.
+                      {tx("Programar preventivos urgentes o vencidos para evitar salida de servicio.", "Schedule urgent or overdue preventive tasks to avoid service interruption.")}
                     </div>
                   )}
                   {sinRevisionProgramada.length > 0 && (
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 dark:text-slate-300">
-                      Completar próxima revisión en equipos sin fecha para mejorar trazabilidad.
+                      {tx("Completar próxima revisión en equipos sin fecha para mejorar trazabilidad.", "Complete the next review for equipment without a date to improve traceability.")}
                     </div>
                   )}
                   {(biMantenimiento?.recomendaciones_reemplazo?.length ?? 0) > 0 && (
                     <div className="rounded-xl border border-violet-100 bg-violet-50 p-4 text-sm text-violet-800">
-                      Evaluar reparación vs. reemplazo en equipos con costo o correctivos repetidos.
+                      {tx("Evaluar reparación vs. reemplazo en equipos con costo o correctivos repetidos.", "Evaluate repair vs. replacement for equipment with high cost or repeated corrective maintenance.")}
                     </div>
                   )}
                   {riesgoAltoCritico.length === 0 &&
@@ -793,7 +856,7 @@ export default function EquipamientosPage() {
                     )}
 
                   <div className="rounded-xl border bg-white p-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
-                    Próxima evolución sugerida: planes preventivos por tipo de máquina, órdenes técnicas avanzadas, repuestos, QR y downtime.
+                    {tx("Próxima evolución sugerida: planes preventivos por tipo de máquina, órdenes técnicas avanzadas, repuestos, QR y downtime.", "Suggested next evolution: preventive plans by machine type, advanced technical work orders, spare parts, QR, and downtime.")}
                   </div>
                 </CardContent>
               </Card>
@@ -803,9 +866,9 @@ export default function EquipamientosPage() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between gap-4 border-b p-4">
                   <div>
-                    <h2 className="text-xl font-bold">Métricas de mantenimiento</h2>
+                    <h2 className="text-xl font-bold">{tx("Métricas de mantenimiento", "Maintenance metrics")}</h2>
                     <p className="text-sm text-muted-foreground">
-                      Costos, frecuencia y señales para decidir si mantener, reparar o reemplazar.
+                      {tx("Costos, frecuencia y señales para decidir si mantener, reparar o reemplazar.", "Costs, frequency, and signals to decide whether to maintain, repair, or replace.")}
                     </p>
                   </div>
                   <Button
@@ -816,26 +879,26 @@ export default function EquipamientosPage() {
                     className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd] dark:bg-slate-950 dark:text-cyan-300 dark:hover:bg-slate-900"
                   >
                     <RefreshCw className={`h-4 w-4 ${loadingAlertas ? "animate-spin" : ""}`} />
-                    Actualizar
+                    {tx("Actualizar", "Refresh")}
                   </Button>
                 </CardHeader>
                 <CardContent className="grid gap-4 p-4 lg:grid-cols-2">
                   <div className="rounded-xl border p-4">
                     <div className="mb-3 flex items-center gap-2 font-semibold">
-                      <BarChart3 className="h-4 w-4" /> Estado del parque
+                      <BarChart3 className="h-4 w-4" /> {tx("Estado del parque", "Fleet status")}
                     </div>
                     {biMantenimiento?.por_estado?.length ? (
                       <ResponsiveContainer width="100%" height={260}>
                         <PieChart>
                           <Pie
-                            data={biMantenimiento.por_estado}
+                            data={stateChartData}
                             dataKey="total"
                             nameKey="label"
                             innerRadius={55}
                             outerRadius={90}
                             paddingAngle={2}
                           >
-                            {biMantenimiento.por_estado.map((entry, index) => (
+                            {stateChartData.map((entry, index) => (
                               <Cell key={entry.label} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                             ))}
                           </Pie>
@@ -844,13 +907,13 @@ export default function EquipamientosPage() {
                         </PieChart>
                       </ResponsiveContainer>
                     ) : (
-                      <EmptyChart label="Sin datos para estado del parque." />
+                      <EmptyChart label={tx("Sin datos para estado del parque.", "No data available for fleet status.")} />
                     )}
                   </div>
 
                   <div className="rounded-xl border p-4">
                     <div className="mb-3 flex items-center gap-2 font-semibold">
-                      <TrendingUp className="h-4 w-4" /> Costo mensual
+                      <TrendingUp className="h-4 w-4" /> {tx("Costo mensual", "Monthly cost")}
                     </div>
                     {biMantenimiento?.costo_mensual?.length ? (
                       <ResponsiveContainer width="100%" height={260}>
@@ -859,17 +922,17 @@ export default function EquipamientosPage() {
                           <XAxis dataKey="periodo" />
                           <YAxis />
                           <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                          <Bar dataKey="costo" name="Costo" fill="#02a8e1" />
+                          <Bar dataKey="costo" name={tx("Costo", "Cost")} fill="#02a8e1" />
                         </BarChart>
                       </ResponsiveContainer>
                     ) : (
-                      <EmptyChart label="Sin costos mensuales para graficar." />
+                      <EmptyChart label={tx("Sin costos mensuales para graficar.", "No monthly costs available to chart.")} />
                     )}
                   </div>
 
                   <div className="rounded-xl border p-4 lg:col-span-2">
                     <div className="mb-3 flex items-center gap-2 font-semibold">
-                      <Wrench className="h-4 w-4" /> Mantenimientos por tipo
+                      <Wrench className="h-4 w-4" /> {tx("Mantenimientos por tipo", "Maintenance by type")}
                     </div>
                     {biMantenimiento?.por_tipo?.length ? (
                       <ResponsiveContainer width="100%" height={260}>
@@ -878,11 +941,11 @@ export default function EquipamientosPage() {
                           <XAxis type="number" allowDecimals={false} />
                           <YAxis type="category" dataKey="label" />
                           <Tooltip />
-                          <Bar dataKey="total" name="Equipos" fill="#22c55e" />
+                          <Bar dataKey="total" name={tx("Equipos", "Equipment")} fill="#22c55e" />
                         </BarChart>
                       </ResponsiveContainer>
                     ) : (
-                      <EmptyChart label="Sin datos por tipo de equipamiento." />
+                      <EmptyChart label={tx("Sin datos por tipo de equipamiento.", "No data available by equipment type.")} />
                     )}
                   </div>
                 </CardContent>
@@ -890,9 +953,9 @@ export default function EquipamientosPage() {
 
               <Card>
                 <CardHeader className="border-b p-4">
-                  <h2 className="text-xl font-bold">Recomendaciones operativas</h2>
+                  <h2 className="text-xl font-bold">{tx("Recomendaciones operativas", "Operational recommendations")}</h2>
                   <p className="text-sm text-muted-foreground">
-                    Equipos con mantenimiento repetido, alto costo o estado crítico.
+                    {tx("Equipos con mantenimiento repetido, alto costo o estado crítico.", "Equipment with repeated maintenance, high cost, or critical status.")}
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-3 p-4">
@@ -903,23 +966,23 @@ export default function EquipamientosPage() {
                           <div>
                             <p className="font-semibold text-slate-950 dark:text-slate-100">{item.nombre}</p>
                             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                              {item.tipo || "Sin tipo"} · {item.ubicacion || "Sin ubicación"}
+                              {item.tipo || tx("Sin tipo", "No type")} · {item.ubicacion || tx("Sin ubicación", "No location")}
                             </p>
                           </div>
                           <span className="rounded-full bg-red-100 px-2 py-1 text-xs font-semibold text-red-700">
-                            Score {item.score_reemplazo}
+                            {tx("Score", "Score")} {item.score_reemplazo}
                           </span>
                         </div>
                         <p className="mt-3 text-sm text-slate-700 dark:text-slate-300">{item.recomendacion}</p>
                         <div className="mt-2 grid gap-2 text-xs text-slate-500 dark:text-slate-400 sm:grid-cols-2">
-                          <span>Correctivos 180 días: {item.correctivos_180_dias}</span>
-                          <span>Costo 180 días: {formatCurrency(item.costo_180_dias)}</span>
+                          <span>{tx("Correctivos 180 días", "Corrective work 180 days")}: {item.correctivos_180_dias}</span>
+                          <span>{tx("Costo 180 días", "180-day cost")}: {formatCurrency(item.costo_180_dias)}</span>
                         </div>
                       </div>
                     ))
                   ) : (
                     <div className="rounded-lg border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-800">
-                      No hay equipos con recomendación de reemplazo en este momento.
+                      {tx("No hay equipos con recomendación de reemplazo en este momento.", "There is no equipment with a replacement recommendation at this time.")}
                     </div>
                   )}
                 </CardContent>
@@ -929,9 +992,9 @@ export default function EquipamientosPage() {
             <Card className="w-full">
               <CardHeader className="flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap">
                 <div>
-                  <h2 className="text-xl font-bold">Alertas de mantenimiento</h2>
+                  <h2 className="text-xl font-bold">{tx("Alertas de mantenimiento", "Maintenance alerts")}</h2>
                   <p className="text-sm text-muted-foreground">
-                    Control operativo basado en próxima revisión, estado del equipo y umbral de 5 días.
+                    {tx("Control operativo basado en próxima revisión, estado del equipo y umbral de 5 días.", "Operational control based on the next review, equipment status, and a 5-day threshold.")}
                   </p>
                 </div>
                 <Button
@@ -958,7 +1021,7 @@ export default function EquipamientosPage() {
                           <div>
                             <p className="font-semibold text-slate-950 dark:text-slate-100">{alerta.nombre}</p>
                             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                              {alerta.tipo || "Sin tipo"} · {alerta.ubicacion || "Sin ubicación"}
+                              {alerta.tipo || tx("Sin tipo", "No type")} · {alerta.ubicacion || tx("Sin ubicación", "No location")}
                             </p>
                           </div>
                           <span
@@ -970,12 +1033,12 @@ export default function EquipamientosPage() {
                                   : "bg-slate-100 text-slate-700"
                             }`}
                           >
-                            {alerta.estado_alerta.replaceAll("_", " ")}
+                            {tAlertState(alerta.estado_alerta)}
                           </span>
                         </div>
-                        <p className="mt-3 text-sm text-slate-700 dark:text-slate-300">{alerta.mensaje}</p>
+                        <p className="mt-3 text-sm text-slate-700 dark:text-slate-300">{tAlertMessage(alerta.mensaje)}</p>
                         <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                          Próxima revisión: {alerta.proxima_revision || "sin fecha"}
+                          {tx("Próxima revisión", "Next review")}: {alerta.proxima_revision || tx("sin fecha", "no date")}
                         </p>
                       </div>
                     ))}
@@ -987,12 +1050,12 @@ export default function EquipamientosPage() {
             <Card className="w-full">
               <CardHeader className="flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap">
                 <div>
-                  <h2 className="text-xl font-bold">Listado de equipamientos</h2>
+                  <h2 className="text-xl font-bold">{tx("Listado de equipamientos", "Equipment registry")}</h2>
                   <p className="text-sm text-muted-foreground">
-                    {filteredEquipos.length} resultado{filteredEquipos.length === 1 ? "" : "s"} filtrado{filteredEquipos.length === 1 ? "" : "s"} de {equipos.length} equipos activos.
+                    {tx(`${filteredEquipos.length} resultado${filteredEquipos.length === 1 ? "" : "s"} filtrado${filteredEquipos.length === 1 ? "" : "s"} de ${equipos.length} equipos activos.`, `${filteredEquipos.length} filtered result${filteredEquipos.length === 1 ? "" : "s"} out of ${equipos.length} active equipment item${equipos.length === 1 ? "" : "s"}.`)}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Tipos y ubicaciones se toman de catálogos parametrizables. Los estados se mantienen normalizados para control operativo.
+                    {tx("Tipos y ubicaciones se toman de catálogos parametrizables. Los estados se mantienen normalizados para control operativo.", "Types and locations come from parameterized catalogs. Statuses remain normalized for operational control.")}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center w-full gap-2 md:w-auto">
@@ -1001,7 +1064,7 @@ export default function EquipamientosPage() {
                       <PopoverTrigger asChild>
                         <Button variant="outline" className="min-w-[120px]">
                           <Filter className="w-4 h-4 mr-2" />
-                          Filtros
+                          {tx("Filtros", "Filters")}
                           {activeFiltersCount > 0 && (
                             <span className="px-1 ml-1 text-xs text-blue-600 bg-blue-100 rounded-full">
                               {activeFiltersCount}
@@ -1012,7 +1075,7 @@ export default function EquipamientosPage() {
                       <PopoverContent className="p-0 w-72" align="start">
                         <div className="p-4 space-y-4">
                           <div>
-                            <div className="pb-2 text-sm font-medium text-gray-700 dark:text-slate-200">Tipo</div>
+                            <div className="pb-2 text-sm font-medium text-gray-700 dark:text-slate-200">{tx("Tipo", "Type")}</div>
                             <div className="space-y-2">
                               {tipos.map((tipo) => (
                                 <div key={tipo} className="flex items-center space-x-2">
@@ -1034,12 +1097,12 @@ export default function EquipamientosPage() {
                           </div>
 
                           <div className="pt-4 border-t">
-                            <div className="pb-2 text-sm font-medium text-gray-700 dark:text-slate-200">Estado</div>
+                            <div className="pb-2 text-sm font-medium text-gray-700 dark:text-slate-200">{tx("Estado", "Status")}</div>
                             <div className="space-y-2">
                               {estados.map((estado) => (
-                                <div key={estado} className="flex items-center space-x-2">
+                                <div key={tStatus(estado)} className="flex items-center space-x-2">
                                   <Checkbox
-                                    id={`estado-${estado}`}
+                                    id={`estado-${tStatus(estado)}`}
                                     checked={selectedEstados.includes(estado)}
                                     onCheckedChange={() =>
                                       setSelectedEstados((prev) =>
@@ -1049,8 +1112,8 @@ export default function EquipamientosPage() {
                                       )
                                     }
                                   />
-                                  <label htmlFor={`estado-${estado}`} className="text-sm cursor-pointer">
-                                    {estado}
+                                  <label htmlFor={`estado-${tStatus(estado)}`} className="text-sm cursor-pointer">
+                                    {tStatus(estado)}
                                   </label>
                                 </div>
                               ))}
@@ -1058,7 +1121,7 @@ export default function EquipamientosPage() {
                           </div>
 
                           <div className="pt-4 border-t">
-                            <div className="pb-2 text-sm font-medium text-gray-700 dark:text-slate-200">Ubicación</div>
+                            <div className="pb-2 text-sm font-medium text-gray-700 dark:text-slate-200">{tx("Ubicación", "Location")}</div>
                             <div className="space-y-2">
                               {ubicaciones.map((ubicacion) => (
                                 <div key={ubicacion} className="flex items-center space-x-2">
@@ -1101,7 +1164,7 @@ export default function EquipamientosPage() {
                       <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                       <Input
                         type="search"
-                        placeholder="Buscar nombre, marca, modelo, tipo, ubicación..."
+                        placeholder={tx("Buscar nombre, marca, modelo, tipo, ubicación...", "Search name, brand, model, type, location...")}
                         className="pl-8 sm:w-[320px] md:w-[260px] lg:w-[360px] w-full"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -1116,7 +1179,7 @@ export default function EquipamientosPage() {
                     className="flex items-center gap-2 bg-white border-slate-200 text-slate-700 hover:bg-slate-50 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900"
                   >
                     <Filter className="w-4 h-4" />
-                    <span className="hidden sm:inline">Catálogos</span>
+                    <span className="hidden sm:inline">{tx("Catálogos", "Catalogs")}</span>
                   </Button>
 
                   <Button
@@ -1125,7 +1188,7 @@ export default function EquipamientosPage() {
                     className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd] dark:bg-slate-950 dark:text-cyan-300 dark:hover:bg-slate-900"
                   >
                     <FileText className="w-4 h-4" />
-                    <span className="hidden sm:inline">Descargar PDF</span>
+                    <span className="hidden sm:inline">{tx("Descargar PDF", "Download PDF")}</span>
                   </Button>
                   <Button
                     variant="outline"
@@ -1133,7 +1196,7 @@ export default function EquipamientosPage() {
                     className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd] dark:bg-slate-950 dark:text-cyan-300 dark:hover:bg-slate-900"
                   >
                     <FileSpreadsheet className="w-4 h-4" />
-                    <span className="hidden sm:inline">Exportar</span>
+                    <span className="hidden sm:inline">{tx("Exportar", "Export")}</span>
                   </Button>
                   <Button
                     onClick={() => {
@@ -1142,15 +1205,15 @@ export default function EquipamientosPage() {
                     }}
                     className="bg-[#02a8e1] hover:bg-[#0288b1]"
                   >
-                    <span className="hidden sm:inline">Añadir Equipo</span>
-                    <span className="sm:hidden">Añadir</span>
+                    <span className="hidden sm:inline">{tx("Añadir Equipo", "Add equipment")}</span>
+                    <span className="sm:hidden">{tx("Añadir", "Add")}</span>
                   </Button>
                 </div>
               </CardHeader>
               <CardContent className="p-4 space-y-4">
                 {loading ? (
                   <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
-                    Cargando equipamientos...
+                    {tx("Cargando equipamientos...", "Loading equipment...")}
                   </div>
                 ) : (
                   <>
@@ -1166,7 +1229,7 @@ export default function EquipamientosPage() {
                           setOpenModalVer(true);
                         }}
                         onDelete={async (equipo) => {
-                          const confirmar = window.confirm("¿Está seguro de eliminar el equipo?");
+                          const confirmar = window.confirm(tx("¿Está seguro de eliminar el equipo?", "Are you sure you want to delete the equipment?"));
                           if (!confirmar) return;
                           await deleteEquipamiento(equipo.id);
                           await handleRefreshMantenimiento();
@@ -1176,7 +1239,7 @@ export default function EquipamientosPage() {
 
                     <div className="flex flex-col gap-3 border-t pt-4 md:flex-row md:items-center md:justify-between">
                       <div className="text-sm text-muted-foreground">
-                        Página {safeCurrentPage} de {totalPages} · mostrando {paginatedEquipos.length} de {filteredEquipos.length}
+                        {tx(`Página ${safeCurrentPage} de ${totalPages} · mostrando ${paginatedEquipos.length} de ${filteredEquipos.length}`, `Page ${safeCurrentPage} of ${totalPages} · showing ${paginatedEquipos.length} of ${filteredEquipos.length}`)}
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         <select
@@ -1186,7 +1249,7 @@ export default function EquipamientosPage() {
                         >
                           {PAGE_SIZE_OPTIONS.map((option) => (
                             <option key={option} value={option}>
-                              {option} por página
+                              {option} {tx("por página", "per page")}
                             </option>
                           ))}
                         </select>
@@ -1198,7 +1261,7 @@ export default function EquipamientosPage() {
                           onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                         >
                           <ChevronLeft className="h-4 w-4" />
-                          Anterior
+                          {tx("Anterior", "Previous")}
                         </Button>
                         <Button
                           type="button"
@@ -1207,7 +1270,7 @@ export default function EquipamientosPage() {
                           disabled={safeCurrentPage >= totalPages}
                           onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                         >
-                          Siguiente
+                          {tx("Siguiente", "Next")}
                           <ChevronRight className="h-4 w-4" />
                         </Button>
                       </div>

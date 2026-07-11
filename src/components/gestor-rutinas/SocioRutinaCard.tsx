@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Eye, User, Calendar, Dumbbell } from "lucide-react";
 import RutinaModal from "@/components/modal/RutinaModal";
 import { formatFrontendDate } from '@/utils/dateFormat';
+import { useI18n } from "@/i18n/I18nProvider";
 
 interface SocioRutinaCardProps {
   socio: Socio;
@@ -31,6 +32,9 @@ export default function SocioRutinaCard({
   onRutinaCreated,
 }: SocioRutinaCardProps) {
   const router = useRouter();
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const tx = (es: string, en: string) => (isEnglish ? en : es);
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
   const handleVerRutina = () => {
@@ -40,13 +44,31 @@ export default function SocioRutinaCard({
   };
 
   const formatearFecha = (fecha?: string) => {
-    if (!fecha) return "No disponible";
+    if (!fecha) return tx("No disponible", "Not available");
     return formatFrontendDate(fecha);
   };
 
   const obtenerNombreRutina = (rutina?: Rutina | null) => {
-    if (!rutina) return "Sin rutina asignada";
-    return rutina.nombre || "Rutina sin nombre";
+    if (!rutina) return tx("Sin rutina asignada", "No routine assigned");
+
+    const nombre = rutina.nombre?.trim();
+    if (!nombre) return tx("Rutina sin nombre", "Untitled routine");
+
+    if (!isEnglish) return nombre;
+
+    if (/^Rutina auto\b/i.test(nombre)) {
+      return nombre.replace(/^Rutina auto/i, "Auto routine");
+    }
+
+    if (/^Rutina sin nombre$/i.test(nombre)) {
+      return "Untitled routine";
+    }
+
+    if (/^Rutina FullBody Julio$/i.test(nombre)) {
+      return "July FullBody routine";
+    }
+
+    return nombre;
   };
 
   const contarEjercicios = (rutina?: Rutina | null) => {
@@ -109,17 +131,17 @@ export default function SocioRutinaCard({
                 : "bg-gray-100 text-gray-800"
             }`}
           >
-            {socio.activo ? "Activo" : "Inactivo"}
+            {socio.activo ? tx("Activo", "Active") : tx("Inactivo", "Inactive")}
           </span>
         </div>
-        <p className="text-sm text-muted-foreground">DNI: {socio.dni}</p>
+        <p className="text-sm text-muted-foreground">{tx("DNI", "ID")}: {socio.dni}</p>
       </CardHeader>
 
       <CardContent className="space-y-4">
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Dumbbell className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium">Última Rutina</span>
+            <span className="text-sm font-medium">{tx("Última Rutina", "Latest routine")}</span>
           </div>
 
           {loadingRutina ? (
@@ -137,22 +159,22 @@ export default function SocioRutinaCard({
                 <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <Calendar className="w-3 h-3" />
-                    <span>{contarDias(rutina)} días</span>
+                    <span>{contarDias(rutina)} {tx("días", "days")}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Dumbbell className="w-3 h-3" />
-                    <span>{contarEjercicios(rutina)} ejercicios</span>
+                    <span>{contarEjercicios(rutina)} {tx("ejercicios", "exercises")}</span>
                   </div>
                 </div>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  Este socio no tiene rutinas asignadas
+                  {tx("Este socio no tiene rutinas asignadas", "This member has no assigned routines")}
                 </p>
               )}
 
               {rutina?.creado_en && (
                 <p className="text-xs text-muted-foreground">
-                  Creada: {formatearFecha(rutina.creado_en)}
+                  {tx("Creada", "Created")}: {formatearFecha(rutina.creado_en)}
                 </p>
               )}
             </div>
@@ -168,7 +190,7 @@ export default function SocioRutinaCard({
             onClick={handleVerRutina}
           >
             <Eye className="w-4 h-4 mr-2" />
-            Ver Rutina
+            {tx("Ver Rutina", "View routine")}
           </Button>
           <Button
             variant="default"
@@ -177,7 +199,7 @@ export default function SocioRutinaCard({
             disabled={loadingRutina || objetivos.length === 0 || niveles.length === 0}
             onClick={() => setCreateModalOpen(true)}
           >
-            Nueva Rutina
+            {tx("Nueva Rutina", "New routine")}
           </Button>
         </div>
       </CardContent>

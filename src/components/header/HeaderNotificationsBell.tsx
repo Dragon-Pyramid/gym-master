@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuthStore } from '@/stores/authStore';
+import { useI18n } from '@/i18n/I18nProvider';
 
 export type HeaderNotificationSeverity = 'alta' | 'media' | 'baja';
 
@@ -44,8 +45,109 @@ function getBadgeLabel(total: number) {
   return String(total);
 }
 
+
+function translateSeverity(severity: HeaderNotificationSeverity, isEnglish: boolean) {
+  if (!isEnglish) return severity;
+
+  const labels: Record<HeaderNotificationSeverity, string> = {
+    alta: 'high',
+    media: 'medium',
+    baja: 'low',
+  };
+
+  return labels[severity] ?? severity;
+}
+
+function translateNotificationTitle(title: string, isEnglish: boolean) {
+  if (!isEnglish) return title;
+
+  const normalized = title.trim();
+  const titleMap: Record<string, string> = {
+    'Socios con cuotas vencidas': 'Members with overdue fees',
+    'Mantenimientos de equipos pendientes': 'Pending equipment maintenance',
+    'Stock crítico': 'Critical stock',
+    'Mensajes de socios pendientes': 'Pending member messages',
+    'Cuota sin pagos registrados': 'Fee with no registered payments',
+    'Cuota vencida': 'Overdue fee',
+    'Tu acceso puede bloquearse pronto': 'Your access may be blocked soon',
+    'Acceso en riesgo por mora': 'Access at risk due to overdue payment',
+    'Tu cuota está por vencer': 'Your fee is about to expire',
+    'Cargá tu foto de perfil': 'Upload your profile photo',
+    'Tenés mensajes en tu casilla': 'You have messages in your inbox',
+    'Completá tu ficha médica': 'Complete your medical record',
+    'Actualizá tu ficha médica': 'Update your medical record',
+  };
+
+  return titleMap[normalized] ?? title;
+}
+
+function translateNotificationSummary(summary: string, isEnglish: boolean) {
+  if (!isEnglish) return summary;
+
+  const normalized = summary.trim();
+  let match = normalized.match(/^(\d+) socio\(s\) requieren seguimiento: (\d+) vencido\(s\), (\d+) sin pagos\.$/);
+  if (match) {
+    return `${match[1]} member(s) require follow-up: ${match[2]} overdue, ${match[3]} with no payments.`;
+  }
+
+  match = normalized.match(/^(\d+) alerta\(s\): (\d+) mantenimiento\(s\) y (\d+) revisión\(es\) vencida\(s\)\.$/);
+  if (match) {
+    return `${match[1]} alert(s): ${match[2]} maintenance item(s) and ${match[3]} overdue review(s).`;
+  }
+
+  match = normalized.match(/^(\d+) producto\(s\) en stock crítico; (\d+) sin stock\.$/);
+  if (match) {
+    return `${match[1]} product(s) in critical stock; ${match[2]} out of stock.`;
+  }
+
+  match = normalized.match(/^(\d+) producto\(s\) están en stock mínimo o por debajo\.$/);
+  if (match) {
+    return `${match[1]} product(s) are at or below minimum stock.`;
+  }
+
+  match = normalized.match(/^(\d+) mensaje\(s\) requieren lectura o respuesta\.$/);
+  if (match) {
+    return `${match[1]} message(s) require reading or reply.`;
+  }
+
+  match = normalized.match(/^Tu cuota está vencida(?: hace (\d+) días)?\.$/);
+  if (match) {
+    return match[1]
+      ? `Your fee is overdue by ${match[1]} day(s).`
+      : 'Your fee is overdue.';
+  }
+
+  match = normalized.match(/^Te quedan (\d+) día\(s\) de gracia para regularizar la cuota\.$/);
+  if (match) {
+    return `You have ${match[1]} grace day(s) left to regularize the fee.`;
+  }
+
+  match = normalized.match(/^Tu período vigente vence en (\d+) día\(s\)\.$/);
+  if (match) {
+    return `Your current period expires in ${match[1]} day(s).`;
+  }
+
+  match = normalized.match(/^Tenés (\d+) mensaje\(s\) respondidos por administración\.$/);
+  if (match) {
+    return `You have ${match[1]} message(s) answered by administration.`;
+  }
+
+  const summaryMap: Record<string, string> = {
+    'No registrás pagos activos. Regularizá tu cuota para mantener el acceso.': 'You do not have active payments registered. Regularize your fee to keep access.',
+    'Regularizá tu cuota para evitar restricciones de ingreso al sistema o al gimnasio.': 'Regularize your fee to avoid access restrictions to the system or gym.',
+    'Todavía usás la imagen por defecto. Subí una foto o sacate una desde el celular para completar tu perfil.': 'You are still using the default image. Upload a photo or take one from your phone to complete your profile.',
+    'Tu ficha médica todavía no está cargada. Completala para mejorar tu seguimiento.': 'Your medical record has not been uploaded yet. Complete it to improve your follow-up.',
+    'La próxima revisión médica indicada ya venció o corresponde actualizarla.': 'The indicated next medical review is overdue or should be updated.',
+  };
+
+  return summaryMap[normalized] ?? summary;
+}
+
 export function HeaderNotificationsBell() {
   const router = useRouter();
+  const { locale } = useI18n();
+  const isEnglish = locale === 'en';
+  const tx = (es: string, en: string) => (isEnglish ? en : es);
   const { token, isAuthenticated } = useAuthStore();
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
@@ -71,7 +173,7 @@ export function HeaderNotificationsBell() {
       });
 
       const json = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(json?.error || 'No se pudieron cargar notificaciones');
+      if (!response.ok) throw new Error(json?.error || tx('No se pudieron cargar notificaciones', 'Notifications could not be loaded'));
 
       setPayload(json?.data ?? { total: 0, items: [], generated_at: new Date().toISOString() });
     } catch {
@@ -79,7 +181,7 @@ export function HeaderNotificationsBell() {
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated, token]);
+  }, [isAuthenticated, token, isEnglish]);
 
   React.useEffect(() => {
     loadNotifications();
@@ -107,7 +209,7 @@ export function HeaderNotificationsBell() {
           variant='ghost'
           size='icon'
           className='relative text-muted-foreground hover:text-foreground'
-          aria-label={total > 0 ? `Notificaciones pendientes: ${total}` : 'Notificaciones'}
+          aria-label={total > 0 ? tx(`Notificaciones pendientes: ${total}`, `${total} pending notifications`) : tx('Notificaciones', 'Notifications')}
         >
           <Bell className='h-5 w-5' />
           {total > 0 ? (
@@ -120,7 +222,7 @@ export function HeaderNotificationsBell() {
 
       <DropdownMenuContent align='end' sideOffset={8} className='w-[calc(100vw-1rem)] max-w-[400px] overflow-hidden rounded-2xl p-0'>
         <DropdownMenuLabel className='flex items-center justify-between gap-3 px-4 py-3'>
-          <span>Notificaciones</span>
+          <span>{tx('Notificaciones', 'Notifications')}</span>
           {loading ? <Loader2 className='h-4 w-4 animate-spin text-muted-foreground' /> : null}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
@@ -129,8 +231,8 @@ export function HeaderNotificationsBell() {
           <div className='flex items-start gap-3 px-4 py-5 text-sm text-muted-foreground'>
             <CheckCircle2 className='mt-0.5 h-5 w-5 text-emerald-600' />
             <div>
-              <p className='font-medium text-foreground'>Sin pendientes críticos</p>
-              <p>Cuando haya cuotas, mensajes, stock o mantenimientos pendientes, aparecerán acá.</p>
+              <p className='font-medium text-foreground'>{tx('Sin pendientes críticos', 'No critical pending items')}</p>
+              <p>{tx('Cuando haya cuotas, mensajes, stock o mantenimientos pendientes, aparecerán acá.', 'When there are pending fees, messages, stock, or maintenance items, they will appear here.')}</p>
             </div>
           </div>
         ) : (
@@ -142,11 +244,11 @@ export function HeaderNotificationsBell() {
                 onClick={() => handleNavigate(item.route)}
               >
                 <span className={`mt-0.5 rounded-full border px-2 py-1 text-[10px] font-bold uppercase ${severityClass[item.severity]}`}>
-                  {item.severity}
+                  {translateSeverity(item.severity, isEnglish)}
                 </span>
                 <div className='min-w-0 flex-1'>
                   <div className='flex items-start justify-between gap-2'>
-                    <p className='font-semibold leading-tight text-foreground'>{item.title}</p>
+                    <p className='font-semibold leading-tight text-foreground'>{translateNotificationTitle(item.title, isEnglish)}</p>
                     {item.count && item.count > 1 ? (
                       <span className='rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground'>
                         {item.count}
@@ -154,7 +256,7 @@ export function HeaderNotificationsBell() {
                     ) : null}
                   </div>
                   <p className='mt-1 line-clamp-2 text-xs leading-snug text-muted-foreground'>
-                    {item.summary}
+                    {translateNotificationSummary(item.summary, isEnglish)}
                   </p>
                 </div>
                 <ChevronRight className='mt-1 h-4 w-4 shrink-0 text-muted-foreground' />
@@ -171,14 +273,14 @@ export function HeaderNotificationsBell() {
             onClick={loadNotifications}
           >
             <AlertCircle className='h-3.5 w-3.5' />
-            Actualizar
+            {tx('Actualizar', 'Refresh')}
           </button>
           <button
             type='button'
             className='flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-sky-700 hover:bg-sky-50 dark:text-sky-200 dark:hover:bg-sky-950/40'
             onClick={() => handleNavigate('/dashboard/notificaciones')}
           >
-            Ver centro completo
+            {tx('Ver centro completo', 'View full center')}
             <ChevronRight className='h-3.5 w-3.5' />
           </button>
         </div>

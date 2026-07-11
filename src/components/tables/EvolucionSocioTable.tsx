@@ -17,6 +17,7 @@ import {
 import { EvolucionSocio } from "@/interfaces/evolucionSocio.interface";
 import { getEvolucionesFisicas } from "@/services/evolucionSocioClient";
 import { formatFrontendDate } from '@/utils/dateFormat';
+import { useI18n } from "@/i18n/I18nProvider";
 
 const formatDate = (value?: string | Date | null) => {
   if (!value) return "-";
@@ -38,6 +39,58 @@ const formatNumber = (value?: number | null, suffix = "") => {
 const getRowKey = (row: EvolucionSocio, index: number) =>
   row.id || row.id_evolucion || `${row.socio_id}-${row.fecha}-${index}`;
 
+const translateBodyType = (value: string | null | undefined, tx: (es: string, en: string) => string) => {
+  if (!value) return "-";
+  const normalized = value.trim().toLowerCase();
+  const map: Record<string, string> = {
+    mesomorfo: "Mesomorph",
+    endomorfo: "Endomorph",
+    ectomorfo: "Ectomorph",
+  };
+  return tx(value, map[normalized] ?? value);
+};
+
+
+const translateObservation = (
+  value: string | null | undefined,
+  tx: (es: string, en: string) => string
+) => {
+  if (!value?.trim()) return "";
+  const translated = value
+    .replace(
+      "Registro actual con mejora notable:",
+      "Current record with notable improvement:"
+    )
+    .replace(
+      "reducción importante de grasa y cintura",
+      "significant reduction in fat and waist"
+    )
+    .replace("aumento de masa muscular", "increased muscle mass")
+    .replace(
+      "mayor desarrollo de pecho, hombros, brazos, muslos y pantorrillas",
+      "greater development in chest, shoulders, arms, thighs, and calves"
+    )
+    .replace("Registro inicial histórico.", "Historical initial record.")
+    .replace(
+      "Punto de partida con medidas base para comparar la evolución física del socio.",
+      "Starting point with baseline measurements to compare the member's physical evolution."
+    )
+    .replace(
+      "Punto de partida con mediciones base para comparar la evolución física del socio.",
+      "Starting point with baseline measurements to compare the member's physical evolution."
+    )
+    .replace(
+      "Punto de partida con medidas base para comparación.",
+      "Starting point with baseline measurements for comparison."
+    )
+    .replace(
+      "Punto de partida con mediciones base para comparación.",
+      "Starting point with baseline measurements for comparison."
+    )
+    .replace("Punto de partida", "Starting point");
+  return tx(value, translated);
+};
+
 export default function EvolucionSocioTable({
   socioId = "me",
   refreshKey = 0,
@@ -53,6 +106,9 @@ export default function EvolucionSocioTable({
   onLoadedDataChange?: (rows: EvolucionSocio[]) => void;
   onView?: (evolucion: EvolucionSocio) => void;
 }) {
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const tx = (es: string, en: string) => (isEnglish ? en : es);
   const [evoluciones, setEvoluciones] = useState<EvolucionSocio[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +121,7 @@ export default function EvolucionSocioTable({
       const res = await getEvolucionesFisicas(socioId);
       setEvoluciones(res.data);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Error al cargar evoluciones");
+      setError(e instanceof Error ? e.message : tx("Error al cargar evoluciones", "Error loading evolution records"));
       setEvoluciones([]);
     } finally {
       setLoading(false);
@@ -84,7 +140,7 @@ export default function EvolucionSocioTable({
         if (mounted) setEvoluciones(res.data);
       } catch (e: unknown) {
         if (mounted) {
-          setError(e instanceof Error ? e.message : "Error al cargar evoluciones");
+          setError(e instanceof Error ? e.message : tx("Error al cargar evoluciones", "Error loading evolution records"));
           setEvoluciones([]);
         }
       } finally {
@@ -146,7 +202,7 @@ export default function EvolucionSocioTable({
         {error}
         <div className="mt-4">
           <Button variant="outline" onClick={loadData}>
-            Reintentar
+            {tx("Reintentar", "Retry")}
           </Button>
         </div>
       </div>
@@ -156,7 +212,7 @@ export default function EvolucionSocioTable({
   if (evoluciones.length === 0) {
     return (
       <div className="rounded-md border border-dashed py-12 text-center text-muted-foreground">
-        No hay evoluciones registradas para este socio.
+        {tx("No hay evoluciones registradas para este socio.", "There are no evolution records for this member.")}
       </div>
     );
   }
@@ -164,7 +220,7 @@ export default function EvolucionSocioTable({
   if (filtered.length === 0) {
     return (
       <div className="rounded-md border border-dashed py-10 text-center text-muted-foreground">
-        No hay resultados para la búsqueda actual.
+        {tx("No hay resultados para la búsqueda actual.", "There are no results for the current search.")}
       </div>
     );
   }
@@ -180,7 +236,7 @@ export default function EvolucionSocioTable({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-wide text-[#02a8e1]">
-                  {e.es_registro_inicial ? "Registro inicial" : "Medición"}
+                  {e.es_registro_inicial ? tx("Registro inicial", "Initial record") : tx("Medición", "Measurement")}
                 </p>
                 <h3 className="mt-1 text-lg font-bold text-foreground">
                   {formatDate(e.fecha)}
@@ -193,25 +249,25 @@ export default function EvolucionSocioTable({
                 className="shrink-0 border-[#02a8e1] text-[#02a8e1]"
               >
                 <Eye className="mr-1 h-4 w-4" />
-                Ver
+                {tx("Ver", "View")}
               </Button>
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
               <div className="rounded-xl bg-muted/40 p-3">
-                <p className="text-[11px] uppercase text-muted-foreground">Peso</p>
+                <p className="text-[11px] uppercase text-muted-foreground">{tx("Peso", "Weight")}</p>
                 <p className="font-bold text-foreground">{formatNumber(e.peso, " kg")}</p>
               </div>
               <div className="rounded-xl bg-muted/40 p-3">
-                <p className="text-[11px] uppercase text-muted-foreground">IMC</p>
+                <p className="text-[11px] uppercase text-muted-foreground">{tx("IMC", "BMI")}</p>
                 <p className="font-bold text-foreground">{formatNumber(e.imc)}</p>
               </div>
               <div className="rounded-xl bg-muted/40 p-3">
-                <p className="text-[11px] uppercase text-muted-foreground">Cintura</p>
+                <p className="text-[11px] uppercase text-muted-foreground">{tx("Cintura", "Waist")}</p>
                 <p className="font-bold text-foreground">{formatNumber(e.cintura, " cm")}</p>
               </div>
               <div className="rounded-xl bg-muted/40 p-3">
-                <p className="text-[11px] uppercase text-muted-foreground">Masa muscular</p>
+                <p className="text-[11px] uppercase text-muted-foreground">{tx("Masa muscular", "Muscle mass")}</p>
                 <p className="font-bold text-foreground">{formatNumber(e.masa_muscular, " kg")}</p>
               </div>
             </div>
@@ -221,20 +277,20 @@ export default function EvolucionSocioTable({
                 Grasa: {formatNumber(e.porcentaje_grasa, "%")}
               </span>
               <span className="rounded-full bg-muted px-2.5 py-1">
-                Tipo: {e.tipo_corporal || "-"}
+                {tx("Tipo", "Type")}: {translateBodyType(e.tipo_corporal, tx)}
               </span>
             </div>
 
             {e.observaciones ? (
               <p className="mt-3 rounded-xl border bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground">
-                {e.observaciones}
+                {translateObservation(e.observaciones, tx)}
               </p>
             ) : null}
           </article>
         ))}
 
         <p className="text-center text-xs text-muted-foreground">
-          {filtered.length} registro{filtered.length === 1 ? "" : "s"} de evolución física.
+          {filtered.length} {tx(filtered.length === 1 ? "registro de evolución física." : "registros de evolución física.", filtered.length === 1 ? "physical evolution record." : "physical evolution records.")}
         </p>
       </div>
 
@@ -242,19 +298,19 @@ export default function EvolucionSocioTable({
         <Table className="w-full min-w-[1120px] overflow-hidden text-sm">
           <TableHeader>
             <TableRow className="bg-muted/50 text-muted-foreground">
-              <TableHead>Fecha</TableHead>
-              <TableHead>Peso</TableHead>
-              <TableHead>Altura</TableHead>
-              <TableHead>IMC</TableHead>
-              <TableHead>Cintura</TableHead>
-              <TableHead>Pecho</TableHead>
-              <TableHead>Cadera</TableHead>
-              <TableHead>% Grasa</TableHead>
-              <TableHead>Masa muscular</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Inicial</TableHead>
-              <TableHead>Observaciones</TableHead>
-              <TableHead>Acciones</TableHead>
+              <TableHead>{tx("Fecha", "Date")}</TableHead>
+              <TableHead>{tx("Peso", "Weight")}</TableHead>
+              <TableHead>{tx("Altura", "Height")}</TableHead>
+              <TableHead>{tx("IMC", "BMI")}</TableHead>
+              <TableHead>{tx("Cintura", "Waist")}</TableHead>
+              <TableHead>{tx("Pecho", "Chest")}</TableHead>
+              <TableHead>{tx("Cadera", "Hip")}</TableHead>
+              <TableHead>{tx("% Grasa", "Fat %")}</TableHead>
+              <TableHead>{tx("Masa muscular", "Muscle mass")}</TableHead>
+              <TableHead>{tx("Tipo", "Type")}</TableHead>
+              <TableHead>{tx("Inicial", "Initial")}</TableHead>
+              <TableHead>{tx("Observaciones", "Notes")}</TableHead>
+              <TableHead>{tx("Acciones", "Actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -272,10 +328,10 @@ export default function EvolucionSocioTable({
                 <TableCell>{formatNumber(e.cadera, " cm")}</TableCell>
                 <TableCell>{formatNumber(e.porcentaje_grasa, "%")}</TableCell>
                 <TableCell>{formatNumber(e.masa_muscular, " kg")}</TableCell>
-                <TableCell className="capitalize">{e.tipo_corporal || "-"}</TableCell>
-                <TableCell>{e.es_registro_inicial ? "Sí" : "No"}</TableCell>
-                <TableCell className="max-w-[220px] truncate" title={e.observaciones || ""}>
-                  {e.observaciones || "-"}
+                <TableCell className="capitalize">{translateBodyType(e.tipo_corporal, tx)}</TableCell>
+                <TableCell>{e.es_registro_inicial ? tx("Sí", "Yes") : tx("No", "No")}</TableCell>
+                <TableCell className="max-w-[220px] truncate" title={translateObservation(e.observaciones, tx) || ""}>
+                  {translateObservation(e.observaciones, tx) || "-"}
                 </TableCell>
                 <TableCell>
                   <Button
@@ -285,7 +341,7 @@ export default function EvolucionSocioTable({
                     className="flex items-center gap-1"
                   >
                     <Eye className="h-4 w-4" />
-                    Ver
+                    {tx("Ver", "View")}
                   </Button>
                 </TableCell>
               </TableRow>
@@ -293,11 +349,11 @@ export default function EvolucionSocioTable({
           </TableBody>
           <TableFooter>
             <TableRow>
-              <TableCell colSpan={12}>Total de registros</TableCell>
+              <TableCell colSpan={12}>{tx("Total de registros", "Total records")}</TableCell>
               <TableCell className="text-right">{filtered.length}</TableCell>
             </TableRow>
           </TableFooter>
-          <TableCaption>Historial de evolución física del socio.</TableCaption>
+          <TableCaption>{tx("Historial de evolución física del socio.", "Member physical evolution history.")}</TableCaption>
         </Table>
       </div>
     </div>

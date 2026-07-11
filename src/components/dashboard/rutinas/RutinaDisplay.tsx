@@ -35,6 +35,7 @@ import {
 import { toast } from "sonner";
 import { descargarRutinaPdf } from "@/utils/rutinaPdf";
 import { formatFrontendDate } from '@/utils/dateFormat';
+import { useI18n } from "@/i18n/I18nProvider";
 
 type EjerciciosPorDia = Record<string, any[]>;
 
@@ -439,8 +440,126 @@ const obtenerEstadoSesionLabel = (status: RutinaTrainingSession['status']): stri
 
 const obtenerEstadoSesionClasses = (status: RutinaTrainingSession['status']): string => {
   if (status === 'completed') return 'border-emerald-200 bg-emerald-50 text-emerald-800';
-  if (status === 'cancelled') return 'border-gray-200 bg-gray-50 text-gray-600';
-  return 'border-sky-200 bg-sky-50 text-sky-800';
+  if (status === 'cancelled') return 'border-gray-200 bg-gray-50 text-gray-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300';
+  return 'border-neutral-300 bg-neutral-100 text-neutral-800 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200';
+};
+
+const RUTINA_TITLE_EN: Record<string, string> = {
+  "Rutina sin nombre": "Untitled routine",
+  "Sin rutina asignada": "No routine assigned",
+};
+
+const EXERCISE_NAME_EN: Record<string, string> = {
+  "Press plano con mancuernas livianas": "Light dumbbell flat press",
+  "Flexiones asistidas": "Assisted push-ups",
+  "Aperturas con mancuernas livianas": "Light dumbbell flyes",
+  "Remo sentado en polea": "Seated cable row",
+  "Prensa liviana": "Light leg press",
+  "Sillón de cuádriceps liviano": "Light leg extension",
+  "Camilla de femorales liviana": "Light leg curl",
+  "Curl martillo liviano": "Light hammer curl",
+  "Curl alternado controlado": "Controlled alternating curl",
+  "Sentadilla asistida": "Assisted squat",
+  "Jalón al pecho": "Lat pulldown",
+  "Press militar liviano": "Light shoulder press",
+  "Extensión de tríceps en polea": "Cable triceps extension",
+  "Extensiones de tríceps en polea": "Cable triceps extensions",
+  "Abdominales básicos": "Basic crunches",
+  "Plancha básica": "Basic plank",
+  "Elevaciones laterales livianas": "Light lateral raises",
+  "Press inclinado con mancuernas livianas": "Light dumbbell incline press",
+  "Remo con mancuerna liviana": "Light dumbbell row",
+  "Jalón al pecho liviano": "Light lat pulldown",
+  "Puente de glúteos": "Glute bridge",
+  "Peso muerto rumano liviano": "Light Romanian deadlift",
+  "Zancadas asistidas": "Assisted lunges",
+  "Curl de bíceps con mancuernas livianas": "Light dumbbell biceps curl",
+  "Pull over en polea liviano": "Light cable pullover",
+  "Jalón al pecho en polea": "Cable lat pulldown",
+  "Curl con mancuernas livianas": "Light dumbbell curl",
+  "Aperturas con mancuernas": "Dumbbell chest fly",
+  "Aperturas livianas": "Light chest fly",
+};
+
+const MUSCLE_GROUP_EN: Record<string, string> = {
+  pecho: "chest",
+  espalda: "back",
+  piernas: "legs",
+  cuadriceps: "quadriceps",
+  femorales: "hamstrings",
+  biceps: "biceps",
+  triceps: "triceps",
+  hombros: "shoulders",
+  abdomen: "core",
+  gluteos: "glutes",
+};
+
+const DIA_EN: Record<string, string> = {
+  lunes: "Monday",
+  martes: "Tuesday",
+  miercoles: "Wednesday",
+  jueves: "Thursday",
+  viernes: "Friday",
+  sabado: "Saturday",
+  domingo: "Sunday",
+};
+
+const traducirTituloRutina = (title: string, isEnglish: boolean): string => {
+  if (!isEnglish) return title;
+  if (RUTINA_TITLE_EN[title]) return RUTINA_TITLE_EN[title];
+  if (title.startsWith("Rutina auto ")) return title.replace("Rutina auto ", "Auto routine ");
+  if (title.startsWith("Rutina semana ")) return title.replace("Rutina semana ", "Week routine ");
+  if (title.startsWith("Rutina #")) return title.replace("Rutina #", "Routine #");
+  return title;
+};
+
+const traducirTextoDemoRutina = (value: string | null | undefined, isEnglish: boolean): string => {
+  if (!value) return "";
+  if (!isEnglish) return value;
+  return EXERCISE_NAME_EN[value] ?? value;
+};
+
+const traducirGrupoMuscular = (value: string | null, isEnglish: boolean): string | null => {
+  if (!value) return null;
+  if (!isEnglish) return value;
+  const normalized = normalizarDiaKey(value);
+  return MUSCLE_GROUP_EN[normalized] ?? value;
+};
+
+const traducirDiaRutina = (dia: string | null | undefined, isEnglish: boolean): string => {
+  if (!dia) return isEnglish ? "No day" : "Sin día";
+  if (!isEnglish) return capitalizarTexto(dia);
+  return DIA_EN[normalizarDiaKey(dia)] ?? capitalizarTexto(dia);
+};
+
+const traducirEstadoSesion = (status: RutinaTrainingSession['status'], isEnglish: boolean): string => {
+  if (!isEnglish) return obtenerEstadoSesionLabel(status);
+  if (status === 'completed') return 'Completed';
+  if (status === 'cancelled') return 'Cancelled';
+  return 'In progress';
+};
+
+const traducirDuracionSesion = (minutes: number | null | undefined, isEnglish: boolean): string => {
+  if (minutes === null || minutes === undefined) return isEnglish ? 'Not closed' : 'Sin cerrar';
+  return formatearDuracionSesion(minutes);
+};
+
+const traducirAyudaSeries = (value: string, isEnglish: boolean): string => {
+  if (!isEnglish) return value;
+
+  let match = value.match(/^Debes hacer entre (\d+) a (\d+) series de entre (\d+) a (\d+) repeticiones por serie\.$/);
+  if (match) return `You should perform between ${match[1]} and ${match[2]} sets of between ${match[3]} and ${match[4]} repetitions per set.`;
+
+  match = value.match(/^Debes hacer (\d+) series de entre (\d+) a (\d+) repeticiones por serie\.$/);
+  if (match) return `You should perform ${match[1]} sets of between ${match[2]} and ${match[3]} repetitions per set.`;
+
+  match = value.match(/^Debes hacer entre (\d+) a (\d+) series de (\d+) repeticiones por serie\.$/);
+  if (match) return `You should perform between ${match[1]} and ${match[2]} sets of ${match[3]} repetitions per set.`;
+
+  match = value.match(/^Debes hacer (\d+) series de (\d+) repeticiones por serie\.$/);
+  if (match) return `You should perform ${match[1]} sets of ${match[2]} repetitions per set.`;
+
+  return value;
 };
 
 const obtenerDiaSugerido = (ejerciciosPorDia: EjerciciosPorDia): string | null => {
@@ -520,6 +639,9 @@ export default function RutinaEjercicios({
   backLabel?: string;
   onBack?: () => void;
 }) {
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const tx = (es: string, en: string) => (isEnglish ? en : es);
   const { user, token } = useAuthStore();
   const usuarioEsAdmin = isAdmin(user?.rol);
   const puedeGestionarRutinas = usuarioEsAdmin;
@@ -896,10 +1018,10 @@ export default function RutinaEjercicios({
         socioNombre,
         logoUrl: "/gm_logo.svg",
       });
-      toast.success("Rutina descargada correctamente");
+      toast.success(tx("Rutina descargada correctamente", "Routine downloaded successfully"));
     } catch (error) {
       console.error("Error al descargar rutina en PDF:", error);
-      toast.error("No se pudo descargar la rutina");
+      toast.error(tx("No se pudo descargar la rutina", "The routine could not be downloaded"));
     } finally {
       setExportingPdf(false);
     }
@@ -908,7 +1030,7 @@ export default function RutinaEjercicios({
   if (loading) {
     return (
       <div className="py-10 text-center text-muted-foreground">
-        Cargando rutinas...
+        {tx("Cargando rutinas...", "Loading routines...")}
       </div>
     );
   }
@@ -916,7 +1038,7 @@ export default function RutinaEjercicios({
   if (!loading && rutinas.length === 0) {
     return (
       <div className="py-10 text-center text-muted-foreground">
-        No hay rutinas registradas aún.
+        {tx("No hay rutinas registradas aún.", "No routines have been registered yet.")}
       </div>
     );
   }
@@ -927,9 +1049,9 @@ export default function RutinaEjercicios({
     if (!rutina) {
       return (
         <div className="min-h-screen">
-          <div className="max-w-3xl p-8 mx-auto bg-white border border-gray-200 shadow-xl rounded-2xl">
-            <p className="mb-6 text-sm text-gray-600">
-              No se encontró la rutina solicitada o no tenés permisos para verla.
+          <div className="max-w-3xl p-8 mx-auto bg-white border border-gray-200 shadow-xl rounded-2xl dark:border-neutral-800 dark:bg-neutral-950 dark:shadow-black/40">
+            <p className="mb-6 text-sm text-gray-600 dark:text-neutral-300">
+              {tx("No se encontró la rutina solicitada o no tenés permisos para verla.", "The requested routine was not found, or you do not have permission to view it.")}
             </p>
             <button
               onClick={volverALista}
@@ -960,35 +1082,35 @@ export default function RutinaEjercicios({
 
     return (
       <>
-        <div className="min-h-screen bg-slate-50/70 px-0 py-0 sm:px-4 sm:py-6">
-          <div className="mx-auto overflow-hidden bg-white shadow-xl max-w-7xl rounded-none sm:rounded-3xl">
-          <div className="flex flex-col gap-4 px-4 py-5 text-white bg-gradient-to-br from-gray-950 via-gray-900 to-gray-800 sm:flex-row sm:items-center sm:justify-between sm:px-10 sm:py-8">
+        <div className="min-h-screen bg-slate-50/70 px-0 py-0 sm:px-4 sm:py-6 dark:bg-black">
+          <div className="mx-auto overflow-hidden bg-white shadow-xl max-w-7xl rounded-none sm:rounded-3xl dark:border dark:border-neutral-800 dark:bg-neutral-950 dark:shadow-2xl dark:shadow-black/60">
+          <div className="flex flex-col gap-4 px-4 py-5 text-white bg-gradient-to-br from-neutral-950 via-neutral-950 to-black sm:flex-row sm:items-center sm:justify-between sm:px-10 sm:py-8">
             <div className="flex-1 min-w-0">
               <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/80">
                 <Dumbbell className="h-3.5 w-3.5" />
-                Detalle de rutina
+                {tx("Detalle de rutina", "Routine detail")}
               </div>
               <h1 className="mb-2 text-2xl font-semibold leading-tight tracking-tight sm:text-3xl lg:text-4xl sm:tracking-wide">
-                {obtenerTituloRutina(rutina)}
+                {traducirTituloRutina(obtenerTituloRutina(rutina), isEnglish)}
               </h1>
 
               {usuarioEsAdmin && rutina.socio && (
                 <p className="mb-2 text-sm font-light opacity-80">
-                  Socio: {rutina.socio.nombre_completo}
-                  {rutina.socio.dni ? ` · DNI: ${rutina.socio.dni}` : ""}
+                  {tx("Socio", "Member")}: {rutina.socio.nombre_completo}
+                  {rutina.socio.dni ? ` · ${tx("DNI", "ID")}: ${rutina.socio.dni}` : ""}
                 </p>
               )}
 
               <div className="flex flex-col gap-2 text-xs font-light sm:flex-row sm:gap-5 sm:text-sm text-white/70">
                 <span>
-                  CREADO{" "}
+                  {tx("CREADO", "CREATED")}{" "}
                   {rutina.creado_en
                     ? formatFrontendDate(rutina.creado_en)
                     : "-"}
                 </span>
                 <span className="hidden sm:inline">•</span>
                 <span>
-                  ACTUALIZADO{" "}
+                  {tx("ACTUALIZADO", "UPDATED")}{" "}
                   {rutina.actualizado_en
                     ? formatFrontendDate(rutina.actualizado_en)
                     : "-"}
@@ -1000,10 +1122,10 @@ export default function RutinaEjercicios({
               <button
                 onClick={() => handleDescargarPdf(rutina, ejerciciosPorDia)}
                 disabled={exportingPdf}
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white bg-white px-4 py-2 text-xs font-semibold tracking-wide text-gray-950 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 sm:px-6 sm:py-3 sm:text-sm hover:bg-gray-100"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/20 bg-white px-4 py-2 text-xs font-semibold tracking-wide text-gray-950 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 sm:px-6 sm:py-3 sm:text-sm hover:bg-gray-100 dark:border-neutral-700 dark:bg-neutral-100 dark:text-black dark:hover:bg-white"
               >
                 <Download className="w-4 h-4" />
-                {exportingPdf ? "Generando..." : "Descargar PDF"}
+                {exportingPdf ? tx("Generando...", "Generating...") : tx("Descargar PDF", "Download PDF")}
               </button>
 
               {puedeMarcarEjercicios && totalEjercicios > 0 && (
@@ -1016,7 +1138,7 @@ export default function RutinaEjercicios({
                       className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-emerald-300 bg-emerald-400 px-4 py-2 text-xs font-semibold tracking-wide text-emerald-950 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 sm:px-6 sm:py-3 sm:text-sm hover:bg-emerald-300"
                     >
                       <Flag className="w-4 h-4" />
-                      {sessionActionLoading === 'finish-session' ? 'Finalizando...' : 'Finalizar sesión'}
+                      {sessionActionLoading === 'finish-session' ? tx('Finalizando...', 'Finishing...') : tx('Finalizar sesión', 'Finish session')}
                     </button>
                     <button
                       type="button"
@@ -1025,7 +1147,7 @@ export default function RutinaEjercicios({
                       className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/30 bg-transparent px-4 py-2 text-xs font-medium tracking-wide text-white transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 sm:px-6 sm:py-3 sm:text-sm hover:bg-white/10"
                     >
                       <X className="w-4 h-4" />
-                      {sessionActionLoading === 'cancel-session' ? 'Cancelando...' : 'Cancelar sesión'}
+                      {sessionActionLoading === 'cancel-session' ? tx('Cancelando...', 'Cancelling...') : tx('Cancelar sesión', 'Cancel session')}
                     </button>
                   </>
                 ) : (
@@ -1037,7 +1159,7 @@ export default function RutinaEjercicios({
                       className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-emerald-300 bg-emerald-400 px-4 py-2 text-xs font-semibold tracking-wide text-emerald-950 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 sm:px-6 sm:py-3 sm:text-sm hover:bg-emerald-300"
                     >
                       <PlayCircle className="w-4 h-4" />
-                      {sessionActionLoading === 'start-session' ? 'Iniciando...' : 'Iniciar sesión'}
+                      {sessionActionLoading === 'start-session' ? tx('Iniciando...', 'Starting...') : tx('Iniciar sesión', 'Start session')}
                     </button>
                     <button
                       type="button"
@@ -1045,7 +1167,7 @@ export default function RutinaEjercicios({
                       className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-white/30 bg-transparent px-4 py-2 text-xs font-medium tracking-wide text-white transition-colors cursor-pointer sm:px-6 sm:py-3 sm:text-sm hover:bg-white/10"
                     >
                       <RotateCcw className="w-4 h-4" />
-                      Reiniciar local
+                      {tx("Reiniciar local", "Reset local progress")}
                     </button>
                   </>
                 )
@@ -1061,38 +1183,38 @@ export default function RutinaEjercicios({
             </div>
           </div>
 
-          <div className="border-b border-gray-100 bg-white px-4 py-4 sm:px-8 sm:py-6">
+          <div className="border-b border-gray-100 bg-white px-4 py-4 sm:px-8 sm:py-6 dark:border-neutral-800 dark:bg-neutral-950">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3 sm:p-4">
-                <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
+              <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3 sm:p-4 dark:border-neutral-800 dark:bg-neutral-900/70">
+                <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-neutral-400">
                   <CalendarDays className="h-4 w-4" />
-                  Días
+                  {tx("Días", "Days")}
                 </div>
-                <p className="text-2xl font-semibold text-gray-950">{diasDisponibles.length}</p>
+                <p className="text-2xl font-semibold text-gray-950 dark:text-neutral-50">{diasDisponibles.length}</p>
               </div>
-              <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3 sm:p-4">
-                <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
+              <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3 sm:p-4 dark:border-neutral-800 dark:bg-neutral-900/70">
+                <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-neutral-400">
                   <Dumbbell className="h-4 w-4" />
-                  Ejercicios
+                  {tx("Ejercicios", "Exercises")}
                 </div>
-                <p className="text-2xl font-semibold text-gray-950">{totalEjercicios}</p>
+                <p className="text-2xl font-semibold text-gray-950 dark:text-neutral-50">{totalEjercicios}</p>
               </div>
-              <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3 sm:p-4">
-                <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
+              <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3 sm:p-4 dark:border-neutral-800 dark:bg-neutral-900/70">
+                <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-neutral-400">
                   <CheckCircle2 className="h-4 w-4" />
-                  Hoy
+                  {tx("Hoy", "Today")}
                 </div>
-                <p className="truncate text-lg font-semibold text-gray-950">
-                  {diaSugerido ? capitalizarTexto(diaSugerido) : "Sin día"}
+                <p className="truncate text-lg font-semibold text-gray-950 dark:text-neutral-50">
+                  {traducirDiaRutina(diaSugerido, isEnglish)}
                 </p>
               </div>
-              <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3 sm:p-4">
-                <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
+              <div className="rounded-2xl border border-gray-100 bg-gray-50 p-3 sm:p-4 dark:border-neutral-800 dark:bg-neutral-900/70">
+                <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-gray-500 dark:text-neutral-400">
                   <Trophy className="h-4 w-4" />
-                  Progreso
+                  {tx("Progreso", "Progress")}
                 </div>
-                <p className="text-lg font-semibold text-gray-950">
-                  {puedeMarcarEjercicios ? `${porcentajeProgreso}%` : 'Solo socio'}
+                <p className="text-lg font-semibold text-gray-950 dark:text-neutral-50">
+                  {puedeMarcarEjercicios ? `${porcentajeProgreso}%` : tx('Solo socio', 'Member only')}
                 </p>
               </div>
             </div>
@@ -1100,92 +1222,92 @@ export default function RutinaEjercicios({
             {puedeMarcarEjercicios && totalEjercicios > 0 && (
               <div className={`mt-4 rounded-2xl border p-4 ${
                 activeTrainingSession
-                  ? 'border-sky-100 bg-sky-50'
+                  ? 'border-neutral-200 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900'
                   : 'border-emerald-100 bg-emerald-50'
               }`}>
                 <div className={`mb-2 flex items-center justify-between gap-3 text-sm font-semibold ${
-                  activeTrainingSession ? 'text-sky-950' : 'text-emerald-950'
+                  activeTrainingSession ? 'text-neutral-950 dark:text-neutral-100' : 'text-emerald-950 dark:text-emerald-200'
                 }`}>
-                  <span>{activeTrainingSession ? 'Sesión activa' : 'Avance personal'}</span>
-                  <span>{ejerciciosCompletadosCount}/{totalEjercicios} ejercicios</span>
+                  <span>{activeTrainingSession ? tx('Sesión activa', 'Active session') : tx('Avance personal', 'Personal progress')}</span>
+                  <span>{ejerciciosCompletadosCount}/{totalEjercicios} {tx("ejercicios", "exercises")}</span>
                 </div>
-                <div className="h-3 overflow-hidden rounded-full bg-white">
+                <div className="h-3 overflow-hidden rounded-full bg-white dark:bg-neutral-800">
                   <div
                     className={`h-full rounded-full transition-all duration-300 ${
-                      activeTrainingSession ? 'bg-sky-500' : 'bg-emerald-500'
+                      activeTrainingSession ? 'bg-neutral-500' : 'bg-emerald-500'
                     }`}
                     style={{ width: `${porcentajeProgreso}%` }}
                   />
                 </div>
                 <p className={`mt-2 text-xs leading-5 ${
-                  activeTrainingSession ? 'text-sky-800' : 'text-emerald-800'
+                  activeTrainingSession ? 'text-neutral-700 dark:text-neutral-300' : 'text-emerald-800 dark:text-emerald-300'
                 }`}>
                   {activeTrainingSession
-                    ? 'Esta sesión se guarda en el historial formal de entrenamiento. Al finalizar, quedará disponible para seguimiento posterior.'
-                    : 'Podés marcar avance local o iniciar una sesión para guardar el entrenamiento en el historial.'}
+                    ? tx('Esta sesión se guarda en el historial formal de entrenamiento. Al finalizar, quedará disponible para seguimiento posterior.', 'This session is saved in the formal training history. After finishing, it will be available for later follow-up.')
+                    : tx('Podés marcar avance local o iniciar una sesión para guardar el entrenamiento en el historial.', 'You can mark local progress or start a session to save the workout in the history.')}
                 </p>
               </div>
             )}
 
             {puedeMarcarEjercicios && totalEjercicios > 0 && (
-              <div className="mt-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+              <div className="mt-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60 dark:shadow-black/30">
                 <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <div className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-600">
+                    <div className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-600 dark:bg-neutral-800 dark:text-neutral-300">
                       <History className="h-3.5 w-3.5" />
-                      Historial de sesiones
+                      {tx("Historial de sesiones", "Session history")}
                     </div>
-                    <h3 className="mt-2 text-base font-semibold text-gray-950">
-                      Entrenamientos registrados
+                    <h3 className="mt-2 text-base font-semibold text-gray-950 dark:text-neutral-50">
+                      {tx("Entrenamientos registrados", "Registered workouts")}
                     </h3>
                   </div>
                   {trainingSessionsLoading && (
-                    <span className="text-xs font-medium text-gray-500">Cargando historial...</span>
+                    <span className="text-xs font-medium text-gray-500 dark:text-neutral-400">{tx("Cargando historial...", "Loading history...")}</span>
                   )}
                 </div>
 
                 {activeTrainingSession && (
-                  <div className="mb-3 rounded-2xl border border-sky-100 bg-sky-50 p-3 text-sm text-sky-950">
+                  <div className="mb-3 rounded-2xl border border-neutral-200 bg-neutral-100 p-3 text-sm text-neutral-900 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <span className="inline-flex items-center gap-2 font-semibold">
                         <Clock className="h-4 w-4" />
-                        Sesión iniciada {formatearFechaHoraSesion(activeTrainingSession.started_at)}
+                        {tx("Sesión iniciada", "Session started")} {formatearFechaHoraSesion(activeTrainingSession.started_at)}
                       </span>
-                      <span className="rounded-full border border-sky-200 bg-white px-3 py-1 text-xs font-semibold text-sky-800">
-                        {activeTrainingSession.progress_percent}% completado
+                      <span className="rounded-full border border-neutral-300 bg-white px-3 py-1 text-xs font-semibold text-neutral-800 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-200">
+                        {activeTrainingSession.progress_percent}% {tx("completado", "completed")}
                       </span>
                     </div>
                   </div>
                 )}
 
                 {finishedTrainingSessions.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-4 text-sm leading-6 text-gray-600">
-                    Todavía no hay sesiones finalizadas para esta rutina. Iniciá una sesión, marcá ejercicios y finalizala para construir historial real.
+                  <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-4 text-sm leading-6 text-gray-600 dark:border-neutral-800 dark:bg-neutral-950/70 dark:text-neutral-300">
+                    {tx("Todavía no hay sesiones finalizadas para esta rutina. Iniciá una sesión, marcá ejercicios y finalizala para construir historial real.", "There are no finished sessions for this routine yet. Start a session, mark exercises, and finish it to build real history.")}
                   </div>
                 ) : (
                   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                     {finishedTrainingSessions.slice(0, 6).map((session) => (
                       <div
                         key={session.id}
-                        className="rounded-2xl border border-gray-100 bg-gray-50 p-3 text-sm"
+                        className="rounded-2xl border border-gray-100 bg-gray-50 p-3 text-sm dark:border-neutral-800 dark:bg-neutral-950/70"
                       >
                         <div className="mb-2 flex items-center justify-between gap-2">
                           <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${obtenerEstadoSesionClasses(session.status)}`}>
-                            {obtenerEstadoSesionLabel(session.status)}
+                            {traducirEstadoSesion(session.status, isEnglish)}
                           </span>
-                          <span className="text-xs font-semibold text-gray-700">
+                          <span className="text-xs font-semibold text-gray-700 dark:text-neutral-300">
                             {session.progress_percent}%
                           </span>
                         </div>
-                        <p className="font-semibold text-gray-950">
+                        <p className="font-semibold text-gray-950 dark:text-neutral-50">
                           {formatearFechaHoraSesion(session.started_at)}
                         </p>
-                        <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-600">
-                          <span className="rounded-xl bg-white px-2 py-1">
-                            {session.completed_exercises}/{session.total_exercises} ejercicios
+                        <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-600 dark:text-neutral-300">
+                          <span className="rounded-xl bg-white px-2 py-1 dark:bg-neutral-900 dark:text-neutral-200">
+                            {session.completed_exercises}/{session.total_exercises} {tx("ejercicios", "exercises")}
                           </span>
-                          <span className="rounded-xl bg-white px-2 py-1">
-                            {formatearDuracionSesion(session.duration_minutes)}
+                          <span className="rounded-xl bg-white px-2 py-1 dark:bg-neutral-900 dark:text-neutral-200">
+                            {traducirDuracionSesion(session.duration_minutes, isEnglish)}
                           </span>
                         </div>
                       </div>
@@ -1209,16 +1331,16 @@ export default function RutinaEjercicios({
                     }
                     className={`flex min-w-max items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition-colors ${
                       diasExpandidos[dia]
-                        ? "border-gray-900 bg-gray-900 text-white"
-                        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                        ? "border-neutral-100 bg-neutral-100 text-black dark:border-neutral-100 dark:bg-neutral-100 dark:text-black"
+                        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:border-neutral-700 dark:hover:bg-neutral-800"
                     }`}
                   >
-                    {capitalizarTexto(dia)}
+                    {traducirDiaRutina(dia, isEnglish)}
                     <span
                       className={`rounded-full px-2 py-0.5 text-[11px] ${
                         diasExpandidos[dia]
-                          ? "bg-white/15 text-white"
-                          : "bg-gray-100 text-gray-600"
+                          ? "bg-black/10 text-black dark:bg-black/30 dark:text-white"
+                          : "bg-gray-100 text-gray-600 dark:bg-neutral-800 dark:text-neutral-300"
                       }`}
                     >
                       {puedeMarcarEjercicios
@@ -1226,8 +1348,8 @@ export default function RutinaEjercicios({
                         : contarEjercicios(ejerciciosPorDia[dia])}
                     </span>
                     {esDiaActual(dia) && (
-                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] uppercase tracking-wide text-emerald-700">
-                        Hoy
+                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] uppercase tracking-wide text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300">
+                        {tx("Hoy", "Today")}
                       </span>
                     )}
                   </button>
@@ -1238,46 +1360,46 @@ export default function RutinaEjercicios({
 
           <div className="p-3 sm:p-6 lg:p-10">
             {diasDisponibles.length === 0 ? (
-              <div className="p-6 text-sm italic font-light text-center text-gray-400 sm:p-8 lg:p-10 sm:text-base">
-                Esta rutina no tiene ejercicios cargados o usa un formato no reconocido.
+              <div className="p-6 text-sm italic font-light text-center text-gray-400 sm:p-8 lg:p-10 sm:text-base dark:text-neutral-500">
+                {tx("Esta rutina no tiene ejercicios cargados o usa un formato no reconocido.", "This routine has no loaded exercises or uses an unrecognized format.")}
               </div>
             ) : (
               diasDisponibles.map((dia) => (
                 <div
                   key={dia}
-                  className="mb-3 overflow-hidden border border-gray-200 bg-white shadow-sm sm:mb-4 rounded-2xl"
+                  className="mb-3 overflow-hidden border border-gray-200 bg-white shadow-sm sm:mb-4 rounded-2xl dark:border-neutral-800 dark:bg-neutral-950 dark:shadow-black/30"
                 >
                   <button
                     onClick={() => toggleDia(dia)}
-                    className={`w-full px-4 py-4 sm:px-8 sm:py-6 border-none cursor-pointer text-left flex justify-between items-center text-gray-800 transition-colors ${
-                      diasExpandidos[dia] ? "bg-gray-50" : "bg-white"
+                    className={`w-full px-4 py-4 sm:px-8 sm:py-6 border-none cursor-pointer text-left flex justify-between items-center text-gray-800 transition-colors dark:text-neutral-100 ${
+                      diasExpandidos[dia] ? "bg-gray-50 dark:bg-neutral-900" : "bg-white dark:bg-neutral-950"
                     }`}
                   >
                     <span className="flex min-w-0 flex-col gap-1">
                       <span className="flex items-center gap-2 text-sm font-semibold sm:text-base">
-                        {capitalizarTexto(dia)}
+                        {traducirDiaRutina(dia, isEnglish)}
                         {esDiaActual(dia) && (
                           <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
-                            Hoy
+                            {tx("Hoy", "Today")}
                           </span>
                         )}
                       </span>
-                      <span className="text-xs font-normal text-gray-500">
+                      <span className="text-xs font-normal text-gray-500 dark:text-neutral-400">
                         {puedeMarcarEjercicios
-                          ? `${contarCompletadosPorDia(ejerciciosPorDia[dia], ejerciciosCompletadosFuente, rutina.id_rutina, dia)} de ${contarEjercicios(ejerciciosPorDia[dia])} ejercicios completados`
-                          : `${contarEjercicios(ejerciciosPorDia[dia])} ejercicios programados`}
+                          ? `${contarCompletadosPorDia(ejerciciosPorDia[dia], ejerciciosCompletadosFuente, rutina.id_rutina, dia)} ${tx("de", "of")} ${contarEjercicios(ejerciciosPorDia[dia])} ${tx("ejercicios completados", "completed exercises")}`
+                          : `${contarEjercicios(ejerciciosPorDia[dia])} ${tx("ejercicios programados", "scheduled exercises")}`}
                       </span>
                     </span>
                     <div
                       className={`ml-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all duration-300 sm:h-9 sm:w-9 ${
                         diasExpandidos[dia]
-                          ? "bg-gray-700 rotate-180"
-                          : "bg-gray-200 rotate-0"
+                          ? "bg-gray-700 rotate-180 dark:bg-neutral-100"
+                          : "bg-gray-200 rotate-0 dark:bg-neutral-800"
                       }`}
                     >
                       <span
                         className={`text-xs ${
-                          diasExpandidos[dia] ? "text-white" : "text-gray-600"
+                          diasExpandidos[dia] ? "text-white dark:text-black" : "text-gray-600 dark:text-neutral-300"
                         }`}
                       >
                         ▼
@@ -1286,13 +1408,15 @@ export default function RutinaEjercicios({
                   </button>
 
                   {diasExpandidos[dia] && (
-                    <div className="px-3 pb-4 sm:px-8 sm:pb-8 bg-gray-50">
+                    <div className="px-3 pb-4 sm:px-8 sm:pb-8 bg-gray-50 dark:bg-neutral-950">
                       {ejerciciosPorDia[dia]?.length > 0 ? (
                         ejerciciosPorDia[dia].map(
                           (ejercicio: any, idx: number) => {
                             const ejercicioKey = `${dia}-${idx}`;
-                            const nombreEjercicio =
-                              obtenerNombreEjercicio(ejercicio);
+                            const nombreEjercicio = traducirTextoDemoRutina(
+                              obtenerNombreEjercicio(ejercicio),
+                              isEnglish
+                            );
                             const series = obtenerSeries(ejercicio);
                             const repeticiones =
                               obtenerRepeticiones(ejercicio);
@@ -1306,10 +1430,10 @@ export default function RutinaEjercicios({
                             return (
                               <div
                                 key={idx}
-                                className={`mt-3 overflow-hidden rounded-2xl border bg-white shadow-sm transition-colors sm:mt-5 ${
+                                className={`mt-3 overflow-hidden rounded-2xl border bg-white shadow-sm transition-colors sm:mt-5 dark:bg-neutral-950/80 dark:shadow-black/30 ${
                                   ejercicioCompletado
-                                    ? 'border-emerald-300 ring-1 ring-emerald-100'
-                                    : 'border-gray-200'
+                                    ? 'border-emerald-300 ring-1 ring-emerald-100 dark:border-emerald-700 dark:ring-emerald-900/60'
+                                    : 'border-gray-200 dark:border-neutral-800'
                                 }`}
                               >
                                 <div className="flex flex-col gap-4 p-4 sm:p-6 lg:flex-row lg:items-start lg:gap-8">
@@ -1319,7 +1443,7 @@ export default function RutinaEjercicios({
                                         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
                                           ejercicioCompletado
                                             ? 'bg-emerald-600 text-white'
-                                            : 'bg-gray-900 text-white'
+                                            : 'bg-gray-900 text-white dark:bg-neutral-100 dark:text-black'
                                         }`}
                                       >
                                         {ejercicioCompletado ? <CheckCircle2 className="h-5 w-5" /> : idx + 1}
@@ -1327,42 +1451,42 @@ export default function RutinaEjercicios({
                                       <div className="min-w-0 flex-1">
                                         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                                           <h3 className={`m-0 text-base font-semibold leading-snug tracking-tight break-words sm:text-xl lg:text-2xl ${
-                                            ejercicioCompletado ? 'text-emerald-950' : 'text-gray-950'
+                                            ejercicioCompletado ? 'text-emerald-950 dark:text-emerald-200' : 'text-gray-950 dark:text-neutral-50'
                                           }`}>
                                             {nombreEjercicio}
                                           </h3>
                                           {puedeMarcarEjercicios && ejercicioCompletado && (
-                                            <span className="inline-flex w-fit items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                                            <span className="inline-flex w-fit items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300">
                                               <CheckCircle2 className="h-3.5 w-3.5" />
-                                              Completado
+                                              {tx("Completado", "Completed")}
                                             </span>
                                           )}
                                         </div>
                                         {obtenerGrupoMuscular(ejercicio) && (
-                                          <p className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-gray-500">
-                                            {obtenerGrupoMuscular(ejercicio)}
+                                          <p className="mt-1 text-xs font-medium uppercase tracking-[0.14em] text-gray-500 dark:text-neutral-400">
+                                            {traducirGrupoMuscular(obtenerGrupoMuscular(ejercicio), isEnglish)}
                                           </p>
                                         )}
                                       </div>
                                     </div>
 
                                     <div className="mb-3 grid grid-cols-3 gap-2 sm:mb-4 sm:max-w-xl">
-                                      <div className="rounded-2xl bg-gray-50 p-3 text-center">
-                                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-500">Series</p>
-                                        <p className="mt-1 text-sm font-semibold text-gray-950 sm:text-base">{series}</p>
+                                      <div className="rounded-2xl bg-gray-50 p-3 text-center dark:border dark:border-neutral-800 dark:bg-neutral-900/80">
+                                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-neutral-400">{tx("Series", "Sets")}</p>
+                                        <p className="mt-1 text-sm font-semibold text-gray-950 sm:text-base dark:text-neutral-50">{series}</p>
                                       </div>
-                                      <div className="rounded-2xl bg-gray-50 p-3 text-center">
-                                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-500">Reps</p>
-                                        <p className="mt-1 text-sm font-semibold text-gray-950 sm:text-base">{repeticiones}</p>
+                                      <div className="rounded-2xl bg-gray-50 p-3 text-center dark:border dark:border-neutral-800 dark:bg-neutral-900/80">
+                                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-neutral-400">{tx("Reps", "Reps")}</p>
+                                        <p className="mt-1 text-sm font-semibold text-gray-950 sm:text-base dark:text-neutral-50">{repeticiones}</p>
                                       </div>
-                                      <div className="rounded-2xl bg-gray-50 p-3 text-center">
-                                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-500">Descanso</p>
-                                        <p className="mt-1 text-sm font-semibold text-gray-950 sm:text-base">{descanso}</p>
+                                      <div className="rounded-2xl bg-gray-50 p-3 text-center dark:border dark:border-neutral-800 dark:bg-neutral-900/80">
+                                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-neutral-400">{tx("Descanso", "Rest")}</p>
+                                        <p className="mt-1 text-sm font-semibold text-gray-950 sm:text-base dark:text-neutral-50">{descanso}</p>
                                       </div>
                                     </div>
 
                                     <div className="flex flex-wrap items-center gap-2 mb-3 sm:mb-4">
-                                      <div className="inline-block px-3 py-1 text-xs font-semibold tracking-wide text-white bg-gray-900 rounded-full sm:px-4 sm:py-2 sm:text-sm">
+                                      <div className="inline-block px-3 py-1 text-xs font-semibold tracking-wide text-white bg-gray-900 rounded-full sm:px-4 sm:py-2 sm:text-sm dark:border dark:border-neutral-700 dark:bg-neutral-100 dark:text-black">
                                         {series} × {repeticiones}
                                       </div>
 
@@ -1379,16 +1503,16 @@ export default function RutinaEjercicios({
                                               ),
                                           })
                                         }
-                                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/20"
-                                        title="Explicar series y repeticiones"
-                                        aria-label={`Explicar series y repeticiones de ${nombreEjercicio}`}
+                                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/20 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-300 dark:hover:border-neutral-700 dark:hover:bg-neutral-900 dark:hover:text-white"
+                                        title={tx("Explicar series y repeticiones", "Explain sets and repetitions")}
+                                        aria-label={`${tx("Explicar series y repeticiones de", "Explain sets and repetitions for")} ${nombreEjercicio}`}
                                       >
                                         <Info className="h-4 w-4" />
                                       </button>
                                     </div>
 
                                     {obtenerIndicacionTecnica(ejercicio) && (
-                                      <p className="mb-3 rounded-2xl bg-blue-50 p-3 text-sm leading-6 text-blue-950">
+                                      <p className="mb-3 rounded-2xl bg-gray-100 p-3 text-sm leading-6 text-gray-800 dark:border dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300">
                                         {obtenerIndicacionTecnica(ejercicio)}
                                       </p>
                                     )}
@@ -1401,8 +1525,8 @@ export default function RutinaEjercicios({
                                           disabled={sessionActionLoading === completionKey}
                                           className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-full border px-4 py-2 text-xs font-semibold tracking-wide transition-colors disabled:cursor-not-allowed disabled:opacity-70 ${
                                             ejercicioCompletado
-                                              ? 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
-                                              : 'border-gray-300 text-gray-900 hover:bg-gray-100'
+                                              ? 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-950/70'
+                                              : 'border-gray-300 text-gray-900 hover:bg-gray-100 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-900'
                                           }`}
                                         >
                                           {ejercicioCompletado ? (
@@ -1411,10 +1535,10 @@ export default function RutinaEjercicios({
                                             <Circle className="h-4 w-4" />
                                           )}
                                           {sessionActionLoading === completionKey
-                                            ? 'Guardando...'
+                                            ? tx('Guardando...', 'Saving...')
                                             : ejercicioCompletado
-                                              ? 'Reabrir ejercicio'
-                                              : 'Marcar completado'}
+                                              ? tx('Reabrir ejercicio', 'Reopen exercise')
+                                              : tx('Marcar completado', 'Mark completed')}
                                         </button>
                                       )}
                                       {videoYoutube && (
@@ -1422,24 +1546,24 @@ export default function RutinaEjercicios({
                                           href={videoYoutube}
                                           target="_blank"
                                           rel="noreferrer"
-                                          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-gray-300 px-4 py-2 text-xs font-semibold tracking-wide text-gray-900 transition-colors hover:bg-gray-100"
+                                          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-gray-300 px-4 py-2 text-xs font-semibold tracking-wide text-gray-900 transition-colors hover:bg-gray-100 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-900"
                                         >
                                           <PlayCircle className="h-4 w-4" />
-                                          Ver video
+                                          {tx("Ver video", "View video")}
                                         </a>
                                       )}
                                       {imagen && (
                                         <button
                                           type="button"
                                           onClick={() => toggleImagen(ejercicioKey)}
-                                          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-gray-300 px-4 py-2 text-xs font-semibold tracking-wide text-gray-900 transition-colors hover:bg-gray-100"
+                                          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-gray-300 px-4 py-2 text-xs font-semibold tracking-wide text-gray-900 transition-colors hover:bg-gray-100 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-900"
                                         >
                                           {imagenVisible[ejercicioKey] ? (
                                             <EyeOff className="h-4 w-4" />
                                           ) : (
                                             <Eye className="h-4 w-4" />
                                           )}
-                                          {imagenVisible[ejercicioKey] ? "Ocultar imagen" : "Ver imagen"}
+                                          {imagenVisible[ejercicioKey] ? tx("Ocultar imagen", "Hide image") : tx("Ver imagen", "View image")}
                                         </button>
                                       )}
                                     </div>
@@ -1447,10 +1571,10 @@ export default function RutinaEjercicios({
 
                                   {imagenVisible[ejercicioKey] && imagen && (
                                     <div className="w-full lg:w-64 xl:w-80">
-                                      <div className="overflow-hidden rounded-2xl bg-gray-50">
+                                      <div className="overflow-hidden rounded-2xl bg-gray-50 dark:bg-neutral-900">
                                         <Image
                                           src={imagen}
-                                          alt={`Demostración de ${nombreEjercicio}`}
+                                          alt={`${tx("Demostración de", "Demonstration of")} ${nombreEjercicio}`}
                                           width={320}
                                           height={500}
                                           className="object-cover w-full h-64 sm:h-72 lg:h-80 xl:h-72"
@@ -1465,8 +1589,8 @@ export default function RutinaEjercicios({
                           }
                         )
                       ) : (
-                        <div className="p-6 text-sm italic font-light text-center text-gray-400 sm:p-8 lg:p-10 sm:text-base">
-                          Día de descanso
+                        <div className="p-6 text-sm italic font-light text-center text-gray-400 sm:p-8 lg:p-10 sm:text-base dark:text-neutral-500">
+                          {tx("Día de descanso", "Rest day")}
                         </div>
                       )}
                     </div>
@@ -1485,7 +1609,7 @@ export default function RutinaEjercicios({
             onClick={() => setAyudaSeries(null)}
           >
             <div
-              className="w-full max-w-md rounded-2xl bg-white p-5 text-gray-900 shadow-2xl sm:p-6"
+              className="w-full max-w-md rounded-2xl bg-white p-5 text-gray-900 shadow-2xl sm:p-6 dark:border dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100 dark:shadow-black/70"
               role="dialog"
               aria-modal="true"
               aria-labelledby="series-reps-help-title"
@@ -1493,41 +1617,41 @@ export default function RutinaEjercicios({
             >
               <div className="mb-4 flex items-start justify-between gap-4">
                 <div>
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">
-                    Ayuda para principiantes
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-neutral-400">
+                    {tx("Ayuda para principiantes", "Beginner help")}
                   </p>
                   <h2
                     id="series-reps-help-title"
-                    className="text-lg font-semibold tracking-wide text-gray-950"
+                    className="text-lg font-semibold tracking-wide text-gray-950 dark:text-neutral-50"
                   >
-                    Series y repeticiones
+                    {tx("Series y repeticiones", "Sets and repetitions")}
                   </h2>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => setAyudaSeries(null)}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
-                  aria-label="Cerrar ayuda"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:border-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-900 dark:hover:text-white"
+                  aria-label={tx("Cerrar ayuda", "Close help")}
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
 
-              <p className="mb-3 text-sm font-medium text-gray-800">
+              <p className="mb-3 text-sm font-medium text-gray-800 dark:text-neutral-200">
                 {ayudaSeries.titulo}
               </p>
 
-              <div className="mb-4 inline-flex rounded-full bg-gray-900 px-4 py-2 text-sm font-semibold tracking-wide text-white">
+              <div className="mb-4 inline-flex rounded-full bg-gray-900 px-4 py-2 text-sm font-semibold tracking-wide text-white dark:bg-neutral-100 dark:text-black">
                 {ayudaSeries.badge}
               </div>
 
-              <p className="text-sm leading-6 text-gray-700 sm:text-base">
-                {ayudaSeries.descripcion}
+              <p className="text-sm leading-6 text-gray-700 sm:text-base dark:text-neutral-300">
+                {traducirAyudaSeries(ayudaSeries.descripcion, isEnglish)}
               </p>
 
-              <p className="mt-4 rounded-xl bg-gray-50 p-3 text-xs leading-5 text-gray-500">
-                Consejo: priorizá la técnica. Si no podés completar el rango indicado, bajá un poco el peso y consultá al entrenador.
+              <p className="mt-4 rounded-xl bg-gray-50 p-3 text-xs leading-5 text-gray-500 dark:border dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-400">
+                {tx("Consejo: priorizá la técnica. Si no podés completar el rango indicado, bajá un poco el peso y consultá al entrenador.", "Tip: prioritize technique. If you cannot complete the indicated range, lower the weight a little and ask the trainer.")}
               </p>
             </div>
           </div>
@@ -1539,7 +1663,7 @@ export default function RutinaEjercicios({
   if (singleMode && viendoRutina === null) {
     return (
       <div className="py-10 text-center text-muted-foreground">
-        Preparando detalle de rutina...
+        {tx("Preparando detalle de rutina...", "Preparing routine detail...")}
       </div>
     );
   }
@@ -1566,29 +1690,29 @@ export default function RutinaEjercicios({
                 className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm"
               >
                 <div className="p-5 sm:p-8 lg:p-10">
-                  <h2 className="mb-2 text-xl font-semibold tracking-tight text-gray-950 break-words sm:mb-3 sm:text-2xl lg:text-3xl sm:tracking-wide">
-                    {obtenerTituloRutina(rutina)}
+                  <h2 className="mb-2 text-xl font-semibold tracking-tight text-gray-950 break-words dark:text-neutral-50 sm:mb-3 sm:text-2xl lg:text-3xl sm:tracking-wide">
+                    {traducirTituloRutina(obtenerTituloRutina(rutina), isEnglish)}
                   </h2>
 
                   {usuarioEsAdmin && rutina.socio && (
                     <div className="mb-3 text-sm font-light tracking-wide text-gray-600">
-                      <span className="font-medium">Socio:</span>{" "}
+                      <span className="font-medium">{tx("Socio", "Member")}:</span>{" "}
                       {rutina.socio.nombre_completo}
-                      {rutina.socio.dni ? ` · DNI: ${rutina.socio.dni}` : ""}
+                      {rutina.socio.dni ? ` · ${tx("DNI", "ID")}: ${rutina.socio.dni}` : ""}
                       {rutina.socio.email ? ` · ${rutina.socio.email}` : ""}
                     </div>
                   )}
 
                   <div className="flex flex-col gap-2 text-xs font-light tracking-wide text-gray-600 sm:flex-row sm:gap-6 sm:text-sm">
                     <span>
-                      CREADO{" "}
+                      {tx("CREADO", "CREATED")}{" "}
                       {rutina.creado_en
                         ? formatFrontendDate(rutina.creado_en)
                         : "-"}
                     </span>
                     <span className="hidden sm:inline">•</span>
                     <span>
-                      ACTUALIZADO{" "}
+                      {tx("ACTUALIZADO", "UPDATED")}{" "}
                       {rutina.actualizado_en
                         ? formatFrontendDate(rutina.actualizado_en)
                         : "-"}
@@ -1604,7 +1728,7 @@ export default function RutinaEjercicios({
                     }}
                     className="min-h-11 rounded-full border-none bg-gray-900 px-6 py-2 text-xs font-semibold tracking-wide text-white transition-colors cursor-pointer sm:px-8 sm:py-3 sm:text-sm hover:bg-gray-800"
                   >
-                    Ver rutina
+                    {tx("Ver rutina", "View routine")}
                   </button>
 
                   {puedeGestionarRutinas && onEdit && (
