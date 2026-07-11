@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { PaginationControls } from '@/components/ui/PaginationControls';
 import { Search } from 'lucide-react';
+import { useI18n } from '@/i18n/I18nProvider';
 import SocioDietaGrid from '@/components/gestor-dietas/SocioDietaGrid';
 import { fetchSocios } from '@/services/socioService';
 import { Socio } from '@/interfaces/socio.interface';
@@ -19,6 +20,9 @@ import { JwtUser } from '@/interfaces/jwtUser.interface';
 const GESTOR_DIETAS_PAGE_SIZE = 12;
 
 export default function DietasPage() {
+  const { locale } = useI18n();
+  const isEnglish = locale === 'en';
+  const tx = (es: string, en: string) => (isEnglish ? en : es);
   const { isAuthenticated, initializeAuth, isInitialized, user } =
     useAuthStore();
   const router = useRouter();
@@ -96,7 +100,7 @@ export default function DietasPage() {
   if (loading || !isInitialized) {
     return (
       <div className='flex items-center justify-center h-screen'>
-        Cargando datos de socios...
+        {tx('Cargando datos de socios...', 'Loading member data...')}
       </div>
     );
   }
@@ -110,16 +114,16 @@ export default function DietasPage() {
       <div className='flex w-full min-h-screen'>
         <AppSidebar />
         <SidebarInset>
-          <AppHeader title='Gestor de Dietas' />
+          <AppHeader title={tx('Gestor de Dietas', 'Diet manager')} />
           <main className='flex-1 p-6 space-y-6'>
             <Card className='w-full'>
               <CardHeader className='flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap'>
-                <h2 className='text-xl font-bold'>Dietas de Socios</h2>
+                <h2 className='text-xl font-bold'>{tx('Dietas de Socios', 'Member diets')}</h2>
                 <div className='relative flex-grow md:flex-grow-0'>
                   <Search className='absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground' />
                   <Input
                     type='search'
-                    placeholder='Buscar por nombre o DNI...'
+                    placeholder={tx('Buscar por nombre o DNI...', 'Search by name or ID...')}
                     className='pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] w-full'
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -133,7 +137,7 @@ export default function DietasPage() {
                   totalItems={totalSocios}
                   pageSize={GESTOR_DIETAS_PAGE_SIZE}
                   onPageChange={setCurrentPage}
-                  itemLabel="socios"
+                  itemLabel={tx("socios", "members")}
                 />
               </CardContent>
             </Card>

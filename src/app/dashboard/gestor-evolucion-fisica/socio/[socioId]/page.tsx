@@ -27,6 +27,7 @@ import { getEvolucionFisicaAdminResumen } from "@/services/evolucionSocioClient"
 import { useAuthStore } from "@/stores/authStore";
 import { descargarEvolucionFisicaPdf } from "@/utils/evolucionFisicaPdf";
 import { toast } from "sonner";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const isAdminRole = (rol?: string | null) => {
   const normalized = rol?.trim().toLowerCase();
@@ -35,6 +36,9 @@ const isAdminRole = (rol?: string | null) => {
 
 export default function GestorEvolucionFisicaDetallePage() {
   const router = useRouter();
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const tx = (es: string, en: string) => (isEnglish ? en : es);
   const params = useParams<{ socioId: string }>();
   const socioId = params.socioId;
   const { isAuthenticated, initializeAuth, isInitialized, user } = useAuthStore();
@@ -86,12 +90,12 @@ export default function GestorEvolucionFisicaDetallePage() {
 
   const socioNombre = useMemo(() => {
     const socio = sociosResumen.find((item) => item.id_socio === socioId);
-    return socio?.nombre_completo || "Socio";
+    return socio?.nombre_completo || tx("Socio", "Member");
   }, [socioId, sociosResumen]);
 
   const handleDownloadPdf = async () => {
     if (!dashboardRows.length) {
-      toast.warning("No hay registros para descargar");
+      toast.warning(tx("No hay registros para descargar", "There are no records to download"));
       return;
     }
 
@@ -104,13 +108,13 @@ export default function GestorEvolucionFisicaDetallePage() {
         logoUrl: "/gm_logo.svg",
       });
 
-      toast.success("PDF de evolución física generado");
+      toast.success(tx("PDF de evolución física generado", "Physical evolution PDF generated"));
     } catch (error) {
       console.error("Error al generar PDF de evolución física:", error);
       toast.error(
         error instanceof Error
           ? error.message
-          : "No se pudo generar el PDF de evolución física"
+          : tx("No se pudo generar el PDF de evolución física", "The physical evolution PDF could not be generated")
       );
     } finally {
       setGeneratingPdf(false);
@@ -118,7 +122,7 @@ export default function GestorEvolucionFisicaDetallePage() {
   };
 
   if (!isInitialized) {
-    return <div className="flex h-screen items-center justify-center">Cargando...</div>;
+    return <div className="flex h-screen items-center justify-center">{tx("Cargando...", "Loading...")}</div>;
   }
 
   if (!isAuthenticated || !isAdminRole(user?.rol)) {
@@ -130,18 +134,18 @@ export default function GestorEvolucionFisicaDetallePage() {
       <div className="flex min-h-screen w-full">
         <AppSidebar />
         <SidebarInset>
-          <AppHeader title="Detalle de Evolución Física" />
+          <AppHeader title={tx("Detalle de Evolución Física", "Physical evolution detail")} />
           <main className="flex-1 space-y-6 p-6">
             <Card className="w-full">
               <CardHeader className="border-b p-4">
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                   <div>
                     <CardTitle className="text-2xl font-bold">
-                      Evolución física de {socioNombre}
+                      {tx("Evolución física de", "Physical evolution of")} {socioNombre}
                     </CardTitle>
                     <CardDescription className="mt-2 flex items-center gap-2">
                       <ShieldCheck className="h-4 w-4 text-[#02a8e1]" />
-                      Vista administrativa solo lectura. Los valores no se editan desde este gestor.
+                      {tx("Vista administrativa solo lectura. Los valores no se editan desde este gestor.", "Read-only administrative view. Values are not edited from this manager.")}
                     </CardDescription>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -151,20 +155,20 @@ export default function GestorEvolucionFisicaDetallePage() {
                       disabled={!dashboardRows.length || generatingPdf}
                     >
                       <Download className="mr-2 h-4 w-4" />
-                      {generatingPdf ? "Generando PDF..." : "Descargar PDF"}
+                      {generatingPdf ? tx("Generando PDF...", "Generating PDF...") : tx("Descargar PDF", "Download PDF")}
                     </Button>
                     <Button
                       variant="outline"
                       onClick={() => router.push("/dashboard/gestor-evolucion-fisica")}
                     >
                       <ArrowLeft className="mr-2 h-4 w-4" />
-                      Volver al gestor
+                      {tx("Volver al gestor", "Back to manager")}
                     </Button>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="p-4 text-sm text-muted-foreground">
-                Registros cargados: {dashboardRows.length}. Resultados filtrados: {tableRows.length}.
+                {tx("Registros cargados", "Loaded records")}: {dashboardRows.length}. {tx("Resultados filtrados", "Filtered results")}: {tableRows.length}.
               </CardContent>
             </Card>
 
@@ -173,16 +177,16 @@ export default function GestorEvolucionFisicaDetallePage() {
             <Card className="w-full">
               <CardHeader className="flex flex-wrap items-center justify-between gap-4 border-b p-4 md:flex-nowrap">
                 <div>
-                  <CardTitle className="text-xl font-bold">Historial de medidas</CardTitle>
+                  <CardTitle className="text-xl font-bold">{tx("Historial de medidas", "Measurement history")}</CardTitle>
                   <CardDescription>
-                    Consulta cronológica de registros físicos del socio.
+                    {tx("Consulta cronológica de registros físicos del socio.", "Chronological view of the member physical records.")}
                   </CardDescription>
                 </div>
                 <div className="relative w-full md:w-[320px]">
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="search"
-                    placeholder="Buscar en registros..."
+                    placeholder={tx("Buscar en registros...", "Search records...")}
                     className="pl-9"
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}

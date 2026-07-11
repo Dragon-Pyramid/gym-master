@@ -13,6 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
+import { useI18n } from "@/i18n/I18nProvider";
 import { AppHeader } from "@/components/header/AppHeader";
 import { AppFooter } from "@/components/footer/AppFooter";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
@@ -39,10 +40,52 @@ function getEstadoClass(estado?: string) {
   return "border-emerald-300 bg-emerald-50 text-emerald-800";
 }
 
+function translateAforoEstado(value: string | undefined, isEnglish: boolean) {
+  if (!value) return "--";
+
+  if (!isEnglish) {
+    return value;
+  }
+
+  const normalized = value.toLowerCase();
+
+  if (normalized === "normal") return "Normal";
+  if (normalized === "moderado" || normalized === "medio") return "Moderate";
+  if (normalized === "alto") return "High";
+  if (normalized === "critico" || normalized === "crítico") return "Critical";
+
+  return value;
+}
+
+function translateAforoMessage(message: string | undefined, isEnglish: boolean) {
+  if (!message) {
+    return isEnglish ? "No capacity data." : "Sin datos de aforo.";
+  }
+
+  if (!isEnglish) {
+    return message;
+  }
+
+  const translations: Record<string, string> = {
+    "Ocupación normal. Hay disponibilidad operativa.":
+      "Normal occupancy. Operational capacity is available.",
+    "Ocupación moderada. El gimnasio opera con margen disponible.":
+      "Moderate occupancy. The gym is operating with available margin.",
+    "Ocupación alta. Recomendado monitorear accesos y horarios pico.":
+      "High occupancy. Monitor access points and peak hours.",
+    "Ocupación crítica. Activar control de aforo y limitar nuevos ingresos.":
+      "Critical occupancy. Activate capacity control and limit new entries.",
+  };
+
+  return translations[message] ?? message;
+}
+
 function MovimientoRow({
   movimiento,
+  isEnglish,
 }: {
   movimiento: AsistenciaMovimientoResumen;
+  isEnglish: boolean;
 }) {
   const esSalida = movimiento.tipo_movimiento === "salida";
 
@@ -53,7 +96,7 @@ function MovimientoRow({
           {movimiento.socio?.nombre_completo || movimiento.socio_id}
         </p>
         <p className="text-xs text-muted-foreground">
-          ID socio: {movimiento.socio_id}
+          {isEnglish ? "Member ID" : "ID socio"}: {movimiento.socio_id}
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -61,7 +104,7 @@ function MovimientoRow({
           {movimiento.fecha}
         </span>
         <span className="rounded-full bg-muted px-3 py-1 font-mono">
-          Ingreso {movimiento.hora_ingreso?.slice(0, 5) || "--:--"}
+          {isEnglish ? "Check-in" : "Ingreso"} {movimiento.hora_ingreso?.slice(0, 5) || "--:--"}
         </span>
         <span
           className={`inline-flex items-center gap-1 rounded-full px-3 py-1 font-semibold ${
@@ -76,8 +119,10 @@ function MovimientoRow({
             <LogIn className="h-4 w-4" />
           )}
           {esSalida
-            ? `Salida ${movimiento.hora_egreso?.slice(0, 5) || "--:--"}`
-            : "Dentro"}
+            ? `${isEnglish ? "Exit" : "Salida"} ${movimiento.hora_egreso?.slice(0, 5) || "--:--"}`
+            : isEnglish
+              ? "Inside"
+              : "Dentro"}
         </span>
       </div>
     </div>
@@ -86,6 +131,9 @@ function MovimientoRow({
 
 export default function AsistenciaAforoPage() {
   const { isAuthenticated, initializeAuth, isInitialized } = useAuthStore();
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const text = useCallback((es: string, en: string) => (isEnglish ? en : es), [isEnglish]);
   const router = useRouter();
   const [aforo, setAforo] = useState<AforoAsistenciaResumen | null>(null);
   const [loading, setLoading] = useState(true);
@@ -112,12 +160,12 @@ export default function AsistenciaAforoPage() {
       const data = await fetchAforoAsistencia();
       setAforo(data);
     } catch (error: unknown) {
-      toast.error((error as Error).message || "No se pudo cargar el aforo");
+      toast.error((error as Error).message || text("No se pudo cargar el aforo", "Capacity data could not be loaded"));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [text]);
 
   useEffect(() => {
     if (isInitialized && isAuthenticated) {
@@ -141,21 +189,24 @@ export default function AsistenciaAforoPage() {
     movimiento: AsistenciaMovimientoResumen,
   ) => {
     const confirmar = window.confirm(
-      `¿Registrar salida para ${movimiento.socio?.nombre_completo || movimiento.socio_id}?`,
+      text(
+        `¿Registrar salida para ${movimiento.socio?.nombre_completo || movimiento.socio_id}?`,
+        `Register exit for ${movimiento.socio?.nombre_completo || movimiento.socio_id}?`,
+      ),
     );
     if (!confirmar) return;
 
     try {
       const response = await registrarSalidaAdministrativa(movimiento.id);
-      toast.success(response.message || "Salida registrada correctamente");
+      toast.success(response.message || text("Salida registrada correctamente", "Exit recorded successfully"));
       await loadAforo(true);
     } catch (error: unknown) {
-      toast.error((error as Error).message || "No se pudo registrar la salida");
+      toast.error((error as Error).message || text("No se pudo registrar la salida", "The exit could not be recorded"));
     }
   };
 
   if (!isInitialized || loading) {
-    return <div>Cargando...</div>;
+    return <div>{text("Cargando...", "Loading...")}</div>;
   }
 
   if (!isAuthenticated) {
@@ -167,15 +218,15 @@ export default function AsistenciaAforoPage() {
       <div className="flex w-full min-h-screen">
         <AppSidebar />
         <SidebarInset>
-          <AppHeader title="Salida / Aforo" />
+          <AppHeader title={text("Salida / Aforo", "Exit / Capacity")} />
           <main className="flex-1 p-6 space-y-6">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
                 <h1 className="text-2xl font-black">
-                  Control de salida y aforo
+                  {text("Control de salida y aforo", "Exit and capacity control")}
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  Monitoreo operativo en vivo de personas dentro del gimnasio.
+                  {text("Monitoreo operativo en vivo de personas dentro del gimnasio.", "Live operational monitoring of people inside the gym.")}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -184,11 +235,11 @@ export default function AsistenciaAforoPage() {
                   onClick={() => router.push("/dashboard/asistencias")}
                 >
                   <ArrowLeft className="mr-2 h-4 w-4" />
-                  Volver al listado
+                  {text("Volver al listado", "Back to list")}
                 </Button>
                 <Button onClick={() => loadAforo(true)} disabled={refreshing}>
                   <RefreshCcw className="mr-2 h-4 w-4" />
-                  {refreshing ? "Actualizando..." : "Actualizar"}
+                  {refreshing ? text("Actualizando...", "Refreshing...") : text("Actualizar", "Refresh")}
                 </Button>
               </div>
             </div>
@@ -199,7 +250,7 @@ export default function AsistenciaAforoPage() {
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">
-                        Dentro ahora
+                        {text("Dentro ahora", "Inside now")}
                       </p>
                       <p className="text-4xl font-black">
                         {aforo?.aforo_actual ?? 0}
@@ -212,20 +263,20 @@ export default function AsistenciaAforoPage() {
               <Card>
                 <CardContent className="p-5">
                   <p className="text-sm font-medium text-muted-foreground">
-                    Capacidad máxima
+                    {text("Capacidad máxima", "Maximum capacity")}
                   </p>
                   <p className="text-4xl font-black">
                     {aforo?.capacidad_maxima ?? 0}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Configurable por entorno
+                    {text("Configurable por entorno", "Configurable by environment")}
                   </p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-5">
                   <p className="text-sm font-medium text-muted-foreground">
-                    Ocupación
+                    {text("Ocupación", "Occupancy")}
                   </p>
                   <p className="text-4xl font-black">
                     {aforo?.porcentaje_ocupacion ?? 0}%
@@ -244,12 +295,12 @@ export default function AsistenciaAforoPage() {
                 <CardContent className="p-5">
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="h-5 w-5" />
-                    <p className="text-sm font-bold uppercase">Estado</p>
+                    <p className="text-sm font-bold uppercase">{text("Estado", "Status")}</p>
                   </div>
                   <p className="mt-2 text-2xl font-black capitalize">
-                    {aforo?.estado ?? "normal"}
+                    {translateAforoEstado(aforo?.estado ?? "normal", isEnglish)}
                   </p>
-                  <p className="text-xs font-medium">{aforo?.mensaje_estado}</p>
+                  <p className="text-xs font-medium">{translateAforoMessage(aforo?.mensaje_estado, isEnglish)}</p>
                 </CardContent>
               </Card>
             </div>
@@ -258,7 +309,7 @@ export default function AsistenciaAforoPage() {
               <Card>
                 <CardContent className="p-4">
                   <p className="text-sm text-muted-foreground">
-                    Entradas de hoy
+                    {text("Entradas de hoy", "Today's entries")}
                   </p>
                   <p className="text-2xl font-bold">
                     {aforo?.entradas_hoy ?? 0}
@@ -268,7 +319,7 @@ export default function AsistenciaAforoPage() {
               <Card>
                 <CardContent className="p-4">
                   <p className="text-sm text-muted-foreground">
-                    Salidas de hoy
+                    {text("Salidas de hoy", "Today's exits")}
                   </p>
                   <p className="text-2xl font-bold">
                     {aforo?.salidas_hoy ?? 0}
@@ -278,7 +329,7 @@ export default function AsistenciaAforoPage() {
               <Card>
                 <CardContent className="p-4">
                   <p className="text-sm text-muted-foreground">
-                    Abiertas antiguas
+                    {text("Abiertas antiguas", "Old open records")}
                   </p>
                   <p className="text-2xl font-bold">
                     {aforo?.asistencias_abiertas_antiguas ?? 0}
@@ -288,7 +339,7 @@ export default function AsistenciaAforoPage() {
               <Card>
                 <CardContent className="p-4">
                   <p className="text-sm text-muted-foreground">
-                    Última lectura
+                    {text("Última lectura", "Last reading")}
                   </p>
                   <p className="flex items-center gap-2 text-2xl font-bold">
                     <Clock className="h-5 w-5" />
@@ -303,7 +354,7 @@ export default function AsistenciaAforoPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Users className="h-5 w-5" />
-                    Socios dentro ahora
+                    {text("Socios dentro ahora", "Members inside now")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -313,7 +364,7 @@ export default function AsistenciaAforoPage() {
                         key={movimiento.id}
                         className="flex flex-col gap-3 rounded-xl border p-3 md:flex-row md:items-center md:justify-between"
                       >
-                        <MovimientoRow movimiento={movimiento} />
+                        <MovimientoRow movimiento={movimiento} isEnglish={isEnglish} />
                         <Button
                           size="sm"
                           variant="outline"
@@ -321,13 +372,13 @@ export default function AsistenciaAforoPage() {
                           className="shrink-0 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
                         >
                           <LogOut className="mr-2 h-4 w-4" />
-                          Registrar salida
+                          {text("Registrar salida", "Register exit")}
                         </Button>
                       </div>
                     ))
                   ) : (
                     <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-                      No hay socios dentro en este momento.
+                      {text("No hay socios dentro en este momento.", "There are no members inside right now.")}
                     </p>
                   )}
                 </CardContent>
@@ -337,7 +388,7 @@ export default function AsistenciaAforoPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Activity className="h-5 w-5" />
-                    Movimientos recientes
+                    {text("Movimientos recientes", "Recent movements")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -346,11 +397,12 @@ export default function AsistenciaAforoPage() {
                       <MovimientoRow
                         key={movimiento.id}
                         movimiento={movimiento}
+                        isEnglish={isEnglish}
                       />
                     ))
                   ) : (
                     <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-                      Todavía no hay movimientos registrados hoy.
+                      {text("Todavía no hay movimientos registrados hoy.", "No movements have been recorded today yet.")}
                     </p>
                   )}
                 </CardContent>

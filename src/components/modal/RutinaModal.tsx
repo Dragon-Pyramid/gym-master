@@ -11,6 +11,7 @@ import RutinasForm from "../forms/RutinasForm";
 import FechaHora from "@/components/ui/FechaHora";
 import { Objetivo } from "@/interfaces/objetivo.interface";
 import { Nivel } from "@/interfaces/niveles.interface";
+import { useI18n } from "@/i18n/I18nProvider";
 
 export default function RutinaModal({
   open,
@@ -31,6 +32,10 @@ export default function RutinaModal({
   targetSocioId?: string;
   targetSocioName?: string;
 }) {
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const tx = (es: string, en: string) => (isEnglish ? en : es);
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="w-full max-w-5xl sm:max-w-4xl">
@@ -38,7 +43,7 @@ export default function RutinaModal({
         <DialogHeader>
           <div className="flex items-center justify-between w-full gap-4">
             <DialogTitle>
-              {rutina ? "Editar Rutina" : "Generar Nueva Rutina"}
+              {rutina ? tx("Editar Rutina", "Edit routine") : tx("Generar Nueva Rutina", "Generate new routine")}
             </DialogTitle>
             <FechaHora />
           </div>

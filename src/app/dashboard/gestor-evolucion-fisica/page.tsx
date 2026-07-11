@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ComponentType } from "react";
 import { useRouter } from "next/navigation";
-import { Activity, CalendarDays, Eye, Search, UserRound } from "lucide-react";
+import { Activity, CalendarDays, Clock3, Eye, Search, UserCheck, UserRound, Users } from "lucide-react";
 import { toast } from "sonner";
 import { AppFooter } from "@/components/footer/AppFooter";
 import { AppHeader } from "@/components/header/AppHeader";
@@ -22,6 +22,7 @@ import { EvolucionFisicaAdminResumen } from "@/interfaces/evolucionSocio.interfa
 import { getEvolucionFisicaAdminResumen } from "@/services/evolucionSocioClient";
 import { useAuthStore } from "@/stores/authStore";
 import { formatFrontendDate } from '@/utils/dateFormat';
+import { useI18n } from "@/i18n/I18nProvider";
 
 const GESTOR_EVOLUCION_PAGE_SIZE = 12;
 
@@ -30,38 +31,79 @@ const isAdminRole = (rol?: string | null) => {
   return normalized === "admin" || normalized === "administrador";
 };
 
-const formatDate = (value?: string | null) => {
-  if (!value) return "Sin registros";
+const formatDate = (value?: string | null, locale: string = "es", emptyLabel = "Sin registros") => {
+  if (!value) return emptyLabel;
 
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "Sin registros" : formatFrontendDate(value, 'es-AR', "Sin registros");
+  const dateLocale = locale === "en" ? "en-US" : "es-AR";
+  return Number.isNaN(date.getTime())
+    ? emptyLabel
+    : formatFrontendDate(value, dateLocale, emptyLabel);
 };
 
-const formatNumber = (value?: number | null, suffix = "") => {
+const formatNumber = (value?: number | null, suffix = "", locale: string = "es") => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) {
     return "-";
   }
 
-  return `${Number(value).toLocaleString("es-AR", {
+  return `${Number(value).toLocaleString(locale === "en" ? "en-US" : "es-AR", {
     maximumFractionDigits: 2,
   })}${suffix}`;
 };
+
+type TranslateFn = (es: string, en: string) => string;
 
 function StatCard({
   title,
   value,
   helper,
+  icon: Icon,
+  tone = "neutral",
 }: {
   title: string;
   value: string | number;
   helper: string;
+  icon: ComponentType<{ className?: string }>;
+  tone?: "neutral" | "positive" | "warning" | "info";
 }) {
+  const toneMap = {
+    neutral: {
+      badge: "border-neutral-200 bg-neutral-100 text-neutral-700 dark:border-neutral-800 dark:bg-white/[0.04] dark:text-neutral-200",
+      bar: "bg-neutral-300 dark:bg-neutral-700",
+    },
+    positive: {
+      badge: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/40 dark:text-emerald-300",
+      bar: "bg-emerald-400 dark:bg-emerald-500",
+    },
+    warning: {
+      badge: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-300",
+      bar: "bg-amber-400 dark:bg-amber-500",
+    },
+    info: {
+      badge: "border-cyan-200 bg-cyan-50 text-cyan-700 dark:border-cyan-900/70 dark:bg-cyan-950/40 dark:text-cyan-300",
+      bar: "bg-cyan-400 dark:bg-cyan-500",
+    },
+  } as const;
+
+  const selectedTone = toneMap[tone];
+
   return (
-    <Card className="rounded-2xl border bg-white shadow-sm">
+    <Card className="rounded-2xl border border-border/70 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950/80 dark:shadow-none">
       <CardContent className="p-4">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">{title}</p>
-        <p className="mt-2 text-2xl font-bold text-foreground">{value}</p>
-        <p className="mt-1 text-xs text-muted-foreground">{helper}</p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground dark:text-neutral-400">{title}</p>
+            <p className="mt-1 text-xs text-muted-foreground dark:text-neutral-500">{helper}</p>
+          </div>
+          <span className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${selectedTone.badge}`}>
+            <Icon className="h-5 w-5" />
+          </span>
+        </div>
+
+        <div className="mt-4 flex items-end justify-between gap-3">
+          <p className="text-4xl font-bold leading-none text-foreground dark:text-white">{value}</p>
+          <span className={`h-1.5 w-14 rounded-full ${selectedTone.bar}`} />
+        </div>
       </CardContent>
     </Card>
   );
@@ -70,12 +112,16 @@ function StatCard({
 function SocioEvolucionCard({
   socio,
   onView,
+  tx,
+  locale,
 }: {
   socio: EvolucionFisicaAdminResumen;
   onView: (socioId: string) => void;
+  tx: TranslateFn;
+  locale: string;
 }) {
   return (
-    <Card className="h-full transition-shadow duration-200 hover:shadow-lg">
+    <Card className="h-full border bg-card transition-shadow duration-200 hover:shadow-lg dark:border-neutral-800 dark:bg-neutral-900/70 dark:hover:border-neutral-700 dark:hover:shadow-none">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -87,42 +133,42 @@ function SocioEvolucionCard({
           <span
             className={`rounded-full px-2 py-1 text-xs font-medium ${
               socio.activo
-                ? "bg-green-100 text-green-800"
-                : "bg-gray-100 text-gray-700"
+                ? "bg-green-100 text-green-800 dark:bg-emerald-950/70 dark:text-emerald-200"
+                : "bg-gray-100 text-gray-700 dark:bg-neutral-800 dark:text-neutral-300"
             }`}
           >
-            {socio.activo ? "Activo" : "Inactivo"}
+            {socio.activo ? tx("Activo", "Active") : tx("Inactivo", "Inactive")}
           </span>
         </div>
-        <CardDescription>DNI: {socio.dni}</CardDescription>
+        <CardDescription>{tx("DNI", "ID")}: {socio.dni}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <div className="space-y-3 rounded-xl border bg-muted/20 p-3">
+        <div className="space-y-3 rounded-xl border bg-muted/20 p-3 dark:border-neutral-800 dark:bg-black/25">
           <div className="flex items-center gap-2">
             <Activity className="h-4 w-4 text-[#02a8e1]" />
-            <span className="text-sm font-semibold">Evolución física</span>
+            <span className="text-sm font-semibold">{tx("Evolución física", "Physical evolution")}</span>
           </div>
 
           {socio.tiene_evolucion ? (
             <div className="space-y-2 text-sm">
               <p>
-                <span className="font-medium">Registros:</span> {socio.total_registros}
+                <span className="font-medium">{tx("Registros", "Records")}:</span> {socio.total_registros}
               </p>
               <p className="flex items-center gap-1 text-muted-foreground">
                 <CalendarDays className="h-3.5 w-3.5" />
-                Última medición: {formatDate(socio.ultima_fecha)}
+                {tx("Última medición", "Last measurement")}: {formatDate(socio.ultima_fecha, locale, tx("Sin registros", "No records"))}
               </p>
               <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                <span>Peso: {formatNumber(socio.ultimo_peso, " kg")}</span>
-                <span>IMC: {formatNumber(socio.ultimo_imc)}</span>
-                <span>Cintura: {formatNumber(socio.ultima_cintura, " cm")}</span>
-                <span>Grasa: {formatNumber(socio.ultimo_porcentaje_grasa, "%")}</span>
+                <span>{tx("Peso", "Weight")}: {formatNumber(socio.ultimo_peso, " kg", locale)}</span>
+                <span>{tx("IMC", "BMI")}: {formatNumber(socio.ultimo_imc, "", locale)}</span>
+                <span>{tx("Cintura", "Waist")}: {formatNumber(socio.ultima_cintura, " cm", locale)}</span>
+                <span>{tx("Grasa", "Fat")}: {formatNumber(socio.ultimo_porcentaje_grasa, "%", locale)}</span>
               </div>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Este socio todavía no tiene registros de evolución física.
+              {tx("Este socio todavía no tiene registros de evolución física.", "This member does not have physical evolution records yet.")}
             </p>
           )}
         </div>
@@ -135,7 +181,7 @@ function SocioEvolucionCard({
           onClick={() => onView(socio.id_socio)}
         >
           <Eye className="mr-2 h-4 w-4" />
-          Ver evolución
+          {tx("Ver evolución", "View evolution")}
         </Button>
       </CardContent>
     </Card>
@@ -144,6 +190,9 @@ function SocioEvolucionCard({
 
 export default function GestorEvolucionFisicaPage() {
   const router = useRouter();
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const tx = useCallback((es: string, en: string) => (isEnglish ? en : es), [isEnglish]);
   const { isAuthenticated, initializeAuth, isInitialized, user } = useAuthStore();
   const [rows, setRows] = useState<EvolucionFisicaAdminResumen[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -176,13 +225,13 @@ export default function GestorEvolucionFisicaPage() {
       toast.error(
         error instanceof Error
           ? error.message
-          : "No se pudo cargar el gestor de evolución física"
+          : tx("No se pudo cargar el gestor de evolución física", "The physical evolution manager could not be loaded")
       );
       setRows([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [tx]);
 
   useEffect(() => {
     if (isInitialized && isAuthenticated && user && isAdminRole(user.rol)) {
@@ -193,7 +242,7 @@ export default function GestorEvolucionFisicaPage() {
   const filteredRows = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
     const orderedRows = [...rows].sort((a, b) =>
-      a.nombre_completo.localeCompare(b.nombre_completo, "es")
+      a.nombre_completo.localeCompare(b.nombre_completo, isEnglish ? "en" : "es")
     );
 
     if (!q) return orderedRows;
@@ -203,7 +252,7 @@ export default function GestorEvolucionFisicaPage() {
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(q))
     );
-  }, [rows, searchTerm]);
+  }, [isEnglish, rows, searchTerm]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -233,7 +282,7 @@ export default function GestorEvolucionFisicaPage() {
   if (!isInitialized || loading) {
     return (
       <div className="flex h-screen items-center justify-center">
-        Cargando gestor de evolución física...
+        {tx("Cargando gestor de evolución física...", "Loading physical evolution manager...")}
       </div>
     );
   }
@@ -247,25 +296,28 @@ export default function GestorEvolucionFisicaPage() {
       <div className="flex min-h-screen w-full">
         <AppSidebar />
         <SidebarInset>
-          <AppHeader title="Gestor de Evolución Física" />
-          <main className="flex-1 space-y-6 p-6">
-            <Card className="w-full">
-              <CardHeader className="space-y-2 border-b p-4">
+          <AppHeader title={tx("Gestor de Evolución Física", "Physical evolution manager")} />
+          <main className="flex-1 space-y-6 bg-background p-6 dark:bg-black">
+            <Card className="w-full dark:border-neutral-800 dark:bg-neutral-950/45">
+              <CardHeader className="space-y-2 border-b p-4 dark:border-neutral-800">
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                   <div>
                     <CardTitle className="text-2xl font-bold">
-                      Evolución física de socios
+                      {tx("Evolución física de socios", "Members' physical evolution")}
                     </CardTitle>
                     <CardDescription>
-                      Consulta administrativa solo lectura del progreso físico de los socios.
+                      {tx(
+                        "Consulta administrativa solo lectura del progreso físico de los socios.",
+                        "Read-only administrative view of members' physical progress."
+                      )}
                     </CardDescription>
                   </div>
                   <div className="relative w-full md:w-[360px]">
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                       type="search"
-                      placeholder="Buscar por nombre, DNI o email..."
-                      className="pl-9"
+                      placeholder={tx("Buscar por nombre, DNI o email...", "Search by name, ID, or email...")}
+                      className="pl-9 dark:border-neutral-800 dark:bg-black/40 dark:text-neutral-100 dark:placeholder:text-neutral-500"
                       value={searchTerm}
                       onChange={(event) => setSearchTerm(event.target.value)}
                     />
@@ -275,30 +327,38 @@ export default function GestorEvolucionFisicaPage() {
               <CardContent className="space-y-4 p-4">
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                   <StatCard
-                    title="Socios"
+                    title={tx("Socios", "Members")}
                     value={totalSocios}
-                    helper="Total de socios registrados"
+                    helper={tx("Total de socios registrados", "Total registered members")}
+                    icon={Users}
+                    tone="neutral"
                   />
                   <StatCard
-                    title="Con evolución"
+                    title={tx("Con evolución", "With evolution")}
                     value={sociosConEvolucion}
-                    helper="Socios con al menos una medición"
+                    helper={tx("Socios con al menos una medición", "Members with at least one measurement")}
+                    icon={Activity}
+                    tone="positive"
                   />
                   <StatCard
-                    title="Sin evolución"
+                    title={tx("Sin evolución", "Without evolution")}
                     value={sociosSinEvolucion}
-                    helper="Pendientes de primera carga"
+                    helper={tx("Pendientes de primera carga", "Pending first entry")}
+                    icon={Clock3}
+                    tone="warning"
                   />
                   <StatCard
-                    title="Activos con evolución"
+                    title={tx("Activos con evolución", "Active with evolution")}
                     value={activosConEvolucion}
-                    helper="Socios activos con seguimiento físico"
+                    helper={tx("Socios activos con seguimiento físico", "Active members with physical tracking")}
+                    icon={UserCheck}
+                    tone="info"
                   />
                 </div>
 
                 {filteredRows.length === 0 ? (
                   <div className="rounded-lg border border-dashed py-12 text-center text-muted-foreground">
-                    No hay socios que coincidan con la búsqueda actual.
+                    {tx("No hay socios que coincidan con la búsqueda actual.", "No members match the current search.")}
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -309,6 +369,8 @@ export default function GestorEvolucionFisicaPage() {
                         onView={(socioId) =>
                           router.push(`/dashboard/gestor-evolucion-fisica/socio/${socioId}`)
                         }
+                        tx={tx}
+                        locale={locale}
                       />
                     ))}
                   </div>
@@ -318,7 +380,7 @@ export default function GestorEvolucionFisicaPage() {
                   totalItems={totalFilteredRows}
                   pageSize={GESTOR_EVOLUCION_PAGE_SIZE}
                   onPageChange={setCurrentPage}
-                  itemLabel="socios"
+                  itemLabel={tx("socios", "members")}
                 />
               </CardContent>
             </Card>

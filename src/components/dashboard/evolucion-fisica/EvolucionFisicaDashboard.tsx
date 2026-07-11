@@ -25,6 +25,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { EvolucionSocio } from "@/interfaces/evolucionSocio.interface";
 import EvolucionFisicaBeforeAfterStudio from "./EvolucionFisicaBeforeAfterStudio";
 import { formatFrontendDate, formatFrontendShortDate } from '@/utils/dateFormat';
+import { useI18n } from "@/i18n/I18nProvider";
 
 
 interface EvolucionFisicaDashboardProps {
@@ -44,14 +45,20 @@ interface ChartPoint {
   masaMuscular: number | null;
 }
 
-const metricLabels: Record<string, string> = {
-  peso: "Peso",
-  imc: "IMC",
-  cintura: "Cintura",
-  pecho: "Pecho",
-  cadera: "Cadera",
-  grasa: "% grasa",
-  masaMuscular: "Masa muscular",
+type TranslateFn = (es: string, en: string) => string;
+
+const getMetricLabel = (key: string, tx: TranslateFn) => {
+  const labels: Record<string, string> = {
+    peso: tx("Peso", "Weight"),
+    imc: tx("IMC", "BMI"),
+    cintura: tx("Cintura", "Waist"),
+    pecho: tx("Pecho", "Chest"),
+    cadera: tx("Cadera", "Hip"),
+    grasa: tx("% grasa", "Fat %"),
+    masaMuscular: tx("Masa muscular", "Muscle mass"),
+  };
+
+  return labels[key] ?? key;
 };
 
 const formatDate = (value?: string | Date | null) => {
@@ -223,9 +230,9 @@ function ChartCard({
   );
 }
 
-const tooltipFormatter = (value: unknown, name: unknown) => {
+const getTooltipFormatter = (tx: TranslateFn) => (value: unknown, name: unknown) => {
   const key = String(name);
-  return [formatNumber(Number(value)), metricLabels[key] ?? key];
+  return [formatNumber(Number(value)), getMetricLabel(key, tx)];
 };
 
 const buildInsight = ({
@@ -234,46 +241,52 @@ const buildInsight = ({
   diffCintura,
   diffGrasa,
   diffMasa,
+  tx,
 }: {
   records: number;
   diffPeso: number | null;
   diffCintura: number | null;
   diffGrasa: number | null;
   diffMasa: number | null;
+  tx: TranslateFn;
 }) => {
   if (records < 2) {
-    return "Aún falta un segundo registro para construir una comparación completa de progreso.";
+    return tx("Aún falta un segundo registro para construir una comparación completa de progreso.", "A second record is still needed to build a complete progress comparison.");
   }
 
   const highlights: string[] = [];
 
   if (diffPeso !== null) {
-    highlights.push(`peso ${diffPeso < 0 ? "bajó" : diffPeso > 0 ? "subió" : "se mantuvo"} ${formatNumber(Math.abs(diffPeso), " kg")}`);
+    highlights.push(`${tx("peso", "weight")} ${diffPeso < 0 ? tx("bajó", "decreased") : diffPeso > 0 ? tx("subió", "increased") : tx("se mantuvo", "remained stable")} ${formatNumber(Math.abs(diffPeso), " kg")}`);
   }
 
   if (diffCintura !== null) {
-    highlights.push(`cintura ${diffCintura < 0 ? "bajó" : diffCintura > 0 ? "subió" : "se mantuvo"} ${formatNumber(Math.abs(diffCintura), " cm")}`);
+    highlights.push(`${tx("cintura", "waist")} ${diffCintura < 0 ? tx("bajó", "decreased") : diffCintura > 0 ? tx("subió", "increased") : tx("se mantuvo", "remained stable")} ${formatNumber(Math.abs(diffCintura), " cm")}`);
   }
 
   if (diffGrasa !== null) {
-    highlights.push(`grasa ${diffGrasa < 0 ? "bajó" : diffGrasa > 0 ? "subió" : "se mantuvo"} ${formatNumber(Math.abs(diffGrasa), "%")}`);
+    highlights.push(`${tx("grasa", "fat")} ${diffGrasa < 0 ? tx("bajó", "decreased") : diffGrasa > 0 ? tx("subió", "increased") : tx("se mantuvo", "remained stable")} ${formatNumber(Math.abs(diffGrasa), "%")}`);
   }
 
   if (diffMasa !== null) {
-    highlights.push(`masa muscular ${diffMasa > 0 ? "aumentó" : diffMasa < 0 ? "bajó" : "se mantuvo"} ${formatNumber(Math.abs(diffMasa), " kg")}`);
+    highlights.push(`${tx("masa muscular", "muscle mass")} ${diffMasa > 0 ? tx("aumentó", "increased") : diffMasa < 0 ? tx("bajó", "decreased") : tx("se mantuvo", "remained stable")} ${formatNumber(Math.abs(diffMasa), " kg")}`);
   }
 
   if (!highlights.length) {
-    return "Hay registros cargados, pero faltan métricas comparables para generar una lectura automática.";
+    return tx("Hay registros cargados, pero faltan métricas comparables para generar una lectura automática.", "Records are loaded, but comparable metrics are missing to generate an automatic reading.");
   }
 
-  return `Comparación inicial vs. actual: ${highlights.join(", ")}.`;
+  return `${tx("Comparación inicial vs. actual", "Initial vs. current comparison")}: ${highlights.join(", ")}.`;
 };
 
 export default function EvolucionFisicaDashboard({
   rows,
   socioNombre = "Socio",
 }: EvolucionFisicaDashboardProps) {
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const tx = (es: string, en: string) => (isEnglish ? en : es);
+  const tooltipFormatter = getTooltipFormatter(tx);
   const orderedRows = useMemo(() => getOrderedRows(rows), [rows]);
   const initial = orderedRows.find((row) => row.es_registro_inicial) || orderedRows[0] || null;
   const current = orderedRows[orderedRows.length - 1] || null;
@@ -304,13 +317,13 @@ export default function EvolucionFisicaDashboard({
   const piernaActual = getAverage(current?.muslo_izquierdo, current?.muslo_derecho);
 
   const comparisonRows = [
-    ["Peso", formatNumber(initial?.peso, " kg"), formatNumber(current?.peso, " kg"), signed(diffPeso, " kg")],
-    ["IMC", formatNumber(initial?.imc), formatNumber(current?.imc), signed(diffImc)],
-    ["Cintura", formatNumber(initial?.cintura, " cm"), formatNumber(current?.cintura, " cm"), signed(diffCintura, " cm")],
-    ["% grasa", formatNumber(initial?.porcentaje_grasa, "%"), formatNumber(current?.porcentaje_grasa, "%"), signed(diffGrasa, "%")],
-    ["Masa muscular", formatNumber(initial?.masa_muscular, " kg"), formatNumber(current?.masa_muscular, " kg"), signed(diffMasa, " kg")],
-    ["Brazo promedio", formatNumber(brazoInicial, " cm"), formatNumber(brazoActual, " cm"), signed(delta(brazoActual, brazoInicial), " cm")],
-    ["Muslo promedio", formatNumber(piernaInicial, " cm"), formatNumber(piernaActual, " cm"), signed(delta(piernaActual, piernaInicial), " cm")],
+    [tx("Peso", "Weight"), formatNumber(initial?.peso, " kg"), formatNumber(current?.peso, " kg"), signed(diffPeso, " kg")],
+    [tx("IMC", "BMI"), formatNumber(initial?.imc), formatNumber(current?.imc), signed(diffImc)],
+    [tx("Cintura", "Waist"), formatNumber(initial?.cintura, " cm"), formatNumber(current?.cintura, " cm"), signed(diffCintura, " cm")],
+    [tx("% grasa", "Fat %"), formatNumber(initial?.porcentaje_grasa, "%"), formatNumber(current?.porcentaje_grasa, "%"), signed(diffGrasa, "%")],
+    [tx("Masa muscular", "Muscle mass"), formatNumber(initial?.masa_muscular, " kg"), formatNumber(current?.masa_muscular, " kg"), signed(diffMasa, " kg")],
+    [tx("Brazo promedio", "Average arm"), formatNumber(brazoInicial, " cm"), formatNumber(brazoActual, " cm"), signed(delta(brazoActual, brazoInicial), " cm")],
+    [tx("Muslo promedio", "Average thigh"), formatNumber(piernaInicial, " cm"), formatNumber(piernaActual, " cm"), signed(delta(piernaActual, piernaInicial), " cm")],
   ] as Array<[string, string, string, string]>;
 
   const insight = buildInsight({
@@ -319,13 +332,14 @@ export default function EvolucionFisicaDashboard({
     diffCintura,
     diffGrasa,
     diffMasa,
+    tx,
   });
 
   if (!rows.length) {
     return (
       <Card className="rounded-2xl border bg-card text-card-foreground shadow-sm">
         <CardContent className="p-6 text-sm text-muted-foreground">
-          El dashboard se activará cuando el socio tenga al menos un registro de evolución física.
+          {tx("El dashboard se activará cuando el socio tenga al menos un registro de evolución física.", "The dashboard will activate when the member has at least one physical evolution record.")}
         </CardContent>
       </Card>
     );
@@ -337,51 +351,51 @@ export default function EvolucionFisicaDashboard({
         <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-xs uppercase tracking-wide text-[#02a8e1]">
-              Dashboard de evolución física
+              {tx("Dashboard de evolución física", "Physical evolution dashboard")}
             </p>
             <h2 className="mt-1 text-xl font-bold text-foreground sm:text-2xl">
-              Progreso corporal de {socioNombre}
+              {tx("Progreso corporal de", "Body progress of")} {socioNombre}
             </h2>
             <p className="mt-2 max-w-3xl text-sm text-muted-foreground">{insight}</p>
           </div>
           <p className="text-xs text-muted-foreground">
-            Registros: {orderedRows.length} · Última medición: {formatDate(current?.fecha)}
+            {tx("Registros", "Records")}: {orderedRows.length} · {tx("Última medición", "Last measurement")}: {formatDate(current?.fecha)}
           </p>
         </div>
       </section>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          title="Peso actual"
+          title={tx("Peso actual", "Current weight")}
           value={formatNumber(current?.peso, " kg")}
-          helper={`Inicial: ${formatNumber(initial?.peso, " kg")}`}
+          helper={`${tx("Inicial", "Initial")}: ${formatNumber(initial?.peso, " kg")}`}
           deltaValue={diffPeso}
           deltaSuffix=" kg"
           direction="neutral"
           icon={Scale}
         />
         <StatCard
-          title="Cintura"
+          title={tx("Cintura", "Waist")}
           value={formatNumber(current?.cintura, " cm")}
-          helper={`Inicial: ${formatNumber(initial?.cintura, " cm")}`}
+          helper={`${tx("Inicial", "Initial")}: ${formatNumber(initial?.cintura, " cm")}`}
           deltaValue={diffCintura}
           deltaSuffix=" cm"
           direction="lower"
           icon={Ruler}
         />
         <StatCard
-          title="% grasa"
+          title={tx("% grasa", "Fat %")}
           value={formatNumber(current?.porcentaje_grasa, "%")}
-          helper={`Inicial: ${formatNumber(initial?.porcentaje_grasa, "%")}`}
+          helper={`${tx("Inicial", "Initial")}: ${formatNumber(initial?.porcentaje_grasa, "%")}`}
           deltaValue={diffGrasa}
           deltaSuffix="%"
           direction="lower"
           icon={Percent}
         />
         <StatCard
-          title="Masa muscular"
+          title={tx("Masa muscular", "Muscle mass")}
           value={formatNumber(current?.masa_muscular, " kg")}
-          helper={`Inicial: ${formatNumber(initial?.masa_muscular, " kg")}`}
+          helper={`${tx("Inicial", "Initial")}: ${formatNumber(initial?.masa_muscular, " kg")}`}
           deltaValue={diffMasa}
           deltaSuffix=" kg"
           direction="higher"
@@ -391,23 +405,23 @@ export default function EvolucionFisicaDashboard({
 
       <section className="grid gap-4 md:grid-cols-3">
         <StatCard
-          title="IMC actual"
+          title={tx("IMC actual", "Current BMI")}
           value={formatNumber(current?.imc)}
-          helper={`Inicial: ${formatNumber(initial?.imc)}`}
+          helper={`${tx("Inicial", "Initial")}: ${formatNumber(initial?.imc)}`}
           deltaValue={diffImc}
           direction="lower"
           icon={Activity}
         />
         <StatCard
-          title="Primer registro"
+          title={tx("Primer registro", "First record")}
           value={formatDate(initial?.fecha)}
-          helper={`${formatNumber(initial?.peso, " kg")} · ${formatNumber(initial?.cintura, " cm cintura")}`}
+          helper={`${formatNumber(initial?.peso, " kg")} · ${formatNumber(initial?.cintura, ` cm ${tx("cintura", "waist")}`)}`}
           icon={CalendarDays}
         />
         <StatCard
-          title="Último registro"
+          title={tx("Último registro", "Last record")}
           value={formatDate(current?.fecha)}
-          helper={`${formatNumber(current?.peso, " kg")} · ${formatNumber(current?.cintura, " cm cintura")}`}
+          helper={`${formatNumber(current?.peso, " kg")} · ${formatNumber(current?.cintura, ` cm ${tx("cintura", "waist")}`)}`}
           icon={CalendarDays}
         />
       </section>
@@ -417,8 +431,8 @@ export default function EvolucionFisicaDashboard({
 
       <section className="grid gap-6 xl:grid-cols-2">
         <ChartCard
-          title="Peso e IMC"
-          description="Evolución cronológica del peso corporal y del índice de masa corporal."
+          title={tx("Peso e IMC", "Weight and BMI")}
+          description={tx("Evolución cronológica del peso corporal y del índice de masa corporal.", "Chronological evolution of body weight and body mass index.")}
         >
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 10 }}>
@@ -427,15 +441,15 @@ export default function EvolucionFisicaDashboard({
               <YAxis />
               <Tooltip formatter={tooltipFormatter} />
               <Legend />
-              <Line type="monotone" dataKey="peso" name="peso" stroke="#02a8e1" strokeWidth={2} dot={{ r: 3 }} connectNulls />
-              <Line type="monotone" dataKey="imc" name="imc" stroke="#6d28d9" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+              <Line type="monotone" dataKey="peso" name={tx("peso", "weight")} stroke="#02a8e1" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+              <Line type="monotone" dataKey="imc" name={tx("imc", "bmi")} stroke="#6d28d9" strokeWidth={2} dot={{ r: 3 }} connectNulls />
             </LineChart>
           </ResponsiveContainer>
         </ChartCard>
 
         <ChartCard
-          title="Composición corporal"
-          description="Comparación entre porcentaje de grasa y masa muscular."
+          title={tx("Composición corporal", "Body composition")}
+          description={tx("Comparación entre porcentaje de grasa y masa muscular.", "Comparison between body fat percentage and muscle mass.")}
         >
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 10 }}>
@@ -444,15 +458,15 @@ export default function EvolucionFisicaDashboard({
               <YAxis />
               <Tooltip formatter={tooltipFormatter} />
               <Legend />
-              <Line type="monotone" dataKey="grasa" name="grasa" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} connectNulls />
-              <Line type="monotone" dataKey="masaMuscular" name="masaMuscular" stroke="#16a34a" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+              <Line type="monotone" dataKey="grasa" name={tx("grasa", "fat")} stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+              <Line type="monotone" dataKey="masaMuscular" name={tx("masaMuscular", "muscle mass")} stroke="#16a34a" strokeWidth={2} dot={{ r: 3 }} connectNulls />
             </LineChart>
           </ResponsiveContainer>
         </ChartCard>
 
         <ChartCard
-          title="Medidas centrales"
-          description="Seguimiento de cintura, pecho y cadera para análisis corporal."
+          title={tx("Medidas centrales", "Core measurements")}
+          description={tx("Seguimiento de cintura, pecho y cadera para análisis corporal.", "Tracking waist, chest, and hip measurements for body analysis.")}
         >
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 10 }}>
@@ -461,18 +475,18 @@ export default function EvolucionFisicaDashboard({
               <YAxis />
               <Tooltip formatter={tooltipFormatter} />
               <Legend />
-              <Line type="monotone" dataKey="cintura" name="cintura" stroke="#0f172a" strokeWidth={2} dot={{ r: 3 }} connectNulls />
-              <Line type="monotone" dataKey="pecho" name="pecho" stroke="#0284c7" strokeWidth={2} dot={{ r: 3 }} connectNulls />
-              <Line type="monotone" dataKey="cadera" name="cadera" stroke="#db2777" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+              <Line type="monotone" dataKey="cintura" name={tx("cintura", "waist")} stroke="#0f172a" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+              <Line type="monotone" dataKey="pecho" name={tx("pecho", "chest")} stroke="#0284c7" strokeWidth={2} dot={{ r: 3 }} connectNulls />
+              <Line type="monotone" dataKey="cadera" name={tx("cadera", "hip")} stroke="#db2777" strokeWidth={2} dot={{ r: 3 }} connectNulls />
             </LineChart>
           </ResponsiveContainer>
         </ChartCard>
 
         <Card className="rounded-2xl border bg-card text-card-foreground shadow-sm">
           <CardHeader className="space-y-1 border-b p-4">
-            <h3 className="text-lg font-semibold text-foreground">Antes vs. ahora</h3>
+            <h3 className="text-lg font-semibold text-foreground">{tx("Antes vs. ahora", "Before vs. now")}</h3>
             <p className="text-sm text-muted-foreground">
-              Lectura comparativa entre el primer registro y la última medición.
+              {tx("Lectura comparativa entre el primer registro y la última medición.", "Comparative reading between the first record and the latest measurement.")}
             </p>
           </CardHeader>
           <CardContent className="p-4">
@@ -485,11 +499,11 @@ export default function EvolucionFisicaDashboard({
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                     <div className="rounded-xl bg-card p-2">
-                      <p className="uppercase text-muted-foreground">Inicial</p>
+                      <p className="uppercase text-muted-foreground">{tx("Inicial", "Initial")}</p>
                       <p className="mt-1 font-semibold text-foreground">{initialValue}</p>
                     </div>
                     <div className="rounded-xl bg-card p-2">
-                      <p className="uppercase text-muted-foreground">Actual</p>
+                      <p className="uppercase text-muted-foreground">{tx("Actual", "Current")}</p>
                       <p className="mt-1 font-semibold text-foreground">{currentValue}</p>
                     </div>
                   </div>
@@ -501,10 +515,10 @@ export default function EvolucionFisicaDashboard({
               <table className="w-full text-left text-sm">
                 <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
                   <tr>
-                    <th className="px-4 py-3">Métrica</th>
-                    <th className="px-4 py-3">Inicial</th>
-                    <th className="px-4 py-3">Actual</th>
-                    <th className="px-4 py-3">Cambio</th>
+                    <th className="px-4 py-3">{tx("Métrica", "Metric")}</th>
+                    <th className="px-4 py-3">{tx("Inicial", "Initial")}</th>
+                    <th className="px-4 py-3">{tx("Actual", "Current")}</th>
+                    <th className="px-4 py-3">{tx("Cambio", "Change")}</th>
                   </tr>
                 </thead>
                 <tbody>

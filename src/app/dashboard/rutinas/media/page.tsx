@@ -51,6 +51,7 @@ import {
   uploadEjercicioMedia,
 } from "@/services/apiClient";
 import { useAuthStore } from "@/stores/authStore";
+import { useI18n } from "@/i18n/I18nProvider";
 
 type CatalogSummary = {
   total: number;
@@ -109,13 +110,13 @@ function getYoutubeEnUrl(item?: EjercicioMediaCatalogItem | null) {
   return item.youtube_url_en || getYoutubePreviewUrl(item.youtube_video_id_en);
 }
 
-function mediaStatusLabel(status?: string | null) {
+function mediaStatusLabel(status?: string | null, isEnglish = false) {
   if (status === "cloudinary") return "Cloudinary";
   if (status === "youtube") return "YouTube";
-  if (status === "externa") return "URL externa";
+  if (status === "externa") return isEnglish ? "External URL" : "URL externa";
   if (status === "local") return "Local";
   if (status === "fallback") return "Fallback";
-  return "Sin origen";
+  return isEnglish ? "No source" : "Sin origen";
 }
 
 function getImageSource(item?: EjercicioMediaCatalogItem | null) {
@@ -142,7 +143,7 @@ function hasYoutubeMedia(item?: EjercicioMediaCatalogItem | null) {
   );
 }
 
-function getMediaQuality(item?: EjercicioMediaCatalogItem | null) {
+function getMediaQuality(item?: EjercicioMediaCatalogItem | null, isEnglish = false) {
   const hasImage = hasCloudinaryMedia(item);
   const hasYoutube = hasYoutubeMedia(item);
   const youtubeReviewed =
@@ -150,18 +151,30 @@ function getMediaQuality(item?: EjercicioMediaCatalogItem | null) {
     item?.youtube_review_status === "sugerido";
 
   if (hasImage && hasYoutube && youtubeReviewed) {
-    return { label: "Completo", className: "border-emerald-200 bg-emerald-50 text-emerald-700" };
+    return {
+      label: isEnglish ? "Complete" : "Completo",
+      className: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/45 dark:text-emerald-300",
+    };
   }
 
   if (hasImage && hasYoutube) {
-    return { label: "Revisar video", className: "border-sky-200 bg-sky-50 text-sky-700" };
+    return {
+      label: isEnglish ? "Review video" : "Revisar video",
+      className: "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/45 dark:text-sky-300",
+    };
   }
 
   if (hasImage || hasYoutube) {
-    return { label: "Parcial", className: "border-amber-200 bg-amber-50 text-amber-700" };
+    return {
+      label: isEnglish ? "Partial" : "Parcial",
+      className: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/45 dark:text-amber-300",
+    };
   }
 
-  return { label: "Pendiente", className: "border-red-200 bg-red-50 text-red-700" };
+  return {
+    label: isEnglish ? "Pending" : "Pendiente",
+    className: "border-red-200 bg-red-50 text-red-700 dark:border-red-900/70 dark:bg-red-950/45 dark:text-red-300",
+  };
 }
 
 function percentage(value: number, total: number) {
@@ -187,6 +200,9 @@ export default function RutinasExerciseMediaCatalogPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { isAuthenticated, initializeAuth, isInitialized, user } =
     useAuthStore();
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const tx = useCallback((es: string, en: string) => (isEnglish ? en : es), [isEnglish]);
 
   const [items, setItems] = useState<EjercicioMediaCatalogItem[]>([]);
   const [objetivos, setObjetivos] = useState<Objetivo[]>([]);
@@ -848,8 +864,8 @@ export default function RutinasExerciseMediaCatalogPage() {
 
   if (loading && !items.length) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        Cargando catálogo de media...
+      <div className="flex items-center justify-center min-h-screen bg-background text-foreground dark:bg-black dark:text-neutral-100">
+        {tx("Cargando catálogo de media...", "Loading media catalog...")}
       </div>
     );
   }
@@ -863,18 +879,21 @@ export default function RutinasExerciseMediaCatalogPage() {
       <div className="flex w-full min-h-screen">
         <AppSidebar />
         <SidebarInset>
-          <AppHeader title="Media de Ejercicios" />
-          <main className="flex-1 p-6 space-y-6 bg-slate-50">
+          <AppHeader title={tx("Media de Ejercicios", "Exercise media")} />
+          <main className="flex-1 p-6 space-y-6 bg-slate-50 dark:bg-black">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
                 <p className="text-sm font-semibold tracking-wide text-[#0ea5e9] uppercase">
-                  Rutinas / Banco de media
+                  {tx("Rutinas / Banco de media", "Routines / Media bank")}
                 </p>
-                <h1 className="text-2xl font-bold text-slate-900">
-                  Catálogo visual de ejercicios
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-white dark:text-white">
+                  {tx("Catálogo visual de ejercicios", "Visual exercise catalog")}
                 </h1>
-                <p className="max-w-3xl text-sm text-slate-600">
-                  Prepará una base visual consistente para web, mobile, PDFs y futuro RAG: imágenes/GIFs seguros en Cloudinary y videos de técnica revisados.
+                <p className="max-w-3xl text-sm text-slate-600 dark:text-neutral-400">
+                  {tx(
+                    "Prepará una base visual consistente para web, mobile, PDFs y futuro RAG: imágenes/GIFs seguros en Cloudinary y videos de técnica revisados.",
+                    "Prepare a consistent visual base for web, mobile, PDFs, and future RAG: safe Cloudinary images/GIFs and reviewed technique videos."
+                  )}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -888,7 +907,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                   ) : (
                     <RefreshCcw className="w-4 h-4 mr-2" />
                   )}
-                  Actualizar
+                  {tx("Actualizar", "Refresh")}
                 </Button>
                 <Button
                   variant="outline"
@@ -900,7 +919,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                   ) : (
                     <RefreshCcw className="w-4 h-4 mr-2" />
                   )}
-                  Detectar equivalencias
+                  {tx("Detectar equivalencias", "Detect equivalences")}
                 </Button>
                 <Button
                   onClick={handleApplyEquivalenceSync}
@@ -911,96 +930,164 @@ export default function RutinasExerciseMediaCatalogPage() {
                   ) : (
                     <Cloud className="w-4 h-4 mr-2" />
                   )}
-                  Aplicar equivalencias
+                  {tx("Aplicar equivalencias", "Apply equivalences")}
                 </Button>
                 <Button asChild variant="outline">
-                  <Link href="/dashboard/gestor-rutinas">Volver a Gestor</Link>
+                  <Link href="/dashboard/gestor-rutinas">{tx("Volver a Gestor", "Back to manager")}</Link>
                 </Button>
               </div>
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-              <Card className="border-emerald-100 bg-white">
+              <Card className="border-emerald-100 bg-white dark:border-emerald-900/60 dark:bg-neutral-950/80">
                 <CardContent className="p-4">
-                  <p className="text-xs font-medium text-slate-500">
-                    Total ejercicios
-                  </p>
-                  <p className="text-2xl font-bold text-slate-900">
-                    {summary.total}
-                  </p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium text-slate-500 dark:text-neutral-400">
+                        {tx("Total ejercicios", "Total exercises")}
+                      </p>
+                      <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">
+                        {summary.total}
+                      </p>
+                      <p className="mt-1 text-[11px] text-slate-400 dark:text-neutral-500">
+                        {tx("Base total del catálogo", "Total catalog base")}
+                      </p>
+                    </div>
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 shadow-sm dark:border-emerald-900/70 dark:bg-emerald-950/45 dark:text-emerald-300">
+                      <Dumbbell className="h-5 w-5" />
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
-              <Card className="border-sky-100 bg-white">
+              <Card className="border-sky-100 bg-white dark:border-sky-900/60 dark:bg-neutral-950/80">
                 <CardContent className="p-4">
-                  <p className="text-xs font-medium text-slate-500">
-                    En Cloudinary
-                  </p>
-                  <p className="text-2xl font-bold text-sky-700">
-                    {summary.conCloudinary}
-                  </p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium text-slate-500 dark:text-neutral-400">
+                        {tx("En Cloudinary", "In Cloudinary")}
+                      </p>
+                      <p className="mt-2 text-2xl font-bold text-sky-700 dark:text-sky-300">
+                        {summary.conCloudinary}
+                      </p>
+                      <p className="mt-1 text-[11px] text-slate-400 dark:text-neutral-500">
+                        {tx("Ejercicios con imagen segura", "Exercises with secure image")}
+                      </p>
+                    </div>
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-sky-200 bg-sky-50 text-sky-700 shadow-sm dark:border-sky-900/70 dark:bg-sky-950/45 dark:text-sky-300">
+                      <Cloud className="h-5 w-5" />
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
-              <Card className="border-amber-100 bg-white">
+              <Card className="border-amber-100 bg-white dark:border-amber-900/60 dark:bg-neutral-950/80">
                 <CardContent className="p-4">
-                  <p className="text-xs font-medium text-slate-500">
-                    Pendientes Cloudinary
-                  </p>
-                  <p className="text-2xl font-bold text-amber-700">
-                    {summary.pendientesCloudinary}
-                  </p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium text-slate-500 dark:text-neutral-400">
+                        {tx("Pendientes Cloudinary", "Pending Cloudinary")}
+                      </p>
+                      <p className="mt-2 text-2xl font-bold text-amber-700 dark:text-amber-300">
+                        {summary.pendientesCloudinary}
+                      </p>
+                      <p className="mt-1 text-[11px] text-slate-400 dark:text-neutral-500">
+                        {tx("Aún sin imagen/GIF principal", "Still missing main image/GIF")}
+                      </p>
+                    </div>
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-amber-200 bg-amber-50 text-amber-700 shadow-sm dark:border-amber-900/70 dark:bg-amber-950/45 dark:text-amber-300">
+                      <ImageIcon className="h-5 w-5" />
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
-              <Card className="border-red-100 bg-white">
+              <Card className="border-red-100 bg-white dark:border-red-900/60 dark:bg-neutral-950/80">
                 <CardContent className="p-4">
-                  <p className="text-xs font-medium text-slate-500">
-                    Pendientes YouTube
-                  </p>
-                  <p className="text-2xl font-bold text-red-700">
-                    {summary.pendientesYoutube}
-                  </p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium text-slate-500 dark:text-neutral-400">
+                        {tx("Pendientes YouTube", "Pending YouTube")}
+                      </p>
+                      <p className="mt-2 text-2xl font-bold text-red-700 dark:text-red-300">
+                        {summary.pendientesYoutube}
+                      </p>
+                      <p className="mt-1 text-[11px] text-slate-400 dark:text-neutral-500">
+                        {tx("Falta asociar técnica en video", "Technique video still missing")}
+                      </p>
+                    </div>
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-red-200 bg-red-50 text-red-700 shadow-sm dark:border-red-900/70 dark:bg-red-950/45 dark:text-red-300">
+                      <Video className="h-5 w-5" />
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
-              <Card className="border-purple-100 bg-white">
+              <Card className="border-purple-100 bg-white dark:border-purple-900/60 dark:bg-neutral-950/80">
                 <CardContent className="p-4">
-                  <p className="text-xs font-medium text-slate-500">
-                    Con fallback
-                  </p>
-                  <p className="text-2xl font-bold text-purple-700">
-                    {summary.conFallback}
-                  </p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium text-slate-500 dark:text-neutral-400">
+                        {tx("Con fallback", "With fallback")}
+                      </p>
+                      <p className="mt-2 text-2xl font-bold text-purple-700 dark:text-purple-300">
+                        {summary.conFallback}
+                      </p>
+                      <p className="mt-1 text-[11px] text-slate-400 dark:text-neutral-500">
+                        {tx("Usan recurso genérico temporal", "Using a temporary generic resource")}
+                      </p>
+                    </div>
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-purple-200 bg-purple-50 text-purple-700 shadow-sm dark:border-purple-900/70 dark:bg-purple-950/45 dark:text-purple-300">
+                      <AlertTriangle className="h-5 w-5" />
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>
 
-            <Card className="border-slate-200 bg-white">
+            <Card className="border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-950/80">
               <CardContent className="p-4">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <div>
-                    <p className="text-sm font-bold text-slate-900">
-                      Preparación del catálogo para RAG y experiencia mobile
+                    <p className="text-sm font-bold text-slate-900 dark:text-white">
+                      {tx("Preparación del catálogo para RAG y experiencia mobile", "Catalog preparation for RAG and mobile experience")}
                     </p>
-                    <p className="text-xs text-slate-500">
-                      Prioridad: ejercicios con imagen segura en Cloudinary, videos ES/EN revisados y sin fallback visible para socios.
+                    <p className="text-xs text-slate-500 dark:text-neutral-400">
+                      {tx(
+                        "Prioridad: ejercicios con imagen segura en Cloudinary, videos ES/EN revisados y sin fallback visible para socios.",
+                        "Priority: exercises with safe Cloudinary images, reviewed ES/EN videos, and no visible fallback for members."
+                      )}
                     </p>
                   </div>
                   <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-3 lg:min-w-[460px]">
-                    <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3">
-                      <p className="font-semibold text-emerald-800">Imágenes Cloudinary</p>
-                      <p className="text-xl font-bold text-emerald-900">{catalogReadiness.imageCoverage}%</p>
+                    <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3 dark:border-emerald-900/60 dark:bg-emerald-950/35">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-semibold text-emerald-800 dark:text-emerald-300">{tx("Imágenes Cloudinary", "Cloudinary images")}</p>
+                          <p className="text-xl font-bold text-emerald-900 dark:text-emerald-100">{catalogReadiness.imageCoverage}%</p>
+                        </div>
+                        <Cloud className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-300" />
+                      </div>
                     </div>
-                    <div className="rounded-xl border border-red-100 bg-red-50 p-3">
-                      <p className="font-semibold text-red-800">Videos YouTube</p>
-                      <p className="text-xl font-bold text-red-900">{catalogReadiness.youtubeCoverage}%</p>
+                    <div className="rounded-xl border border-red-100 bg-red-50 p-3 dark:border-red-900/60 dark:bg-red-950/35">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-semibold text-red-800 dark:text-red-300">{tx("Videos YouTube", "YouTube videos")}</p>
+                          <p className="text-xl font-bold text-red-900 dark:text-red-100">{catalogReadiness.youtubeCoverage}%</p>
+                        </div>
+                        <Video className="h-4 w-4 shrink-0 text-red-600 dark:text-red-300" />
+                      </div>
                     </div>
-                    <div className="rounded-xl border border-sky-100 bg-sky-50 p-3">
-                      <p className="font-semibold text-sky-800">Base completa</p>
-                      <p className="text-xl font-bold text-sky-900">{catalogReadiness.completeCoverage}%</p>
+                    <div className="rounded-xl border border-sky-100 bg-sky-50 p-3 dark:border-sky-900/60 dark:bg-sky-950/35">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-semibold text-sky-800 dark:text-sky-300">{tx("Base completa", "Complete base")}</p>
+                          <p className="text-xl font-bold text-sky-900 dark:text-sky-100">{catalogReadiness.completeCoverage}%</p>
+                        </div>
+                        <CheckCircle2 className="h-4 w-4 shrink-0 text-sky-600 dark:text-sky-300" />
+                      </div>
                     </div>
                   </div>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Button variant="outline" size="sm" onClick={handleShowCriticalPendings}>
-                    Ver pendientes de imagen ({summary.pendientesCloudinary})
+                    {tx("Ver pendientes de imagen", "View image pending")} ({summary.pendientesCloudinary})
                   </Button>
                   <Button
                     variant="outline"
@@ -1010,13 +1097,13 @@ export default function RutinasExerciseMediaCatalogPage() {
                       setMediaStatus("pendiente_youtube");
                     }}
                   >
-                    Ver pendientes de video ({summary.pendientesYoutube})
+                    {tx("Ver pendientes de video", "View video pending")} ({summary.pendientesYoutube})
                   </Button>
                   <Button variant="outline" size="sm" onClick={handleShowYoutubeReview}>
-                    Revisar YouTube ({summary.youtubePendientesRevision ?? 0})
+                    {tx("Revisar YouTube", "Review YouTube")} ({summary.youtubePendientesRevision ?? 0})
                   </Button>
                   <Button variant="ghost" size="sm" onClick={handleClearCatalogFilters}>
-                    Limpiar auditoría
+                    {tx("Limpiar auditoría", "Clear audit")}
                   </Button>
                 </div>
               </CardContent>
@@ -1024,7 +1111,7 @@ export default function RutinasExerciseMediaCatalogPage() {
 
             {(error || success) && (
               <div
-                className={`rounded-xl border p-4 text-sm ${error ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}
+                className={`rounded-xl border p-4 text-sm ${error ? "border-red-200 bg-red-50 text-red-700 dark:border-red-900/70 dark:bg-red-950/40 dark:text-red-300" : "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/40 dark:text-emerald-300"}`}
               >
                 <div className="flex items-center gap-2">
                   {error ? (
@@ -1037,20 +1124,21 @@ export default function RutinasExerciseMediaCatalogPage() {
               </div>
             )}
 
-            <Card className="border-indigo-100 bg-white">
+            <Card className="border-indigo-100 bg-white dark:border-neutral-800 dark:bg-neutral-950/80">
               <CardContent className="p-4 space-y-3">
                 <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                   <div>
-                    <p className="text-sm font-bold text-slate-900">
-                      Descubrimiento automático YouTube
+                    <p className="text-sm font-bold text-slate-900 dark:text-white">
+                      {tx("Descubrimiento automático YouTube", "Automatic YouTube discovery")}
                     </p>
-                    <p className="text-xs text-slate-500">
-                      Busca candidatos por nombre del ejercicio usando YouTube
-                      Data API. No pisa videos existentes y guarda como
-                      sugerido/en revisión.
+                    <p className="text-xs text-slate-500 dark:text-neutral-400">
+                      {tx(
+                        "Busca candidatos por nombre del ejercicio usando YouTube Data API. No pisa videos existentes y guarda como sugerido/en revisión.",
+                        "Find candidates by exercise name using the YouTube Data API. Existing videos are not overwritten and matches are saved as suggested/in review."
+                      )}
                     </p>
                   </div>
-                  <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600">
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600 dark:text-neutral-400">
                     <label className="flex items-center gap-2">
                       <input
                         type="checkbox"
@@ -1079,14 +1167,14 @@ export default function RutinasExerciseMediaCatalogPage() {
                           setYoutubeAutoApply(event.target.checked)
                         }
                       />
-                      Aplicar cambios
+                      {tx("Aplicar cambios", "Apply changes")}
                     </label>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-[180px_minmax(0,1fr)] md:items-end">
                   <div>
                     <Label htmlFor="youtube-auto-limit">
-                      Ejercicios por corrida
+                      {tx("Ejercicios por corrida", "Exercises per run")}
                     </Label>
                     <Input
                       id="youtube-auto-limit"
@@ -1099,7 +1187,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                       }
                     />
                     <p className="mt-1 text-[11px] text-slate-500">
-                      Recomendado: 25. Máximo: 50.
+                      {tx("Recomendado: 25. Máximo: 50.", "Recommended: 25. Maximum: 50.")}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -1113,8 +1201,8 @@ export default function RutinasExerciseMediaCatalogPage() {
                         <Video className="w-4 h-4 mr-2" />
                       )}
                       {youtubeAutoApply
-                        ? "Buscar y guardar sugeridos"
-                        : "Previsualizar candidatos"}
+                        ? tx("Buscar y guardar sugeridos", "Find and save suggestions")
+                        : tx("Previsualizar candidatos", "Preview candidates")}
                     </Button>
                     <Button
                       variant="outline"
@@ -1124,7 +1212,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                       }}
                       disabled={youtubeAutoRunning || !youtubeAutoReport}
                     >
-                      Limpiar resultado
+                      {tx("Limpiar resultado", "Clear result")}
                     </Button>
                     {youtubeAutoReport?.dryRun && (
                       <Button
@@ -1135,35 +1223,34 @@ export default function RutinasExerciseMediaCatalogPage() {
                           youtubeAutoSelectedKeys.size === 0
                         }
                       >
-                        Aplicar seleccionados ({youtubeAutoSelectedKeys.size})
+                        {tx("Aplicar seleccionados", "Apply selected")} ({youtubeAutoSelectedKeys.size})
                       </Button>
                     )}
                   </div>
                 </div>
                 {youtubeAutoReport && (
-                  <div className="rounded-lg border border-indigo-100 bg-indigo-50 p-3 text-xs text-indigo-950">
+                  <div className="rounded-lg border border-indigo-100 bg-indigo-50 p-3 text-xs text-indigo-950 dark:border-indigo-900/60 dark:bg-indigo-950/30 dark:text-indigo-200">
                     <p className="font-semibold">
-                      Resultado:{" "}
-                      {youtubeAutoReport.dryRun
-                        ? "previsualización"
-                        : "aplicado"}
+                      {tx("Resultado", "Result")}: {youtubeAutoReport.dryRun
+                        ? tx("previsualización", "preview")
+                        : tx("aplicado", "applied")}
                     </p>
                     <p>
-                      Consultas YouTube:{" "}
-                      {youtubeAutoReport.total_consultas_youtube ?? 0} ·
-                      Aplicados: {youtubeAutoReport.applied ?? 0} · Saltados:{" "}
-                      {youtubeAutoReport.skipped ?? 0} · Errores:{" "}
+                      {tx("Consultas YouTube", "YouTube queries")}: {youtubeAutoReport.total_consultas_youtube ?? 0} ·
+                      {tx("Aplicados", "Applied")}: {youtubeAutoReport.applied ?? 0} · {tx("Saltados", "Skipped")}: {" "}
+                      {youtubeAutoReport.skipped ?? 0} · {tx("Errores", "Errors")}: {" "}
                       {youtubeAutoReport.errors ?? 0}
                     </p>
                     {youtubeAutoReport.dryRun && (
-                      <p className="mt-1 text-[11px] text-indigo-800">
-                        Desmarcá los videos que no coinciden con el ejercicio.
-                        Luego usá “Aplicar seleccionados”; los descartados no se
-                        guardan.
+                      <p className="mt-1 text-[11px] text-indigo-800 dark:text-indigo-300">
+                        {tx(
+                          "Desmarcá los videos que no coinciden con el ejercicio. Luego usá ‘Aplicar seleccionados’; los descartados no se guardan.",
+                          "Uncheck videos that do not match the exercise. Then use ‘Apply selected’; discarded candidates will not be saved."
+                        )}
                       </p>
                     )}
                     {youtubeAutoReport.candidates?.length > 0 && (
-                      <div className="mt-2 max-h-48 overflow-auto rounded border bg-white">
+                      <div className="mt-2 max-h-48 overflow-auto rounded border bg-white dark:border-neutral-800 dark:bg-black/40">
                         {youtubeAutoReport.candidates
                           .slice(0, 24)
                           .map((row: any, index: number) => {
@@ -1233,19 +1320,21 @@ export default function RutinasExerciseMediaCatalogPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-red-100 bg-white">
+            <Card className="border-red-100 bg-white dark:border-red-900/60 dark:bg-neutral-950/80">
               <CardContent className="p-4 space-y-3">
                 <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                   <div>
-                    <p className="text-sm font-bold text-slate-900">
-                      Importación masiva YouTube ES/EN
+                    <p className="text-sm font-bold text-slate-900 dark:text-white">
+                      {tx("Importación masiva YouTube ES/EN", "Bulk YouTube import ES/EN")}
                     </p>
-                    <p className="text-xs text-slate-500">
-                      Pegá un CSV revisado. Primero previsualizá; luego activá
-                      “Aplicar cambios”.
+                    <p className="text-xs text-slate-500 dark:text-neutral-400">
+                      {tx(
+                        "Pegá un CSV revisado. Primero previsualizá; luego activá ‘Aplicar cambios’.",
+                        "Paste a reviewed CSV. Preview first, then enable ‘Apply changes’."
+                      )}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-slate-600">
+                  <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-neutral-400">
                     <input
                       id="youtube-apply-import"
                       type="checkbox"
@@ -1255,7 +1344,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                       }
                     />
                     <Label htmlFor="youtube-apply-import">
-                      Aplicar cambios
+                      {tx("Aplicar cambios", "Apply changes")}
                     </Label>
                   </div>
                 </div>
@@ -1278,8 +1367,8 @@ export default function RutinasExerciseMediaCatalogPage() {
                       <Video className="w-4 h-4 mr-2" />
                     )}
                     {youtubeImportApply
-                      ? "Importar YouTube"
-                      : "Previsualizar YouTube"}
+                      ? tx("Importar YouTube", "Import YouTube")
+                      : tx("Previsualizar YouTube", "Preview YouTube")}
                   </Button>
                   <Button
                     variant="outline"
@@ -1289,25 +1378,24 @@ export default function RutinasExerciseMediaCatalogPage() {
                       )
                     }
                   >
-                    Cargar plantilla
+                    {tx("Cargar plantilla", "Load template")}
                   </Button>
                 </div>
                 {youtubeImportReport && (
-                  <div className="rounded-lg border border-red-100 bg-red-50 p-3 text-xs text-red-900">
+                  <div className="rounded-lg border border-red-100 bg-red-50 p-3 text-xs text-red-900 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
                     <p className="font-semibold">
-                      Resultado:{" "}
-                      {youtubeImportReport.dryRun
-                        ? "previsualización"
-                        : "importación aplicada"}
+                      {tx("Resultado", "Result")}: {youtubeImportReport.dryRun
+                        ? tx("previsualización", "preview")
+                        : tx("importación aplicada", "import applied")}
                     </p>
                     <p>
-                      Total: {youtubeImportReport.total} · Encontrados:{" "}
-                      {youtubeImportReport.matched} · Aplicados:{" "}
-                      {youtubeImportReport.applied} · Errores:{" "}
+                      Total: {youtubeImportReport.total} · {tx("Encontrados", "Matched")}: {" "}
+                      {youtubeImportReport.matched} · {tx("Aplicados", "Applied")}:{" "}
+                      {youtubeImportReport.applied} · {tx("Errores", "Errors")}: {" "}
                       {youtubeImportReport.errors}
                     </p>
                     {youtubeImportReport.preview?.length > 0 && (
-                      <div className="mt-2 max-h-36 overflow-auto rounded border bg-white">
+                      <div className="mt-2 max-h-36 overflow-auto rounded border bg-white dark:border-neutral-800 dark:bg-black/40">
                         {youtubeImportReport.preview
                           .slice(0, 12)
                           .map((row: any) => (
@@ -1315,7 +1403,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                               key={`${row.row}-${row.id_ejercicio ?? row.nombre_ejercicio}`}
                               className="border-b px-2 py-1"
                             >
-                              Fila {row.row}:{" "}
+                              {tx("Fila", "Row")} {row.row}:{" "}
                               {row.nombre_ejercicio ?? row.id_ejercicio ?? "-"}{" "}
                               — {row.message}
                             </div>
@@ -1328,44 +1416,44 @@ export default function RutinasExerciseMediaCatalogPage() {
             </Card>
 
             {equivalenceSyncReport && (
-              <Card className="border-sky-200 bg-sky-50">
+              <Card className="border-sky-200 bg-sky-50 dark:border-sky-900/60 dark:bg-sky-950/25">
                 <CardContent className="p-4 space-y-3">
                   <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                     <div>
-                      <p className="text-sm font-bold text-sky-900">
-                        Sincronización de media equivalente
+                      <p className="text-sm font-bold text-sky-900 dark:text-sky-200">
+                        {tx("Sincronización de media equivalente", "Equivalent media sync")}
                       </p>
-                      <p className="text-xs text-sky-700">
+                      <p className="text-xs text-sky-700 dark:text-sky-300">
                         {equivalenceSyncReport.dryRun
-                          ? "Previsualización sin modificar datos."
-                          : "Cambios aplicados sobre ejercicios con fallback o imagen vacía."}
+                          ? tx("Previsualización sin modificar datos.", "Preview without changing data.")
+                          : tx("Cambios aplicados sobre ejercicios con fallback o imagen vacía.", "Changes applied to exercises with fallback or empty image.")}
                       </p>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
-                      <span className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sky-800">
-                        Fuentes: {equivalenceSyncReport.source_pool}
+                      <span className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sky-800 dark:border-sky-900/60 dark:bg-black/35 dark:text-sky-200">
+                        {tx("Fuentes", "Sources")}: {equivalenceSyncReport.source_pool}
                       </span>
-                      <span className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sky-800">
-                        Candidatos: {equivalenceSyncReport.total_candidates}
+                      <span className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sky-800 dark:border-sky-900/60 dark:bg-black/35 dark:text-sky-200">
+                        {tx("Candidatos", "Candidates")}: {equivalenceSyncReport.total_candidates}
                       </span>
-                      <span className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sky-800">
-                        Aplicados: {equivalenceSyncReport.applied}
+                      <span className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sky-800 dark:border-sky-900/60 dark:bg-black/35 dark:text-sky-200">
+                        {tx("Aplicados", "Applied")}: {equivalenceSyncReport.applied}
                       </span>
-                      <span className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sky-800">
-                        Pendientes: {equivalenceSyncReport.skipped}
+                      <span className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sky-800 dark:border-sky-900/60 dark:bg-black/35 dark:text-sky-200">
+                        {tx("Pendientes", "Pending")}: {equivalenceSyncReport.skipped}
                       </span>
                     </div>
                   </div>
 
                   {equivalenceSyncReport.candidates.length > 0 && (
-                    <div className="overflow-x-auto rounded-lg border border-sky-200 bg-white">
+                    <div className="overflow-x-auto rounded-lg border border-sky-200 bg-white dark:border-sky-900/60 dark:bg-black/35">
                       <table className="w-full text-xs">
-                        <thead className="text-left bg-sky-100 text-sky-900">
+                        <thead className="text-left bg-sky-100 text-sky-900 dark:bg-sky-950/60 dark:text-sky-200">
                           <tr>
-                            <th className="px-3 py-2">Origen</th>
-                            <th className="px-3 py-2">Destino</th>
-                            <th className="px-3 py-2">Nombre canónico</th>
-                            <th className="px-3 py-2">Media</th>
+                            <th className="px-3 py-2">{tx("Origen", "Source")}</th>
+                            <th className="px-3 py-2">{tx("Destino", "Target")}</th>
+                            <th className="px-3 py-2">{tx("Nombre canónico", "Canonical name")}</th>
+                            <th className="px-3 py-2">{tx("Media", "Media")}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1411,8 +1499,8 @@ export default function RutinasExerciseMediaCatalogPage() {
             )}
 
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
-              <Card className="bg-white">
-                <CardHeader className="p-4 border-b">
+              <Card className="bg-white dark:border-neutral-800 dark:bg-neutral-950/80">
+                <CardHeader className="p-4 border-b dark:border-neutral-800">
                   <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_180px_180px_220px]">
                     <div className="relative">
                       <Search className="absolute w-4 h-4 text-slate-400 left-3 top-3" />
@@ -1422,8 +1510,8 @@ export default function RutinasExerciseMediaCatalogPage() {
                           setPage(1);
                           setSearchTerm(event.target.value);
                         }}
-                        placeholder="Buscar ejercicio por nombre..."
-                        className="pl-9"
+                        placeholder={tx("Buscar ejercicio por nombre...", "Search exercise by name...")}
+                        className="pl-9 dark:border-neutral-800 dark:bg-black/50 dark:text-neutral-100 dark:placeholder:text-neutral-500"
                       />
                     </div>
                     <select
@@ -1432,9 +1520,9 @@ export default function RutinasExerciseMediaCatalogPage() {
                         setPage(1);
                         setObjetivoFilter(event.target.value);
                       }}
-                      className="h-10 px-3 text-sm border rounded-md bg-white"
+                      className="h-10 px-3 text-sm border rounded-md bg-white dark:border-neutral-800 dark:bg-black/50 dark:text-neutral-100"
                     >
-                      <option value="todos">Todos los objetivos</option>
+                      <option value="todos">{tx("Todos los objetivos", "All goals")}</option>
                       {objetivos.map((objetivo) => (
                         <option
                           key={objetivo.id_objetivo}
@@ -1450,9 +1538,9 @@ export default function RutinasExerciseMediaCatalogPage() {
                         setPage(1);
                         setNivelFilter(event.target.value);
                       }}
-                      className="h-10 px-3 text-sm border rounded-md bg-white"
+                      className="h-10 px-3 text-sm border rounded-md bg-white dark:border-neutral-800 dark:bg-black/50 dark:text-neutral-100"
                     >
-                      <option value="todos">Todos los niveles</option>
+                      <option value="todos">{tx("Todos los niveles", "All levels")}</option>
                       {niveles.map((nivel) => (
                         <option key={nivel.id_nivel} value={nivel.id_nivel}>
                           {nivel.nombre_nivel}
@@ -1465,30 +1553,30 @@ export default function RutinasExerciseMediaCatalogPage() {
                         setPage(1);
                         setMediaStatus(event.target.value);
                       }}
-                      className="h-10 px-3 text-sm border rounded-md bg-white"
+                      className="h-10 px-3 text-sm border rounded-md bg-white dark:border-neutral-800 dark:bg-black/50 dark:text-neutral-100"
                     >
-                      <option value="todos">Todos los estados</option>
+                      <option value="todos">{tx("Todos los estados", "All statuses")}</option>
                       <option value="pendiente_cloudinary">
-                        Pendiente Cloudinary
+                        {tx("Pendiente Cloudinary", "Pending Cloudinary")}
                       </option>
-                      <option value="cloudinary">Con Cloudinary</option>
+                      <option value="cloudinary">{tx("Con Cloudinary", "With Cloudinary")}</option>
                       <option value="pendiente_youtube">
-                        Pendiente YouTube
+                        {tx("Pendiente YouTube", "Pending YouTube")}
                       </option>
-                      <option value="youtube">Con YouTube</option>
+                      <option value="youtube">{tx("Con YouTube", "With YouTube")}</option>
                       <option value="pendiente_youtube_es">
-                        Pendiente YouTube ES
+                        {tx("Pendiente YouTube ES", "Pending YouTube ES")}
                       </option>
-                      <option value="youtube_es">Con YouTube ES</option>
+                      <option value="youtube_es">{tx("Con YouTube ES", "With YouTube ES")}</option>
                       <option value="pendiente_youtube_en">
-                        Pendiente YouTube EN
+                        {tx("Pendiente YouTube EN", "Pending YouTube EN")}
                       </option>
-                      <option value="youtube_en">Con YouTube EN</option>
-                      <option value="youtube_validado">YouTube validado</option>
+                      <option value="youtube_en">{tx("Con YouTube EN", "With YouTube EN")}</option>
+                      <option value="youtube_validado">{tx("YouTube validado", "Validated YouTube")}</option>
                       <option value="youtube_revision">
-                        YouTube en revisión
+                        {tx("YouTube en revisión", "YouTube in review")}
                       </option>
-                      <option value="fallback">Con fallback</option>
+                      <option value="fallback">{tx("Con fallback", "With fallback")}</option>
                     </select>
                   </div>
                 </CardHeader>
@@ -1501,35 +1589,35 @@ export default function RutinasExerciseMediaCatalogPage() {
                       const hasCloudinary = hasCloudinaryMedia(item);
                       const youtubeEsUrl = getYoutubeEsUrl(item);
                       const youtubeEnUrl = getYoutubeEnUrl(item);
-                      const quality = getMediaQuality(item);
+                      const quality = getMediaQuality(item, isEnglish);
 
                       return (
                         <button
                           key={item.id_ejercicio}
                           type="button"
                           onClick={() => setSelectedExercise(item)}
-                          className={`w-full rounded-2xl border p-3 text-left shadow-sm ${active ? "border-sky-300 bg-sky-50" : "border-slate-200 bg-white"}`}
+                          className={`w-full rounded-2xl border p-3 text-left shadow-sm ${active ? "border-sky-300 bg-sky-50 dark:border-sky-900/70 dark:bg-sky-950/30" : "border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-950/70"}`}
                         >
                           <div className="flex gap-3">
                             <img
                               src={getImageSource(item)}
                               alt={item.nombre_ejercicio}
-                              className="h-20 w-20 rounded-xl border bg-slate-100 object-cover"
+                              className="h-20 w-20 rounded-xl border bg-slate-100 object-cover dark:border-neutral-800 dark:bg-neutral-900"
                             />
                             <div className="min-w-0 flex-1">
-                              <p className="font-semibold text-slate-900">{item.nombre_ejercicio}</p>
-                              <p className="text-xs text-slate-500">
-                                {item.grupo_muscular_nombre ?? "Grupo sin dato"} · {item.objetivo_nombre ?? `Objetivo ${item.id_objetivo}`}
+                              <p className="font-semibold text-slate-900 dark:text-white">{item.nombre_ejercicio}</p>
+                              <p className="text-xs text-slate-500 dark:text-neutral-400">
+                                {item.grupo_muscular_nombre ?? tx("Grupo sin dato", "No group data")} · {item.objetivo_nombre ?? `${tx("Objetivo", "Goal")} ${item.id_objetivo}`}
                               </p>
                               <div className="mt-2 flex flex-wrap gap-1.5">
                                 <span className={`inline-flex rounded-full border px-2 py-1 text-[11px] ${quality.className}`}>
                                   {quality.label}
                                 </span>
-                                <span className={`inline-flex rounded-full border px-2 py-1 text-[11px] ${hasCloudinary ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"}`}>
-                                  {hasCloudinary ? "Imagen OK" : "Imagen pendiente"}
+                                <span className={`inline-flex rounded-full border px-2 py-1 text-[11px] ${hasCloudinary ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/40 dark:text-emerald-300" : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-300"}`}>
+                                  {hasCloudinary ? tx("Imagen OK", "Image OK") : tx("Imagen pendiente", "Image pending")}
                                 </span>
-                                <span className={`inline-flex rounded-full border px-2 py-1 text-[11px] ${hasYoutube ? "border-red-200 bg-red-50 text-red-700" : "border-slate-200 bg-slate-50 text-slate-500"}`}>
-                                  {hasYoutube ? "Video OK" : "Video pendiente"}
+                                <span className={`inline-flex rounded-full border px-2 py-1 text-[11px] ${hasYoutube ? "border-red-200 bg-red-50 text-red-700 dark:border-red-900/70 dark:bg-red-950/40 dark:text-red-300" : "border-slate-200 bg-slate-50 text-slate-500 dark:border-neutral-800 dark:bg-neutral-900/70 dark:text-neutral-400"}`}>
+                                  {hasYoutube ? tx("Video OK", "Video OK") : tx("Video pendiente", "Video pending")}
                                 </span>
                               </div>
                               <div className="mt-2 flex gap-2">
@@ -1565,16 +1653,16 @@ export default function RutinasExerciseMediaCatalogPage() {
 
                   <div className="hidden overflow-x-auto md:block">
                     <table className="w-full text-sm">
-                      <thead className="text-left bg-slate-100 text-slate-600">
+                      <thead className="text-left bg-slate-100 text-slate-600 dark:bg-neutral-900 dark:text-neutral-300">
                         <tr>
-                          <th className="px-4 py-3">Ejercicio</th>
-                          <th className="px-4 py-3">Objetivo / Nivel</th>
-                          <th className="px-4 py-3">Imagen</th>
-                          <th className="px-4 py-3">Video</th>
-                          <th className="px-4 py-3">Calidad</th>
-                          <th className="px-4 py-3 text-center">Ver (ES)</th>
-                          <th className="px-4 py-3 text-center">Ver (EN)</th>
-                          <th className="px-4 py-3 text-right">Acción</th>
+                          <th className="px-4 py-3">{tx("Ejercicio", "Exercise")}</th>
+                          <th className="px-4 py-3">{tx("Objetivo / Nivel", "Goal / Level")}</th>
+                          <th className="px-4 py-3">{tx("Imagen", "Image")}</th>
+                          <th className="px-4 py-3">{tx("Video", "Video")}</th>
+                          <th className="px-4 py-3">{tx("Calidad", "Quality")}</th>
+                          <th className="px-4 py-3 text-center">{tx("Ver (ES)", "View (ES)")}</th>
+                          <th className="px-4 py-3 text-center">{tx("Ver (EN)", "View (EN)")}</th>
+                          <th className="px-4 py-3 text-right">{tx("Acción", "Action")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1586,63 +1674,63 @@ export default function RutinasExerciseMediaCatalogPage() {
                           const youtubeEsUrl = getYoutubeEsUrl(item);
                           const youtubeEnUrl = getYoutubeEnUrl(item);
                           const hasCloudinary = hasCloudinaryMedia(item);
-                          const quality = getMediaQuality(item);
+                          const quality = getMediaQuality(item, isEnglish);
 
                           return (
                             <tr
                               key={item.id_ejercicio}
-                              className={`border-t ${active ? "bg-sky-50" : "bg-white"}`}
+                              className={`border-t ${active ? "bg-sky-50 dark:bg-sky-950/25" : "bg-white dark:bg-neutral-950/70"}`}
                             >
                               <td className="px-4 py-3">
                                 <div className="flex items-center gap-3">
                                   <img
                                     src={getImageSource(item)}
                                     alt={item.nombre_ejercicio}
-                                    className="object-cover w-12 h-12 border rounded-lg bg-slate-100"
+                                    className="object-cover w-12 h-12 border rounded-lg bg-slate-100 dark:border-neutral-800 dark:bg-neutral-900"
                                   />
                                   <div>
-                                    <p className="font-semibold text-slate-900">
+                                    <p className="font-semibold text-slate-900 dark:text-white">
                                       {item.nombre_ejercicio}
                                     </p>
-                                    <p className="text-xs text-slate-500">
+                                    <p className="text-xs text-slate-500 dark:text-neutral-400">
                                       {item.grupo_muscular_nombre ??
-                                        "Grupo sin dato"}
+                                        tx("Grupo sin dato", "No group data")}
                                     </p>
                                   </div>
                                 </div>
                               </td>
-                              <td className="px-4 py-3 text-slate-600">
+                              <td className="px-4 py-3 text-slate-600 dark:text-neutral-300">
                                 <p>
                                   {item.objetivo_nombre ??
-                                    `Objetivo ${item.id_objetivo}`}
+                                    `${tx("Objetivo", "Goal")} ${item.id_objetivo}`}
                                 </p>
                                 <p className="text-xs">
                                   {item.nivel_nombre ??
-                                    `Nivel ${item.id_nivel}`}
+                                    `${tx("Nivel", "Level")} ${item.id_nivel}`}
                                 </p>
                               </td>
                               <td className="px-4 py-3">
                                 <span
-                                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs ${hasCloudinary ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"}`}
+                                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs ${hasCloudinary ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/40 dark:text-emerald-300" : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-300"}`}
                                 >
                                   {hasCloudinary ? (
                                     <Cloud className="w-3 h-3" />
                                   ) : (
                                     <AlertTriangle className="w-3 h-3" />
                                   )}
-                                  {mediaStatusLabel(item.imagen_origen)}
+                                  {mediaStatusLabel(item.imagen_origen, isEnglish)}
                                 </span>
                               </td>
                               <td className="px-4 py-3">
                                 <span
-                                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs ${hasYoutube ? "border-red-200 bg-red-50 text-red-700" : "border-slate-200 bg-slate-50 text-slate-500"}`}
+                                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs ${hasYoutube ? "border-red-200 bg-red-50 text-red-700 dark:border-red-900/70 dark:bg-red-950/40 dark:text-red-300" : "border-slate-200 bg-slate-50 text-slate-500 dark:border-neutral-800 dark:bg-neutral-900/70 dark:text-neutral-400"}`}
                                 >
                                   <Video className="w-3 h-3" />
                                   {hasYoutube
                                     ? item.youtube_review_status === "validado"
-                                      ? "YouTube validado"
+                                      ? tx("YouTube validado", "Validated YouTube")
                                       : "YouTube"
-                                    : "Pendiente"}
+                                    : tx("Pendiente", "Pending")}
                                 </span>
                               </td>
                               <td className="px-4 py-3">
@@ -1658,7 +1746,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                                     href={youtubeEsUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    title="Ver video en español"
+                                    title={tx("Ver video en español", "View video in Spanish")}
                                     className="inline-flex items-center justify-center rounded-md border border-red-200 bg-red-50 p-2 text-red-700 hover:bg-red-100"
                                   >
                                     <Eye className="h-4 w-4" />
@@ -1674,7 +1762,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                                     href={youtubeEnUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    title="Ver video en inglés"
+                                    title={tx("Ver video en inglés", "View video in English")}
                                     className="inline-flex items-center justify-center rounded-md border border-sky-200 bg-sky-50 p-2 text-sky-700 hover:bg-sky-100"
                                   >
                                     <Eye className="h-4 w-4" />
@@ -1690,7 +1778,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                                   variant={active ? "default" : "outline"}
                                   onClick={() => setSelectedExercise(item)}
                                 >
-                                  Editar
+                                  {tx("Editar", "Edit")}
                                 </Button>
                               </td>
                             </tr>
@@ -1700,10 +1788,9 @@ export default function RutinasExerciseMediaCatalogPage() {
                     </table>
                   </div>
 
-                  <div className="flex flex-col gap-3 px-4 py-3 border-t md:flex-row md:items-center md:justify-between">
-                    <p className="text-sm text-slate-500">
-                      Mostrando {items.length} de {total} ejercicios · Página{" "}
-                      {page} de {totalPages}
+                  <div className="flex flex-col gap-3 px-4 py-3 border-t dark:border-neutral-800 md:flex-row md:items-center md:justify-between">
+                    <p className="text-sm text-slate-500 dark:text-neutral-400">
+                      {tx("Mostrando", "Showing")} {items.length} {tx("de", "of")} {total} {tx("ejercicios", "exercises")} · {tx("Página", "Page")} {page} {tx("de", "of")} {totalPages}
                     </p>
                     <div className="flex gap-2">
                       <Button
@@ -1712,7 +1799,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                         disabled={page <= 1}
                         onClick={() => setPage((prev) => Math.max(1, prev - 1))}
                       >
-                        Anterior
+                        {tx("Anterior", "Previous")}
                       </Button>
                       <Button
                         variant="outline"
@@ -1722,32 +1809,32 @@ export default function RutinasExerciseMediaCatalogPage() {
                           setPage((prev) => Math.min(totalPages, prev + 1))
                         }
                       >
-                        Siguiente
+                        {tx("Siguiente", "Next")}
                       </Button>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-white xl:sticky xl:top-6 xl:self-start">
-                <CardHeader className="p-4 border-b">
+              <Card className="bg-white dark:border-neutral-800 dark:bg-neutral-950/80 xl:sticky xl:top-6 xl:self-start">
+                <CardHeader className="p-4 border-b dark:border-neutral-800">
                   <div className="flex items-center gap-2">
                     <Dumbbell className="w-5 h-5 text-[#0ea5e9]" />
-                    <h2 className="text-lg font-bold">Detalle de media</h2>
+                    <h2 className="text-lg font-bold">{tx("Detalle de media", "Media detail")}</h2>
                   </div>
                 </CardHeader>
                 <CardContent className="p-4 space-y-5">
                   {!selectedExercise ? (
-                    <div className="py-12 text-center text-slate-500">
-                      Seleccioná un ejercicio para editar su media.
+                    <div className="py-12 text-center text-slate-500 dark:text-neutral-400">
+                      {tx("Seleccioná un ejercicio para editar su media.", "Select an exercise to edit its media.")}
                     </div>
                   ) : (
                     <>
                       <div>
-                        <p className="text-lg font-bold text-slate-900">
+                        <p className="text-lg font-bold text-slate-900 dark:text-white">
                           {selectedExercise.nombre_ejercicio}
                         </p>
-                        <p className="text-sm text-slate-500">
+                        <p className="text-sm text-slate-500 dark:text-neutral-400">
                           {selectedExercise.objetivo_nombre} ·{" "}
                           {selectedExercise.nivel_nombre} ·{" "}
                           {selectedExercise.grupo_muscular_nombre}
@@ -1765,10 +1852,10 @@ export default function RutinasExerciseMediaCatalogPage() {
                       <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
                         <div className="p-3 border rounded-lg bg-slate-50">
                           <p className="font-semibold text-slate-600">
-                            Origen imagen
+                            {tx("Origen imagen", "Image source")}
                           </p>
                           <p className="text-slate-900">
-                            {mediaStatusLabel(selectedExercise.imagen_origen)}
+                            {mediaStatusLabel(selectedExercise.imagen_origen, isEnglish)}
                           </p>
                         </div>
                         <div className="p-3 border rounded-lg bg-slate-50">
@@ -1781,24 +1868,26 @@ export default function RutinasExerciseMediaCatalogPage() {
                         </div>
                       </div>
 
-                      <div className={`rounded-lg border p-3 text-xs ${getMediaQuality(selectedExercise).className}`}>
-                        <p className="font-semibold">Estado para socio/RAG: {getMediaQuality(selectedExercise).label}</p>
+                      <div className={`rounded-lg border p-3 text-xs ${getMediaQuality(selectedExercise, isEnglish).className}`}>
+                        <p className="font-semibold">
+                          {tx("Estado para socio/RAG", "Status for member/RAG")}: {getMediaQuality(selectedExercise, isEnglish).label}
+                        </p>
                         <p>
                           {hasCloudinaryMedia(selectedExercise)
-                            ? "Imagen principal segura para web, mobile y PDF."
-                            : "Prioridad: subir o importar imagen/GIF a Cloudinary."}{" "}
+                            ? tx("Imagen principal segura para web, mobile y PDF.", "Safe main image for web, mobile, and PDF.")
+                            : tx("Prioridad: subir o importar imagen/GIF a Cloudinary.", "Priority: upload or import an image/GIF to Cloudinary.")}{" "}
                           {hasYoutubeMedia(selectedExercise)
-                            ? "Video asociado para explicar técnica."
-                            : "Pendiente asociar video de técnica ES/EN."}
+                            ? tx("Video asociado para explicar técnica.", "Video associated to explain technique.")
+                            : tx("Pendiente asociar video de técnica ES/EN.", "Pending ES/EN technique video association.")}
                         </p>
                       </div>
 
                       <div className="space-y-3">
                         <div className="flex items-center justify-between gap-3">
                           <div>
-                            <Label>Subir imagen/GIF a Cloudinary</Label>
-                            <p className="text-xs text-slate-500">
-                              Recomendado para evitar URLs rotas.
+                            <Label>{tx("Subir imagen/GIF a Cloudinary", "Upload image/GIF to Cloudinary")}</Label>
+                            <p className="text-xs text-slate-500 dark:text-neutral-400">
+                              {tx("Recomendado para evitar URLs rotas.", "Recommended to avoid broken URLs.")}
                             </p>
                           </div>
                           <input
@@ -1817,14 +1906,14 @@ export default function RutinasExerciseMediaCatalogPage() {
                             ) : (
                               <UploadCloud className="w-4 h-4 mr-2" />
                             )}
-                            Subir
+                            {tx("Subir", "Upload")}
                           </Button>
                         </div>
                       </div>
 
                       <div className="space-y-2">
                         <Label htmlFor="external-image-url">
-                          URL de imagen actual / externa
+                          {tx("URL de imagen actual / externa", "Current / external image URL")}
                         </Label>
                         <Input
                           id="external-image-url"
@@ -1842,7 +1931,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                             disabled={saving || uploading || importing}
                           >
                             <ImageIcon className="w-4 h-4 mr-2" />
-                            Guardar URL de imagen
+                            {tx("Guardar URL de imagen", "Save image URL")}
                           </Button>
                           <Button
                             className="w-full"
@@ -1859,20 +1948,21 @@ export default function RutinasExerciseMediaCatalogPage() {
                             ) : (
                               <Cloud className="w-4 h-4 mr-2" />
                             )}
-                            Importar URL a Cloudinary
+                            {tx("Importar URL a Cloudinary", "Import URL to Cloudinary")}
                           </Button>
                         </div>
-                        <p className="text-xs text-slate-500">
-                          Usa este botón para tomar una URL externa existente,
-                          importarla a Cloudinary y reemplazar la imagen del
-                          ejercicio por la URL segura nueva.
+                        <p className="text-xs text-slate-500 dark:text-neutral-400">
+                          {tx(
+                            "Usá este botón para tomar una URL externa existente, importarla a Cloudinary y reemplazar la imagen del ejercicio por la URL segura nueva.",
+                            "Use this button to take an existing external URL, import it to Cloudinary, and replace the exercise image with the new safe URL."
+                          )}
                         </p>
                       </div>
 
                       <div className="space-y-3">
                         <div className="space-y-2">
                           <Label htmlFor="youtube-url-es">
-                            Video de YouTube recomendado ES
+                            {tx("Video de YouTube recomendado ES", "Recommended YouTube video ES")}
                           </Label>
                           <Input
                             id="youtube-url-es"
@@ -1885,7 +1975,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="youtube-url-en">
-                            Video de YouTube recomendado EN
+                            {tx("Video de YouTube recomendado EN", "Recommended YouTube video EN")}
                           </Label>
                           <Input
                             id="youtube-url-en"
@@ -1898,7 +1988,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                         </div>
                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                           <div className="space-y-2">
-                            <Label htmlFor="youtube-source">Fuente</Label>
+                            <Label htmlFor="youtube-source">{tx("Fuente", "Source")}</Label>
                             <Input
                               id="youtube-source"
                               value={youtubeSource}
@@ -1910,7 +2000,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="youtube-review-status">
-                              Estado revisión
+                              {tx("Estado revisión", "Review status")}
                             </Label>
                             <select
                               id="youtube-review-status"
@@ -1918,12 +2008,12 @@ export default function RutinasExerciseMediaCatalogPage() {
                               onChange={(event) =>
                                 setYoutubeReviewStatus(event.target.value)
                               }
-                              className="h-10 w-full rounded-md border bg-white px-3 text-sm"
+                              className="h-10 w-full rounded-md border bg-white px-3 text-sm dark:border-neutral-800 dark:bg-black/50 dark:text-neutral-100"
                             >
-                              <option value="pendiente">Pendiente</option>
-                              <option value="sugerido">Sugerido</option>
-                              <option value="validado">Validado</option>
-                              <option value="rechazado">Rechazado</option>
+                              <option value="pendiente">{tx("Pendiente", "Pending")}</option>
+                              <option value="sugerido">{tx("Sugerido", "Suggested")}</option>
+                              <option value="validado">{tx("Validado", "Validated")}</option>
+                              <option value="rechazado">{tx("Rechazado", "Rejected")}</option>
                               <option value="requiere_revision">
                                 Requiere revisión
                               </option>
@@ -1932,7 +2022,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="youtube-review-notes">
-                            Notas de revisión
+                            {tx("Notas de revisión", "Review notes")}
                           </Label>
                           <Input
                             id="youtube-review-notes"
@@ -1940,7 +2030,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                             onChange={(event) =>
                               setYoutubeReviewNotes(event.target.value)
                             }
-                            placeholder="Ej: video revisado por técnica y seguridad"
+                            placeholder={tx("Ej: video revisado por técnica y seguridad", "Example: video reviewed for technique and safety")}
                           />
                         </div>
                         <div className="flex gap-2">
@@ -1954,7 +2044,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                             ) : (
                               <Video className="w-4 h-4 mr-2" />
                             )}
-                            Guardar videos
+                            {tx("Guardar videos", "Save videos")}
                           </Button>
                           {getYoutubePreviewUrl(
                             selectedExercise.youtube_video_id_es ||
@@ -1978,12 +2068,11 @@ export default function RutinasExerciseMediaCatalogPage() {
                         </div>
                       </div>
 
-                      <div className="p-3 text-xs border rounded-lg bg-blue-50 text-blue-700 border-blue-200">
-                        Cloudinary debe ser la fuente principal para
-                        imágenes/GIFs. Podés subir archivos locales o importar
-                        URLs externas para evitar descargas manuales. YouTube
-                        queda como apoyo didáctico para que el socio vea la
-                        técnica del ejercicio.
+                      <div className="p-3 text-xs border rounded-lg bg-blue-50 text-blue-700 border-blue-200 dark:border-sky-900/60 dark:bg-sky-950/35 dark:text-sky-300">
+                        {tx(
+                          "Cloudinary debe ser la fuente principal para imágenes/GIFs. Podés subir archivos locales o importar URLs externas para evitar descargas manuales. YouTube queda como apoyo didáctico para que el socio vea la técnica del ejercicio.",
+                          "Cloudinary should be the main source for images/GIFs. You can upload local files or import external URLs to avoid manual downloads. YouTube remains as didactic support so the member can see the exercise technique."
+                        )}
                       </div>
                     </>
                   )}

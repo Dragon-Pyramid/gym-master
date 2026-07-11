@@ -14,6 +14,7 @@ import EquipamientoForm from "../forms/EquipamientoForm";
 import MantenimientoForm from "../forms/MantenimientoForm";
 import { Equipamento } from "@/interfaces/equipamiento.interface";
 import { getOneEquipamientoById } from "@/services/equipamientoService";
+import { useI18n } from "@/i18n/I18nProvider";
 
 export default function EquipamientoModal({
   open,
@@ -26,6 +27,9 @@ export default function EquipamientoModal({
   onCreated: () => void;
   equipoId?: string | null;
 }) {
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const tx = (es: string, en: string) => (isEnglish ? en : es);
   const [equipo, setEquipo] = useState<Equipamento | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [refresh, setRefresh] = useState(0);
@@ -50,7 +54,7 @@ export default function EquipamientoModal({
         <DialogHeader>
           <div className="flex items-center justify-between w-full gap-4">
             <DialogTitle className="text-xl font-semibold">
-              {equipo ? "Editar Equipamiento" : "Nuevo Equipamiento"}
+              {equipo ? tx("Editar Equipamiento", "Edit equipment") : tx("Nuevo Equipamiento", "New equipment")}
             </DialogTitle>
             <FechaHora />
           </div>
@@ -73,8 +77,8 @@ export default function EquipamientoModal({
               type="button"
             >
               {showMantenimiento
-                ? "Ocultar formulario de mantenimiento"
-                : "Registrar nuevo mantenimiento"}
+                ? tx("Ocultar formulario de mantenimiento", "Hide maintenance form")
+                : tx("Registrar nuevo mantenimiento", "Register new maintenance")}
             </Button>
             {showMantenimiento && (
               <MantenimientoForm

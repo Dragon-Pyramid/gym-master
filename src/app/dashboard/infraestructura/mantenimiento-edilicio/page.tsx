@@ -21,6 +21,7 @@ import { AppFooter } from '@/components/footer/AppFooter';
 import { AppHeader } from '@/components/header/AppHeader';
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { Button } from '@/components/ui/button';
+import { useI18n } from '@/i18n/I18nProvider';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
@@ -98,17 +99,105 @@ function labelFromValue(value?: string | null) {
   return value.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+
+function getSectorTypeLabel(value: InfraestructuraSectorTipo, isEnglish: boolean) {
+  if (!isEnglish) return sectorTypes.find((type) => type.value === value)?.label ?? labelFromValue(value);
+  const labels: Record<InfraestructuraSectorTipo, string> = {
+    edificio: 'Building',
+    piso: 'Floor',
+    salon: 'Room',
+    bano: 'Bathroom',
+    ducha: 'Shower',
+    deposito: 'Storage',
+    recepcion: 'Reception',
+    oficina: 'Office',
+    pasillo: 'Hallway',
+    patio: 'Patio',
+    sala_maquinas: 'Machine room',
+    otro: 'Other',
+  };
+  return labels[value] ?? labelFromValue(value);
+}
+
+function getPriorityLabel(value?: string | null, isEnglish = false) {
+  if (!value) return '-';
+  if (!isEnglish) return labelFromValue(value);
+  const labels: Record<string, string> = {
+    baja: 'Low',
+    media: 'Medium',
+    alta: 'High',
+    critica: 'Critical',
+    critico: 'Critical',
+  };
+  return labels[value] ?? labelFromValue(value);
+}
+
+function getOrderTypeLabel(value?: string | null, isEnglish = false) {
+  if (!value) return '-';
+  if (!isEnglish) return labelFromValue(value);
+  const labels: Record<string, string> = {
+    correctivo: 'Corrective',
+    preventivo: 'Preventive',
+    inspeccion: 'Inspection',
+    cambio: 'Replacement',
+    vencimiento: 'Due date',
+    certificacion: 'Certification',
+  };
+  return labels[value] ?? labelFromValue(value);
+}
+
+function getChecklistResultLabel(value?: string | null, isEnglish = false) {
+  if (!value) return '-';
+  if (!isEnglish) return labelFromValue(value);
+  const labels: Record<string, string> = {
+    ok: 'Ok',
+    observado: 'Observed',
+    critico: 'Critical',
+  };
+  return labels[value] ?? labelFromValue(value);
+}
+
+function getTargetTypeLabel(value?: string | null, isEnglish = false) {
+  if (!value) return '-';
+  if (!isEnglish) return labelFromValue(value);
+  const labels: Record<string, string> = {
+    infra_activo: 'Building asset',
+    infra_sector: 'Building sector',
+  };
+  return labels[value] ?? labelFromValue(value);
+}
+
+function getAssetStatusLabel(value?: string | null, isEnglish = false) {
+  if (!value) return '-';
+  if (!isEnglish) return labelFromValue(value);
+  const normalized = value.toLowerCase().replace(/\s+/g, '_');
+  const labels: Record<string, string> = {
+    operativo: 'Operational',
+    activa: 'Active',
+    activo: 'Active',
+    en_mantenimiento: 'Under maintenance',
+    mantenimiento: 'Maintenance',
+    fuera_de_servicio: 'Out of service',
+    fuera_servicio: 'Out of service',
+    pendiente: 'Pending',
+    vencido: 'Overdue',
+  };
+  return labels[normalized] ?? labelFromValue(value);
+}
+
 function buildQrImageUrl(codigo?: string | null, size = 180) {
   const value = String(codigo ?? '').trim();
   if (!value) return '';
   return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=10&data=${encodeURIComponent(value)}`;
 }
 
-function printQrLabel({ codigo, titulo, subtitulo }: { codigo: string; titulo: string; subtitulo?: string }) {
+function printQrLabel({ codigo, titulo, subtitulo, hintText, documentTitlePrefix }: { codigo: string; titulo: string; subtitulo?: string; hintText?: string; documentTitlePrefix?: string }) {
   const qrUrl = buildQrImageUrl(codigo, 260);
   const safeTitle = titulo.replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const safeSubtitle = String(subtitulo ?? '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const safeCode = codigo.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const safeHintText = String(hintText ?? 'Escanear desde Infraestructura > Lector QR/barra').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const safeDocumentTitlePrefix = String(documentTitlePrefix ?? 'Etiqueta QR').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
   const printWindow = window.open('', '_blank', 'width=520,height=720');
   if (!printWindow) return;
@@ -118,7 +207,7 @@ function printQrLabel({ codigo, titulo, subtitulo }: { codigo: string; titulo: s
     <html>
       <head>
         <meta charset="utf-8" />
-        <title>Etiqueta QR - ${safeTitle}</title>
+        <title>${safeDocumentTitlePrefix} - ${safeTitle}</title>
         <style>
           body { font-family: Arial, sans-serif; margin: 0; padding: 24px; color: #111827; }
           .label { border: 2px solid #111827; border-radius: 16px; padding: 18px; width: 340px; text-align: center; }
@@ -138,7 +227,7 @@ function printQrLabel({ codigo, titulo, subtitulo }: { codigo: string; titulo: s
           ${safeSubtitle ? `<div class="subtitle">${safeSubtitle}</div>` : ''}
           <img src="${qrUrl}" alt="QR ${safeCode}" />
           <div class="code">${safeCode}</div>
-          <div class="hint">Escanear desde Infraestructura &gt; Lector QR/barra</div>
+          <div class="hint">${safeHintText}</div>
         </div>
         <script>window.onload = () => { window.print(); };</script>
       </body>
@@ -215,6 +304,13 @@ function SelectField({
 }
 
 export default function MantenimientoEdilicioPage() {
+  const { locale } = useI18n();
+  const isEnglish = locale === 'en';
+  const tx = (es: string, en: string) => (isEnglish ? en : es);
+
+  const sectorTypeOptions = useMemo(() => sectorTypes.map((type) => ({ ...type, label: getSectorTypeLabel(type.value, isEnglish) })), [isEnglish]);
+  const priorityLabelOptions = useMemo(() => priorityOptions.map((option) => ({ ...option, label: getPriorityLabel(option.value, isEnglish) })), [isEnglish]);
+  const orderTypeLabelOptions = useMemo(() => orderTypes.map((option) => ({ ...option, label: getOrderTypeLabel(option.value, isEnglish) })), [isEnglish]);
   const [dashboard, setDashboard] = useState<InfraestructuraMantenimientoDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
@@ -263,7 +359,7 @@ export default function MantenimientoEdilicioPage() {
       const data = await getInfraestructuraMantenimientoDashboardClient();
       setDashboard(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo cargar mantenimiento edilicio.');
+      setError(err instanceof Error ? err.message : tx('No se pudo cargar mantenimiento edilicio.', 'Building maintenance data could not be loaded.'));
     } finally {
       setLoading(false);
     }
@@ -286,12 +382,16 @@ export default function MantenimientoEdilicioPage() {
     const openOrders = metrics?.ordenesAbiertas ?? 0;
     const checklistCritical = (dashboard?.checklistEjecuciones ?? []).filter((item) => item.resultado_general === 'critico').length;
     const needsAttention = overdueAssets + overdueOrders + checklistCritical;
-    const status = needsAttention > 0 ? 'Atención prioritaria' : openOrders > 0 ? 'Seguimiento operativo' : 'Infraestructura controlada';
-    const nextStep = needsAttention > 0
-      ? 'Resolver vencimientos críticos, órdenes vencidas y checklists observados antes de nuevas mejoras edilicias.'
+    const status = needsAttention > 0
+      ? tx('Atención prioritaria', 'Priority attention')
       : openOrders > 0
-        ? 'Cerrar órdenes abiertas y registrar checklists para sostener trazabilidad edilicia.'
-        : 'Mantener calendario preventivo, QR visibles y revisión periódica de sectores clave.';
+        ? tx('Seguimiento operativo', 'Operational follow-up')
+        : tx('Infraestructura controlada', 'Infrastructure under control');
+    const nextStep = needsAttention > 0
+      ? tx('Resolver vencimientos críticos, órdenes vencidas y checklists observados antes de nuevas mejoras edilicias.', 'Resolve critical due dates, overdue orders, and observed checklists before new building improvements.')
+      : openOrders > 0
+        ? tx('Cerrar órdenes abiertas y registrar checklists para sostener trazabilidad edilicia.', 'Close open orders and register checklists to sustain building traceability.')
+        : tx('Mantener calendario preventivo, QR visibles y revisión periódica de sectores clave.', 'Keep the preventive schedule, visible QR labels, and regular reviews of key sectors.');
 
     return {
       status,
@@ -303,7 +403,7 @@ export default function MantenimientoEdilicioPage() {
       checklistCritical,
       nextStep,
     };
-  }, [dashboard]);
+  }, [dashboard, isEnglish]);
 
   const registerSuccess = async (message: string) => {
     setSuccess(message);
@@ -318,9 +418,9 @@ export default function MantenimientoEdilicioPage() {
     try {
       await createInfraestructuraSectorClient(sectorForm);
       setSectorForm({ nombre: '', tipo: 'salon', descripcion: '' });
-      await registerSuccess('Sector edilicio creado correctamente.');
+      await registerSuccess(tx('Sector edilicio creado correctamente.', 'Building sector created successfully.'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo crear el sector.');
+      setError(err instanceof Error ? err.message : tx('No se pudo crear el sector.', 'The sector could not be created.'));
     } finally {
       setSaving(null);
     }
@@ -338,9 +438,9 @@ export default function MantenimientoEdilicioPage() {
         fecha_vencimiento: activoForm.fecha_vencimiento || null,
       });
       setActivoForm({ nombre: '', categoria_id: '', sector_id: '', criticidad: 'media', fecha_vencimiento: '', observaciones: '' });
-      await registerSuccess('Activo edilicio creado correctamente.');
+      await registerSuccess(tx('Activo edilicio creado correctamente.', 'Building asset created successfully.'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo crear el activo edilicio.');
+      setError(err instanceof Error ? err.message : tx('No se pudo crear el activo edilicio.', 'The building asset could not be created.'));
     } finally {
       setSaving(null);
     }
@@ -367,9 +467,9 @@ export default function MantenimientoEdilicioPage() {
         tecnico_responsable: '',
         descripcion: '',
       });
-      await registerSuccess('Orden de mantenimiento creada correctamente.');
+      await registerSuccess(tx('Orden de mantenimiento creada correctamente.', 'Maintenance order created successfully.'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo crear la orden.');
+      setError(err instanceof Error ? err.message : tx('No se pudo crear la orden.', 'The order could not be created.'));
     } finally {
       setSaving(null);
     }
@@ -389,9 +489,9 @@ export default function MantenimientoEdilicioPage() {
         notas: checklistForm.notas || null,
       });
       setChecklistForm({ template_id: '', activo_id: '', sector_id: '', orden_id: '', resultado_general: 'ok', notas: '' });
-      await registerSuccess('Checklist edilicio registrado correctamente.');
+      await registerSuccess(tx('Checklist edilicio registrado correctamente.', 'Building checklist registered successfully.'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo ejecutar el checklist.');
+      setError(err instanceof Error ? err.message : tx('No se pudo ejecutar el checklist.', 'The checklist could not be executed.'));
     } finally {
       setSaving(null);
     }
@@ -409,9 +509,9 @@ export default function MantenimientoEdilicioPage() {
       });
       setLastQr(response.data);
       setQrForm({ target_type: qrForm.target_type || 'infra_activo', target_id: '', titulo: '' });
-      await registerSuccess('Código QR/barra generado correctamente.');
+      await registerSuccess(tx('Código QR/barra generado correctamente.', 'QR/barcode generated successfully.'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo generar el código QR/barra.');
+      setError(err instanceof Error ? err.message : tx('No se pudo generar el código QR/barra.', 'The QR/barcode could not be generated.'));
     } finally {
       setSaving(null);
     }
@@ -422,9 +522,9 @@ export default function MantenimientoEdilicioPage() {
     setError(null);
     try {
       await updateMantenimientoEdilicioOrdenClient(id, { estado: 'completada', resultado: 'Orden completada desde panel de infraestructura.' });
-      await registerSuccess('Orden marcada como completada.');
+      await registerSuccess(tx('Orden marcada como completada.', 'Order marked as completed.'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo completar la orden.');
+      setError(err instanceof Error ? err.message : tx('No se pudo completar la orden.', 'The order could not be completed.'));
     } finally {
       setSaving(null);
     }
@@ -435,21 +535,21 @@ export default function MantenimientoEdilicioPage() {
       <div className="flex h-[100dvh] max-h-[100dvh] w-full overflow-hidden">
         <AppSidebar />
         <SidebarInset className="!grid !min-h-0 !grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden">
-          <AppHeader title="Mantenimiento Edilicio" />
+          <AppHeader title={tx('Mantenimiento Edilicio', 'Building maintenance')} />
           <main className="min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6">
             <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 pb-8">
             <Card className="overflow-hidden border-sky-500/30 bg-gradient-to-br from-slate-950 via-sky-950 to-slate-950 p-6 text-white shadow-xl dark:border-cyan-400/30">
               <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.35em] text-cyan-200">Infraestructura final</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.35em] text-cyan-200">{tx('Infraestructura final', 'Final infrastructure')}</p>
                   <div className="mt-3 flex items-center gap-3">
                     <span className="rounded-2xl bg-cyan-400/15 p-3 text-cyan-100 ring-1 ring-cyan-300/30">
                       <Building2 className="h-7 w-7" />
                     </span>
                     <div>
-                      <h1 className="text-3xl font-black tracking-tight">Mantenimiento edilicio y checklists</h1>
+                      <h1 className="text-3xl font-black tracking-tight">{tx('Mantenimiento edilicio y checklists', 'Building maintenance and checklists')}</h1>
                       <p className="mt-1 max-w-4xl text-sm leading-6 text-slate-200">
-                        Control operativo del edificio: sectores, activos edilicios, vencimientos, órdenes, checklists, QR y trazabilidad preventiva para sostener la continuidad del gimnasio.
+                        {tx('Control operativo del edificio: sectores, activos edilicios, vencimientos, órdenes, checklists, QR y trazabilidad preventiva para sostener la continuidad del gimnasio.', 'Building operational control: sectors, building assets, due dates, orders, checklists, QR, and preventive traceability to sustain gym continuity.')}
                       </p>
                     </div>
                   </div>
@@ -457,7 +557,7 @@ export default function MantenimientoEdilicioPage() {
                 <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[440px]">
                   <Button type="button" className="bg-cyan-500 text-slate-950 dark:text-slate-100 hover:bg-cyan-400" onClick={loadDashboard} disabled={loading || Boolean(saving)}>
                     {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                    Actualizar
+                    {tx('Actualizar', 'Refresh')}
                   </Button>
                   <Button type="button" variant="secondary" onClick={() => document.getElementById('infraestructura-checklist-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
                     <ClipboardCheck className="mr-2 h-4 w-4" />
@@ -465,7 +565,7 @@ export default function MantenimientoEdilicioPage() {
                   </Button>
                   <Button type="button" variant="secondary" onClick={() => document.getElementById('infraestructura-orden-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
                     <Wrench className="mr-2 h-4 w-4" />
-                    Orden
+                    {tx('Orden', 'Order')}
                   </Button>
                 </div>
               </div>
@@ -476,9 +576,9 @@ export default function MantenimientoEdilicioPage() {
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="mt-0.5 h-4 w-4" />
                   <div>
-                    <p className="font-semibold">No se pudo completar la operación.</p>
+                    <p className="font-semibold">{tx('No se pudo completar la operación.', 'The operation could not be completed.')}</p>
                     <p>{error}</p>
-                    <p className="mt-1 text-xs">Si el mensaje indica que no existe una relación/tabla, aplicá primero el SQL privado de infraestructura en Supabase.</p>
+                    <p className="mt-1 text-xs">{tx('Si el mensaje indica que no existe una relación/tabla, aplicá primero el SQL privado de infraestructura en Supabase.', 'If the message indicates that a relation/table does not exist, apply the private infrastructure SQL in Supabase first.')}</p>
                   </div>
                 </div>
               </Card>
@@ -494,60 +594,60 @@ export default function MantenimientoEdilicioPage() {
             ) : null}
 
             <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-              <MetricCard title="Sectores" value={dashboard?.metricas.totalSectores ?? 0} helper="Áreas físicas" tone="blue" />
-              <MetricCard title="Activos" value={dashboard?.metricas.totalActivos ?? 0} helper="Inventario edilicio" />
-              <MetricCard title="Críticos" value={dashboard?.metricas.activosCriticos ?? 0} helper="Alta prioridad" tone="red" />
-              <MetricCard title="Vencidos" value={dashboard?.metricas.activosVencidos ?? 0} helper="Revisión urgente" tone="amber" />
-              <MetricCard title="Órdenes abiertas" value={dashboard?.metricas.ordenesAbiertas ?? 0} helper="Pendientes" tone="violet" />
-              <MetricCard title="Costo mes" value={formatCurrency(dashboard?.metricas.costoOrdenesMes)} helper="Estimado/real" tone="emerald" />
+              <MetricCard title={tx('Sectores', 'Sectors')} value={dashboard?.metricas.totalSectores ?? 0} helper={tx('Áreas físicas', 'Physical areas')} tone="blue" />
+              <MetricCard title={tx('Activos', 'Assets')} value={dashboard?.metricas.totalActivos ?? 0} helper={tx('Inventario edilicio', 'Building inventory')} />
+              <MetricCard title={tx('Críticos', 'Critical')} value={dashboard?.metricas.activosCriticos ?? 0} helper={tx('Alta prioridad', 'High priority')} tone="red" />
+              <MetricCard title={tx('Vencidos', 'Overdue')} value={dashboard?.metricas.activosVencidos ?? 0} helper={tx('Revisión urgente', 'Urgent review')} tone="amber" />
+              <MetricCard title={tx('Órdenes abiertas', 'Open orders')} value={dashboard?.metricas.ordenesAbiertas ?? 0} helper={tx('Pendientes', 'Pending')} tone="violet" />
+              <MetricCard title={tx('Costo mes', 'Monthly cost')} value={formatCurrency(dashboard?.metricas.costoOrdenesMes)} helper={tx('Estimado/real', 'Estimated/actual')} tone="emerald" />
             </section>
 
             <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
               <Card className="border-cyan-500/25 bg-gradient-to-br from-cyan-950 via-slate-950 to-slate-950 p-5 text-white shadow-lg">
-                <p className="text-xs font-bold uppercase tracking-[0.28em] text-cyan-200">Lectura ejecutiva edilicia</p>
+                <p className="text-xs font-bold uppercase tracking-[0.28em] text-cyan-200">{tx('Lectura ejecutiva edilicia', 'Building executive overview')}</p>
                 <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <div>
                     <h2 className="text-2xl font-black">{executiveSummary.status}</h2>
                     <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-200">{executiveSummary.nextStep}</p>
                   </div>
                   <span className={`rounded-full px-4 py-2 text-sm font-bold ${executiveSummary.needsAttention > 0 ? 'bg-red-500/20 text-red-100 ring-1 ring-red-300/30' : 'bg-emerald-500/20 text-emerald-100 ring-1 ring-emerald-300/30'}`}>
-                    {executiveSummary.needsAttention > 0 ? `${executiveSummary.needsAttention} alertas` : 'Sin críticos'}
+                    {executiveSummary.needsAttention > 0 ? `${executiveSummary.needsAttention} ${tx('alertas', 'alerts')}` : tx('Sin críticos', 'No critical issues')}
                   </span>
                 </div>
                 <div className="mt-5 grid gap-3 sm:grid-cols-3">
                   <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10">
-                    <p className="text-xs uppercase tracking-[0.18em] text-slate-300">Vencimientos</p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-300">{tx('Vencimientos', 'Due dates')}</p>
                     <p className="mt-2 text-2xl font-black">{executiveSummary.overdueAssets}</p>
-                    <p className="text-xs text-slate-300">activos vencidos</p>
+                    <p className="text-xs text-slate-300">{tx('activos vencidos', 'overdue assets')}</p>
                   </div>
                   <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10">
-                    <p className="text-xs uppercase tracking-[0.18em] text-slate-300">Órdenes</p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-300">{tx('Órdenes', 'Orders')}</p>
                     <p className="mt-2 text-2xl font-black">{executiveSummary.openOrders}</p>
-                    <p className="text-xs text-slate-300">abiertas para seguimiento</p>
+                    <p className="text-xs text-slate-300">{tx('abiertas para seguimiento', 'open for follow-up')}</p>
                   </div>
                   <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10">
                     <p className="text-xs uppercase tracking-[0.18em] text-slate-300">Checklists</p>
                     <p className="mt-2 text-2xl font-black">{executiveSummary.checklistCritical}</p>
-                    <p className="text-xs text-slate-300">críticos detectados</p>
+                    <p className="text-xs text-slate-300">{tx('críticos detectados', 'critical findings')}</p>
                   </div>
                 </div>
               </Card>
 
               <Card className="border-emerald-500/25 bg-white p-5 text-slate-950 dark:text-slate-100 shadow-sm dark:border-emerald-500/25 dark:bg-slate-950 dark:text-slate-100">
-                <p className="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600 dark:text-emerald-300">Próximo paso operativo</p>
-                <h2 className="mt-3 text-xl font-black">Checklists, QR y órdenes conectadas</h2>
+                <p className="text-xs font-bold uppercase tracking-[0.28em] text-emerald-600 dark:text-emerald-300">{tx('Próximo paso operativo', 'Next operational step')}</p>
+                <h2 className="mt-3 text-xl font-black">{tx('Checklists, QR y órdenes conectadas', 'Connected checklists, QR, and orders')}</h2>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  Usá las acciones rápidas para registrar inspecciones, crear órdenes y generar QR por sector o activo. La prioridad es mantener trazabilidad sin salir de esta pantalla.
+                  {tx('Usá las acciones rápidas para registrar inspecciones, crear órdenes y generar QR por sector o activo. La prioridad es mantener trazabilidad sin salir de esta pantalla.', 'Use the quick actions to register inspections, create orders, and generate QR codes by sector or asset. The priority is to keep traceability without leaving this screen.')}
                 </p>
                 <div className="mt-4 grid gap-3 text-sm">
                   <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
-                    <span className="font-semibold">Sectores activos:</span> {dashboard?.sectores.length ?? 0}
+                    <span className="font-semibold">{tx('Sectores activos:', 'Active sectors:')}</span> {dashboard?.sectores.length ?? 0}
                   </div>
                   <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
-                    <span className="font-semibold">QR generados:</span> {dashboard?.qrCodes.length ?? 0}
+                    <span className="font-semibold">{tx('QR generados:', 'Generated QR codes:')}</span> {dashboard?.qrCodes.length ?? 0}
                   </div>
                   <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
-                    <span className="font-semibold">Ejecuciones recientes:</span> {dashboard?.checklistEjecuciones.length ?? 0}
+                    <span className="font-semibold">{tx('Ejecuciones recientes:', 'Recent executions:')}</span> {dashboard?.checklistEjecuciones.length ?? 0}
                   </div>
                 </div>
               </Card>
@@ -557,28 +657,28 @@ export default function MantenimientoEdilicioPage() {
               <Card className="p-5 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
                 <div className="mb-4 flex items-center gap-2">
                   <Building2 className="h-5 w-5 text-sky-600" />
-                  <h2 className="text-lg font-semibold">Nuevo sector</h2>
+                  <h2 className="text-lg font-semibold">{tx('Nuevo sector', 'New sector')}</h2>
                 </div>
                 <form className="space-y-3" onSubmit={handleCreateSector}>
-                  <Field label="Nombre del sector">
-                    <Input value={sectorForm.nombre} onChange={(e) => setSectorForm((prev) => ({ ...prev, nombre: e.target.value }))} placeholder="Baños hombres, salón musculación..." />
+                  <Field label={tx('Nombre del sector', 'Sector name')}>
+                    <Input value={sectorForm.nombre} onChange={(e) => setSectorForm((prev) => ({ ...prev, nombre: e.target.value }))} placeholder={tx('Baños hombres, salón musculación...', "Men's bathrooms, weight room...")} />
                   </Field>
-                  <Field label="Tipo">
+                  <Field label={tx('Tipo', 'Type')}>
                     <SelectField value={String(sectorForm.tipo ?? 'salon')} onChange={(value) => setSectorForm((prev) => ({ ...prev, tipo: value }))}>
-                      {sectorTypes.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
+                      {sectorTypeOptions.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}
                     </SelectField>
                   </Field>
-                  <Field label="Descripción">
+                  <Field label={tx('Descripción', 'Description')}>
                     <textarea
                       value={sectorForm.descripcion ?? ''}
                       onChange={(e) => setSectorForm((prev) => ({ ...prev, descripcion: e.target.value }))}
                       className="min-h-[82px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      placeholder="Ubicación, uso, referencias internas..."
+                      placeholder={tx('Ubicación, uso, referencias internas...', 'Location, use, internal references...')}
                     />
                   </Field>
                   <Button className="w-full" type="submit" disabled={saving === 'sector'}>
                     {saving === 'sector' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-                    Crear sector
+                    {tx('Crear sector', 'Create sector')}
                   </Button>
                 </form>
               </Card>
@@ -586,47 +686,47 @@ export default function MantenimientoEdilicioPage() {
               <Card className="p-5 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
                 <div className="mb-4 flex items-center gap-2">
                   <ShieldCheck className="h-5 w-5 text-emerald-600" />
-                  <h2 className="text-lg font-semibold">Nuevo activo edilicio</h2>
+                  <h2 className="text-lg font-semibold">{tx('Nuevo activo edilicio', 'New building asset')}</h2>
                 </div>
                 <form className="space-y-3" onSubmit={handleCreateActivo}>
-                  <Field label="Nombre del activo">
-                    <Input value={activoForm.nombre} onChange={(e) => setActivoForm((prev) => ({ ...prev, nombre: e.target.value }))} placeholder="Matafuego recepción, tablero eléctrico..." />
+                  <Field label={tx('Nombre del activo', 'Asset name')}>
+                    <Input value={activoForm.nombre} onChange={(e) => setActivoForm((prev) => ({ ...prev, nombre: e.target.value }))} placeholder={tx('Matafuego recepción, tablero eléctrico...', 'Fire extinguisher at reception, electrical panel...')} />
                   </Field>
                   <div className="grid gap-3 md:grid-cols-2">
-                    <Field label="Categoría">
+                    <Field label={tx('Categoría', 'Category')}>
                       <SelectField value={String(activoForm.categoria_id ?? '')} onChange={(value) => setActivoForm((prev) => ({ ...prev, categoria_id: value }))}>
-                        <option value="">Sin categoría</option>
+                        <option value="">{tx('Sin categoría', 'No category')}</option>
                         {(dashboard?.categorias ?? []).map((categoria) => <option key={categoria.id} value={categoria.id}>{categoria.nombre}</option>)}
                       </SelectField>
                     </Field>
-                    <Field label="Sector">
+                    <Field label={tx('Sector', 'Sector')}>
                       <SelectField value={String(activoForm.sector_id ?? '')} onChange={(value) => setActivoForm((prev) => ({ ...prev, sector_id: value }))}>
-                        <option value="">Sin sector</option>
+                        <option value="">{tx('Sin sector', 'No sector')}</option>
                         {(dashboard?.sectores ?? []).map((sector) => <option key={sector.id} value={sector.id}>{sector.nombre}</option>)}
                       </SelectField>
                     </Field>
                   </div>
                   <div className="grid gap-3 md:grid-cols-2">
-                    <Field label="Criticidad">
+                    <Field label={tx('Criticidad', 'Criticality')}>
                       <SelectField value={String(activoForm.criticidad ?? 'media')} onChange={(value) => setActivoForm((prev) => ({ ...prev, criticidad: value }))}>
-                        {priorityOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                        {priorityLabelOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                       </SelectField>
                     </Field>
-                    <Field label="Vencimiento">
+                    <Field label={tx('Vencimiento', 'Due date')}>
                       <Input type="date" value={activoForm.fecha_vencimiento ?? ''} onChange={(e) => setActivoForm((prev) => ({ ...prev, fecha_vencimiento: e.target.value }))} />
                     </Field>
                   </div>
-                  <Field label="Observaciones">
+                  <Field label={tx('Observaciones', 'Notes')}>
                     <textarea
                       value={activoForm.observaciones ?? ''}
                       onChange={(e) => setActivoForm((prev) => ({ ...prev, observaciones: e.target.value }))}
                       className="min-h-[82px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      placeholder="Estado, garantía, ubicación exacta, certificado..."
+                      placeholder={tx('Estado, garantía, ubicación exacta, certificado...', 'Status, warranty, exact location, certificate...')}
                     />
                   </Field>
                   <Button className="w-full" type="submit" disabled={saving === 'activo'}>
                     {saving === 'activo' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-                    Crear activo
+                    {tx('Crear activo', 'Create asset')}
                   </Button>
                 </form>
               </Card>
@@ -634,55 +734,55 @@ export default function MantenimientoEdilicioPage() {
               <Card id="infraestructura-orden-form" className="p-5 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
                 <div className="mb-4 flex items-center gap-2">
                   <Wrench className="h-5 w-5 text-violet-600" />
-                  <h2 className="text-lg font-semibold">Nueva orden</h2>
+                  <h2 className="text-lg font-semibold">{tx('Nueva orden', 'New order')}</h2>
                 </div>
                 <form className="space-y-3" onSubmit={handleCreateOrden}>
-                  <Field label="Título">
-                    <Input value={ordenForm.titulo} onChange={(e) => setOrdenForm((prev) => ({ ...prev, titulo: e.target.value }))} placeholder="Recarga de matafuego, reparación de baño..." />
+                  <Field label={tx('Título', 'Title')}>
+                    <Input value={ordenForm.titulo} onChange={(e) => setOrdenForm((prev) => ({ ...prev, titulo: e.target.value }))} placeholder={tx('Recarga de matafuego, reparación de baño...', 'Fire extinguisher recharge, bathroom repair...')} />
                   </Field>
                   <div className="grid gap-3 md:grid-cols-2">
-                    <Field label="Tipo">
+                    <Field label={tx('Tipo', 'Type')}>
                       <SelectField value={String(ordenForm.tipo_orden ?? 'correctivo')} onChange={(value) => setOrdenForm((prev) => ({ ...prev, tipo_orden: value }))}>
-                        {orderTypes.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                        {orderTypeLabelOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                       </SelectField>
                     </Field>
-                    <Field label="Prioridad">
+                    <Field label={tx('Prioridad', 'Priority')}>
                       <SelectField value={String(ordenForm.prioridad ?? 'media')} onChange={(value) => setOrdenForm((prev) => ({ ...prev, prioridad: value }))}>
-                        {priorityOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                        {priorityLabelOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                       </SelectField>
                     </Field>
                   </div>
-                  <Field label="Activo edilicio">
+                  <Field label={tx('Activo edilicio', 'Building asset')}>
                     <SelectField value={String(ordenForm.activo_id ?? '')} onChange={(value) => setOrdenForm((prev) => ({ ...prev, activo_id: value }))}>
-                      <option value="">Sin activo específico</option>
+                      <option value="">{tx('Sin activo específico', 'No specific asset')}</option>
                       {(dashboard?.activos ?? []).map((activo) => <option key={activo.id} value={activo.id}>{activo.nombre}</option>)}
                     </SelectField>
                   </Field>
                   <div className="grid gap-3 md:grid-cols-2">
-                    <Field label="Sector">
+                    <Field label={tx('Sector', 'Sector')}>
                       <SelectField value={String(ordenForm.sector_id ?? '')} onChange={(value) => setOrdenForm((prev) => ({ ...prev, sector_id: value }))}>
-                        <option value="">Sin sector</option>
+                        <option value="">{tx('Sin sector', 'No sector')}</option>
                         {(dashboard?.sectores ?? []).map((sector) => <option key={sector.id} value={sector.id}>{sector.nombre}</option>)}
                       </SelectField>
                     </Field>
-                    <Field label="Vencimiento">
+                    <Field label={tx('Vencimiento', 'Due date')}>
                       <Input type="date" value={ordenForm.fecha_vencimiento ?? ''} onChange={(e) => setOrdenForm((prev) => ({ ...prev, fecha_vencimiento: e.target.value }))} />
                     </Field>
                   </div>
-                  <Field label="Técnico / proveedor">
-                    <Input value={ordenForm.tecnico_responsable ?? ''} onChange={(e) => setOrdenForm((prev) => ({ ...prev, tecnico_responsable: e.target.value }))} placeholder="Electricista, plomero, proveedor externo..." />
+                  <Field label={tx('Técnico / proveedor', 'Technician / vendor')}>
+                    <Input value={ordenForm.tecnico_responsable ?? ''} onChange={(e) => setOrdenForm((prev) => ({ ...prev, tecnico_responsable: e.target.value }))} placeholder={tx('Electricista, plomero, proveedor externo...', 'Electrician, plumber, external vendor...')} />
                   </Field>
-                  <Field label="Descripción">
+                  <Field label={tx('Descripción', 'Description')}>
                     <textarea
                       value={ordenForm.descripcion ?? ''}
                       onChange={(e) => setOrdenForm((prev) => ({ ...prev, descripcion: e.target.value }))}
                       className="min-h-[82px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      placeholder="Detalle del trabajo requerido..."
+                      placeholder={tx('Detalle del trabajo requerido...', 'Details of the required work...')}
                     />
                   </Field>
                   <Button className="w-full" type="submit" disabled={saving === 'orden'}>
                     {saving === 'orden' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-                    Crear orden
+                    {tx('Crear orden', 'Create order')}
                   </Button>
                 </form>
               </Card>
@@ -694,43 +794,43 @@ export default function MantenimientoEdilicioPage() {
               <Card id="infraestructura-checklist-form" className="p-5 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
                 <div className="mb-4 flex items-center gap-2">
                   <ClipboardCheck className="h-5 w-5 text-emerald-600" />
-                  <h2 className="text-lg font-semibold">Ejecutar checklist</h2>
+                  <h2 className="text-lg font-semibold">{tx('Ejecutar checklist', 'Run checklist')}</h2>
                 </div>
                 <form className="space-y-3" onSubmit={handleCreateChecklist}>
-                  <Field label="Checklist">
+                  <Field label={tx('Checklist', 'Checklist')}>
                     <SelectField value={String(checklistForm.template_id ?? '')} onChange={(value) => setChecklistForm((prev) => ({ ...prev, template_id: value }))}>
-                      <option value="">Seleccionar checklist</option>
+                      <option value="">{tx('Seleccionar checklist', 'Select checklist')}</option>
                       {(dashboard?.checklists ?? []).map((template) => <option key={template.id} value={template.id}>{template.nombre}</option>)}
                     </SelectField>
                   </Field>
                   <div className="grid gap-3 md:grid-cols-2">
-                    <Field label="Activo">
+                    <Field label={tx('Activo', 'Asset')}>
                       <SelectField value={String(checklistForm.activo_id ?? '')} onChange={(value) => setChecklistForm((prev) => ({ ...prev, activo_id: value }))}>
-                        <option value="">Sin activo</option>
+                        <option value="">{tx('Sin activo', 'No asset')}</option>
                         {(dashboard?.activos ?? []).map((activo) => <option key={activo.id} value={activo.id}>{activo.nombre}</option>)}
                       </SelectField>
                     </Field>
-                    <Field label="Sector">
+                    <Field label={tx('Sector', 'Sector')}>
                       <SelectField value={String(checklistForm.sector_id ?? '')} onChange={(value) => setChecklistForm((prev) => ({ ...prev, sector_id: value }))}>
-                        <option value="">Sin sector</option>
+                        <option value="">{tx('Sin sector', 'No sector')}</option>
                         {(dashboard?.sectores ?? []).map((sector) => <option key={sector.id} value={sector.id}>{sector.nombre}</option>)}
                       </SelectField>
                     </Field>
                   </div>
-                  <Field label="Orden relacionada">
+                  <Field label={tx('Orden relacionada', 'Related order')}>
                     <SelectField value={String(checklistForm.orden_id ?? '')} onChange={(value) => setChecklistForm((prev) => ({ ...prev, orden_id: value }))}>
-                      <option value="">Sin orden</option>
+                      <option value="">{tx('Sin orden', 'No order')}</option>
                       {(dashboard?.ordenes ?? []).slice(0, 30).map((orden) => <option key={orden.id} value={orden.id}>{orden.titulo}</option>)}
                     </SelectField>
                   </Field>
-                  <Field label="Resultado general">
+                  <Field label={tx('Resultado general', 'Overall result')}>
                     <SelectField value={String(checklistForm.resultado_general ?? 'ok')} onChange={(value) => setChecklistForm((prev) => ({ ...prev, resultado_general: value }))}>
                       <option value="ok">OK</option>
-                      <option value="observado">Observado</option>
-                      <option value="critico">Crítico</option>
+                      <option value="observado">{tx('Observado', 'Observed')}</option>
+                      <option value="critico">{tx('Crítico', 'Critical')}</option>
                     </SelectField>
                   </Field>
-                  <Field label="Notas">
+                  <Field label={tx('Notas', 'Notes')}>
                     <textarea
                       value={checklistForm.notas ?? ''}
                       onChange={(e) => setChecklistForm((prev) => ({ ...prev, notas: e.target.value }))}
@@ -740,7 +840,7 @@ export default function MantenimientoEdilicioPage() {
                   </Field>
                   <Button className="w-full" type="submit" disabled={saving === 'checklist'}>
                     {saving === 'checklist' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ClipboardCheck className="mr-2 h-4 w-4" />}
-                    Guardar checklist
+                    {tx('Guardar checklist', 'Save checklist')}
                   </Button>
                 </form>
               </Card>
@@ -748,29 +848,29 @@ export default function MantenimientoEdilicioPage() {
               <Card className="p-5 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
                 <div className="mb-4 flex items-center gap-2">
                   <QrCode className="h-5 w-5 text-sky-600" />
-                  <h2 className="text-lg font-semibold">QR activo / sector</h2>
+                  <h2 className="text-lg font-semibold">{tx('QR activo / sector', 'Asset / sector QR')}</h2>
                 </div>
                 <form className="space-y-3" onSubmit={handleCreateQr}>
-                  <Field label="Tipo">
+                  <Field label={tx('Tipo', 'Type')}>
                     <SelectField value={String(qrForm.target_type ?? 'infra_activo')} onChange={(value) => setQrForm({ target_type: value, target_id: '', titulo: '' })}>
-                      <option value="infra_activo">Activo edilicio</option>
-                      <option value="infra_sector">Sector edilicio</option>
+                      <option value="infra_activo">{tx('Activo edilicio', 'Building asset')}</option>
+                      <option value="infra_sector">{tx('Sector edilicio', 'Building sector')}</option>
                     </SelectField>
                   </Field>
-                  <Field label="Destino">
+                  <Field label={tx('Destino', 'Destination')}>
                     <SelectField value={String(qrForm.target_id ?? '')} onChange={(value) => setQrForm((prev) => ({ ...prev, target_id: value }))}>
-                      <option value="">Seleccionar</option>
+                      <option value="">{tx('Seleccionar', 'Select')}</option>
                       {qrForm.target_type === 'infra_sector'
                         ? (dashboard?.sectores ?? []).map((sector) => <option key={sector.id} value={sector.id}>{sector.nombre}</option>)
                         : (dashboard?.activos ?? []).map((activo) => <option key={activo.id} value={activo.id}>{activo.nombre}</option>)}
                     </SelectField>
                   </Field>
-                  <Field label="Título opcional">
-                    <Input value={qrForm.titulo ?? ''} onChange={(e) => setQrForm((prev) => ({ ...prev, titulo: e.target.value }))} placeholder="Ej: QR Matafuego recepción" />
+                  <Field label={tx('Título opcional', 'Optional title')}>
+                    <Input value={qrForm.titulo ?? ''} onChange={(e) => setQrForm((prev) => ({ ...prev, titulo: e.target.value }))} placeholder={tx('Ej: QR Matafuego recepción', 'Ex: Reception fire extinguisher QR')} />
                   </Field>
                   <Button className="w-full" type="submit" disabled={saving === 'qr'}>
                     {saving === 'qr' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <QrCode className="mr-2 h-4 w-4" />}
-                    Generar QR/barra
+                    {tx('Generar QR/barra', 'Generate QR/barcode')}
                   </Button>
                 </form>
                 {lastQr ? (
@@ -782,7 +882,7 @@ export default function MantenimientoEdilicioPage() {
                         className="h-32 w-32 rounded border bg-white p-2"
                       />
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Último código</p>
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">{tx('Último código', 'Latest code')}</p>
                         <p className="mt-1 break-all font-mono font-semibold text-slate-950 dark:text-slate-100">{lastQr.codigo}</p>
                         <p className="mt-1 text-xs text-muted-foreground">{lastQr.titulo}</p>
                         <Button
@@ -790,9 +890,9 @@ export default function MantenimientoEdilicioPage() {
                           variant="outline"
                           size="sm"
                           className="mt-3"
-                          onClick={() => printQrLabel({ codigo: lastQr.codigo, titulo: lastQr.titulo, subtitulo: labelFromValue(lastQr.target_type) })}
+                          onClick={() => printQrLabel({ codigo: lastQr.codigo, titulo: lastQr.titulo, subtitulo: getTargetTypeLabel(lastQr.target_type, isEnglish), hintText: tx('Escanear desde Infraestructura > Lector QR/barra', 'Scan from Infrastructure > QR/barcode scanner'), documentTitlePrefix: tx('Etiqueta QR', 'QR label') })}
                         >
-                          Imprimir etiqueta
+                          {tx('Imprimir etiqueta', 'Print label')}
                         </Button>
                       </div>
                     </div>
@@ -803,17 +903,17 @@ export default function MantenimientoEdilicioPage() {
               <Card className="p-5 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
                 <div className="mb-4 flex items-center gap-2">
                   <ScanLine className="h-5 w-5 text-violet-600" />
-                  <h2 className="text-lg font-semibold">Lector QR/barra</h2>
+                  <h2 className="text-lg font-semibold">{tx('Lector QR/barra', 'QR/barcode scanner')}</h2>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Base reutilizable para leer códigos con cámara. Sirve para Infraestructura, Equipamientos y deja preparada la evolución comercial para productos/kiosco.
+                  {tx('Base reutilizable para leer códigos con cámara. Sirve para Infraestructura, Equipamientos y deja preparada la evolución comercial para productos/kiosco.', 'Reusable scanner base to read codes with the camera. It works for Infrastructure and Equipment, and leaves the commercial flow ready for products/kiosk.')}
                 </p>
                 <Button className="mt-4 w-full" type="button" variant="outline" onClick={() => window.location.href = '/dashboard/infraestructura/lector-qr-barra'}>
                   <ScanLine className="mr-2 h-4 w-4" />
-                  Abrir lector
+                  {tx('Abrir lector', 'Open scanner')}
                 </Button>
                 <div className="mt-4 rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
-                  Próxima etapa comercial: celular escanea producto y la PC recibe el código en tiempo real para venta/alta/stock.
+                  {tx('Próxima etapa comercial: celular escanea producto y la PC recibe el código en tiempo real para venta/alta/stock.', 'Next commercial stage: the phone scans the product and the PC receives the code in real time for sales/setup/stock.')}
                 </div>
               </Card>
             </section>
@@ -822,23 +922,23 @@ export default function MantenimientoEdilicioPage() {
               <Card id="infraestructura-checklist-form" className="p-5 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
                 <div className="mb-4 flex items-center gap-2">
                   <ClipboardCheck className="h-5 w-5 text-emerald-600" />
-                  <h2 className="text-lg font-semibold">Checklists recientes</h2>
+                  <h2 className="text-lg font-semibold">{tx('Checklists recientes', 'Recent checklists')}</h2>
                 </div>
                 <div className="space-y-3">
                   {(dashboard?.checklistEjecuciones ?? []).length === 0 ? (
-                    <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground dark:border-slate-800">Todavía no hay checklists ejecutados.</p>
+                    <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground dark:border-slate-800">{tx('Todavía no hay checklists ejecutados.', 'No checklists have been executed yet.')}</p>
                   ) : (
                     (dashboard?.checklistEjecuciones ?? []).slice(0, 6).map((ejecucion) => (
                       <div key={ejecucion.id} className="rounded-lg border p-3 dark:border-slate-800">
                         <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                           <div>
-                            <p className="font-semibold text-slate-950 dark:text-slate-100">{ejecucion.template?.nombre ?? 'Checklist edilicio'}</p>
+                            <p className="font-semibold text-slate-950 dark:text-slate-100">{ejecucion.template?.nombre ?? tx('Checklist edilicio', 'Building checklist')}</p>
                             <p className="text-xs text-muted-foreground">
-                              {ejecucion.infraestructura_activo?.nombre ?? ejecucion.infraestructura_sector?.nombre ?? ejecucion.mantenimiento_edilicio_orden?.titulo ?? 'Sin referencia'} · {formatDate(ejecucion.ejecutado_en)}
+                              {ejecucion.infraestructura_activo?.nombre ?? ejecucion.infraestructura_sector?.nombre ?? ejecucion.mantenimiento_edilicio_orden?.titulo ?? tx('Sin referencia', 'No reference')} · {formatDate(ejecucion.ejecutado_en)}
                             </p>
                           </div>
                           <span className={`rounded-full px-3 py-1 text-xs font-semibold ${ejecucion.resultado_general === 'critico' ? 'bg-red-100 text-red-800' : ejecucion.resultado_general === 'observado' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
-                            {labelFromValue(ejecucion.resultado_general)}
+                            {getChecklistResultLabel(ejecucion.resultado_general, isEnglish)}
                           </span>
                         </div>
                         {ejecucion.notas ? <p className="mt-2 text-xs text-muted-foreground">{ejecucion.notas}</p> : null}
@@ -851,11 +951,11 @@ export default function MantenimientoEdilicioPage() {
               <Card className="p-5 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
                 <div className="mb-4 flex items-center gap-2">
                   <QrCode className="h-5 w-5 text-sky-600" />
-                  <h2 className="text-lg font-semibold">Códigos activos</h2>
+                  <h2 className="text-lg font-semibold">{tx('Códigos activos', 'Active codes')}</h2>
                 </div>
                 <div className="space-y-3">
                   {(dashboard?.qrCodes ?? []).length === 0 ? (
-                    <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground dark:border-slate-800">Todavía no hay códigos QR/barra generados.</p>
+                    <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground dark:border-slate-800">{tx('Todavía no hay códigos QR/barra generados.', 'No QR/barcode codes have been generated yet.')}</p>
                   ) : (
                     (dashboard?.qrCodes ?? []).slice(0, 8).map((qr) => (
                       <div key={qr.id} className="rounded-lg border p-3 dark:border-slate-800">
@@ -868,15 +968,15 @@ export default function MantenimientoEdilicioPage() {
                           <div className="min-w-0 flex-1">
                             <p className="font-semibold text-slate-950 dark:text-slate-100">{qr.titulo}</p>
                             <p className="mt-1 break-all font-mono text-xs text-slate-700 dark:text-slate-300">{qr.codigo}</p>
-                            <p className="mt-1 text-xs text-muted-foreground">{labelFromValue(qr.target_type)} · {qr.route}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">{getTargetTypeLabel(qr.target_type, isEnglish)} · {qr.route}</p>
                             <Button
                               type="button"
                               variant="outline"
                               size="sm"
                               className="mt-2"
-                              onClick={() => printQrLabel({ codigo: qr.codigo, titulo: qr.titulo, subtitulo: labelFromValue(qr.target_type) })}
+                              onClick={() => printQrLabel({ codigo: qr.codigo, titulo: qr.titulo, subtitulo: getTargetTypeLabel(qr.target_type, isEnglish), hintText: tx('Escanear desde Infraestructura > Lector QR/barra', 'Scan from Infrastructure > QR/barcode scanner'), documentTitlePrefix: tx('Etiqueta QR', 'QR label') })}
                             >
-                              Imprimir etiqueta
+                              {tx('Imprimir etiqueta', 'Print label')}
                             </Button>
                           </div>
                         </div>
@@ -890,11 +990,11 @@ export default function MantenimientoEdilicioPage() {
               <Card className="p-5 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
                 <div className="mb-4 flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5 text-amber-600" />
-                  <h2 className="text-lg font-semibold">Alertas edilicias</h2>
+                  <h2 className="text-lg font-semibold">{tx('Alertas edilicias', 'Building alerts')}</h2>
                 </div>
                 <div className="space-y-3">
                   {(dashboard?.alertas ?? []).length === 0 ? (
-                    <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground dark:border-slate-800">Sin alertas críticas o vencimientos próximos.</p>
+                    <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground dark:border-slate-800">{tx('Sin alertas críticas o vencimientos próximos.', 'No critical alerts or upcoming due dates.')}</p>
                   ) : (
                     (dashboard?.alertas ?? []).map((activo) => {
                       const remaining = Math.min(daysUntil(activo.fecha_vencimiento) ?? 9999, daysUntil(activo.fecha_proximo_mantenimiento) ?? 9999);
@@ -903,13 +1003,13 @@ export default function MantenimientoEdilicioPage() {
                           <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                             <div>
                               <p className="font-semibold text-slate-950 dark:text-slate-100">{activo.nombre}</p>
-                              <p className="text-xs text-muted-foreground">{activo.categoria?.nombre ?? 'Sin categoría'} · {activo.sector?.nombre ?? 'Sin sector'}</p>
+                              <p className="text-xs text-muted-foreground">{activo.categoria?.nombre ?? tx('Sin categoría', 'No category')} · {activo.sector?.nombre ?? tx('Sin sector', 'No sector')}</p>
                             </div>
                             <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
-                              {remaining < 0 ? 'Vencido' : remaining === 9999 ? labelFromValue(activo.criticidad) : `${remaining} días`}
+                              {remaining < 0 ? tx('Vencido', 'Overdue') : remaining === 9999 ? getPriorityLabel(activo.criticidad, isEnglish) : `${remaining} ${tx('días', 'days')}`}
                             </span>
                           </div>
-                          <p className="mt-2 text-xs text-muted-foreground">Vencimiento: {formatDate(activo.fecha_vencimiento)} · Próx. mantenimiento: {formatDate(activo.fecha_proximo_mantenimiento)}</p>
+                          <p className="mt-2 text-xs text-muted-foreground">{tx('Vencimiento:', 'Due date:')} {formatDate(activo.fecha_vencimiento)} · {tx('Próx. mantenimiento:', 'Next maintenance:')} {formatDate(activo.fecha_proximo_mantenimiento)}</p>
                         </div>
                       );
                     })
@@ -920,23 +1020,23 @@ export default function MantenimientoEdilicioPage() {
               <Card className="p-5 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
                 <div className="mb-4 flex items-center gap-2">
                   <CalendarClock className="h-5 w-5 text-violet-600" />
-                  <h2 className="text-lg font-semibold">Órdenes abiertas</h2>
+                  <h2 className="text-lg font-semibold">{tx('Órdenes abiertas', 'Open orders')}</h2>
                 </div>
                 <div className="space-y-3">
                   {activeOrders.length === 0 ? (
-                    <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground dark:border-slate-800">Sin órdenes abiertas.</p>
+                    <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground dark:border-slate-800">{tx('Sin órdenes abiertas.', 'No open orders.')}</p>
                   ) : (
                     activeOrders.map((orden) => (
                       <div key={orden.id} className="rounded-lg border p-3 dark:border-slate-800">
                         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                           <div>
                             <p className="font-semibold text-slate-950 dark:text-slate-100">{orden.titulo}</p>
-                            <p className="text-xs text-muted-foreground">{labelFromValue(orden.tipo_orden)} · {labelFromValue(orden.prioridad)} · Vence {formatDate(orden.fecha_vencimiento)}</p>
-                            <p className="mt-1 text-xs text-muted-foreground">{orden.infraestructura_activo?.nombre ?? orden.infraestructura_sector?.nombre ?? 'Sin referencia'}</p>
+                            <p className="text-xs text-muted-foreground">{getOrderTypeLabel(orden.tipo_orden, isEnglish)} · {getPriorityLabel(orden.prioridad, isEnglish)} · {tx('Vence', 'Due')} {formatDate(orden.fecha_vencimiento)}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">{orden.infraestructura_activo?.nombre ?? orden.infraestructura_sector?.nombre ?? tx('Sin referencia', 'No reference')}</p>
                           </div>
                           <Button size="sm" variant="outline" onClick={() => completeOrder(orden.id)} disabled={saving === orden.id}>
                             {saving === orden.id ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <CheckCircle2 className="mr-2 h-3 w-3" />}
-                            Completar
+                            {tx('Completar', 'Complete')}
                           </Button>
                         </div>
                       </div>
@@ -949,34 +1049,34 @@ export default function MantenimientoEdilicioPage() {
             <Card className="p-5 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
               <div className="mb-4 flex items-center gap-2">
                 <ShieldCheck className="h-5 w-5 text-sky-600" />
-                <h2 className="text-lg font-semibold">Inventario edilicio</h2>
+                <h2 className="text-lg font-semibold">{tx('Inventario edilicio', 'Building inventory')}</h2>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[920px] text-sm">
                   <thead>
                     <tr className="border-b text-left text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                      <th className="px-3 py-2">Activo</th>
-                      <th className="px-3 py-2">Categoría</th>
-                      <th className="px-3 py-2">Sector</th>
-                      <th className="px-3 py-2">Estado</th>
-                      <th className="px-3 py-2">Criticidad</th>
-                      <th className="px-3 py-2">Vencimiento</th>
-                      <th className="px-3 py-2">Próx. mant.</th>
+                      <th className="px-3 py-2">{tx('Activo', 'Asset')}</th>
+                      <th className="px-3 py-2">{tx('Categoría', 'Category')}</th>
+                      <th className="px-3 py-2">{tx('Sector', 'Sector')}</th>
+                      <th className="px-3 py-2">{tx('Estado', 'Status')}</th>
+                      <th className="px-3 py-2">{tx('Criticidad', 'Criticality')}</th>
+                      <th className="px-3 py-2">{tx('Vencimiento', 'Due date')}</th>
+                      <th className="px-3 py-2">{tx('Próx. mant.', 'Next maint.')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
-                      <tr><td colSpan={7} className="px-3 py-8 text-center text-muted-foreground">Cargando infraestructura...</td></tr>
+                      <tr><td colSpan={7} className="px-3 py-8 text-center text-muted-foreground">{tx('Cargando infraestructura...', 'Loading infrastructure...')}</td></tr>
                     ) : (dashboard?.activos ?? []).length === 0 ? (
-                      <tr><td colSpan={7} className="px-3 py-8 text-center text-muted-foreground">Todavía no hay activos edilicios registrados.</td></tr>
+                      <tr><td colSpan={7} className="px-3 py-8 text-center text-muted-foreground">{tx('Todavía no hay activos edilicios registrados.', 'No building assets have been registered yet.')}</td></tr>
                     ) : (
                       (dashboard?.activos ?? []).map((activo: InfraestructuraActivo) => (
                         <tr key={activo.id} className="border-b last:border-0">
                           <td className="px-3 py-3 font-medium text-slate-950 dark:text-slate-100">{activo.nombre}</td>
                           <td className="px-3 py-3">{activo.categoria?.nombre ?? '-'}</td>
                           <td className="px-3 py-3">{activo.sector?.nombre ?? '-'}</td>
-                          <td className="px-3 py-3">{labelFromValue(activo.estado)}</td>
-                          <td className="px-3 py-3">{labelFromValue(activo.criticidad)}</td>
+                          <td className="px-3 py-3">{getAssetStatusLabel(activo.estado, isEnglish)}</td>
+                          <td className="px-3 py-3">{getPriorityLabel(activo.criticidad, isEnglish)}</td>
                           <td className="px-3 py-3">{formatDate(activo.fecha_vencimiento)}</td>
                           <td className="px-3 py-3">{formatDate(activo.fecha_proximo_mantenimiento)}</td>
                         </tr>

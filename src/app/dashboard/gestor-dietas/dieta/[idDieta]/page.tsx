@@ -12,9 +12,13 @@ import { Button } from "@/components/ui/button";
 import { getDieta } from "@/services/apiClient";
 import { Dieta } from "@/interfaces/dieta.interface";
 import DietaDisplay from "@/components/dashboard/dietas/DietaDisplay";
+import { useI18n } from "@/i18n/I18nProvider";
 
 export default function GestorDietaDetallePage() {
   const { isAuthenticated, initializeAuth, isInitialized } = useAuthStore();
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const tx = (es: string, en: string) => (isEnglish ? en : es);
   const router = useRouter();
   const params = useParams<{ idDieta: string }>();
   const [dieta, setDieta] = useState<Dieta | null>(null);
@@ -44,7 +48,7 @@ export default function GestorDietaDetallePage() {
           setError(
             response.data?.error ||
               response.data?.message ||
-              "No se pudo cargar la dieta."
+              tx("No se pudo cargar la dieta.", "The diet could not be loaded.")
           );
           setDieta(null);
           return;
@@ -53,7 +57,7 @@ export default function GestorDietaDetallePage() {
         setDieta(response.data as Dieta);
       } catch (err) {
         console.error("Error al cargar dieta:", err);
-        setError("Ocurrió un error al cargar la dieta.");
+        setError(tx("Ocurrió un error al cargar la dieta.", "An error occurred while loading the diet."));
         setDieta(null);
       } finally {
         setLoading(false);
@@ -64,7 +68,7 @@ export default function GestorDietaDetallePage() {
   }, [isInitialized, isAuthenticated, params?.idDieta]);
 
   if (!isInitialized) {
-    return <div>Cargando...</div>;
+    return <div>{tx("Cargando...", "Loading...")}</div>;
   }
 
   if (!isAuthenticated) {
@@ -76,12 +80,12 @@ export default function GestorDietaDetallePage() {
       <div className="flex w-full min-h-screen">
         <AppSidebar />
         <SidebarInset>
-          <AppHeader title="Detalle de Dieta" />
+          <AppHeader title={tx("Detalle de Dieta", "Diet detail")} />
           <main className="flex-1 p-6 space-y-6">
             {loading ? (
               <Card>
                 <CardContent className="p-6 text-sm text-muted-foreground">
-                  Cargando detalle de dieta...
+                  {tx("Cargando detalle de dieta...", "Loading diet detail...")}
                 </CardContent>
               </Card>
             ) : error ? (
@@ -92,7 +96,7 @@ export default function GestorDietaDetallePage() {
                     variant="outline"
                     onClick={() => router.push("/dashboard/gestor-dietas")}
                   >
-                    Volver al Gestor de Dietas
+                    {tx("Volver al Gestor de Dietas", "Back to Diet manager")}
                   </Button>
                 </CardContent>
               </Card>
@@ -100,6 +104,7 @@ export default function GestorDietaDetallePage() {
               <DietaDisplay
                 dieta={dieta}
                 onBack={() => router.push("/dashboard/gestor-dietas")}
+                backLabel={tx("Volver", "Back")}
               />
             ) : null}
           </main>

@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import type { EvolucionSocio } from "@/interfaces/evolucionSocio.interface";
 import { formatFrontendDate, formatFrontendShortDate } from "@/utils/dateFormat";
+import { useI18n } from "@/i18n/I18nProvider";
 
 type ViewMode = "slider" | "overlay" | "heatmap";
 type BodyView = "front" | "back";
@@ -89,6 +90,28 @@ interface BodyGroupState extends BodyGroupDescriptor {
   score: number;
   tone: "improved" | "regressed" | "stable" | "missing";
 }
+
+type TranslateFn = (es: string, en: string) => string;
+
+const BODY_GROUP_TRANSLATIONS: Record<BodyGroupId, { label: string; description: string }> = {
+  peso: { label: "Weight", description: "Overall weight change. It is interpreted together with fat, waist and muscle mass." },
+  pecho: { label: "Chest", description: "Upper torso reference. It usually improves through hypertrophy or body recomposition." },
+  abdomen: { label: "Abdomen", description: "Core area sensitive to recomposition and abdominal perimeter reduction." },
+  cintura: { label: "Waist", description: "Key indicator for fat loss and central perimeter control." },
+  cadera: { label: "Hip", description: "Baseline body measurement. It is evaluated with waist, abdomen and glutes." },
+  hombros: { label: "Shoulders", description: "Structural upper-torso volume and postural development." },
+  biceps: { label: "Average biceps", description: "Left/right average to measure arm development." },
+  triceps: { label: "Average triceps", description: "Posterior arm average, useful for back view and muscular balance." },
+  antebrazo: { label: "Average forearm", description: "Forearm average, useful for grip strength and symmetry." },
+  muslo: { label: "Average thigh", description: "Left/right average for lower-body evolution." },
+  pantorrilla: { label: "Average calf", description: "Calf average for progress and leg symmetry." },
+};
+
+const translateGroupState = (state: BodyGroupState, tx: TranslateFn): BodyGroupState => ({
+  ...state,
+  label: tx(state.label, BODY_GROUP_TRANSLATIONS[state.id]?.label ?? state.label),
+  description: tx(state.description, BODY_GROUP_TRANSLATIONS[state.id]?.description ?? state.description),
+});
 
 const BODY_GROUPS: BodyGroupDescriptor[] = [
   {
@@ -533,26 +556,26 @@ const getCompositeScore = (states: BodyGroupState[]) => {
   return scored.reduce((acc, state) => acc + state.score, 0) / scored.length;
 };
 
-const getSummaryText = (states: BodyGroupState[]) => {
+const getSummaryText = (states: BodyGroupState[], tx: TranslateFn) => {
   const improved = states.filter((state) => state.tone === "improved");
   const regressed = states.filter((state) => state.tone === "regressed");
 
   if (!improved.length && !regressed.length) {
-    return "La comparación no detecta cambios significativos o faltan mediciones comparables.";
+    return tx("La comparación no detecta cambios significativos o faltan mediciones comparables.", "The comparison does not detect significant changes or comparable measurements are missing.");
   }
 
   const improvedText = improved.slice(0, 3).map((state) => state.label.toLowerCase()).join(", ");
   const regressedText = regressed.slice(0, 2).map((state) => state.label.toLowerCase()).join(", ");
 
   if (improved.length && regressed.length) {
-    return `Mejoras en ${improvedText}; revisar ${regressedText} para ajustar entrenamiento, nutrición o descanso.`;
+    return `${tx("Mejoras en", "Improvements in")} ${improvedText}; ${tx("revisar", "review")} ${regressedText} ${tx("para ajustar entrenamiento, nutrición o descanso", "to adjust training, nutrition or rest")}.`;
   }
 
   if (improved.length) {
-    return `Evolución favorable en ${improvedText}. Mantener seguimiento para confirmar tendencia.`;
+    return `${tx("Evolución favorable en", "Favorable evolution in")} ${improvedText}. ${tx("Mantener seguimiento para confirmar tendencia.", "Keep tracking to confirm the trend.")}`;
   }
 
-  return `Atención en ${regressedText}. Conviene revisar contexto del período y ajustar el plan.`;
+  return `${tx("Atención en", "Attention needed in")} ${regressedText}. ${tx("Conviene revisar contexto del período y ajustar el plan.", "It is advisable to review the period context and adjust the plan.")}`;
 };
 
 const viewModes: Array<{ id: ViewMode; label: string; icon: typeof Layers3 }> = [
@@ -696,6 +719,7 @@ function BodyMapSvg({
   bodyView,
   activeGroup,
   onSelect,
+  tx,
   muted = false,
   heatmap = true,
 }: {
@@ -704,6 +728,7 @@ function BodyMapSvg({
   bodyView: BodyView;
   activeGroup: BodyGroupId;
   onSelect: (id: BodyGroupId) => void;
+  tx: TranslateFn;
   muted?: boolean;
   heatmap?: boolean;
 }) {
@@ -746,7 +771,7 @@ function BodyMapSvg({
       viewBox="0 0 260 560"
       className="h-full w-full select-none"
       role="img"
-      aria-label={`Mapa corporal ${isBack ? "posterior" : "frontal"} ${female ? "femenino" : "masculino"}`}
+      aria-label={`${tx("Mapa corporal", "Body map")} ${isBack ? tx("posterior", "back") : tx("frontal", "front")} ${female ? tx("femenino", "female") : tx("masculino", "male")}`}
     >
       <defs>
         <radialGradient id="gm-body-core-glow" cx="50%" cy="48%" r="62%">
@@ -850,7 +875,7 @@ function BodyMapSvg({
       </g>
 
       <text x="130" y="510" textAnchor="middle" className="fill-slate-300 text-[11px]">
-        {`${isBack ? "Vista posterior" : "Vista frontal"} · ${female ? "femenina" : "masculina"}`}
+        {`${isBack ? tx("Vista posterior", "Back view") : tx("Vista frontal", "Front view")} · ${female ? tx("femenina", "female") : tx("masculina", "male")}`}
       </text>
     </svg>
   );
@@ -912,6 +937,9 @@ export default function EvolucionFisicaBeforeAfterStudio({
   rows,
   socioNombre = "Socio",
 }: EvolucionFisicaBeforeAfterStudioProps) {
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const tx = (es: string, en: string) => (isEnglish ? en : es);
   const orderedRows = useMemo(
     () => [...rows].sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime()),
     [rows]
@@ -938,7 +966,7 @@ export default function EvolucionFisicaBeforeAfterStudio({
     return (
       <Card className="rounded-2xl border bg-card text-card-foreground shadow-sm">
         <CardContent className="p-6 text-sm text-muted-foreground">
-          El estudio visual antes/después se activará cuando existan al menos dos registros de evolución física.
+          {tx("El estudio visual antes/después se activará cuando existan al menos dos registros de evolución física.", "The before/after visual study will activate when there are at least two physical evolution records.")}
         </CardContent>
       </Card>
     );
@@ -958,14 +986,15 @@ export default function EvolucionFisicaBeforeAfterStudio({
   });
   const beforeMetrics = { ...beforeMetricsBase, sexoReferencia: referenceSex };
   const afterMetrics = { ...afterMetricsBase, sexoReferencia: referenceSex };
-  const groupStates = buildGroupStates(beforeMetrics, afterMetrics);
+  const rawGroupStates = buildGroupStates(beforeMetrics, afterMetrics);
+  const groupStates = rawGroupStates.map((state) => translateGroupState(state, tx));
   const groupMap = new Map(groupStates.map((state) => [state.id, state]));
   const activeState = groupMap.get(activeGroup) || groupStates[0];
   const compositeScore = getCompositeScore(groupStates);
   const improvedCount = groupStates.filter((state) => state.tone === "improved").length;
   const regressedCount = groupStates.filter((state) => state.tone === "regressed").length;
-  const summaryText = getSummaryText(groupStates);
-  const scoreLabel = compositeScore > 0.08 ? "Favorable" : compositeScore < -0.08 ? "A revisar" : "Estable";
+  const summaryText = getSummaryText(groupStates, tx);
+  const scoreLabel = compositeScore > 0.08 ? tx("Favorable", "Favorable") : compositeScore < -0.08 ? tx("A revisar", "Needs review") : tx("Estable", "Stable");
   const ScoreIcon = compositeScore >= 0 ? TrendingUp : TrendingDown;
 
   return (
@@ -975,25 +1004,25 @@ export default function EvolucionFisicaBeforeAfterStudio({
           <div>
             <p className="flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-cyan-200">
               <Sparkles className="h-4 w-4" />
-              Estudio visual antes/después
+              {tx("Estudio visual antes/después", "Before/after visual study")}
             </p>
-            <h3 className="mt-2 text-2xl font-bold">Mapa corporal interactivo de {socioNombre}</h3>
+            <h3 className="mt-2 text-2xl font-bold">{tx("Mapa corporal interactivo de", "Interactive body map of")} {socioNombre}</h3>
             <p className="mt-2 max-w-4xl text-sm text-cyan-50/80">
-              Silueta SVG propia, heatmap por grupos corporales y comparación entre dos mediciones. Inspirado en patrones benchmark, sin copiar assets ni componentes externos.
+              {tx("Silueta SVG propia, heatmap por grupos corporales y comparación entre dos mediciones. Inspirado en patrones benchmark, sin copiar assets ni componentes externos.", "Custom SVG silhouette, body-group heatmap and comparison between two measurements. Inspired by benchmark patterns without copying external assets or components.")}
             </p>
           </div>
           <div className="grid min-w-[260px] grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-background/10 p-3 text-center backdrop-blur">
             <div>
               <p className="text-lg font-bold">{improvedCount}</p>
-              <p className="text-[11px] text-cyan-100/80">mejoras</p>
+              <p className="text-[11px] text-cyan-100/80">{tx("mejoras", "improvements")}</p>
             </div>
             <div>
               <p className="text-lg font-bold">{regressedCount}</p>
-              <p className="text-[11px] text-cyan-100/80">alertas</p>
+              <p className="text-[11px] text-cyan-100/80">{tx("alertas", "alerts")}</p>
             </div>
             <div>
               <p className="text-lg font-bold">{scoreLabel}</p>
-              <p className="text-[11px] text-cyan-100/80">estado</p>
+              <p className="text-[11px] text-cyan-100/80">{tx("estado", "status")}</p>
             </div>
           </div>
         </div>
@@ -1003,7 +1032,7 @@ export default function EvolucionFisicaBeforeAfterStudio({
         <div className="grid gap-3 lg:grid-cols-[1fr_1fr_auto]">
           <div className="space-y-1.5">
             <label htmlFor="gm-evo-before-date" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Medición antes
+              {tx("Medición antes", "Before measurement")}
             </label>
             <select
               id="gm-evo-before-date"
@@ -1013,7 +1042,7 @@ export default function EvolucionFisicaBeforeAfterStudio({
             >
               {orderedRows.map((row, index) => (
                 <option key={`before-${rowKey(row, index)}`} value={index}>
-                  {formatDate(row.fecha)} · {formatNumber(row.peso, " kg")} · cintura {formatNumber(row.cintura, " cm")}
+                  {formatDate(row.fecha)} · {formatNumber(row.peso, " kg")} · {tx("cintura", "waist")} {formatNumber(row.cintura, " cm")}
                 </option>
               ))}
             </select>
@@ -1021,7 +1050,7 @@ export default function EvolucionFisicaBeforeAfterStudio({
 
           <div className="space-y-1.5">
             <label htmlFor="gm-evo-after-date" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Medición después
+              {tx("Medición después", "After measurement")}
             </label>
             <select
               id="gm-evo-after-date"
@@ -1031,7 +1060,7 @@ export default function EvolucionFisicaBeforeAfterStudio({
             >
               {orderedRows.map((row, index) => (
                 <option key={`after-${rowKey(row, index)}`} value={index}>
-                  {formatDate(row.fecha)} · {formatNumber(row.peso, " kg")} · cintura {formatNumber(row.cintura, " cm")}
+                  {formatDate(row.fecha)} · {formatNumber(row.peso, " kg")} · {tx("cintura", "waist")} {formatNumber(row.cintura, " cm")}
                 </option>
               ))}
             </select>
@@ -1047,7 +1076,7 @@ export default function EvolucionFisicaBeforeAfterStudio({
                 className={bodyView === item.id ? "bg-[#02a8e1] hover:bg-[#0288b1]" : ""}
               >
                 <Eye className="mr-2 h-4 w-4" />
-                {item.label}
+                {tx(item.label, item.id === "front" ? "Front" : "Back")}
               </Button>
             ))}
           </div>
@@ -1063,7 +1092,7 @@ export default function EvolucionFisicaBeforeAfterStudio({
               className={mode === id ? "bg-[#02a8e1] hover:bg-[#0288b1]" : ""}
             >
               <Icon className="mr-2 h-4 w-4" />
-              {label}
+              {tx(label, id === "overlay" ? "Overlay" : label)}
             </Button>
           ))}
         </div>
@@ -1071,8 +1100,8 @@ export default function EvolucionFisicaBeforeAfterStudio({
         <div className="grid gap-5 xl:grid-cols-[minmax(320px,0.95fr)_1.05fr]">
           <div className="space-y-4 rounded-3xl border bg-slate-950 p-4 shadow-inner">
             <div className="flex items-center justify-between gap-3 text-xs text-cyan-100">
-              <span>Antes · {formatShortDate(beforeRow.fecha)}</span>
-              <span>Después · {formatShortDate(afterRow.fecha)}</span>
+              <span>{tx("Antes", "Before")} · {formatShortDate(beforeRow.fecha)}</span>
+              <span>{tx("Después", "After")} · {formatShortDate(afterRow.fecha)}</span>
             </div>
 
             <div
@@ -1080,8 +1109,8 @@ export default function EvolucionFisicaBeforeAfterStudio({
               data-body-view={bodyView}
               data-view-mode={mode}
               data-slider={slider}
-              data-before-label={`Antes · ${formatShortDate(beforeRow.fecha)}`}
-              data-after-label={`Después · ${formatShortDate(afterRow.fecha)}`}
+              data-before-label={`${tx("Antes", "Before")} · ${formatShortDate(beforeRow.fecha)}`}
+              data-after-label={`${tx("Después", "After")} · ${formatShortDate(afterRow.fecha)}`}
               data-score-label={scoreLabel}
               className="relative mx-auto h-[560px] w-full max-w-[360px] overflow-hidden rounded-[28px] border border-cyan-300/20 bg-[radial-gradient(circle_at_50%_40%,rgba(34,211,238,0.20),rgba(2,6,23,0.96)_58%)]"
             >
@@ -1094,6 +1123,7 @@ export default function EvolucionFisicaBeforeAfterStudio({
                       bodyView={bodyView}
                       activeGroup={activeGroup}
                       onSelect={setActiveGroup}
+                      tx={tx}
                       muted
                     />
                   </div>
@@ -1108,6 +1138,7 @@ export default function EvolucionFisicaBeforeAfterStudio({
                       bodyView={bodyView}
                       activeGroup={activeGroup}
                       onSelect={setActiveGroup}
+                      tx={tx}
                     />
                   </div>
                   <div
@@ -1124,6 +1155,7 @@ export default function EvolucionFisicaBeforeAfterStudio({
                       bodyView={bodyView}
                       activeGroup={activeGroup}
                       onSelect={setActiveGroup}
+                      tx={tx}
                       muted
                       heatmap={false}
                     />
@@ -1135,6 +1167,7 @@ export default function EvolucionFisicaBeforeAfterStudio({
                       bodyView={bodyView}
                       activeGroup={activeGroup}
                       onSelect={setActiveGroup}
+                      tx={tx}
                     />
                   </div>
                 </>
@@ -1146,6 +1179,7 @@ export default function EvolucionFisicaBeforeAfterStudio({
                     bodyView={bodyView}
                     activeGroup={activeGroup}
                     onSelect={setActiveGroup}
+                    tx={tx}
                   />
                 </div>
               )}
@@ -1154,9 +1188,9 @@ export default function EvolucionFisicaBeforeAfterStudio({
             {mode === "slider" && (
               <div className="rounded-2xl border border-cyan-300/20 bg-background/10 p-3">
                 <div className="mb-2 flex items-center justify-between text-xs text-cyan-100">
-                  <span>Antes</span>
+                  <span>{tx("Antes", "Before")}</span>
                   <span>{slider}%</span>
-                  <span>Después</span>
+                  <span>{tx("Después", "After")}</span>
                 </div>
                 <input
                   type="range"
@@ -1165,7 +1199,7 @@ export default function EvolucionFisicaBeforeAfterStudio({
                   value={slider}
                   onChange={(event) => setSlider(Number(event.target.value))}
                   className="w-full accent-cyan-300"
-                  aria-label="Comparador antes después"
+                  aria-label={tx("Comparador antes después", "Before and after comparator")}
                 />
               </div>
             )}
@@ -1174,25 +1208,25 @@ export default function EvolucionFisicaBeforeAfterStudio({
           <div className="space-y-4">
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <StudioStat
-                label="Peso"
+                label={tx("Peso", "Weight")}
                 value={formatSigned(getDelta(afterMetrics.peso, beforeMetrics.peso), " kg")}
                 helper={`${formatNumber(beforeMetrics.peso, " kg")} → ${formatNumber(afterMetrics.peso, " kg")}`}
                 icon={Scale}
               />
               <StudioStat
-                label="Cintura"
+                label={tx("Cintura", "Waist")}
                 value={formatSigned(getDelta(afterMetrics.cintura, beforeMetrics.cintura), " cm")}
                 helper={`${formatNumber(beforeMetrics.cintura, " cm")} → ${formatNumber(afterMetrics.cintura, " cm")}`}
                 icon={Ruler}
               />
               <StudioStat
-                label="Masa muscular"
+                label={tx("Masa muscular", "Muscle mass")}
                 value={formatSigned(getDelta(afterMetrics.masaMuscular, beforeMetrics.masaMuscular), " kg")}
                 helper={`${formatNumber(beforeMetrics.masaMuscular, " kg")} → ${formatNumber(afterMetrics.masaMuscular, " kg")}`}
                 icon={Dumbbell}
               />
               <StudioStat
-                label="Lectura"
+                label={tx("Lectura", "Reading")}
                 value={scoreLabel}
                 helper={summaryText}
                 icon={ScoreIcon}
@@ -1202,7 +1236,7 @@ export default function EvolucionFisicaBeforeAfterStudio({
             <div className="rounded-2xl border bg-card p-4 text-card-foreground shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-[#02a8e1]">Grupo seleccionado</p>
+                  <p className="text-xs uppercase tracking-wide text-[#02a8e1]">{tx("Grupo seleccionado", "Selected group")}</p>
                   <h4 className="mt-1 text-xl font-bold text-foreground">{activeState.label}</h4>
                   <p className="mt-1 text-sm text-muted-foreground">{activeState.description}</p>
                 </div>
@@ -1211,30 +1245,30 @@ export default function EvolucionFisicaBeforeAfterStudio({
                   style={{ backgroundColor: getSoftColor(activeState), color: getColor(activeState) }}
                 >
                   {activeState.tone === "improved"
-                    ? "Mejora"
+                    ? tx("Mejora", "Improved")
                     : activeState.tone === "regressed"
-                    ? "Revisar"
+                    ? tx("Revisar", "Review")
                     : activeState.tone === "stable"
-                    ? "Estable"
-                    : "Sin dato"}
+                    ? tx("Estable", "Stable")
+                    : tx("Sin dato", "No data")}
                 </div>
               </div>
 
               <div className="mt-4 grid gap-3 md:grid-cols-3">
                 <div className="rounded-xl border bg-muted/40 p-3">
-                  <p className="text-xs text-muted-foreground">Antes</p>
+                  <p className="text-xs text-muted-foreground">{tx("Antes", "Before")}</p>
                   <p className="text-lg font-bold text-foreground">
                     {formatNumber(activeState.before, activeState.before === null ? "" : ` ${activeState.unit}`)}
                   </p>
                 </div>
                 <div className="rounded-xl border bg-muted/40 p-3">
-                  <p className="text-xs text-muted-foreground">Después</p>
+                  <p className="text-xs text-muted-foreground">{tx("Después", "After")}</p>
                   <p className="text-lg font-bold text-foreground">
                     {formatNumber(activeState.after, activeState.after === null ? "" : ` ${activeState.unit}`)}
                   </p>
                 </div>
                 <div className="rounded-xl border bg-muted/40 p-3">
-                  <p className="text-xs text-muted-foreground">Cambio</p>
+                  <p className="text-xs text-muted-foreground">{tx("Cambio", "Change")}</p>
                   <p className="text-lg font-bold text-foreground">
                     {formatSigned(activeState.delta, activeState.delta === null ? "" : ` ${activeState.unit}`)}
                   </p>
@@ -1245,7 +1279,7 @@ export default function EvolucionFisicaBeforeAfterStudio({
             <div className="rounded-2xl border bg-muted/40 p-4">
               <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
                 <UserRound className="h-4 w-4 text-[#02a8e1]" />
-                Mapa de grupos corporales
+                {tx("Mapa de grupos corporales", "Body group map")}
               </div>
               <div className="flex flex-wrap gap-2">
                 {groupStates.map((state) => (
@@ -1260,23 +1294,23 @@ export default function EvolucionFisicaBeforeAfterStudio({
               <div className="mt-4 grid gap-2 text-xs text-muted-foreground md:grid-cols-3">
                 <div className="rounded-xl border bg-card p-3">
                   <span className="mr-1 inline-block h-2 w-2 rounded-full bg-emerald-500" />
-                  Verde: evolución favorable según objetivo de la métrica.
+                  {tx("Verde: evolución favorable según objetivo de la métrica.", "Green: favorable evolution according to the metric objective.")}
                 </div>
                 <div className="rounded-xl border bg-card p-3">
                   <span className="mr-1 inline-block h-2 w-2 rounded-full bg-orange-500" />
-                  Naranja: revisar contexto, adherencia o plan.
+                  {tx("Naranja: revisar contexto, adherencia o plan.", "Orange: review context, adherence or plan.")}
                 </div>
                 <div className="rounded-xl border bg-card p-3">
                   <span className="mr-1 inline-block h-2 w-2 rounded-full bg-sky-400" />
-                  Celeste: cambio estable o métrica neutral.
+                  {tx("Celeste: cambio estable o métrica neutral.", "Cyan: stable change or neutral metric.")}
                 </div>
               </div>
             </div>
 
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-950/30 dark:text-amber-100">
-              <p className="font-semibold">Representación visual estimativa</p>
+              <p className="font-semibold">{tx("Representación visual estimativa", "Estimated visual representation")}</p>
               <p className="mt-1">
-                La silueta y el heatmap son una guía visual basada en mediciones cargadas. No reemplaza evaluación médica, antropométrica profesional ni criterio del entrenador.
+                {tx("La silueta y el heatmap son una guía visual basada en mediciones cargadas. No reemplaza evaluación médica, antropométrica profesional ni criterio del entrenador.", "The silhouette and heatmap are a visual guide based on loaded measurements. They do not replace medical evaluation, professional anthropometric assessment or trainer judgment.")}
               </p>
             </div>
           </div>

@@ -41,6 +41,39 @@ function periodoInRange(periodo: string, desde: string, hasta: string) {
   return true;
 }
 
+function sanitizeMonthFilterValue(value: string) {
+  const cleaned = value.replace(/[^0-9-]/g, "").slice(0, 7);
+  if (/^\d{5}$/.test(cleaned)) {
+    return `${cleaned.slice(0, 4)}-${cleaned.slice(4)}`;
+  }
+  return cleaned;
+}
+
+type MonthFilterInputProps = {
+  value: string;
+  onChange: (value: string) => void;
+  isEnglish: boolean;
+  ariaLabel: string;
+  placeholder: string;
+};
+
+function MonthFilterInput({ value, onChange, isEnglish, ariaLabel, placeholder }: MonthFilterInputProps) {
+  return (
+    <Input
+      type={isEnglish ? "text" : "month"}
+      lang={isEnglish ? "en" : "es"}
+      inputMode={isEnglish ? "numeric" : undefined}
+      pattern={isEnglish ? "[0-9]{4}-[0-9]{2}" : undefined}
+      maxLength={isEnglish ? 7 : undefined}
+      aria-label={ariaLabel}
+      placeholder={placeholder}
+      title={isEnglish ? "Use YYYY-MM format" : undefined}
+      value={value}
+      onChange={(event) => onChange(isEnglish ? sanitizeMonthFilterValue(event.target.value) : event.target.value)}
+    />
+  );
+}
+
 export default function EmpleadosSueldosPage() {
   const { isAuthenticated, initializeAuth, isInitialized } = useAuthStore();
   const { locale } = useI18n();
@@ -335,8 +368,20 @@ export default function EmpleadosSueldosPage() {
                   <option value="pagado">{salaryText("Pagados", "Paid")}</option>
                   <option value="anulado">{salaryText("Anulados", "Canceled")}</option>
                 </select>
-                <Input type="month" lang={isEnglish ? "en" : "es"} aria-label={salaryText("Período desde", "Period from")} value={periodoDesde} onChange={(event) => setPeriodoDesde(event.target.value)} />
-                <Input type="month" lang={isEnglish ? "en" : "es"} aria-label={salaryText("Período hasta", "Period to")} value={periodoHasta} onChange={(event) => setPeriodoHasta(event.target.value)} />
+                <MonthFilterInput
+                  value={periodoDesde}
+                  onChange={setPeriodoDesde}
+                  isEnglish={isEnglish}
+                  ariaLabel={salaryText("Período desde", "Period from")}
+                  placeholder={salaryText("Desde período", "From period (YYYY-MM)")}
+                />
+                <MonthFilterInput
+                  value={periodoHasta}
+                  onChange={setPeriodoHasta}
+                  isEnglish={isEnglish}
+                  ariaLabel={salaryText("Período hasta", "Period to")}
+                  placeholder={salaryText("Hasta período", "To period (YYYY-MM)")}
+                />
                 <div className="relative md:col-span-2">
                   <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input

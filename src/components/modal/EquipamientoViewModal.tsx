@@ -13,6 +13,7 @@ import { Mantenimiento } from "@/interfaces/mantenimiento.interface";
 import { getOneEquipamientoById } from "@/services/equipamientoService";
 import { getMantenimientoByIdEquipamiento } from "@/services/mantenimientoService";
 import { formatFrontendDateTime, formatFrontendDate } from '@/utils/dateFormat';
+import { useI18n } from "@/i18n/I18nProvider";
 
 export default function EquipamientoViewModal({
   open,
@@ -23,6 +24,22 @@ export default function EquipamientoViewModal({
   onClose: () => void;
   equipoId?: string | null;
 }) {
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const tx = (es: string, en: string) => (isEnglish ? en : es);
+  const translateStatus = (value?: string | null) => {
+    switch (String(value ?? "").toLowerCase()) {
+      case "operativo":
+        return tx("operativo", "operational");
+      case "en mantenimiento":
+        return tx("en mantenimiento", "under maintenance");
+      case "fuera de servicio":
+        return tx("fuera de servicio", "out of service");
+      default:
+        return String(value ?? "");
+    }
+  };
+
   const [equipo, setEquipo] = useState<Equipamento | null>(null);
   const [mantenimientos, setMantenimientos] = useState<Mantenimiento[]>([]);
 
@@ -48,7 +65,7 @@ export default function EquipamientoViewModal({
         <QaFileNameBadge file="src/components/modal/EquipamientoViewModal.tsx" />
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="text-xl font-semibold">
-            Detalles de Equipamiento
+            {tx("Detalles de Equipamiento", "Equipment details")}
           </DialogTitle>
           <div className="text-sm text-right text-muted-foreground">
             {formatFrontendDateTime(new Date())}
@@ -64,25 +81,25 @@ export default function EquipamientoViewModal({
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Nombre</label>
+                <label className="text-sm font-medium">{tx("Nombre", "Name")}</label>
                 <div className="p-2 border rounded-md bg-gray-50 dark:bg-zinc-800 dark:border-zinc-700 dark:text-white">
                   {equipo.nombre}
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Tipo</label>
+                <label className="text-sm font-medium">{tx("Tipo", "Type")}</label>
                 <div className="p-2 border rounded-md bg-gray-50 dark:bg-zinc-800 dark:border-zinc-700 dark:text-white">
                   {equipo.tipo}
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Marca</label>
+                <label className="text-sm font-medium">{tx("Marca", "Brand")}</label>
                 <div className="p-2 border rounded-md bg-gray-50 dark:bg-zinc-800 dark:border-zinc-700 dark:text-white">
                   {equipo.marca}
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Modelo</label>
+                <label className="text-sm font-medium">{tx("Modelo", "Model")}</label>
                 <div className="p-2 border rounded-md bg-gray-50 dark:bg-zinc-800 dark:border-zinc-700 dark:text-white">
                   {equipo.modelo}
                 </div>
@@ -90,25 +107,25 @@ export default function EquipamientoViewModal({
             </div>
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Estado</label>
+                <label className="text-sm font-medium">{tx("Estado", "Status")}</label>
                 <div className="p-2 border rounded-md bg-gray-50 dark:bg-zinc-800 dark:border-zinc-700 dark:text-white">
-                  {equipo.estado}
+                  {translateStatus(equipo.estado)}
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Ubicación</label>
+                <label className="text-sm font-medium">{tx("Ubicación", "Location")}</label>
                 <div className="p-2 border rounded-md bg-gray-50 dark:bg-zinc-800 dark:border-zinc-700 dark:text-white">
                   {equipo.ubicacion}
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Próxima Revisión</label>
+                <label className="text-sm font-medium">{tx("Próxima Revisión", "Next review")}</label>
                 <div className="p-2 border rounded-md bg-gray-50 dark:bg-zinc-800 dark:border-zinc-700 dark:text-white">
                   {equipo.proxima_revision}
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Observaciones</label>
+                <label className="text-sm font-medium">{tx("Observaciones", "Notes")}</label>
                 <div className="p-2 border rounded-md bg-gray-50 dark:bg-zinc-800 dark:border-zinc-700 dark:text-white">
                   {equipo.observaciones}
                 </div>
@@ -118,7 +135,7 @@ export default function EquipamientoViewModal({
           {mantenimientos && mantenimientos.length > 0 && (
             <div className="mt-8">
               <div className="mb-4 text-base font-semibold">
-                Historial de Mantenimientos
+                {tx("Historial de Mantenimientos", "Maintenance history")}
               </div>
               <div className="p-4 overflow-y-auto border rounded-lg bg-gray-50 dark:bg-zinc-800 dark:border-zinc-700 dark:text-white max-h-40">
                 <div className="relative pl-6 space-y-4 border-l-2 border-blue-300 dark:border-blue-700">
@@ -130,10 +147,10 @@ export default function EquipamientoViewModal({
                           {m.fecha_mantenimiento} - {m.tipo_mantenimiento}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          Responsable: {m.tecnico_responsable}
+                          {tx("Responsable", "Responsible")}: {m.tecnico_responsable}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          Costo: ${m.costo}
+                          {tx("Costo", "Cost")}: ${m.costo}
                         </div>
                         <div className="text-xs break-words text-muted-foreground">
                           {m.observaciones}

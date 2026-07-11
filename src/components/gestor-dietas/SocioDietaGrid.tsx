@@ -6,6 +6,7 @@ import { Dieta } from "@/interfaces/dieta.interface";
 import { Skeleton } from "@/components/ui/skeleton";
 import SocioDietaCard from "./SocioDietaCard";
 import { getDietasPorSocio } from "@/services/apiClient";
+import { useI18n } from "@/i18n/I18nProvider";
 
 interface SociosDietasGridProps {
   socios: Socio[];
@@ -21,6 +22,8 @@ export default function SocioDietaGrid({
   socios,
   loading,
 }: SociosDietasGridProps) {
+  const { locale } = useI18n();
+  const isEnglish = locale === 'en';
   const [sociosConDietas, setSociosConDietas] = useState<SocioConDieta[]>([]);
 
   const obtenerUltimaDieta = async (socioId: string): Promise<Dieta | null> => {
@@ -94,7 +97,7 @@ export default function SocioDietaGrid({
   if (sociosConDietas.length === 0) {
     return (
       <div className="py-12 text-center text-muted-foreground">
-        No hay socios registrados aún.
+        {isEnglish ? 'No members have been registered yet.' : 'No hay socios registrados aún.'}
       </div>
     );
   }
