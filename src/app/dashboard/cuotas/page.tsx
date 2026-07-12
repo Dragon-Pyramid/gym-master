@@ -18,7 +18,7 @@ import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 import ExcelJS from "exceljs";
-import { buildTimestampedDownloadFileName } from '@/utils/downloadFileName';
+import { buildTimestampedDownloadFileName } from "@/utils/downloadFileName";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -28,13 +28,42 @@ import {
 import { PaginationControls } from "@/components/ui/PaginationControls";
 import { downloadCommercialReportPdf } from "@/utils/commercialReportPdf";
 import { formatFrontendDate } from "@/utils/dateFormat";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const CUOTAS_PAGE_SIZE = 10;
+
+function translateFeeDescription(value: string | null | undefined, isEnglish: boolean) {
+  if (!value || !isEnglish) return value || "-";
+
+  const monthMap: Record<string, string> = {
+    ENERO: "JANUARY",
+    FEBRERO: "FEBRUARY",
+    MARZO: "MARCH",
+    ABRIL: "APRIL",
+    MAYO: "MAY",
+    JUNIO: "JUNE",
+    JULIO: "JULY",
+    AGOSTO: "AUGUST",
+    SEPTIEMBRE: "SEPTEMBER",
+    SETIEMBRE: "SEPTEMBER",
+    OCTUBRE: "OCTOBER",
+    NOVIEMBRE: "NOVEMBER",
+    DICIEMBRE: "DECEMBER",
+  };
+
+  return value.replace(
+    /\b(ENERO|FEBRERO|MARZO|ABRIL|MAYO|JUNIO|JULIO|AGOSTO|SEPTIEMBRE|SETIEMBRE|OCTUBRE|NOVIEMBRE|DICIEMBRE)\b/gi,
+    (match) => monthMap[match.toUpperCase()] || match,
+  );
+}
 
 export default function CuotasPage() {
   const { user, isAuthenticated, initializeAuth, isInitialized } =
     useAuthStore();
   const router = useRouter();
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const tx = (es: string, en: string) => (isEnglish ? en : es);
   const [cuotas, setCuotas] = useState<Cuota[]>([]);
   const [filteredCuotas, setFilteredCuotas] = useState<Cuota[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -70,44 +99,73 @@ export default function CuotasPage() {
   const handleDownloadPdf = async () => {
     try {
       await downloadCommercialReportPdf({
-        title: "Listado de Cuotas",
-        subtitle: "Reporte de cuotas, períodos y estado vigente.",
-        fileName: "listado-cuotas-gym-master",
+        title: tx("Listado de Cuotas", "Fees list"),
+        subtitle: tx(
+          "Reporte de cuotas, períodos y estado vigente.",
+          "Report of fees, periods, and current status.",
+        ),
+        fileName: isEnglish ? "fees-list-gym-master" : "listado-cuotas-gym-master",
         rows: filteredCuotas,
         metrics: [
-          { label: "Cuotas filtradas", value: filteredCuotas.length },
-          { label: "Activas", value: filteredCuotas.filter((c) => c.activo).length },
+          { label: tx("Cuotas filtradas", "Filtered fees"), value: filteredCuotas.length },
+          {
+            label: tx("Activas", "Active"),
+            value: filteredCuotas.filter((c) => c.activo).length,
+          },
         ],
-        filtersLabel: `Estado: ${filtroLabel} · Orden: ${ordenamientoLabel}${searchTerm.trim() ? ` · Búsqueda: ${searchTerm.trim()}` : ""}`,
+        filtersLabel: `${tx("Estado", "Status")}: ${filtroLabel} · ${tx("Orden", "Sort")}: ${ordenamientoLabel}${
+          searchTerm.trim() ? ` · ${tx("Búsqueda", "Search")}: ${searchTerm.trim()}` : ""
+        }`,
         columns: [
-          { header: "Descripción", width: 55, getValue: (c) => c.descripcion },
-          { header: "Monto", width: 26, getValue: (c) => `$${Number(c.monto || 0).toLocaleString("es-AR")}`, align: "right" },
-          { header: "Período", width: 30, getValue: (c) => c.periodo || "-" },
-          { header: "Fecha inicio", width: 30, getValue: (c) => formatFrontendDate(c.fecha_inicio) },
-          { header: "Fecha fin", width: 30, getValue: (c) => formatFrontendDate(c.fecha_fin) },
-          { header: "Estado", width: 24, getValue: (c) => (c.activo ? "Activa" : "Inactiva") },
+          {
+            header: tx("Descripción", "Description"),
+            width: 55,
+            getValue: (c) => translateFeeDescription(c.descripcion, isEnglish),
+          },
+          {
+            header: tx("Monto", "Amount"),
+            width: 26,
+            getValue: (c) => `$${Number(c.monto || 0).toLocaleString("es-AR")}`,
+            align: "right",
+          },
+          { header: tx("Período", "Period"), width: 30, getValue: (c) => c.periodo || "-" },
+          {
+            header: tx("Fecha inicio", "Start date"),
+            width: 30,
+            getValue: (c) => formatFrontendDate(c.fecha_inicio),
+          },
+          {
+            header: tx("Fecha fin", "End date"),
+            width: 30,
+            getValue: (c) => formatFrontendDate(c.fecha_fin),
+          },
+          {
+            header: tx("Estado", "Status"),
+            width: 24,
+            getValue: (c) => (c.activo ? tx("Activa", "Active") : tx("Inactiva", "Inactive")),
+          },
         ],
       });
     } catch {
-      toast.error("No se pudo generar el PDF de cuotas");
+      toast.error(tx("No se pudo generar el PDF de cuotas", "Could not generate the fees PDF"));
     }
   };
 
   const handleExportExcel = async () => {
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Cuotas");
+    const worksheet = workbook.addWorksheet(tx("Cuotas", "Fees"));
 
     worksheet.columns = [
-      { header: "Descripción", key: "descripcion", width: 30 },
-      { header: "Monto", key: "monto", width: 15 },
-      { header: "Período", key: "periodo", width: 20 },
-      { header: "Fecha Inicio", key: "fecha_inicio", width: 20 },
-      { header: "Fecha Fin", key: "fecha_fin", width: 20 },
+      { header: tx("Descripción", "Description"), key: "descripcion", width: 30 },
+      { header: tx("Monto", "Amount"), key: "monto", width: 15 },
+      { header: tx("Período", "Period"), key: "periodo", width: 20 },
+      { header: tx("Fecha Inicio", "Start date"), key: "fecha_inicio", width: 20 },
+      { header: tx("Fecha Fin", "End date"), key: "fecha_fin", width: 20 },
     ];
 
     filteredCuotas.forEach((c) => {
       worksheet.addRow({
-        descripcion: c.descripcion,
+        descripcion: translateFeeDescription(c.descripcion, isEnglish),
         monto: c.monto,
         periodo: c.periodo,
         fecha_inicio: formatFrontendDate(c.fecha_inicio),
@@ -122,7 +180,7 @@ export default function CuotasPage() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = buildTimestampedDownloadFileName("listado-cuotas", "xlsx");
+    a.download = buildTimestampedDownloadFileName(isEnglish ? "fees-list" : "listado-cuotas", "xlsx");
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -180,18 +238,18 @@ export default function CuotasPage() {
 
   const filtroLabel =
     filtroActivo === "todos"
-      ? "Todos"
+      ? tx("Todos", "All")
       : filtroActivo === "activos"
-      ? "Activos"
-      : "Inactivos";
+      ? tx("Activos", "Active")
+      : tx("Inactivos", "Inactive");
 
   const ordenamientoLabel =
     ordenamiento === "reciente"
-      ? "Más reciente a antigua"
-      : "Más antigua a reciente";
+      ? tx("Más reciente a antigua", "Newest to oldest")
+      : tx("Más antigua a reciente", "Oldest to newest");
 
   if (!isInitialized) {
-    return <div>Cargando...</div>;
+    return <div>{tx("Cargando...", "Loading...")}</div>;
   }
 
   if (!isAuthenticated) {
@@ -203,16 +261,16 @@ export default function CuotasPage() {
       <div className="flex w-full min-h-screen">
         <AppSidebar />
         <SidebarInset>
-          <AppHeader title="Cuotas" />
-          <main className="flex-1 p-6 space-y-6">
-            <Card className="w-full">
-              <CardHeader className="flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap">
-                <h2 className="text-xl font-bold">Listado de Cuotas</h2>
+          <AppHeader title={tx("Cuotas", "Fees")} />
+          <main className="flex-1 p-6 space-y-6 dark:bg-black">
+            <Card className="w-full dark:border-neutral-800 dark:bg-neutral-950/80">
+              <CardHeader className="flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap dark:border-neutral-800">
+                <h2 className="text-xl font-bold text-foreground">{tx("Listado de Cuotas", "Fees list")}</h2>
                 <div className="flex flex-wrap items-center w-full gap-2 md:w-auto">
                   <div className="flex items-center flex-grow gap-2 md:flex-grow-0">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="min-w-[120px]">
+                        <Button variant="outline" className="min-w-[120px] dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100">
                           {filtroLabel}
                         </Button>
                       </DropdownMenuTrigger>
@@ -223,7 +281,7 @@ export default function CuotasPage() {
                             filtroActivo === "todos" ? "font-bold" : ""
                           }
                         >
-                          Todos
+                          {tx("Todos", "All")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onSelect={() => setFiltroActivo("activos")}
@@ -231,7 +289,7 @@ export default function CuotasPage() {
                             filtroActivo === "activos" ? "font-bold" : ""
                           }
                         >
-                          Activos
+                          {tx("Activos", "Active")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onSelect={() => setFiltroActivo("inactivos")}
@@ -239,13 +297,13 @@ export default function CuotasPage() {
                             filtroActivo === "inactivos" ? "font-bold" : ""
                           }
                         >
-                          Inactivos
+                          {tx("Inactivos", "Inactive")}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="min-w-[180px]">
+                        <Button variant="outline" className="min-w-[180px] dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100">
                           {ordenamientoLabel}
                         </Button>
                       </DropdownMenuTrigger>
@@ -256,7 +314,7 @@ export default function CuotasPage() {
                             ordenamiento === "reciente" ? "font-bold" : ""
                           }
                         >
-                          Más reciente a antigua
+                          {tx("Más reciente a antigua", "Newest to oldest")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onSelect={() => setOrdenamiento("antigua")}
@@ -264,7 +322,7 @@ export default function CuotasPage() {
                             ordenamiento === "antigua" ? "font-bold" : ""
                           }
                         >
-                          Más antigua a reciente
+                          {tx("Más antigua a reciente", "Oldest to newest")}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -272,8 +330,8 @@ export default function CuotasPage() {
                       <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                       <Input
                         type="search"
-                        placeholder="Buscar por descripción, período..."
-                        className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] w-full"
+                        placeholder={tx("Buscar por descripción, período...", "Search by description, period...")}
+                        className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] w-full dark:border-neutral-800 dark:bg-black dark:text-neutral-100 dark:placeholder:text-neutral-500"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                       />
@@ -282,26 +340,26 @@ export default function CuotasPage() {
                   <Button
                     onClick={handleDownloadPdf}
                     variant="outline"
-                    className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
+                    className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd] dark:border-cyan-900/70 dark:bg-neutral-950 dark:text-cyan-300 dark:hover:bg-cyan-950/30"
                   >
                     <FileText className="w-4 h-4" />
-                    <span className="hidden sm:inline">Descargar PDF</span>
+                    <span className="hidden sm:inline">{tx("Descargar PDF", "Download PDF")}</span>
                   </Button>
                   <Button
                     variant="outline"
                     onClick={handleExportExcel}
-                    className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
+                    className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd] dark:border-cyan-900/70 dark:bg-neutral-950 dark:text-cyan-300 dark:hover:bg-cyan-950/30"
                   >
                     <FileSpreadsheet className="w-4 h-4" />
-                    <span className="hidden sm:inline">Exportar</span>
+                    <span className="hidden sm:inline">{tx("Exportar", "Export")}</span>
                   </Button>
                   {isAdminOnly && (
                     <Button
                       onClick={() => setOpenModal(true)}
                       className="bg-[#02a8e1] hover:bg-[#0288b1]"
                     >
-                      <span className="hidden sm:inline">Añadir Cuota</span>
-                      <span className="sm:hidden">Añadir</span>
+                      <span className="hidden sm:inline">{tx("Añadir Cuota", "Add fee")}</span>
+                      <span className="sm:hidden">{tx("Añadir", "Add")}</span>
                     </Button>
                   )}
                 </div>
@@ -321,16 +379,16 @@ export default function CuotasPage() {
                     }}
                     onDelete={async (cuota) => {
                       const confirmar = window.confirm(
-                        "¿Está seguro de eliminar la cuota?"
+                        tx("¿Está seguro de eliminar la cuota?", "Are you sure you want to delete this fee?")
                       );
                       if (!confirmar) return;
 
                       try {
                         await deleteCuota(cuota.id);
-                        toast.success("Cuota eliminada correctamente");
+                        toast.success(tx("Cuota eliminada correctamente", "Fee deleted successfully"));
                         await loadCuotas();
                       } catch (err) {
-                        toast.error("Error al eliminar cuota");
+                        toast.error(tx("Error al eliminar cuota", "Error deleting fee"));
                       }
                     }}
                   />
@@ -340,7 +398,7 @@ export default function CuotasPage() {
                   totalItems={totalCuotas}
                   pageSize={CUOTAS_PAGE_SIZE}
                   onPageChange={setCurrentPage}
-                  itemLabel="cuotas"
+                  itemLabel={tx("cuotas", "fees")}
                 />
               </CardContent>
             </Card>

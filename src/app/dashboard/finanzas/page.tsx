@@ -44,6 +44,8 @@ import { getFinanzasDashboardBi } from "@/services/finanzasService";
 import { downloadCommercialReportPdf } from "@/utils/commercialReportPdf";
 import { buildTimestampedDownloadFileName } from "@/utils/downloadFileName";
 import { formatFrontendDate } from "@/utils/dateFormat";
+import { useI18n } from "@/i18n/I18nProvider";
+import type { GymMasterLocale } from "@/i18n/config";
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -61,6 +63,57 @@ function formatPercent(value?: number | null) {
   return `${Number(value).toFixed(1)}%`;
 }
 
+function financeTx(locale: GymMasterLocale, es: string, en: string) {
+  return locale === "en" ? en : es;
+}
+
+function normalizeFinanceText(value?: string | null) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+const FINANCE_DYNAMIC_TRANSLATIONS: Record<string, string> = {
+  "ventas de productos / kiosco": "Product / kiosk sales",
+  "fees / membresias": "Fees / memberships",
+  "compras a proveedores": "Supplier purchases",
+  "gastos pending": "Pending expenses",
+  "gastos pendientes": "Pending expenses",
+  "luz": "Electricity",
+};
+
+function translateFinanceCategory(locale: GymMasterLocale, value?: string | null) {
+  const raw = String(value ?? "").trim();
+  if (!raw || locale !== "en") return raw;
+
+  const normalized = normalizeFinanceText(raw);
+  if (FINANCE_DYNAMIC_TRANSLATIONS[normalized]) {
+    return FINANCE_DYNAMIC_TRANSLATIONS[normalized];
+  }
+
+  const demoExpenseMatch = normalized.match(/^gasto demo (.+)$/);
+  if (demoExpenseMatch) {
+    return `Demo expense ${demoExpenseMatch[1]}`;
+  }
+
+  if (normalized.includes("gasto") && normalized.includes("demo")) {
+    return raw.replace(/gasto demo/gi, "Demo expense").replace(/gasto/gi, "Expense");
+  }
+
+  return raw;
+}
+
+function financeRecordCount(locale: GymMasterLocale, count: number) {
+  if (locale === "en") {
+    return `${count} ${count === 1 ? "record" : "records"}`;
+  }
+
+  return `${count} ${count === 1 ? "registro" : "registros"}`;
+}
+
 function MetricCard({
   title,
   value,
@@ -75,15 +128,15 @@ function MetricCard({
   tone?: "default" | "income" | "expense" | "warning" | "result";
 }) {
   const toneClass = {
-    default: "bg-slate-100 text-slate-700",
-    income: "bg-emerald-50 text-emerald-700",
-    expense: "bg-red-50 text-red-700",
-    warning: "bg-amber-50 text-amber-700",
-    result: "bg-sky-50 text-sky-700",
+    default: "bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-200",
+    income: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300",
+    expense: "bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-300",
+    warning: "bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300",
+    result: "bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300",
   }[tone];
 
   return (
-    <Card className="bg-white text-slate-950 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+    <Card className="bg-white text-slate-950 dark:border-neutral-800 dark:bg-neutral-950/90 dark:text-neutral-100">
       <CardContent className="flex items-center justify-between gap-4 p-5">
         <div className="space-y-1">
           <p className="text-sm text-muted-foreground">{title}</p>
@@ -102,13 +155,15 @@ function CategoryList({
   title,
   items,
   emptyLabel,
+  locale,
 }: {
   title: string;
   items: Array<{ categoria: string; total: number; cantidad: number }>;
   emptyLabel: string;
+  locale: GymMasterLocale;
 }) {
   return (
-    <Card>
+    <Card className="bg-white dark:border-neutral-800 dark:bg-neutral-950/90 dark:text-neutral-100">
       <CardHeader>
         <CardTitle className="text-lg">{title}</CardTitle>
       </CardHeader>
@@ -119,13 +174,13 @@ function CategoryList({
           items.slice(0, 8).map((item) => (
             <div
               key={`${title}-${item.categoria}`}
-              className="rounded-xl border p-3"
+              className="rounded-xl border bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900/70"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="font-medium">{item.categoria}</p>
+                  <p className="font-medium">{translateFinanceCategory(locale, item.categoria)}</p>
                   <p className="text-xs text-muted-foreground">
-                    {item.cantidad} registros
+                    {financeRecordCount(locale, item.cantidad)}
                   </p>
                 </div>
                 <p className="font-semibold">{formatCurrencyARS(item.total)}</p>
@@ -140,6 +195,8 @@ function CategoryList({
 
 export default function FinanzasIngresosEgresosBiPage() {
   const { isAuthenticated, initializeAuth, isInitialized } = useAuthStore();
+  const { locale } = useI18n();
+  const c = (es: string, en: string) => financeTx(locale, es, en);
   const router = useRouter();
   const [desde, setDesde] = useState(firstDayOfCurrentYearISO());
   const [hasta, setHasta] = useState(todayISO());
@@ -163,7 +220,7 @@ export default function FinanzasIngresosEgresosBiPage() {
       const response = await getFinanzasDashboardBi({ desde, hasta });
       setData(response);
     } catch (error: any) {
-      toast.error(error.message || "No se pudo cargar el BI financiero");
+      toast.error(error.message || c("No se pudo cargar el BI financiero", "Unable to load financial BI"));
       setData(null);
     } finally {
       setLoading(false);
@@ -182,38 +239,38 @@ export default function FinanzasIngresosEgresosBiPage() {
   const financialSignal = useMemo(() => {
     if (!metricas) {
       return {
-        label: "Sin datos financieros",
+        label: c("Sin datos financieros", "No financial data"),
         description:
-          "Seleccioná un período y actualizá para generar una lectura ejecutiva.",
+          c("Seleccioná un período y actualizá para generar una lectura ejecutiva.", "Select a period and refresh to generate an executive summary."),
         tone: "neutral" as const,
       };
     }
 
     if (metricas.resultado_neto < 0) {
       return {
-        label: "Resultado negativo",
+        label: c("Resultado negativo", "Negative result"),
         description:
-          "Revisá egresos y compromisos pendientes antes de ampliar gastos operativos.",
+          c("Revisá egresos y compromisos pendientes antes de ampliar gastos operativos.", "Review outflows and pending commitments before increasing operating expenses."),
         tone: "danger" as const,
       };
     }
 
     if (metricas.compromisos_pendientes > metricas.ingresos_total * 0.35) {
       return {
-        label: "Compromisos altos",
+        label: c("Compromisos altos", "High commitments"),
         description:
-          "Hay obligaciones relevantes frente a los ingresos del período. Priorizá pagos críticos.",
+          c("Hay obligaciones relevantes frente a los ingresos del período. Priorizá pagos críticos.", "There are significant obligations compared with period income. Prioritize critical payments."),
         tone: "warning" as const,
       };
     }
 
     return {
-      label: "Operación financieramente estable",
+      label: c("Operación financieramente estable", "Financially stable operation"),
       description:
-        "El resultado neto acompaña la operación comercial. Mantener seguimiento mensual.",
+        c("El resultado neto acompaña la operación comercial. Mantener seguimiento mensual.", "Net result supports the commercial operation. Keep monthly monitoring."),
       tone: "success" as const,
     };
-  }, [metricas]);
+  }, [c, metricas]);
 
   const handleExportExcel = async () => {
     if (!data) return;
@@ -385,7 +442,7 @@ export default function FinanzasIngresosEgresosBiPage() {
     }
   };
 
-  if (!isInitialized) return <div>Cargando...</div>;
+  if (!isInitialized) return <div>{c("Cargando...", "Loading...")}</div>;
   if (!isAuthenticated) return null;
 
   return (
@@ -393,41 +450,40 @@ export default function FinanzasIngresosEgresosBiPage() {
       <div className="flex h-[100dvh] max-h-[100dvh] w-full overflow-hidden">
         <AppSidebar />
         <SidebarInset className="!grid !min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden">
-          <AppHeader title="Finanzas / BI" />
-          <main className="min-h-0 space-y-6 overflow-y-auto overflow-x-hidden p-4 pb-8 sm:p-6">
-            <section className="rounded-2xl border bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+          <AppHeader title={c("Finanzas / BI", "Finance / BI")} />
+          <main className="min-h-0 space-y-6 overflow-y-auto overflow-x-hidden p-4 pb-8 dark:bg-black sm:p-6">
+            <section className="rounded-2xl border bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-950/90 dark:text-neutral-100">
               <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-600">
-                    Business Intelligence financiero
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-600 dark:text-cyan-300">
+                    {c("Business Intelligence financiero", "Financial business intelligence")}
                   </p>
                   <h1 className="text-2xl font-bold">
-                    Ingresos, egresos y resultado neto
+                    {c("Ingresos, egresos y resultado neto", "Income, outflows, and net result")}
                   </h1>
                   <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-                    Consolidá cuotas, ventas, compras y gastos para obtener una
-                    vista financiera operativa del gimnasio.
+                    {c("Consolidá cuotas, ventas, compras y gastos para obtener una vista financiera operativa del gimnasio.", "Consolidate fees, sales, purchases, and expenses to get an operational financial view of the gym.")}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button asChild variant="outline">
-                    <Link href="/dashboard/comercial">Comercial</Link>
+                    <Link href="/dashboard/comercial">{c("Comercial", "Commercial")}</Link>
                   </Button>
                   <Button asChild variant="outline">
-                    <Link href="/dashboard/pagos">Pagos</Link>
+                    <Link href="/dashboard/pagos">{c("Pagos", "Payments")}</Link>
                   </Button>
                   <Button asChild variant="outline">
-                    <Link href="/dashboard/otros-gastos">Gastos</Link>
+                    <Link href="/dashboard/otros-gastos">{c("Gastos", "Expenses")}</Link>
                   </Button>
                 </div>
               </div>
             </section>
 
-            <Card className="bg-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+            <Card className="bg-white dark:border-neutral-800 dark:bg-neutral-950/90 dark:text-neutral-100">
               <CardContent className="flex flex-col gap-4 p-4 lg:flex-row lg:items-end lg:justify-between">
                 <div className="grid flex-1 grid-cols-1 gap-3 md:grid-cols-2 lg:max-w-xl">
                   <div className="space-y-2">
-                    <Label htmlFor="fecha-desde">Fecha desde</Label>
+                    <Label htmlFor="fecha-desde">{c("Fecha desde", "Date from")}</Label>
                     <Input
                       id="fecha-desde"
                       type="date"
@@ -436,7 +492,7 @@ export default function FinanzasIngresosEgresosBiPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="fecha-hasta">Fecha hasta</Label>
+                    <Label htmlFor="fecha-hasta">{c("Fecha hasta", "Date to")}</Label>
                     <Input
                       id="fecha-hasta"
                       type="date"
@@ -453,7 +509,7 @@ export default function FinanzasIngresosEgresosBiPage() {
                     className="bg-[#02a8e1] hover:bg-[#0288b1]"
                   >
                     <RefreshCcw className="mr-2 h-4 w-4" />
-                    {loading ? "Actualizando..." : "Actualizar"}
+                    {loading ? c("Actualizando...", "Refreshing...") : c("Actualizar", "Refresh")}
                   </Button>
                   <Button
                     type="button"
@@ -463,7 +519,7 @@ export default function FinanzasIngresosEgresosBiPage() {
                     className="border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
                   >
                     <FileText className="mr-2 h-4 w-4" />
-                    Descargar PDF
+                    {c("Descargar PDF", "Download PDF")}
                   </Button>
                   <Button
                     type="button"
@@ -473,7 +529,7 @@ export default function FinanzasIngresosEgresosBiPage() {
                     className="border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
                   >
                     <FileSpreadsheet className="mr-2 h-4 w-4" />
-                    Exportar
+                    {c("Exportar", "Export")}
                   </Button>
                 </div>
               </CardContent>
@@ -481,46 +537,46 @@ export default function FinanzasIngresosEgresosBiPage() {
 
             <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
               <MetricCard
-                title="Ingresos totales"
+                title={c("Ingresos totales", "Total income")}
                 value={
                   loading || !metricas
                     ? "..."
                     : formatCurrencyARS(metricas.ingresos_total)
                 }
-                description="Cuotas, ventas y servicios vendidos."
+                description={c("Cuotas, ventas y servicios vendidos.", "Fees, sales, and services sold.")}
                 icon={ArrowUpCircle}
                 tone="income"
               />
               <MetricCard
-                title="Egresos totales"
+                title={c("Egresos totales", "Total outflows")}
                 value={
                   loading || !metricas
                     ? "..."
                     : formatCurrencyARS(metricas.egresos_total)
                 }
-                description="Compras pagadas y gastos pagados."
+                description={c("Compras pagadas y gastos pagados.", "Paid purchases and paid expenses.")}
                 icon={ArrowDownCircle}
                 tone="expense"
               />
               <MetricCard
-                title="Resultado neto"
+                title={c("Resultado neto", "Net result")}
                 value={
                   loading || !metricas
                     ? "..."
                     : formatCurrencyARS(metricas.resultado_neto)
                 }
-                description={`Margen operativo: ${metricas ? formatPercent(metricas.margen_resultado_porcentaje) : "-"}`}
+                description={`${c("Margen operativo", "Operating margin")}: ${metricas ? formatPercent(metricas.margen_resultado_porcentaje) : "-"}`}
                 icon={TrendingUp}
                 tone="result"
               />
               <MetricCard
-                title="Compromisos pendientes"
+                title={c("Compromisos pendientes", "Pending commitments")}
                 value={
                   loading || !metricas
                     ? "..."
                     : formatCurrencyARS(metricas.compromisos_pendientes)
                 }
-                description="Compras pendientes y gastos pendientes/vencidos."
+                description={c("Compras pendientes y gastos pendientes/vencidos.", "Pending purchases and pending/overdue expenses.")}
                 icon={AlertTriangle}
                 tone="warning"
               />
@@ -532,7 +588,7 @@ export default function FinanzasIngresosEgresosBiPage() {
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200">
-                        Lectura ejecutiva financiera
+                        {c("Lectura ejecutiva financiera", "Financial executive summary")}
                       </p>
                       <h2 className="mt-2 text-xl font-bold">
                         {financialSignal.label}
@@ -546,35 +602,35 @@ export default function FinanzasIngresosEgresosBiPage() {
                     >
                       {metricas
                         ? formatPercent(metricas.margen_resultado_porcentaje)
-                        : "Sin margen"}
+                        : c("Sin margen", "No margin")}
                     </div>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-3">
                     <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
                       <p className="text-xs uppercase tracking-wide text-cyan-100/70">
-                        Ventas registradas
+                        {c("Ventas registradas", "Registered sales")}
                       </p>
                       <p className="mt-2 text-lg font-bold">
                         {metricas ? metricas.cantidad_ventas : 0}
                       </p>
                       <p className="mt-1 text-xs text-cyan-50/70">
-                        Operaciones comerciales del período.
+                        {c("Operaciones comerciales del período.", "Commercial operations in the period.")}
                       </p>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
                       <p className="text-xs uppercase tracking-wide text-cyan-100/70">
-                        Pagos de cuotas
+                        {c("Pagos de cuotas", "Fee payments")}
                       </p>
                       <p className="mt-2 text-lg font-bold">
                         {metricas ? metricas.cantidad_pagos : 0}
                       </p>
                       <p className="mt-1 text-xs text-cyan-50/70">
-                        Base recurrente del gimnasio.
+                        {c("Base recurrente del gimnasio.", "Recurring base of the gym.")}
                       </p>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
                       <p className="text-xs uppercase tracking-wide text-cyan-100/70">
-                        Compras/Gastos
+                        {c("Compras/Gastos", "Purchases/Expenses")}
                       </p>
                       <p className="mt-2 text-lg font-bold">
                         {metricas
@@ -582,41 +638,39 @@ export default function FinanzasIngresosEgresosBiPage() {
                           : 0}
                       </p>
                       <p className="mt-1 text-xs text-cyan-50/70">
-                        Salidas operativas registradas.
+                        {c("Salidas operativas registradas.", "Registered operating outflows.")}
                       </p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/20">
+              <Card className="border-emerald-200 bg-emerald-50/60 dark:border-emerald-900/70 dark:bg-emerald-950/25 dark:text-neutral-100">
                 <CardContent className="space-y-3 p-5">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">
-                    Decisión sugerida
+                    {c("Decisión sugerida", "Suggested decision")}
                   </p>
                   <h3 className="text-lg font-bold">
-                    Conectar reportes con caja, stock y comercial
+                    {c("Conectar reportes con caja, stock y comercial", "Connect reports with cash, stock, and commercial")}
                   </h3>
                   <p className="text-sm leading-relaxed text-muted-foreground">
-                    Usá este panel para validar si el crecimiento de ventas
-                    acompaña el margen neto y si los compromisos pendientes no
-                    comprometen reposición o sueldos.
+                    {c("Usá este panel para validar si el crecimiento de ventas acompaña el margen neto y si los compromisos pendientes no comprometen reposición o sueldos.", "Use this panel to validate whether sales growth supports net margin and whether pending commitments affect replenishment or salaries.")}
                   </p>
                   <div className="grid gap-2 text-sm sm:grid-cols-3">
                     <div className="rounded-xl border bg-background p-3">
-                      Ingresos:{" "}
+                      {c("Ingresos", "Income")}:{" "}
                       {metricas
                         ? formatCurrencyARS(metricas.ingresos_total)
                         : "-"}
                     </div>
                     <div className="rounded-xl border bg-background p-3">
-                      Egresos:{" "}
+                      {c("Egresos", "Outflows")}:{" "}
                       {metricas
                         ? formatCurrencyARS(metricas.egresos_total)
                         : "-"}
                     </div>
                     <div className="rounded-xl border bg-background p-3">
-                      Pendientes:{" "}
+                      {c("Pendientes", "Pending")}:{" "}
                       {metricas
                         ? formatCurrencyARS(metricas.compromisos_pendientes)
                         : "-"}
@@ -627,17 +681,17 @@ export default function FinanzasIngresosEgresosBiPage() {
             </section>
 
             <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-              <Card className="xl:col-span-2">
+              <Card className="bg-white dark:border-neutral-800 dark:bg-neutral-950/90 dark:text-neutral-100 xl:col-span-2">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg">
-                    <WalletCards className="h-5 w-5 text-sky-600" />
-                    Evolución mensual
+                    <WalletCards className="h-5 w-5 text-sky-600 dark:text-cyan-300" />
+                    {c("Evolución mensual", "Monthly evolution")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="h-[360px]">
                   {chartData.length === 0 ? (
                     <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                      No hay datos financieros para el período seleccionado.
+                      {c("No hay datos financieros para el período seleccionado.", "No financial data for the selected period.")}
                     </div>
                   ) : (
                     <ResponsiveContainer width="100%" height="100%">
@@ -655,13 +709,13 @@ export default function FinanzasIngresosEgresosBiPage() {
                         <Legend />
                         <Bar
                           dataKey="ingresos_total"
-                          name="Ingresos"
+                          name={c("Ingresos", "Income")}
                           fill="#16a34a"
                           radius={[6, 6, 0, 0]}
                         />
                         <Bar
                           dataKey="egresos_total"
-                          name="Egresos"
+                          name={c("Egresos", "Outflows")}
                           fill="#dc2626"
                           radius={[6, 6, 0, 0]}
                         />
@@ -671,17 +725,17 @@ export default function FinanzasIngresosEgresosBiPage() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="bg-white dark:border-neutral-800 dark:bg-neutral-950/90 dark:text-neutral-100">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg">
-                    <CalendarDays className="h-5 w-5 text-sky-600" />
-                    Resultado neto
+                    <CalendarDays className="h-5 w-5 text-sky-600 dark:text-cyan-300" />
+                    {c("Resultado neto", "Net result")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="h-[360px]">
                   {chartData.length === 0 ? (
                     <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                      Sin resultados para graficar.
+                      {c("Sin resultados para graficar.", "No results to chart.")}
                     </div>
                   ) : (
                     <ResponsiveContainer width="100%" height="100%">
@@ -699,7 +753,7 @@ export default function FinanzasIngresosEgresosBiPage() {
                         <Area
                           type="monotone"
                           dataKey="resultado_neto"
-                          name="Resultado"
+                          name={c("Resultado", "Result")}
                           stroke="#0284c7"
                           fill="#e0f2fe"
                         />
@@ -712,41 +766,44 @@ export default function FinanzasIngresosEgresosBiPage() {
 
             <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
               <CategoryList
-                title="Ingresos por categoría"
+                title={c("Ingresos por categoría", "Income by category")}
                 items={data?.ingresos_por_categoria ?? []}
-                emptyLabel="No hay ingresos para el período."
+                emptyLabel={c("No hay ingresos para el período.", "No income for the selected period.")}
+                locale={locale}
               />
               <CategoryList
-                title="Egresos por categoría"
+                title={c("Egresos por categoría", "Outflows by category")}
                 items={data?.egresos_por_categoria ?? []}
-                emptyLabel="No hay egresos para el período."
+                emptyLabel={c("No hay egresos para el período.", "No outflows for the selected period.")}
+                locale={locale}
               />
               <CategoryList
-                title="Pendientes y vencidos"
+                title={c("Pendientes y vencidos", "Pending and overdue")}
                 items={data?.compromisos_por_categoria ?? []}
-                emptyLabel="No hay compromisos pendientes para el período."
+                emptyLabel={c("No hay compromisos pendientes para el período.", "No pending commitments for the selected period.")}
+                locale={locale}
               />
             </section>
 
-            <Card>
+            <Card className="bg-white dark:border-neutral-800 dark:bg-neutral-950/90 dark:text-neutral-100">
               <CardHeader>
                 <CardTitle className="text-lg">
-                  Resumen mensual detallado
+                  {c("Resumen mensual detallado", "Detailed monthly summary")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="overflow-x-auto">
                 <table className="w-full min-w-[980px] text-sm">
                   <thead>
-                    <tr className="border-b bg-slate-50 text-left">
-                      <th className="p-3">Período</th>
-                      <th className="p-3 text-right">Cuotas</th>
-                      <th className="p-3 text-right">Ventas</th>
-                      <th className="p-3 text-right">Servicios</th>
-                      <th className="p-3 text-right">Ingresos</th>
-                      <th className="p-3 text-right">Compras</th>
-                      <th className="p-3 text-right">Gastos</th>
-                      <th className="p-3 text-right">Egresos</th>
-                      <th className="p-3 text-right">Resultado</th>
+                    <tr className="border-b bg-slate-50 text-left dark:border-neutral-800 dark:bg-neutral-900">
+                      <th className="p-3">{c("Período", "Period")}</th>
+                      <th className="p-3 text-right">{c("Cuotas", "Fees")}</th>
+                      <th className="p-3 text-right">{c("Ventas", "Sales")}</th>
+                      <th className="p-3 text-right">{c("Servicios", "Services")}</th>
+                      <th className="p-3 text-right">{c("Ingresos", "Income")}</th>
+                      <th className="p-3 text-right">{c("Compras", "Purchases")}</th>
+                      <th className="p-3 text-right">{c("Gastos", "Expenses")}</th>
+                      <th className="p-3 text-right">{c("Egresos", "Outflows")}</th>
+                      <th className="p-3 text-right">{c("Resultado", "Result")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -756,12 +813,12 @@ export default function FinanzasIngresosEgresosBiPage() {
                           colSpan={9}
                           className="p-6 text-center text-muted-foreground"
                         >
-                          No hay registros para el período seleccionado.
+                          {c("No hay registros para el período seleccionado.", "No records for the selected period.")}
                         </td>
                       </tr>
                     ) : (
                       chartData.map((item) => (
-                        <tr key={item.periodo} className="border-b">
+                        <tr key={item.periodo} className="border-b dark:border-neutral-800">
                           <td className="p-3 font-medium">
                             {item.periodo_label}
                           </td>

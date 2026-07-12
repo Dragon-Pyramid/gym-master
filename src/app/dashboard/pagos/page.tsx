@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
 import { AppHeader } from "@/components/header/AppHeader";
@@ -9,10 +9,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, FileText, FileSpreadsheet } from "lucide-react";
-import {
-  deletePagoApi,
-  fetchPagosApi,
-} from "@/services/browser/pagoApiClient";
+import { deletePagoApi, fetchPagosApi } from "@/services/browser/pagoApiClient";
 import PagoModal from "@/components/modal/PagoModal";
 import PagoViewModal from "@/components/modal/PagoViewModal";
 import PagoTable from "@/components/tables/PagoTable";
@@ -21,10 +18,11 @@ import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 import ExcelJS from "exceljs";
-import { buildTimestampedDownloadFileName } from '@/utils/downloadFileName';
+import { buildTimestampedDownloadFileName } from "@/utils/downloadFileName";
 import { descargarPagoReciboPdf } from "@/utils/pagoReciboPdf";
 import { PaginationControls } from "@/components/ui/PaginationControls";
 import { downloadCommercialReportPdf } from "@/utils/commercialReportPdf";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const PAGOS_PAGE_SIZE = 10;
 
@@ -36,6 +34,12 @@ function numberOrZero(value: unknown) {
 export default function PagosPage() {
   const { isAuthenticated, initializeAuth, isInitialized } = useAuthStore();
   const router = useRouter();
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const tx = useCallback(
+    (es: string, en: string) => (isEnglish ? en : es),
+    [isEnglish],
+  );
   const [pagos, setPagos] = useState<ResponsePago[]>([]);
   const [filteredPagos, setFilteredPagos] = useState<ResponsePago[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -66,7 +70,9 @@ export default function PagosPage() {
       setPagos(data ?? []);
       setFilteredPagos(data ?? []);
     } catch (error: any) {
-      toast.error(error.message || "Error al cargar pagos");
+      toast.error(
+        error.message || tx("Error al cargar pagos", "Error loading payments"),
+      );
     } finally {
       setLoading(false);
     }
@@ -75,49 +81,126 @@ export default function PagosPage() {
   const handleDownloadPdf = async () => {
     try {
       await downloadCommercialReportPdf({
-        title: "Listado de Pagos",
-        subtitle: "Reporte de pagos manuales, Stripe, períodos y estados.",
+        title: tx("Listado de pagos", "Payments list"),
+        subtitle: tx(
+          "Reporte de pagos manuales, Stripe, períodos y estados.",
+          "Report of manual payments, Stripe payments, covered periods, and statuses.",
+        ),
         fileName: "listado-pagos-gym-master",
         rows: filteredPagos,
         metrics: [
-          { label: "Pagos filtrados", value: filteredPagos.length },
-          { label: "Total efectivo", value: `$${totalEfectivo.toLocaleString("es-AR")}` },
+          {
+            label: tx("Pagos filtrados", "Filtered payments"),
+            value: filteredPagos.length,
+          },
+          {
+            label: tx("Total efectivo", "Cash total"),
+            value: `$${totalEfectivo.toLocaleString("es-AR")}`,
+          },
         ],
-        filtersLabel: `Período: ${periodFilter}${fechaDesde ? ` · Desde: ${fechaDesde}` : ""}${fechaHasta ? ` · Hasta: ${fechaHasta}` : ""}${searchTerm.trim() ? ` · Búsqueda: ${searchTerm.trim()}` : ""}`,
+        filtersLabel: `${tx("Período", "Period")}: ${periodFilter}${fechaDesde ? ` · ${tx("Desde", "From")}: ${fechaDesde}` : ""}${fechaHasta ? ` · ${tx("Hasta", "To")}: ${fechaHasta}` : ""}${searchTerm.trim() ? ` · ${tx("Búsqueda", "Search")}: ${searchTerm.trim()}` : ""}`,
         columns: [
-          { header: "Socio", width: 42, getValue: (p) => p.socio?.nombre_completo || "-" },
-          { header: "Cuota", width: 36, getValue: (p) => p.cuota?.descripcion || "-" },
-          { header: "Fecha pago", width: 24, getValue: (p) => p.fecha_pago },
-          { header: "Período", width: 36, getValue: (p) => `${p.periodo_desde || p.fecha_pago} / ${p.periodo_hasta || p.fecha_vencimiento}` },
-          { header: "Método", width: 22, getValue: (p) => p.metodo_pago || "-" },
-          { header: "Estado", width: 22, getValue: (p) => p.estado || "-" },
-          { header: "Monto", width: 24, getValue: (p) => `$${numberOrZero(p.monto_pagado).toLocaleString("es-AR")}`, align: "right" },
-          { header: "Registrado por", width: 34, getValue: (p) => p.registrado_por?.nombre || "-" },
+          {
+            header: tx("Socio", "Member"),
+            width: 42,
+            getValue: (p) => p.socio?.nombre_completo || "-",
+          },
+          {
+            header: tx("Cuota", "Fee"),
+            width: 36,
+            getValue: (p) => p.cuota?.descripcion || "-",
+          },
+          {
+            header: tx("Fecha pago", "Payment date"),
+            width: 24,
+            getValue: (p) => p.fecha_pago,
+          },
+          {
+            header: tx("Período", "Period"),
+            width: 36,
+            getValue: (p) =>
+              `${p.periodo_desde || p.fecha_pago} / ${p.periodo_hasta || p.fecha_vencimiento}`,
+          },
+          {
+            header: tx("Método", "Method"),
+            width: 22,
+            getValue: (p) => p.metodo_pago || "-",
+          },
+          {
+            header: tx("Estado", "Status"),
+            width: 22,
+            getValue: (p) => p.estado || "-",
+          },
+          {
+            header: tx("Monto", "Amount"),
+            width: 24,
+            getValue: (p) =>
+              `$${numberOrZero(p.monto_pagado).toLocaleString("es-AR")}`,
+            align: "right",
+          },
+          {
+            header: tx("Registrado por", "Registered by"),
+            width: 34,
+            getValue: (p) => p.registrado_por?.nombre || "-",
+          },
         ],
       });
     } catch {
-      toast.error("No se pudo generar el PDF de pagos");
+      toast.error(
+        tx(
+          "No se pudo generar el PDF de pagos",
+          "Could not generate the payments PDF",
+        ),
+      );
     }
   };
 
   const handleExportExcel = async () => {
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Pagos");
+    const worksheet = workbook.addWorksheet(tx("Pagos", "Payments"));
 
     worksheet.columns = [
-      { header: "Socio", key: "socio", width: 28 },
-      { header: "Cuota", key: "cuota", width: 24 },
-      { header: "Fecha Pago", key: "fecha_pago", width: 16 },
-      { header: "Periodo Desde", key: "periodo_desde", width: 16 },
-      { header: "Periodo Hasta", key: "periodo_hasta", width: 16 },
-      { header: "Meses", key: "meses", width: 10 },
-      { header: "Método", key: "metodo", width: 14 },
-      { header: "Estado", key: "estado", width: 14 },
-      { header: "Subtotal", key: "subtotal", width: 15 },
-      { header: "Descuento %", key: "descuento_porcentaje", width: 14 },
-      { header: "Descuento Monto", key: "descuento_monto", width: 18 },
-      { header: "Monto Pagado", key: "monto_pagado", width: 15 },
-      { header: "Registrado Por", key: "registrado_por", width: 20 },
+      { header: tx("Socio", "Member"), key: "socio", width: 28 },
+      { header: tx("Cuota", "Fee"), key: "cuota", width: 24 },
+      {
+        header: tx("Fecha Pago", "Payment Date"),
+        key: "fecha_pago",
+        width: 16,
+      },
+      {
+        header: tx("Periodo Desde", "Period From"),
+        key: "periodo_desde",
+        width: 16,
+      },
+      {
+        header: tx("Periodo Hasta", "Period To"),
+        key: "periodo_hasta",
+        width: 16,
+      },
+      { header: tx("Meses", "Months"), key: "meses", width: 10 },
+      { header: tx("Método", "Method"), key: "metodo", width: 14 },
+      { header: tx("Estado", "Status"), key: "estado", width: 14 },
+      { header: tx("Subtotal", "Subtotal"), key: "subtotal", width: 15 },
+      {
+        header: tx("Descuento %", "Discount %"),
+        key: "descuento_porcentaje",
+        width: 14,
+      },
+      {
+        header: tx("Descuento Monto", "Discount Amount"),
+        key: "descuento_monto",
+        width: 18,
+      },
+      {
+        header: tx("Monto Pagado", "Amount Paid"),
+        key: "monto_pagado",
+        width: 15,
+      },
+      {
+        header: tx("Registrado Por", "Registered By"),
+        key: "registrado_por",
+        width: 20,
+      },
     ];
 
     filteredPagos.forEach((p) => {
@@ -150,16 +233,25 @@ export default function PagosPage() {
     window.URL.revokeObjectURL(url);
   };
 
-
   const handleDownloadReceipt = async (pago: ResponsePago) => {
     try {
       await descargarPagoReciboPdf(pago);
-      toast.success("Recibo PDF generado correctamente");
+      toast.success(
+        tx(
+          "Recibo PDF generado correctamente",
+          "PDF receipt generated successfully",
+        ),
+      );
     } catch (error: any) {
-      toast.error(error?.message || "Error al generar el recibo PDF");
+      toast.error(
+        error?.message ||
+          tx(
+            "Error al generar el recibo PDF",
+            "Error generating the PDF receipt",
+          ),
+      );
     }
   };
-
 
   useEffect(() => {
     if (isInitialized && isAuthenticated) {
@@ -174,16 +266,24 @@ export default function PagosPage() {
     const startOfWeekDate = new Date(today);
     startOfWeekDate.setDate(today.getDate() - 6);
     const startOfWeek = startOfWeekDate.toISOString().slice(0, 10);
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
-    const startOfYear = new Date(today.getFullYear(), 0, 1).toISOString().slice(0, 10);
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+      .toISOString()
+      .slice(0, 10);
+    const startOfYear = new Date(today.getFullYear(), 0, 1)
+      .toISOString()
+      .slice(0, 10);
 
     const filtered = pagos.filter((p) => {
       const fecha = p.fecha_pago || "";
       const matchesSearch =
         lowercaseSearch === "" ||
-        (p.socio?.nombre_completo || "").toLowerCase().includes(lowercaseSearch) ||
+        (p.socio?.nombre_completo || "")
+          .toLowerCase()
+          .includes(lowercaseSearch) ||
         (p.cuota?.descripcion || "").toLowerCase().includes(lowercaseSearch) ||
-        (p.registrado_por?.nombre || "").toLowerCase().includes(lowercaseSearch) ||
+        (p.registrado_por?.nombre || "")
+          .toLowerCase()
+          .includes(lowercaseSearch) ||
         (p.metodo_pago || "").toLowerCase().includes(lowercaseSearch) ||
         (p.estado || "").toLowerCase().includes(lowercaseSearch);
 
@@ -210,7 +310,7 @@ export default function PagosPage() {
   const safeCurrentPage = Math.min(currentPage, totalPages);
   const paginatedPagos = filteredPagos.slice(
     (safeCurrentPage - 1) * PAGOS_PAGE_SIZE,
-    safeCurrentPage * PAGOS_PAGE_SIZE
+    safeCurrentPage * PAGOS_PAGE_SIZE,
   );
 
   useEffect(() => {
@@ -224,7 +324,7 @@ export default function PagosPage() {
     .reduce((acc, pago) => acc + numberOrZero(pago.monto_pagado), 0);
 
   if (!isInitialized) {
-    return <div>Cargando...</div>;
+    return <div>{tx("Cargando...", "Loading...")}</div>;
   }
 
   if (!isAuthenticated) {
@@ -236,14 +336,17 @@ export default function PagosPage() {
       <div className="flex w-full min-h-screen">
         <AppSidebar />
         <SidebarInset>
-          <AppHeader title="Pagos" />
-          <main className="flex-1 p-6 space-y-6">
-            <Card className="w-full">
+          <AppHeader title={tx("Pagos", "Payments")} />
+          <main className="flex-1 p-6 space-y-6 dark:bg-black">
+            <Card className="w-full dark:border-neutral-800 dark:bg-neutral-950/80">
               <CardHeader className="flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap">
                 <div>
-                  <h2 className="text-xl font-bold">Listado de Pagos</h2>
+                  <h2 className="text-xl font-bold">
+                    {tx("Listado de pagos", "Payments list")}
+                  </h2>
                   <p className="text-sm text-muted-foreground">
-                    Total efectivo filtrado: ${totalEfectivo.toLocaleString("es-AR")}
+                    {tx("Total efectivo filtrado", "Filtered cash total")}: $
+                    {totalEfectivo.toLocaleString("es-AR")}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center w-full gap-2 md:w-auto">
@@ -251,7 +354,10 @@ export default function PagosPage() {
                     <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                       type="search"
-                      placeholder="Buscar por socio, cuota, método..."
+                      placeholder={tx(
+                        "Buscar por socio, cuota, método...",
+                        "Search by member, fee, method...",
+                      )}
                       className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] w-full"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
@@ -262,48 +368,62 @@ export default function PagosPage() {
                     onChange={(e) => setPeriodFilter(e.target.value)}
                     className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
                   >
-                    <option value="todos">Todos los períodos</option>
-                    <option value="dia">Hoy</option>
-                    <option value="semana">Últimos 7 días</option>
-                    <option value="mes">Mes actual</option>
-                    <option value="anio">Año actual</option>
+                    <option value="todos">
+                      {tx("Todos los períodos", "All periods")}
+                    </option>
+                    <option value="dia">{tx("Hoy", "Today")}</option>
+                    <option value="semana">
+                      {tx("Últimos 7 días", "Last 7 days")}
+                    </option>
+                    <option value="mes">
+                      {tx("Mes actual", "Current month")}
+                    </option>
+                    <option value="anio">
+                      {tx("Año actual", "Current year")}
+                    </option>
                   </select>
                   <Input
                     type="date"
                     value={fechaDesde}
                     onChange={(e) => setFechaDesde(e.target.value)}
                     className="w-[150px]"
-                    title="Fecha desde"
+                    title={tx("Fecha desde", "Date from")}
                   />
                   <Input
                     type="date"
                     value={fechaHasta}
                     onChange={(e) => setFechaHasta(e.target.value)}
                     className="w-[150px]"
-                    title="Fecha hasta"
+                    title={tx("Fecha hasta", "Date to")}
                   />
                   <Button
                     onClick={handleDownloadPdf}
                     variant="outline"
-                    className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
+                    className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd] dark:bg-neutral-950 dark:text-cyan-300 dark:border-cyan-800 dark:hover:bg-neutral-900"
                   >
                     <FileText className="w-4 h-4" />
-                    <span className="hidden sm:inline">Descargar PDF</span>
+                    <span className="hidden sm:inline">
+                      {tx("Descargar PDF", "Download PDF")}
+                    </span>
                   </Button>
                   <Button
                     variant="outline"
                     onClick={handleExportExcel}
-                    className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
+                    className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd] dark:bg-neutral-950 dark:text-cyan-300 dark:border-cyan-800 dark:hover:bg-neutral-900"
                   >
                     <FileSpreadsheet className="w-4 h-4" />
-                    <span className="hidden sm:inline">Exportar</span>
+                    <span className="hidden sm:inline">
+                      {tx("Exportar", "Export")}
+                    </span>
                   </Button>
                   <Button
                     onClick={() => setOpenModal(true)}
                     className="bg-[#02a8e1] hover:bg-[#0288b1]"
                   >
-                    <span className="hidden sm:inline">Registrar Pago Manual</span>
-                    <span className="sm:hidden">Añadir</span>
+                    <span className="hidden sm:inline">
+                      {tx("Registrar pago manual", "Register manual payment")}
+                    </span>
+                    <span className="sm:hidden">{tx("Añadir", "Add")}</span>
                   </Button>
                 </div>
               </CardHeader>
@@ -323,16 +443,30 @@ export default function PagosPage() {
                     onReceipt={handleDownloadReceipt}
                     onDelete={async (pago) => {
                       const confirmar = window.confirm(
-                        "¿Está seguro de eliminar el pago?"
+                        tx(
+                          "¿Está seguro de eliminar el pago?",
+                          "Are you sure you want to delete this payment?",
+                        ),
                       );
                       if (!confirmar) return;
 
                       try {
                         await deletePagoApi(pago.id);
-                        toast.success("Pago eliminado correctamente");
+                        toast.success(
+                          tx(
+                            "Pago eliminado correctamente",
+                            "Payment deleted successfully",
+                          ),
+                        );
                         await loadPagos();
                       } catch (err: any) {
-                        toast.error(err.message || "Error al eliminar pago");
+                        toast.error(
+                          err.message ||
+                            tx(
+                              "Error al eliminar pago",
+                              "Error deleting payment",
+                            ),
+                        );
                       }
                     }}
                   />
@@ -342,7 +476,7 @@ export default function PagosPage() {
                   totalItems={totalPagos}
                   pageSize={PAGOS_PAGE_SIZE}
                   onPageChange={setCurrentPage}
-                  itemLabel="pagos"
+                  itemLabel={tx("pagos", "payments")}
                 />
               </CardContent>
             </Card>

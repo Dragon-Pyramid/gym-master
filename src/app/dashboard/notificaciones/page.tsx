@@ -47,6 +47,8 @@ import {
   getNotificaciones,
 } from '@/services/apiClient';
 import { useAuthStore } from '@/stores/authStore';
+import { useI18n } from '@/i18n/I18nProvider';
+import type { GymMasterLocale } from '@/i18n/config';
 import { downloadCommercialReportPdf } from '@/utils/commercialReportPdf';
 import { buildTimestampedDownloadFileName } from '@/utils/downloadFileName';
 import { formatFrontendDateTime } from '@/utils/dateFormat';
@@ -54,6 +56,45 @@ import { formatFrontendDateTime } from '@/utils/dateFormat';
 const PAGE_SIZE = 10;
 type EstadoFilter = 'todos' | NotificacionEstado;
 type TipoFilter = 'todos' | NotificacionTipo;
+
+
+function notificationTx(locale: GymMasterLocale, es: string, en: string) {
+  return locale === 'en' ? en : es;
+}
+
+function notificationStatusLabel(locale: GymMasterLocale, value?: string | null) {
+  const labels: Record<string, { es: string; en: string }> = {
+    todos: { es: 'Todos', en: 'All' },
+    borrador: { es: 'Borrador', en: 'Draft' },
+    programada: { es: 'Programada', en: 'Scheduled' },
+    enviada: { es: 'Enviada', en: 'Sent' },
+    cancelada: { es: 'Cancelada', en: 'Cancelled' },
+    error: { es: 'Error', en: 'Error' },
+  };
+  const key = String(value ?? '').toLowerCase();
+  const match = labels[key];
+  if (match) return notificationTx(locale, match.es, match.en);
+  return normalizeLabel(value);
+}
+
+function notificationTypeLabel(locale: GymMasterLocale, value?: string | null) {
+  const labels: Record<string, { es: string; en: string }> = {
+    todos: { es: 'Todos', en: 'All' },
+    general: { es: 'General', en: 'General' },
+    feriado: { es: 'Feriado', en: 'Holiday' },
+    promocion: { es: 'Promoción', en: 'Promotion' },
+    stock: { es: 'Stock', en: 'Stock' },
+    cumpleanos: { es: 'Cumpleaños', en: 'Birthday' },
+    cuota: { es: 'Cuota', en: 'Fee' },
+    recordatorio: { es: 'Recordatorio', en: 'Reminder' },
+    sistema: { es: 'Sistema', en: 'System' },
+    otro: { es: 'Otro', en: 'Other' },
+  };
+  const key = String(value ?? '').toLowerCase();
+  const match = labels[key];
+  if (match) return notificationTx(locale, match.es, match.en);
+  return normalizeLabel(value);
+}
 
 const estados: Array<{ value: EstadoFilter; label: string }> = [
   { value: 'todos', label: 'Todos' },
@@ -77,14 +118,12 @@ const tipos: Array<{ value: TipoFilter; label: string }> = [
   { value: 'otro', label: 'Otro' },
 ];
 
-function estadoLabel(value: EstadoFilter) {
-  const match = estados.find((estado) => estado.value === value);
-  return match?.label ?? value;
+function estadoLabel(locale: GymMasterLocale, value: EstadoFilter) {
+  return notificationStatusLabel(locale, value);
 }
 
-function tipoLabel(value: TipoFilter) {
-  const match = tipos.find((tipo) => tipo.value === value);
-  return match?.label ?? value;
+function tipoLabel(locale: GymMasterLocale, value: TipoFilter) {
+  return notificationTypeLabel(locale, value);
 }
 
 function dateInRange(value: string | null | undefined, desde: string, hasta: string) {
@@ -117,6 +156,8 @@ function normalizeLabel(value?: string | null) {
 
 export default function NotificacionesPage() {
   const { isAuthenticated, initializeAuth, isInitialized } = useAuthStore();
+  const { locale } = useI18n();
+  const c = (es: string, en: string) => notificationTx(locale, es, en);
   const router = useRouter();
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [plantillas, setPlantillas] = useState<NotificacionPlantilla[]>([]);
@@ -148,15 +189,15 @@ export default function NotificacionesPage() {
         getNotificacionPlantillas(),
       ]);
 
-      if (!notificacionesResponse.ok) throw new Error(notificacionesResponse.error || 'Error al cargar notificaciones');
-      if (!plantillasResponse.ok) throw new Error(plantillasResponse.error || 'Error al cargar plantillas');
+      if (!notificacionesResponse.ok) throw new Error(notificacionesResponse.error || c('Error al cargar notificaciones', 'Could not load notifications'));
+      if (!plantillasResponse.ok) throw new Error(plantillasResponse.error || c('Error al cargar plantillas', 'Could not load templates'));
 
       setNotificaciones((notificacionesResponse.data || []) as Notificacion[]);
       setPlantillas((plantillasResponse.data || []) as NotificacionPlantilla[]);
     } catch (error) {
       setNotificaciones([]);
       setPlantillas([]);
-      toast.error(error instanceof Error ? error.message : 'Error al cargar notificaciones');
+      toast.error(error instanceof Error ? error.message : c('Error al cargar notificaciones', 'Could not load notifications'));
     } finally {
       setLoading(false);
     }
@@ -250,7 +291,7 @@ export default function NotificacionesPage() {
     const response = await getNotificacion(notificacion.id);
 
     if (!response.ok) {
-      toast.error(response.error || 'No se pudo cargar el detalle');
+      toast.error(response.error || c('No se pudo cargar el detalle', 'Could not load the detail'));
       return;
     }
 
@@ -259,66 +300,66 @@ export default function NotificacionesPage() {
   };
 
   const handleSend = async (notificacion: Notificacion) => {
-    if (!confirm(`¿Preparar/enviar la notificación “${notificacion.titulo}” a los socios del segmento seleccionado?`)) return;
+    if (!confirm(c(`¿Preparar/enviar la notificación “${notificacion.titulo}” a los socios del segmento seleccionado?`, `Prepare/send the notification “${notificacion.titulo}” to members in the selected segment?`))) return;
 
     const response = await enviarNotificacion(notificacion.id);
 
     if (!response.ok) {
-      toast.error(response.error || 'No se pudo enviar la notificación');
+      toast.error(response.error || c('No se pudo enviar la notificación', 'Could not send the notification'));
       return;
     }
 
-    toast.success('Notificación registrada como enviada');
+    toast.success(c('Notificación registrada como enviada', 'Notification marked as sent'));
     setOpenViewModal(false);
     setNotificacionVer(null);
     await loadData();
   };
 
   const handleCancel = async (notificacion: Notificacion) => {
-    if (!confirm(`¿Cancelar la notificación “${notificacion.titulo}”?`)) return;
+    if (!confirm(c(`¿Cancelar la notificación “${notificacion.titulo}”?`, `Cancel the notification “${notificacion.titulo}”?`))) return;
 
     const response = await cancelarNotificacion(notificacion.id);
 
     if (!response.ok) {
-      toast.error(response.error || 'No se pudo cancelar la notificación');
+      toast.error(response.error || c('No se pudo cancelar la notificación', 'Could not cancel the notification'));
       return;
     }
 
-    toast.success('Notificación cancelada');
+    toast.success(c('Notificación cancelada', 'Notification cancelled'));
     await loadData();
   };
 
   const exportExcel = async () => {
     const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet('Notificaciones');
+    const sheet = workbook.addWorksheet(c('Notificaciones', 'Notifications'));
 
     sheet.columns = [
-      { header: 'Título', key: 'titulo', width: 28 },
-      { header: 'Asunto', key: 'asunto', width: 36 },
-      { header: 'Tipo', key: 'tipo', width: 16 },
-      { header: 'Canal', key: 'canal', width: 16 },
-      { header: 'Estado', key: 'estado', width: 16 },
-      { header: 'Destinatarios', key: 'destinatarios', width: 16 },
-      { header: 'Enviados', key: 'enviados', width: 14 },
-      { header: 'Errores', key: 'errores', width: 14 },
-      { header: 'Programada', key: 'programada', width: 22 },
-      { header: 'Visible hasta', key: 'vigencia_hasta', width: 22 },
-      { header: 'Terminal', key: 'terminal', width: 14 },
+      { header: c('Título', 'Title'), key: 'titulo', width: 28 },
+      { header: c('Asunto', 'Subject'), key: 'asunto', width: 36 },
+      { header: c('Tipo', 'Type'), key: 'tipo', width: 16 },
+      { header: c('Canal', 'Channel'), key: 'canal', width: 16 },
+      { header: c('Estado', 'Status'), key: 'estado', width: 16 },
+      { header: c('Destinatarios', 'Recipients'), key: 'destinatarios', width: 16 },
+      { header: c('Enviados', 'Sent'), key: 'enviados', width: 14 },
+      { header: c('Errores', 'Errors'), key: 'errores', width: 14 },
+      { header: c('Programada', 'Scheduled'), key: 'programada', width: 22 },
+      { header: c('Visible hasta', 'Visible until'), key: 'vigencia_hasta', width: 22 },
+      { header: c('Terminal', 'Terminal'), key: 'terminal', width: 14 },
     ];
 
     filteredNotificaciones.forEach((notificacion) => {
       sheet.addRow({
         titulo: notificacion.titulo,
         asunto: notificacion.asunto,
-        tipo: notificacion.tipo,
-        canal: notificacion.canal,
-        estado: notificacion.estado,
+        tipo: notificationTypeLabel(locale, notificacion.tipo),
+        canal: normalizeLabel(notificacion.canal),
+        estado: notificationStatusLabel(locale, notificacion.estado),
         destinatarios: notificacion.total_destinatarios,
         enviados: notificacion.total_enviados,
         errores: notificacion.total_errores,
         programada: formatFrontendDateTime(notificacion.fecha_programada),
         vigencia_hasta: formatFrontendDateTime(notificacion.fecha_vigencia_hasta),
-        terminal: notificacion.mostrar_terminal ? 'Sí' : 'No',
+        terminal: notificacion.mostrar_terminal ? c('Sí', 'Yes') : c('No', 'No'),
       });
     });
 
@@ -336,31 +377,31 @@ export default function NotificacionesPage() {
 
   const downloadPdf = async () => {
     await downloadCommercialReportPdf({
-      title: 'Centro de notificaciones',
-      subtitle: 'Avisos administrativos, campañas, terminal, emails y seguimiento de envíos.',
+      title: c('Centro de notificaciones', 'Notifications center'),
+      subtitle: c('Avisos administrativos, campañas, terminal, emails y seguimiento de envíos.', 'Administrative alerts, campaigns, terminal messages, emails and delivery tracking.'),
       fileName: buildTimestampedDownloadFileName('listado-notificaciones', 'pdf'),
       rows: filteredNotificaciones,
       metrics: [
-        { label: 'Registros', value: totals.total },
-        { label: 'Enviadas', value: totals.enviadas },
-        { label: 'Programadas', value: totals.programadas },
-        { label: 'Errores', value: totals.errores },
-        { label: 'Terminal visibles', value: totals.terminal },
+        { label: c('Registros', 'Records'), value: totals.total },
+        { label: c('Enviadas', 'Sent'), value: totals.enviadas },
+        { label: c('Programadas', 'Scheduled'), value: totals.programadas },
+        { label: c('Errores', 'Errors'), value: totals.errores },
+        { label: c('Terminal visibles', 'Visible in terminal'), value: totals.terminal },
       ],
-      filtersLabel: `Estado: ${estadoLabel(estadoFilter)} · Tipo: ${tipoLabel(tipoFilter)} · Desde: ${fechaDesde || 'sin filtro'} · Hasta: ${fechaHasta || 'sin filtro'} · Búsqueda: ${searchTerm || 'sin búsqueda'}`,
+      filtersLabel: `${c('Estado', 'Status')}: ${estadoLabel(locale, estadoFilter)} · ${c('Tipo', 'Type')}: ${tipoLabel(locale, tipoFilter)} · ${c('Desde', 'From')}: ${fechaDesde || c('sin filtro', 'no filter')} · ${c('Hasta', 'To')}: ${fechaHasta || c('sin filtro', 'no filter')} · ${c('Búsqueda', 'Search')}: ${searchTerm || c('sin búsqueda', 'no search')}`,
       columns: [
-        { header: 'Título', width: 36, getValue: (row) => row.titulo },
-        { header: 'Tipo', width: 22, getValue: (row) => row.tipo },
-        { header: 'Canal', width: 24, getValue: (row) => row.canal },
-        { header: 'Estado', width: 24, getValue: (row) => row.estado },
-        { header: 'Programada', width: 28, getValue: (row) => formatFrontendDateTime(row.fecha_programada) },
-        { header: 'Hasta', width: 28, getValue: (row) => formatFrontendDateTime(row.fecha_vigencia_hasta) },
-        { header: 'Envíos', width: 20, getValue: (row) => `${row.total_enviados}/${row.total_destinatarios}` },
+        { header: c('Título', 'Title'), width: 36, getValue: (row) => row.titulo },
+        { header: c('Tipo', 'Type'), width: 22, getValue: (row) => notificationTypeLabel(locale, row.tipo) },
+        { header: c('Canal', 'Channel'), width: 24, getValue: (row) => normalizeLabel(row.canal) },
+        { header: c('Estado', 'Status'), width: 24, getValue: (row) => notificationStatusLabel(locale, row.estado) },
+        { header: c('Programada', 'Scheduled'), width: 28, getValue: (row) => formatFrontendDateTime(row.fecha_programada) },
+        { header: c('Hasta', 'Until'), width: 28, getValue: (row) => formatFrontendDateTime(row.fecha_vigencia_hasta) },
+        { header: c('Envíos', 'Deliveries'), width: 20, getValue: (row) => `${row.total_enviados}/${row.total_destinatarios}` },
       ],
     });
   };
 
-  if (!isInitialized) return <div>Cargando...</div>;
+  if (!isInitialized) return <div>{c('Cargando...', 'Loading...')}</div>;
   if (!isAuthenticated) return null;
 
   return (
@@ -368,7 +409,7 @@ export default function NotificacionesPage() {
       <div className='flex h-[100dvh] max-h-[100dvh] w-full overflow-hidden'>
         <AppSidebar />
         <SidebarInset className='!grid !min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden'>
-          <AppHeader title='Notificaciones' />
+          <AppHeader title={c('Notificaciones', 'Notifications')} />
           <section className='min-h-0 overflow-y-auto bg-gradient-to-b from-sky-50/70 via-background to-background px-4 py-4 sm:px-6 md:p-6 dark:from-sky-950/10'>
             <div className='mx-auto w-full max-w-7xl space-y-5 md:space-y-6'>
               <section className='overflow-hidden rounded-[2rem] border border-sky-100 bg-white shadow-sm dark:border-sky-900/60 dark:bg-slate-950/80'>
@@ -376,19 +417,19 @@ export default function NotificacionesPage() {
                   <div className='min-w-0'>
                     <p className='inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-sky-700 ring-1 ring-sky-100 dark:bg-sky-950/40 dark:text-sky-200 dark:ring-sky-900/70'>
                       <BellRing className='h-3.5 w-3.5' />
-                      Centro administrativo
+                      {c('Centro administrativo', 'Administrative center')}
                     </p>
                     <h1 className='mt-3 text-2xl font-black leading-tight text-slate-950 sm:text-3xl dark:text-white'>
-                      Centro de notificaciones
+                      {c('Centro de notificaciones', 'Notifications center')}
                     </h1>
                     <p className='mt-2 max-w-3xl text-sm leading-6 text-muted-foreground'>
-                      Controlá campañas, avisos programados, mensajes de sistema, alertas para Terminal y envíos a socios desde una vista operativa.
+                      {c('Controlá campañas, avisos programados, mensajes de sistema, alertas para Terminal y envíos a socios desde una vista operativa.', 'Control campaigns, scheduled alerts, system messages, terminal alerts and member deliveries from one operational view.')}
                     </p>
                   </div>
                   <div className='grid gap-2 sm:grid-cols-2 lg:min-w-[360px]'>
                     <Button type='button' variant='outline' onClick={loadData} disabled={loading} className='w-full'>
                       <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                      Actualizar
+                      {c('Actualizar', 'Refresh')}
                     </Button>
                     <Button
                       type='button'
@@ -398,7 +439,7 @@ export default function NotificacionesPage() {
                       }}
                       className='w-full'
                     >
-                      <Plus className='mr-2 h-4 w-4' /> Nueva notificación
+                      <Plus className='mr-2 h-4 w-4' /> {c('Nueva notificación', 'New notification')}
                     </Button>
                   </div>
                 </div>
@@ -409,7 +450,7 @@ export default function NotificacionesPage() {
                   <CardContent className='flex items-center gap-3 p-4'>
                     <BellRing className='h-8 w-8 text-sky-600' />
                     <div>
-                      <p className='text-sm text-muted-foreground'>Registros</p>
+                      <p className='text-sm text-muted-foreground'>{c('Registros', 'Records')}</p>
                       <p className='text-2xl font-bold'>{totals.total}</p>
                     </div>
                   </CardContent>
@@ -418,7 +459,7 @@ export default function NotificacionesPage() {
                   <CardContent className='flex items-center gap-3 p-4'>
                     <Send className='h-8 w-8 text-emerald-600' />
                     <div>
-                      <p className='text-sm text-muted-foreground'>Enviadas</p>
+                      <p className='text-sm text-muted-foreground'>{c('Enviadas', 'Sent')}</p>
                       <p className='text-2xl font-bold'>{totals.enviadas}</p>
                     </div>
                   </CardContent>
@@ -427,7 +468,7 @@ export default function NotificacionesPage() {
                   <CardContent className='flex items-center gap-3 p-4'>
                     <CalendarClock className='h-8 w-8 text-amber-600' />
                     <div>
-                      <p className='text-sm text-muted-foreground'>Programadas</p>
+                      <p className='text-sm text-muted-foreground'>{c('Programadas', 'Scheduled')}</p>
                       <p className='text-2xl font-bold'>{totals.programadas}</p>
                     </div>
                   </CardContent>
@@ -436,7 +477,7 @@ export default function NotificacionesPage() {
                   <CardContent className='flex items-center gap-3 p-4'>
                     <AlertTriangle className='h-8 w-8 text-red-600' />
                     <div>
-                      <p className='text-sm text-muted-foreground'>Con error</p>
+                      <p className='text-sm text-muted-foreground'>{c('Con error', 'With errors')}</p>
                       <p className='text-2xl font-bold'>{totals.errores}</p>
                     </div>
                   </CardContent>
@@ -454,7 +495,7 @@ export default function NotificacionesPage() {
                   <CardContent className='flex items-center gap-3 p-4'>
                     <Mail className='h-8 w-8 text-cyan-600' />
                     <div>
-                      <p className='text-sm text-muted-foreground'>Entrega</p>
+                      <p className='text-sm text-muted-foreground'>{c('Entrega', 'Delivery')}</p>
                       <p className='text-2xl font-bold'>{formatPercent(deliveryRate)}</p>
                     </div>
                   </CardContent>
@@ -469,26 +510,26 @@ export default function NotificacionesPage() {
                         <ShieldCheck className='h-5 w-5' />
                       </span>
                       <div>
-                        <h2 className='text-lg font-black'>Salud del centro de avisos</h2>
-                        <p className='text-sm text-muted-foreground'>Lectura rápida para detectar campañas trabadas o envíos que necesitan intervención.</p>
+                        <h2 className='text-lg font-black'>{c('Salud del centro de avisos', 'Notification center health')}</h2>
+                        <p className='text-sm text-muted-foreground'>{c('Lectura rápida para detectar campañas trabadas o envíos que necesitan intervención.', 'Quick reading to detect stuck campaigns or deliveries that need attention.')}</p>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent className='grid gap-3 p-4 md:grid-cols-3'>
                     <div className='rounded-2xl border border-border/70 bg-muted/20 p-4'>
-                      <p className='text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground'>Próximas 48 h</p>
+                      <p className='text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground'>{c('Próximas 48 h', 'Next 48 h')}</p>
                       <p className='mt-2 text-2xl font-black'>{totals.proximas48}</p>
-                      <p className='mt-1 text-xs text-muted-foreground'>Programaciones próximas a ejecutarse.</p>
+                      <p className='mt-1 text-xs text-muted-foreground'>{c('Programaciones próximas a ejecutarse.', 'Scheduled messages about to run.')}</p>
                     </div>
                     <div className='rounded-2xl border border-border/70 bg-muted/20 p-4'>
-                      <p className='text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground'>Borradores</p>
+                      <p className='text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground'>{c('Borradores', 'Drafts')}</p>
                       <p className='mt-2 text-2xl font-black'>{totals.borradores}</p>
-                      <p className='mt-1 text-xs text-muted-foreground'>Avisos pendientes de preparación o envío.</p>
+                      <p className='mt-1 text-xs text-muted-foreground'>{c('Avisos pendientes de preparación o envío.', 'Messages pending preparation or delivery.')}</p>
                     </div>
                     <div className='rounded-2xl border border-border/70 bg-muted/20 p-4'>
-                      <p className='text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground'>Sin destinatarios</p>
+                      <p className='text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground'>{c('Sin destinatarios', 'Without recipients')}</p>
                       <p className='mt-2 text-2xl font-black'>{totals.sinDestinatarios}</p>
-                      <p className='mt-1 text-xs text-muted-foreground'>Revisar segmento antes de enviar.</p>
+                      <p className='mt-1 text-xs text-muted-foreground'>{c('Revisar segmento antes de enviar.', 'Review the segment before sending.')}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -500,8 +541,8 @@ export default function NotificacionesPage() {
                         <Inbox className='h-5 w-5' />
                       </span>
                       <div>
-                        <h2 className='text-lg font-black'>Prioridades</h2>
-                        <p className='text-sm text-muted-foreground'>Errores o envíos próximos.</p>
+                        <h2 className='text-lg font-black'>{c('Prioridades', 'Priorities')}</h2>
+                        <p className='text-sm text-muted-foreground'>{c('Errores o envíos próximos.', 'Errors or upcoming deliveries.')}</p>
                       </div>
                     </div>
                   </CardHeader>
@@ -510,7 +551,7 @@ export default function NotificacionesPage() {
                       <div className='rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-100'>
                         <div className='flex items-start gap-2'>
                           <CheckCircle2 className='mt-0.5 h-4 w-4 shrink-0' />
-                          No hay alertas críticas para los filtros actuales.
+                          {c('No hay alertas críticas para los filtros actuales.', 'No critical alerts for the current filters.')}
                         </div>
                       </div>
                     ) : (
@@ -526,7 +567,7 @@ export default function NotificacionesPage() {
                             <div className='min-w-0'>
                               <p className='truncate text-sm font-bold'>{item.titulo}</p>
                               <p className='text-xs text-muted-foreground'>
-                                {normalizeLabel(item.estado)} · {formatFrontendDateTime(item.fecha_programada ?? item.creado_en)}
+                                {notificationStatusLabel(locale, item.estado)} · {formatFrontendDateTime(item.fecha_programada ?? item.creado_en)}
                               </p>
                             </div>
                           </div>
@@ -540,15 +581,15 @@ export default function NotificacionesPage() {
               <Card className='overflow-hidden rounded-[2rem] border-border bg-white shadow-sm dark:bg-slate-950/80'>
                 <CardHeader className='flex flex-col items-start justify-between gap-4 border-b p-4 xl:flex-row xl:items-center'>
                   <div>
-                    <h2 className='text-xl font-bold'>Listado operativo</h2>
-                    <p className='text-sm text-muted-foreground'>Filtrá, exportá, revisá detalle y ejecutá acciones sobre las notificaciones.</p>
+                    <h2 className='text-xl font-bold'>{c('Listado operativo', 'Operational list')}</h2>
+                    <p className='text-sm text-muted-foreground'>{c('Filtrá, exportá, revisá detalle y ejecutá acciones sobre las notificaciones.', 'Filter, export, review details and run actions on notifications.')}</p>
                   </div>
                   <div className='grid w-full grid-cols-1 gap-2 sm:grid-cols-2 xl:w-auto xl:grid-cols-3'>
                     <Button type='button' variant='outline' onClick={exportExcel}>
                       <FileSpreadsheet className='mr-2 h-4 w-4' /> Excel
                     </Button>
                     <Button type='button' variant='outline' onClick={downloadPdf}>
-                      <FileText className='mr-2 h-4 w-4' /> Descargar PDF
+                      <FileText className='mr-2 h-4 w-4' /> {c('Descargar PDF', 'Download PDF')}
                     </Button>
                     <Button
                       type='button'
@@ -557,7 +598,7 @@ export default function NotificacionesPage() {
                         setOpenModal(true);
                       }}
                     >
-                      <Plus className='mr-2 h-4 w-4' /> Nueva notificación
+                      <Plus className='mr-2 h-4 w-4' /> {c('Nueva notificación', 'New notification')}
                     </Button>
                   </div>
                 </CardHeader>
@@ -566,11 +607,11 @@ export default function NotificacionesPage() {
                     <div className='mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
                       <div className='flex items-center gap-2 text-sm font-bold'>
                         <Filter className='h-4 w-4 text-sky-600' />
-                        Filtros de búsqueda
+                        {c('Filtros de búsqueda', 'Search filters')}
                       </div>
                       {hasActiveFilters ? (
                         <Button type='button' variant='ghost' size='sm' onClick={clearFilters}>
-                          Limpiar filtros
+                          {c('Limpiar filtros', 'Clear filters')}
                         </Button>
                       ) : null}
                     </div>
@@ -579,7 +620,7 @@ export default function NotificacionesPage() {
                         <Search className='absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground' />
                         <Input
                           type='search'
-                          placeholder='Buscar por título, asunto, tipo, canal o mensaje...'
+                          placeholder={c('Buscar por título, asunto, tipo, canal o mensaje...', 'Search by title, subject, type, channel or message...')}
                           className='pl-8'
                           value={searchTerm}
                           onChange={(event) => setSearchTerm(event.target.value)}
@@ -592,7 +633,7 @@ export default function NotificacionesPage() {
                       >
                         {estados.map((estado) => (
                           <option key={estado.value} value={estado.value}>
-                            {estado.label}
+                            {notificationStatusLabel(locale, estado.value)}
                           </option>
                         ))}
                       </select>
@@ -603,7 +644,7 @@ export default function NotificacionesPage() {
                       >
                         {tipos.map((tipo) => (
                           <option key={tipo.value} value={tipo.value}>
-                            {tipo.label}
+                            {notificationTypeLabel(locale, tipo.value)}
                           </option>
                         ))}
                       </select>
@@ -615,7 +656,7 @@ export default function NotificacionesPage() {
                   </div>
 
                   {loading ? (
-                    <div className='py-10 text-center text-muted-foreground'>Cargando notificaciones...</div>
+                    <div className='py-10 text-center text-muted-foreground'>{c('Cargando notificaciones...', 'Loading notifications...')}</div>
                   ) : (
                     <NotificacionTable
                       notificaciones={paginatedNotificaciones}
@@ -634,7 +675,7 @@ export default function NotificacionesPage() {
                     totalItems={filteredNotificaciones.length}
                     pageSize={PAGE_SIZE}
                     onPageChange={setCurrentPage}
-                    itemLabel='notificaciones'
+                    itemLabel={c('notificaciones', 'notifications')}
                   />
                 </CardContent>
               </Card>
