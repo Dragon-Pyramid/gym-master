@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { createCuota, updateCuota } from "@/services/cuotaService";
 import { toast } from "sonner";
+import { useI18n } from "@/i18n/I18nProvider";
 
 export interface CuotasFormProps {
   cuota?: {
@@ -29,6 +30,9 @@ const emptyForm = {
 };
 
 export default function CuotasForm({ cuota, onCreated }: CuotasFormProps) {
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const tx = (es: string, en: string) => (isEnglish ? en : es);
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
 
@@ -60,24 +64,28 @@ export default function CuotasForm({ cuota, onCreated }: CuotasFormProps) {
     try {
       if (cuota && cuota.id) {
         await updateCuota(cuota.id, { ...form, activo: true });
-        toast.success("Cuota actualizada");
+        toast.success(tx("Cuota actualizada", "Fee updated"));
       } else {
         await createCuota(form);
-        toast.success("Cuota creada");
+        toast.success(tx("Cuota creada", "Fee created"));
       }
       setForm(emptyForm);
       onCreated();
     } catch (error: any) {
-      let msg = error.message || "Error al guardar cuota";
+      let msg = error.message || tx("Error al guardar cuota", "Error saving fee");
       if (msg.includes("value too long")) {
-        msg =
-          "Uno de los campos excede la cantidad máxima de caracteres permitidos.";
+        msg = tx(
+          "Uno de los campos excede la cantidad máxima de caracteres permitidos.",
+          "One of the fields exceeds the maximum allowed number of characters.",
+        );
       }
       toast.error(msg);
     } finally {
       setLoading(false);
     }
   };
+
+  const inputClassName = "dark:border-neutral-800 dark:bg-black dark:text-neutral-100 dark:placeholder:text-neutral-500";
 
   return (
     <form
@@ -86,62 +94,67 @@ export default function CuotasForm({ cuota, onCreated }: CuotasFormProps) {
     >
       <QaFileNameBadge file="src/components/forms/CuotasForm.tsx" />
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="descripcion">Descripción</Label>
+        <Label htmlFor="descripcion">{tx("Descripción", "Description")}</Label>
         <Input
           id="descripcion"
           name="descripcion"
-          placeholder="Ingrese descripción"
+          placeholder={tx("Ingrese descripción", "Enter description")}
           value={form.descripcion}
           onChange={handleChange}
+          className={inputClassName}
           required
         />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="monto">Monto</Label>
+        <Label htmlFor="monto">{tx("Monto", "Amount")}</Label>
         <Input
           id="monto"
           name="monto"
           type="number"
-          placeholder="Ingrese monto"
+          placeholder={tx("Ingrese monto", "Enter amount")}
           value={form.monto}
           onChange={handleChange}
+          className={inputClassName}
           required
         />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="periodo">Período</Label>
+        <Label htmlFor="periodo">{tx("Período", "Period")}</Label>
         <Input
           id="periodo"
           name="periodo"
-          placeholder="Ingrese período"
+          placeholder={tx("Ingrese período", "Enter period")}
           value={form.periodo}
           onChange={handleChange}
+          className={inputClassName}
           required
         />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="fecha_inicio">Fecha de Inicio</Label>
+        <Label htmlFor="fecha_inicio">{tx("Fecha de Inicio", "Start date")}</Label>
         <Input
           id="fecha_inicio"
           name="fecha_inicio"
           type="date"
           value={form.fecha_inicio}
           onChange={handleChange}
+          className={inputClassName}
           required
         />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="fecha_fin">Fecha de Fin</Label>
+        <Label htmlFor="fecha_fin">{tx("Fecha de Fin", "End date")}</Label>
         <Input
           id="fecha_fin"
           name="fecha_fin"
           type="date"
           value={form.fecha_fin}
           onChange={handleChange}
+          className={inputClassName}
           required
         />
       </div>
@@ -151,7 +164,11 @@ export default function CuotasForm({ cuota, onCreated }: CuotasFormProps) {
         className="col-span-full justify-self-end"
         disabled={loading}
       >
-        {loading ? "Guardando..." : cuota ? "Actualizar Cuota" : "Crear Cuota"}
+        {loading
+          ? tx("Guardando...", "Saving...")
+          : cuota
+          ? tx("Actualizar Cuota", "Update fee")
+          : tx("Crear Cuota", "Create fee")}
       </Button>
     </form>
   );

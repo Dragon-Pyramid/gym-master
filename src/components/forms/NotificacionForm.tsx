@@ -15,9 +15,50 @@ import {
 } from '@/interfaces/notificacion.interface';
 import { actualizarNotificacion, crearNotificacion } from '@/services/apiClient';
 import { useEffect, useMemo, useState } from 'react';
+import { useI18n } from '@/i18n/I18nProvider';
+import type { GymMasterLocale } from '@/i18n/config';
 import { toast } from 'sonner';
 
 type FormState = CreateNotificacionDto;
+
+
+function notificationTx(locale: GymMasterLocale, es: string, en: string) {
+  return locale === 'en' ? en : es;
+}
+
+function optionLabel(locale: GymMasterLocale, label: string) {
+  const labels: Record<string, string> = {
+    'General': 'General',
+    'Feriado / horario especial': 'Holiday / special schedule',
+    'Promoción': 'Promotion',
+    'Stock crítico': 'Critical stock',
+    'Cumpleaños': 'Birthday',
+    'Cuotas / pagos': 'Fees / payments',
+    'Recordatorio': 'Reminder',
+    'Sistema': 'System',
+    'Otro': 'Other',
+    'Email': 'Email',
+    'Terminal': 'Terminal',
+    'Email + Terminal': 'Email + Terminal',
+    'Sistema interno': 'Internal system',
+    'Borrador': 'Draft',
+    'Programada / activa': 'Scheduled / active',
+    'Enviada': 'Sent',
+    'Cancelada': 'Cancelled',
+    'Error': 'Error',
+    'Todos los socios con email': 'All members with email',
+    'Socios activos con email': 'Active members with email',
+    'Socios con cuota al día (base futura)': 'Members with up-to-date fees (future base)',
+    'Manual / personalizado (base futura)': 'Manual / custom (future base)',
+    'Rosa neón': 'Neon pink',
+    'Verde flúor': 'Fluorescent green',
+    'Naranja flúor': 'Fluorescent orange',
+    'Amarillo flúor': 'Fluorescent yellow',
+    'Rojo flúor': 'Fluorescent red',
+  };
+  return locale === 'en' ? labels[label] ?? label : label;
+}
+
 
 const emptyForm: FormState = {
   titulo: '',
@@ -97,6 +138,8 @@ export default function NotificacionForm({
   plantillas: NotificacionPlantilla[];
   onCreated?: () => void;
 }) {
+  const { locale } = useI18n();
+  const c = (es: string, en: string) => notificationTx(locale, es, en);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [loading, setLoading] = useState(false);
 
@@ -172,11 +215,11 @@ export default function NotificacionForm({
     setLoading(false);
 
     if (!response.ok) {
-      toast.error(response.error || 'No se pudo guardar la notificación');
+      toast.error(response.error || c('No se pudo guardar la notificación', 'Could not save the notification'));
       return;
     }
 
-    toast.success(notificacion ? 'Notificación actualizada' : 'Notificación creada');
+    toast.success(notificacion ? c('Notificación actualizada', 'Notification updated') : c('Notificación creada', 'Notification created'));
     onCreated?.();
   };
 
@@ -185,14 +228,14 @@ export default function NotificacionForm({
       <QaFileNameBadge file='src/components/forms/NotificacionForm.tsx' />
 
       <div className='flex flex-col gap-1.5 md:col-span-2'>
-        <Label htmlFor='plantilla_id'>Plantilla base</Label>
+        <Label htmlFor='plantilla_id'>{c('Plantilla base', 'Base template')}</Label>
         <select
           id='plantilla_id'
           value={form.plantilla_id ?? ''}
           onChange={(event) => applyPlantilla(event.target.value)}
           className='h-10 rounded-md border border-input bg-background px-3 text-sm'
         >
-          <option value=''>Sin plantilla</option>
+          <option value=''>{c('Sin plantilla', 'No template')}</option>
           {plantillas.map((plantilla) => (
             <option key={plantilla.id} value={plantilla.id}>
               {plantilla.nombre}
@@ -201,13 +244,13 @@ export default function NotificacionForm({
         </select>
         {selectedPlantilla ? (
           <p className='text-xs text-muted-foreground'>
-            Se cargaron asunto, cuerpo, tipo y canal desde la plantilla seleccionada.
+            {c('Se cargaron asunto, cuerpo, tipo y canal desde la plantilla seleccionada.', 'Subject, body, type and channel were loaded from the selected template.')}
           </p>
         ) : null}
       </div>
 
       <div className='flex flex-col gap-1.5'>
-        <Label htmlFor='titulo'>Título interno</Label>
+        <Label htmlFor='titulo'>{c('Título interno', 'Internal title')}</Label>
         <Input
           id='titulo'
           value={form.titulo}
@@ -217,7 +260,7 @@ export default function NotificacionForm({
       </div>
 
       <div className='flex flex-col gap-1.5'>
-        <Label htmlFor='asunto'>Asunto / título visible</Label>
+        <Label htmlFor='asunto'>{c('Asunto / título visible', 'Subject / visible title')}</Label>
         <Input
           id='asunto'
           value={form.asunto}
@@ -227,7 +270,7 @@ export default function NotificacionForm({
       </div>
 
       <div className='flex flex-col gap-1.5'>
-        <Label htmlFor='tipo'>Tipo</Label>
+        <Label htmlFor='tipo'>{c('Tipo', 'Type')}</Label>
         <select
           id='tipo'
           value={form.tipo}
@@ -236,14 +279,14 @@ export default function NotificacionForm({
         >
           {tipos.map((tipo) => (
             <option key={tipo.value} value={tipo.value}>
-              {tipo.label}
+              {optionLabel(locale, tipo.label)}
             </option>
           ))}
         </select>
       </div>
 
       <div className='flex flex-col gap-1.5'>
-        <Label htmlFor='canal'>Canal</Label>
+        <Label htmlFor='canal'>{c('Canal', 'Channel')}</Label>
         <select
           id='canal'
           value={form.canal}
@@ -252,7 +295,7 @@ export default function NotificacionForm({
         >
           {canales.map((canal) => (
             <option key={canal.value} value={canal.value}>
-              {canal.label}
+              {optionLabel(locale, canal.label)}
             </option>
           ))}
         </select>
@@ -260,7 +303,7 @@ export default function NotificacionForm({
 
 
       <div className='flex flex-col gap-1.5'>
-        <Label htmlFor='estado'>Estado</Label>
+        <Label htmlFor='estado'>{c('Estado', 'Status')}</Label>
         <select
           id='estado'
           value={form.estado ?? 'borrador'}
@@ -269,14 +312,14 @@ export default function NotificacionForm({
         >
           {estadosNotificacion.map((estado) => (
             <option key={estado.value} value={estado.value}>
-              {estado.label}
+              {optionLabel(locale, estado.label)}
             </option>
           ))}
         </select>
       </div>
 
       <div className='flex flex-col gap-1.5'>
-        <Label htmlFor='destinatario_segmento'>Destinatarios</Label>
+        <Label htmlFor='destinatario_segmento'>{c('Destinatarios', 'Recipients')}</Label>
         <select
           id='destinatario_segmento'
           value={form.destinatario_segmento}
@@ -285,14 +328,14 @@ export default function NotificacionForm({
         >
           {segmentos.map((segmento) => (
             <option key={segmento.value} value={segmento.value}>
-              {segmento.label}
+              {optionLabel(locale, segmento.label)}
             </option>
           ))}
         </select>
       </div>
 
       <div className='flex flex-col gap-1.5'>
-        <Label htmlFor='fecha_programada'>Visible desde / fecha programada</Label>
+        <Label htmlFor='fecha_programada'>{c('Visible desde / fecha programada', 'Visible from / scheduled date')}</Label>
         <Input
           id='fecha_programada'
           type='datetime-local'
@@ -303,18 +346,18 @@ export default function NotificacionForm({
 
 
       <div className='flex flex-col gap-1.5'>
-        <Label htmlFor='fecha_vigencia_hasta'>Fecha/hora visible hasta</Label>
+        <Label htmlFor='fecha_vigencia_hasta'>{c('Fecha/hora visible hasta', 'Visible until date/time')}</Label>
         <Input
           id='fecha_vigencia_hasta'
           type='datetime-local'
           value={form.fecha_vigencia_hasta ?? ''}
           onChange={(event) => updateField('fecha_vigencia_hasta', event.target.value)}
         />
-        <p className='text-xs text-muted-foreground'>Usá este campo para que promociones vencidas no sigan apareciendo en Terminal.</p>
+        <p className='text-xs text-muted-foreground'>{c('Usá este campo para que promociones vencidas no sigan apareciendo en Terminal.', 'Use this field so expired promotions stop appearing in the terminal.')}</p>
       </div>
 
       <div className='flex flex-col gap-1.5 md:col-span-2'>
-        <Label htmlFor='cuerpo'>Mensaje</Label>
+        <Label htmlFor='cuerpo'>{c('Mensaje', 'Message')}</Label>
         <textarea
           id='cuerpo'
           value={form.cuerpo}
@@ -328,9 +371,9 @@ export default function NotificacionForm({
       <div className='rounded-xl border bg-muted/30 p-4 md:col-span-2'>
         <div className='mb-3 flex items-center justify-between gap-4'>
           <div>
-            <h3 className='font-semibold'>Salida en Terminal de asistencia</h3>
+            <h3 className='font-semibold'>{c('Salida en Terminal de asistencia', 'Attendance terminal output')}</h3>
             <p className='text-xs text-muted-foreground'>
-              Base para avisos/promociones en el panel derecho sin ocultar el QR.
+              {c('Base para avisos/promociones en el panel derecho sin ocultar el QR.', 'Base for alerts/promotions in the right panel without hiding the QR.')}
             </p>
           </div>
           <label className='flex items-center gap-2 text-sm font-medium'>
@@ -339,7 +382,7 @@ export default function NotificacionForm({
               checked={Boolean(form.mostrar_terminal)}
               onChange={(event) => updateField('mostrar_terminal', event.target.checked)}
             />
-            Mostrar en Terminal
+            {c('Mostrar en Terminal', 'Show in terminal')}
           </label>
         </div>
 
@@ -350,11 +393,11 @@ export default function NotificacionForm({
               checked={Boolean(form.terminal_visible)}
               onChange={(event) => updateField('terminal_visible', event.target.checked)}
             />
-            Visible/habilitada
+            {c('Visible/habilitada', 'Visible/enabled')}
           </label>
 
           <div className='flex flex-col gap-1.5'>
-            <Label htmlFor='terminal_color_neon'>Color neón</Label>
+            <Label htmlFor='terminal_color_neon'>{c('Color neón', 'Neon color')}</Label>
             <select
               id='terminal_color_neon'
               value={form.terminal_color_neon ?? 'verde_fluo'}
@@ -363,14 +406,14 @@ export default function NotificacionForm({
             >
               {coloresNeon.map((color) => (
                 <option key={color.value} value={color.value}>
-                  {color.label}
+                  {optionLabel(locale, color.label)}
                 </option>
               ))}
             </select>
           </div>
 
           <div className='flex flex-col gap-1.5'>
-            <Label htmlFor='terminal_duracion_segundos'>Duración en pantalla (segundos)</Label>
+            <Label htmlFor='terminal_duracion_segundos'>{c('Duración en pantalla (segundos)', 'On-screen duration (seconds)')}</Label>
             <Input
               id='terminal_duracion_segundos'
               type='number'
@@ -381,7 +424,7 @@ export default function NotificacionForm({
           </div>
 
           <div className='flex flex-col gap-1.5'>
-            <Label htmlFor='terminal_frecuencia_segundos'>Frecuencia de aparición (segundos)</Label>
+            <Label htmlFor='terminal_frecuencia_segundos'>{c('Frecuencia de aparición (segundos)', 'Appearance frequency (seconds)')}</Label>
             <Input
               id='terminal_frecuencia_segundos'
               type='number'
@@ -392,7 +435,7 @@ export default function NotificacionForm({
           </div>
 
           <div className='flex flex-col gap-1.5 md:col-span-2'>
-            <Label htmlFor='terminal_imagen_url'>URL de imagen/banner</Label>
+            <Label htmlFor='terminal_imagen_url'>{c('URL de imagen/banner', 'Image/banner URL')}</Label>
             <Input
               id='terminal_imagen_url'
               value={form.terminal_imagen_url ?? ''}
@@ -400,7 +443,7 @@ export default function NotificacionForm({
               placeholder='https://...'
             />
             <p className='text-xs text-muted-foreground'>
-              Recomendación visual: relación de aspecto 5:4. Si no hay imagen, se usará el logo del gimnasio y luego el logo de Gym Master como fallback.
+              {c('Recomendación visual: relación de aspecto 5:4. Si no hay imagen, se usará el logo del gimnasio y luego el logo de Gym Master como fallback.', 'Visual recommendation: 5:4 aspect ratio. If there is no image, the gym logo and then the Gym Master logo will be used as fallback.')}
             </p>
           </div>
         </div>
@@ -408,7 +451,7 @@ export default function NotificacionForm({
 
       <div className='flex justify-end md:col-span-2'>
         <Button type='submit' disabled={loading}>
-          {loading ? 'Guardando...' : notificacion ? 'Guardar cambios' : 'Crear notificación'}
+          {loading ? c('Guardando...', 'Saving...') : notificacion ? c('Guardar cambios', 'Save changes') : c('Crear notificación', 'Create notification')}
         </Button>
       </div>
     </form>

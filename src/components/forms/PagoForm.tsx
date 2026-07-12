@@ -13,23 +13,34 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Check, ChevronsUpDown } from "lucide-react";
 import {
   createPagoManualApi,
   fetchPagoFormOptionsApi,
   updatePagoApi,
 } from "@/services/browser/pagoApiClient";
-import { PagoManualFormOptions, ResponsePago } from "@/interfaces/pago.interface";
+import {
+  PagoManualFormOptions,
+  ResponsePago,
+} from "@/interfaces/pago.interface";
 import { CatalogoParametrizableItem } from "@/interfaces/parametrizacion.interface";
 import { useCatalogoParametrizable } from "@/hooks/useCatalogosParametrizables";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { calcularDescuentoPago, formatDiscountPercent } from "@/lib/cuotas/descuentoPago";
+import {
+  calcularDescuentoPago,
+  formatDiscountPercent,
+} from "@/lib/cuotas/descuentoPago";
 import {
   combinarDescuentosPago,
   resolveBonificacionMensualForPeriod,
 } from "@/lib/cuotas/descuentoPagoBonificacion";
+import { useI18n } from "@/i18n/I18nProvider";
 
 export interface PagoFormProps {
   pago?: ResponsePago | null;
@@ -95,6 +106,64 @@ function normalizeMedioPagoIdForPayload(value?: string | null) {
   return value;
 }
 
+function normalizeLabel(value?: string | null) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase();
+}
+
+function getPaymentMethodLabel(
+  value: string | null | undefined,
+  isEnglish: boolean,
+) {
+  if (!isEnglish) return value ?? "-";
+  const normalized = normalizeLabel(value);
+  const labels: Record<string, string> = {
+    efectivo: "Cash",
+    transferencia: "Bank transfer",
+    stripe: "Stripe",
+    mercado_pago: "Mercado Pago",
+    "mercado pago": "Mercado Pago",
+    tarjeta: "Card",
+    debito: "Debit card",
+    débito: "Debit card",
+    credito: "Credit card",
+    crédito: "Credit card",
+    otro: "Other",
+  };
+  return labels[normalized] ?? value ?? "-";
+}
+
+function translatePaymentPreviewMessage(
+  message: string | null | undefined,
+  isEnglish: boolean,
+) {
+  if (!message) return null;
+  if (!isEnglish) return message;
+
+  const advanceDiscountMatch = message.match(
+    /Pagando\s+(\d+)\s+o\s+m[aá]s\s+cuotas(?:\s+por\s+adelantado)?\s+obten[eé]s\s+([\d.,]+)%\s+de\s+descuento\.?/i,
+  );
+  if (advanceDiscountMatch) {
+    return `Paying ${advanceDiscountMatch[1]} or more fees in advance gives you ${advanceDiscountMatch[2]}% discount.`;
+  }
+
+  const appliesDiscountMatch = message.match(
+    /Pagando\s+(\d+)\s+o\s+m[aá]s\s+cuotas\s+se\s+aplicar[aá]\s+([\d.,]+)%\s+de\s+descuento\.?/i,
+  );
+  if (appliesDiscountMatch) {
+    return `Paying ${appliesDiscountMatch[1]} or more fees applies ${appliesDiscountMatch[2]}% discount.`;
+  }
+
+  return message
+    .replace(/Pagando/gi, "Paying")
+    .replace(/o más cuotas por adelantado obtenés/gi, "or more fees in advance gives you")
+    .replace(/o mas cuotas por adelantado obtenes/gi, "or more fees in advance gives you")
+    .replace(/o más cuotas se aplicará/gi, "or more fees applies")
+    .replace(/de descuento/gi, "discount")
+    .replace(/Bonificación mensual activa para este socio/gi, "Active monthly bonus for this member");
+}
+
 const emptyForm = {
   socio_id: "",
   cuota_id: "",
@@ -113,6 +182,9 @@ const emptyForm = {
 };
 
 export default function PagoForm({ pago, onCreated }: PagoFormProps) {
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const tx = (es: string, en: string) => (isEnglish ? en : es);
   const [form, setForm] = useState(emptyForm);
   const [options, setOptions] = useState<PagoManualFormOptions>({
     socios: [],
@@ -124,7 +196,7 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
   const [socioComboboxOpen, setSocioComboboxOpen] = useState(false);
   const { items: mediosPago } = useCatalogoParametrizable(
     "medio_pago",
-    fallbackMediosPago
+    fallbackMediosPago,
   );
 
   useEffect(() => {
@@ -142,7 +214,13 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
           cuota_id: prev.cuota_id || defaultCuotaId,
         }));
       } catch (error: any) {
-        toast.error(error.message || "Error al cargar opciones de pago");
+        toast.error(
+          error.message ||
+            tx(
+              "Error al cargar opciones de pago",
+              "Error loading payment options",
+            ),
+        );
       } finally {
         if (mounted) setLoadingOptions(false);
       }
@@ -158,7 +236,7 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
     if (pago) {
       const metodoPago = pago.metodo_pago ?? "efectivo";
       const medioPago = mediosPago.find(
-        (item) => item.codigo === metodoPago || item.id === pago.id_medio_pago
+        (item) => item.codigo === metodoPago || item.id === pago.id_medio_pago,
       );
 
       setForm({
@@ -167,7 +245,9 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
         fecha_pago: pago.fecha_pago ?? todayIso(),
         periodo_desde: pago.periodo_desde ?? pago.fecha_pago ?? todayIso(),
         periodo_hasta:
-          pago.periodo_hasta ?? pago.fecha_vencimiento ?? addMonthsIso(todayIso(), 1),
+          pago.periodo_hasta ??
+          pago.fecha_vencimiento ??
+          addMonthsIso(todayIso(), 1),
         meses_cubiertos: pago.meses_cubiertos ?? 1,
         subtotal: pago.subtotal ?? pago.monto_pagado ?? 0,
         descuento_porcentaje: pago.descuento_porcentaje ?? 0,
@@ -184,7 +264,8 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
         id_medio_pago:
           prev.id_medio_pago ||
           mediosPago.find((item) => item.codigo === prev.metodo_pago)?.id ||
-          mediosPago.find((item) => item.codigo === emptyForm.metodo_pago)?.id ||
+          mediosPago.find((item) => item.codigo === emptyForm.metodo_pago)
+            ?.id ||
           "",
       }));
     }
@@ -192,7 +273,7 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
 
   const selectedSocio = useMemo(
     () => options.socios.find((socio) => socio.id_socio === form.socio_id),
-    [form.socio_id, options.socios]
+    [form.socio_id, options.socios],
   );
 
   const selectedCuota = useMemo(
@@ -200,7 +281,7 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
       options.cuotas.find((cuota) => cuota.id === form.cuota_id) ??
       options.cuotas[0] ??
       null,
-    [form.cuota_id, options.cuotas]
+    [form.cuota_id, options.cuotas],
   );
 
   const descuentoPreview = useMemo(
@@ -210,7 +291,7 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
         mesesCubiertos: Number(form.meses_cubiertos || 1),
         config: options.descuento_config,
       }),
-    [selectedCuota?.monto, form.meses_cubiertos, options.descuento_config]
+    [selectedCuota?.monto, form.meses_cubiertos, options.descuento_config],
   );
 
   const bonificacionMensualActiva = useMemo(
@@ -220,7 +301,12 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
         fechaReferencia: form.periodo_desde || form.fecha_pago,
         bonificaciones: options.bonificaciones_mensuales,
       }),
-    [form.fecha_pago, form.periodo_desde, form.socio_id, options.bonificaciones_mensuales]
+    [
+      form.fecha_pago,
+      form.periodo_desde,
+      form.socio_id,
+      options.bonificaciones_mensuales,
+    ],
   );
 
   const pagoPreview = useMemo(
@@ -229,7 +315,7 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
         previewPagoAdelantado: descuentoPreview,
         bonificacionMensual: bonificacionMensualActiva,
       }),
-    [bonificacionMensualActiva, descuentoPreview]
+    [bonificacionMensualActiva, descuentoPreview],
   );
 
   const descuentoConfigActivo =
@@ -258,7 +344,9 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
   ]);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >,
   ) => {
     const { name, value } = e.target;
 
@@ -277,18 +365,26 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
 
       if (name === "fecha_pago") {
         next.periodo_desde = value;
-        next.periodo_hasta = addMonthsIso(value, Number(next.meses_cubiertos || 1));
+        next.periodo_hasta = addMonthsIso(
+          value,
+          Number(next.meses_cubiertos || 1),
+        );
       }
 
       if (name === "periodo_desde" || name === "meses_cubiertos") {
         next.periodo_hasta = addMonthsIso(
           name === "periodo_desde" ? value : next.periodo_desde,
-          Number(name === "meses_cubiertos" ? value : next.meses_cubiertos || 1)
+          Number(
+            name === "meses_cubiertos" ? value : next.meses_cubiertos || 1,
+          ),
         );
       }
 
       if (name === "monto_pagado") {
-        next.descuento_monto = Math.max(Number(next.subtotal || 0) - Number(value || 0), 0);
+        next.descuento_monto = Math.max(
+          Number(next.subtotal || 0) - Number(value || 0),
+          0,
+        );
       }
 
       return next;
@@ -316,7 +412,12 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
     e.preventDefault();
 
     if (!form.socio_id) {
-      toast.error("Seleccioná un socio para registrar el pago");
+      toast.error(
+        tx(
+          "Seleccioná un socio para registrar el pago",
+          "Select a member to register the payment",
+        ),
+      );
       return;
     }
 
@@ -330,26 +431,33 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
 
       if (pago?.id) {
         await updatePagoApi(pago.id, payload);
-        toast.success("Pago actualizado");
+        toast.success(tx("Pago actualizado", "Payment updated"));
       } else {
         await createPagoManualApi(payload);
-        toast.success("Pago manual registrado");
+        toast.success(
+          tx("Pago manual registrado", "Manual payment registered"),
+        );
       }
 
       setForm(emptyForm);
       onCreated();
     } catch (error: any) {
-      toast.error(error.message || "Error al guardar pago");
+      toast.error(
+        error.message || tx("Error al guardar pago", "Error saving payment"),
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <form
+      onSubmit={handleSubmit}
+      className="grid grid-cols-1 gap-4 md:grid-cols-2"
+    >
       <QaFileNameBadge file="src/components/forms/PagoForm.tsx" />
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="socio_id">Socio</Label>
+        <Label htmlFor="socio_id">{tx("Socio", "Member")}</Label>
         <Popover open={socioComboboxOpen} onOpenChange={setSocioComboboxOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -361,17 +469,25 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
               disabled={loadingOptions || Boolean(pago)}
               className={cn(
                 "h-10 w-full justify-between px-3 text-left font-normal",
-                !selectedSocio && "text-muted-foreground"
+                !selectedSocio && "text-muted-foreground",
               )}
             >
               <span className="truncate">
                 {selectedSocio
                   ? `${selectedSocio.nombre_completo}${
-                      selectedSocio.activo ? "" : " (inactivo / regularizar)"
+                      selectedSocio.activo
+                        ? ""
+                        : tx(
+                            " (inactivo / regularizar)",
+                            " (inactive / regularize)",
+                          )
                     }`
                   : loadingOptions
-                    ? "Cargando socios..."
-                    : "Buscar o seleccionar socio"}
+                    ? tx("Cargando socios...", "Loading members...")
+                    : tx(
+                        "Buscar o seleccionar socio",
+                        "Search or select member",
+                      )}
               </span>
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
@@ -381,13 +497,26 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
             className="w-[var(--radix-popover-trigger-width)] min-w-[320px] p-0"
           >
             <Command>
-              <CommandInput placeholder="Buscar por nombre o email..." className="h-9" />
+              <CommandInput
+                placeholder={tx(
+                  "Buscar por nombre o email...",
+                  "Search by name or email...",
+                )}
+                className="h-9"
+              />
               <CommandList className="max-h-[320px]">
-                <CommandEmpty>No se encontraron socios.</CommandEmpty>
+                <CommandEmpty>
+                  {tx("No se encontraron socios.", "No members found.")}
+                </CommandEmpty>
                 <CommandGroup>
                   {options.socios.map((socio) => {
                     const socioLabel = `${socio.nombre_completo}${
-                      socio.activo ? "" : " (inactivo / regularizar)"
+                      socio.activo
+                        ? ""
+                        : tx(
+                            " (inactivo / regularizar)",
+                            " (inactive / regularize)",
+                          )
                     }`;
                     const searchValue = `${socio.nombre_completo} ${
                       socio.email ?? ""
@@ -410,7 +539,9 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
                         <Check
                           className={cn(
                             "ml-auto h-4 w-4",
-                            form.socio_id === socio.id_socio ? "opacity-100" : "opacity-0"
+                            form.socio_id === socio.id_socio
+                              ? "opacity-100"
+                              : "opacity-0",
                           )}
                         />
                       </CommandItem>
@@ -423,13 +554,16 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
         </Popover>
         {!pago ? (
           <p className="text-xs text-muted-foreground">
-            Escribí el nombre o email para encontrar al socio sin recorrer todo el listado.
+            {tx(
+              "Escribí el nombre o email para encontrar al socio sin recorrer todo el listado.",
+              "Type the name or email to find the member without browsing the full list.",
+            )}
           </p>
         ) : null}
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="cuota_id">Cuota</Label>
+        <Label htmlFor="cuota_id">{tx("Cuota", "Fee")}</Label>
         <select
           id="cuota_id"
           name="cuota_id"
@@ -438,17 +572,22 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
           disabled={loadingOptions || Boolean(pago)}
           className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
         >
-          <option value="">Cuota vigente / última activa</option>
+          <option value="">
+            {tx("Cuota vigente / última activa", "Current fee / last active")}
+          </option>
           {options.cuotas.map((cuota) => (
             <option key={cuota.id} value={cuota.id}>
-              {cuota.descripcion} - ${Number(cuota.monto).toLocaleString("es-AR")}
+              {cuota.descripcion} - $
+              {Number(cuota.monto).toLocaleString("es-AR")}
             </option>
           ))}
         </select>
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="fecha_pago">Fecha de pago</Label>
+        <Label htmlFor="fecha_pago">
+          {tx("Fecha de pago", "Payment date")}
+        </Label>
         <Input
           id="fecha_pago"
           name="fecha_pago"
@@ -460,7 +599,9 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="meses_cubiertos">Meses cubiertos</Label>
+        <Label htmlFor="meses_cubiertos">
+          {tx("Meses cubiertos", "Covered months")}
+        </Label>
         <Input
           id="meses_cubiertos"
           name="meses_cubiertos"
@@ -474,7 +615,9 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="periodo_desde">Cubre desde</Label>
+        <Label htmlFor="periodo_desde">
+          {tx("Cubre desde", "Covers from")}
+        </Label>
         <Input
           id="periodo_desde"
           name="periodo_desde"
@@ -486,7 +629,7 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="periodo_hasta">Cubre hasta</Label>
+        <Label htmlFor="periodo_hasta">{tx("Cubre hasta", "Covers to")}</Label>
         <Input
           id="periodo_hasta"
           name="periodo_hasta"
@@ -498,12 +641,14 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="monto_pagado">Monto pagado</Label>
+        <Label htmlFor="monto_pagado">
+          {tx("Monto pagado", "Amount paid")}
+        </Label>
         <Input
           id="monto_pagado"
           name="monto_pagado"
           type="number"
-          placeholder="Monto pagado"
+          placeholder={tx("Monto pagado", "Amount paid")}
           value={form.monto_pagado}
           onChange={handleChange}
           required
@@ -511,39 +656,59 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
         />
       </div>
 
-      {(descuentoConfigActivo || pagoPreview.bonificacion_mensual_aplicada) ? (
-        <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-3 text-sm text-cyan-900 md:col-span-2">
+      {descuentoConfigActivo || pagoPreview.bonificacion_mensual_aplicada ? (
+        <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-3 text-sm text-cyan-900 dark:border-cyan-900/70 dark:bg-cyan-950/35 dark:text-cyan-100 md:col-span-2">
           <p className="font-semibold">
-            Descuentos y bonificación aplicados
+            {tx(
+              "Descuentos y bonificación aplicados",
+              "Applied discounts and bonus",
+            )}
           </p>
           <p className="mt-1">
-            {pagoPreview.mensaje ??
-              `Pagando ${options.descuento_config?.cuotas_minimas ?? 2} o más cuotas se aplicará ${formatDiscountPercent(
-                Number(options.descuento_config?.porcentaje ?? 0)
-              )} de descuento.`}
+            {translatePaymentPreviewMessage(pagoPreview.mensaje, isEnglish) ??
+              `${tx("Pagando", "Paying")} ${options.descuento_config?.cuotas_minimas ?? 2} ${tx("o más cuotas se aplicará", "or more fees applies")} ${formatDiscountPercent(
+                Number(options.descuento_config?.porcentaje ?? 0),
+              )} ${tx("de descuento", "discount")}.`}
           </p>
           {pagoPreview.bonificacion_mensual_aplicada ? (
-            <p className="mt-2 rounded-lg bg-white/70 px-3 py-2 text-xs font-medium text-cyan-900">
-              Bonificación mensual activa para este socio: {formatDiscountPercent(pagoPreview.bonificacion_mensual_porcentaje ?? 0)}.
+            <p className="mt-2 rounded-lg bg-white/70 px-3 py-2 text-xs font-medium text-cyan-900 dark:bg-neutral-900/80 dark:text-cyan-100">
+              {tx(
+                "Bonificación mensual activa para este socio",
+                "Active monthly bonus for this member",
+              )}
+              :{" "}
+              {formatDiscountPercent(
+                pagoPreview.bonificacion_mensual_porcentaje ?? 0,
+              )}
+              .
             </p>
           ) : null}
           <div className="mt-3 grid gap-2 text-xs md:grid-cols-4">
             <div>
-              <span className="text-cyan-700">Subtotal</span>
-              <p className="font-semibold">{formatMoney(pagoPreview.subtotal)}</p>
-            </div>
-            <div>
-              <span className="text-cyan-700">Descuento</span>
+              <span className="text-cyan-700 dark:text-cyan-300">Subtotal</span>
               <p className="font-semibold">
-                {formatMoney(pagoPreview.descuento_monto)} ({formatDiscountPercent(pagoPreview.descuento_porcentaje)})
+                {formatMoney(pagoPreview.subtotal)}
               </p>
             </div>
             <div>
-              <span className="text-cyan-700">Total sugerido</span>
+              <span className="text-cyan-700 dark:text-cyan-300">
+                {tx("Descuento", "Discount")}
+              </span>
+              <p className="font-semibold">
+                {formatMoney(pagoPreview.descuento_monto)} (
+                {formatDiscountPercent(pagoPreview.descuento_porcentaje)})
+              </p>
+            </div>
+            <div>
+              <span className="text-cyan-700 dark:text-cyan-300">
+                {tx("Total sugerido", "Suggested total")}
+              </span>
               <p className="font-semibold">{formatMoney(pagoPreview.total)}</p>
             </div>
             <div>
-              <span className="text-cyan-700">Meses cubiertos</span>
+              <span className="text-cyan-700 dark:text-cyan-300">
+                {tx("Meses cubiertos", "Covered months")}
+              </span>
               <p className="font-semibold">{form.meses_cubiertos}</p>
             </div>
           </div>
@@ -551,38 +716,51 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
       ) : null}
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="id_medio_pago">Método de pago</Label>
+        <Label htmlFor="id_medio_pago">
+          {tx("Método de pago", "Payment method")}
+        </Label>
         <select
           id="id_medio_pago"
           name="id_medio_pago"
-          value={form.id_medio_pago || mediosPago.find((item) => item.codigo === form.metodo_pago)?.id || form.metodo_pago}
+          value={
+            form.id_medio_pago ||
+            mediosPago.find((item) => item.codigo === form.metodo_pago)?.id ||
+            form.metodo_pago
+          }
           onChange={(e) => handleMedioPagoChange(e.target.value)}
           className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
         >
           {mediosPago.map((medio) => (
             <option key={medio.id} value={medio.id}>
-              {medio.nombre}
-              {medio.es_online ? " (online)" : ""}
+              {getPaymentMethodLabel(medio.codigo || medio.nombre, isEnglish)}
+              {medio.es_online ? ` (${tx("online", "online")})` : ""}
             </option>
           ))}
         </select>
       </div>
 
       <div className="flex flex-col gap-1.5 md:col-span-2">
-        <Label htmlFor="observaciones">Observaciones</Label>
+        <Label htmlFor="observaciones">{tx("Observaciones", "Notes")}</Label>
         <textarea
           id="observaciones"
           name="observaciones"
           value={form.observaciones}
           onChange={handleChange}
-          placeholder="Ejemplo: pago en efectivo en recepción"
+          placeholder={tx(
+            "Ejemplo: pago en efectivo en recepción",
+            "Example: cash payment at reception",
+          )}
           className="min-h-20 rounded-md border border-input bg-background px-3 py-2 text-sm"
         />
       </div>
 
       <div className="flex items-center justify-end gap-2 md:col-span-2">
         <Button type="submit" disabled={loading || loadingOptions}>
-          {loading ? "Guardando..." : pago ? "Actualizar Pago" : "Registrar pago"}
+          {loading
+            ? tx("Guardando...", "Saving...")
+            : pago
+              ? tx("Actualizar pago", "Update payment")
+              : tx("Registrar pago", "Register payment")}
         </Button>
       </div>
     </form>

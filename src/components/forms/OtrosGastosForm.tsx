@@ -1,7 +1,7 @@
 "use client";
 
 import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -21,7 +21,7 @@ import {
 import { toast } from "sonner";
 import { FileUp, Link as LinkIcon } from "lucide-react";
 import { useI18n } from '@/i18n/I18nProvider';
-import { translateCommercialUi } from '@/i18n/commercialUi';
+import { getOtrosGastosTipoLabel, translateOtrosGastosUi } from '@/utils/otrosGastosI18n';
 
 export interface OtrosGastosFormProps {
   gasto?: OtrosGastos | null;
@@ -73,12 +73,13 @@ function normalizeNullable(value?: string | null) {
 
 export default function OtrosGastosForm({ gasto, onCreated }: OtrosGastosFormProps) {
   const { locale } = useI18n();
-  const c = (text: string) => translateCommercialUi(locale, text);
+  const c = (text: string) => translateOtrosGastosUi(locale, text);
 
   const [form, setForm] = useState<CreateOtrosGastosDto>(emptyForm);
   const [tiposGasto, setTiposGasto] = useState<TipoGastoLite[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const receiptFileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     async function loadCatalogos() {
@@ -157,9 +158,9 @@ export default function OtrosGastosForm({ gasto, onCreated }: OtrosGastosFormPro
         comprobante_nombre: uploaded.originalName,
         comprobante_mime_type: uploaded.mimeType,
       }));
-      toast.success("Comprobante subido correctamente");
+      toast.success(c("Comprobante subido correctamente"));
     } catch (error: any) {
-      toast.error(error?.message || "Error al subir comprobante");
+      toast.error(error?.message || c("Error al subir comprobante"));
     } finally {
       setUploading(false);
       event.target.value = "";
@@ -193,15 +194,15 @@ export default function OtrosGastosForm({ gasto, onCreated }: OtrosGastosFormPro
       const payload = buildPayload();
       if (gasto?.id) {
         await updateOtrosGastos(gasto.id, payload);
-        toast.success("Gasto actualizado");
+        toast.success(c("Gasto actualizado"));
       } else {
         await createOtrosGastos(payload);
-        toast.success("Gasto creado");
+        toast.success(c("Gasto creado"));
       }
       setForm(emptyForm);
       onCreated();
     } catch (error: any) {
-      toast.error(error?.message || "Error al guardar gasto");
+      toast.error(error?.message || c("Error al guardar gasto"));
     } finally {
       setLoading(false);
     }
@@ -213,7 +214,7 @@ export default function OtrosGastosForm({ gasto, onCreated }: OtrosGastosFormPro
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="descripcion">Descripción *</Label>
+          <Label htmlFor="descripcion">{c("Descripción *")}</Label>
           <Input
             id="descripcion"
             name="descripcion"
@@ -225,28 +226,28 @@ export default function OtrosGastosForm({ gasto, onCreated }: OtrosGastosFormPro
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="id_tipo_gasto">Tipo de gasto</Label>
+          <Label htmlFor="id_tipo_gasto">{c("Tipo de gasto")}</Label>
           <select
             id="id_tipo_gasto"
             name="id_tipo_gasto"
             value={form.id_tipo_gasto ?? ""}
             onChange={handleChange}
-            className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-950"
           >
-            <option value="">Sin clasificar</option>
+            <option value="">{c("Sin clasificar")}</option>
             {tiposGasto.map((tipo) => (
               <option key={tipo.id} value={tipo.id}>
-                {tipo.nombre}
+                {getOtrosGastosTipoLabel(locale, tipo.nombre)}
               </option>
             ))}
           </select>
           {selectedTipo?.descripcion ? (
-            <p className="text-xs text-muted-foreground">{selectedTipo.descripcion}</p>
+            <p className="text-xs text-muted-foreground">{getOtrosGastosTipoLabel(locale, selectedTipo.descripcion)}</p>
           ) : null}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="monto">Monto *</Label>
+          <Label htmlFor="monto">{c("Monto *")}</Label>
           <Input
             id="monto"
             name="monto"
@@ -260,12 +261,12 @@ export default function OtrosGastosForm({ gasto, onCreated }: OtrosGastosFormPro
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="fecha">Fecha del gasto *</Label>
+          <Label htmlFor="fecha">{c("Fecha del gasto *")}</Label>
           <Input id="fecha" name="fecha" type="date" value={form.fecha} onChange={handleChange} required />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="fecha_vencimiento">Fecha de vencimiento</Label>
+          <Label htmlFor="fecha_vencimiento">{c("Fecha de vencimiento")}</Label>
           <Input
             id="fecha_vencimiento"
             name="fecha_vencimiento"
@@ -276,7 +277,7 @@ export default function OtrosGastosForm({ gasto, onCreated }: OtrosGastosFormPro
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="fecha_pago">Fecha de pago</Label>
+          <Label htmlFor="fecha_pago">{c("Fecha de pago")}</Label>
           <Input
             id="fecha_pago"
             name="fecha_pago"
@@ -287,41 +288,41 @@ export default function OtrosGastosForm({ gasto, onCreated }: OtrosGastosFormPro
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="estado">Estado</Label>
+          <Label htmlFor="estado">{c("Estado")}</Label>
           <select
             id="estado"
             name="estado"
             value={form.estado ?? "pagado"}
             onChange={handleChange}
-            className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-950"
           >
             {estados.map((estado) => (
               <option key={estado.value} value={estado.value}>
-                {estado.label}
+                {c(estado.label)}
               </option>
             ))}
           </select>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="medio_pago">Medio de pago</Label>
+          <Label htmlFor="medio_pago">{c("Medio de pago")}</Label>
           <select
             id="medio_pago"
             name="medio_pago"
             value={form.medio_pago ?? "efectivo"}
             onChange={handleChange}
-            className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-950"
           >
             {mediosPago.map((medio) => (
               <option key={medio.value} value={medio.value}>
-                {medio.label}
+                {c(medio.label)}
               </option>
             ))}
           </select>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="proveedor_nombre">Proveedor / entidad</Label>
+          <Label htmlFor="proveedor_nombre">{c("Proveedor / entidad")}</Label>
           <Input
             id="proveedor_nombre"
             name="proveedor_nombre"
@@ -332,18 +333,18 @@ export default function OtrosGastosForm({ gasto, onCreated }: OtrosGastosFormPro
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="numero_comprobante">Nº comprobante / factura</Label>
+          <Label htmlFor="numero_comprobante">{c("Nº comprobante / factura")}</Label>
           <Input
             id="numero_comprobante"
             name="numero_comprobante"
             value={form.numero_comprobante ?? ""}
             onChange={handleChange}
-            placeholder="Factura, ticket, transferencia..."
+            placeholder={c("Factura, ticket, transferencia...")}
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="periodo_desde">Período desde</Label>
+          <Label htmlFor="periodo_desde">{c("Período desde")}</Label>
           <Input
             id="periodo_desde"
             name="periodo_desde"
@@ -354,7 +355,7 @@ export default function OtrosGastosForm({ gasto, onCreated }: OtrosGastosFormPro
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="periodo_hasta">Período hasta</Label>
+          <Label htmlFor="periodo_hasta">{c("Período hasta")}</Label>
           <Input
             id="periodo_hasta"
             name="periodo_hasta"
@@ -365,66 +366,83 @@ export default function OtrosGastosForm({ gasto, onCreated }: OtrosGastosFormPro
         </div>
       </section>
 
-      <section className="rounded-xl border bg-muted/20 p-4">
+      <section className="rounded-xl border bg-muted/20 p-4 dark:border-neutral-800 dark:bg-neutral-950/60">
         <div className="mb-3 flex items-center gap-2">
           <FileUp className="h-4 w-4 text-sky-600" />
-          <h3 className="font-semibold">Comprobante</h3>
+          <h3 className="font-semibold">{c("Comprobante")}</h3>
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="comprobante_file">Subir PDF o imagen</Label>
-            <Input
+            <Label htmlFor="comprobante_file">{c("Subir PDF o imagen")}</Label>
+            <input
+              ref={receiptFileInputRef}
               id="comprobante_file"
               type="file"
               accept="application/pdf,image/png,image/jpeg,image/webp,image/gif,image/heic,image/heif"
               onChange={handleFileChange}
               disabled={uploading}
+              className="sr-only"
             />
+            <div className="flex flex-col gap-2 rounded-md border border-input bg-background p-2 dark:border-neutral-800 dark:bg-neutral-950 sm:flex-row sm:items-center">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={uploading}
+                onClick={() => receiptFileInputRef.current?.click()}
+                className="justify-start sm:w-auto"
+              >
+                <FileUp className="mr-2 h-4 w-4" />
+                {uploading ? c("Subiendo...") : c("Seleccionar archivo")}
+              </Button>
+              <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground dark:text-neutral-400">
+                {form.comprobante_nombre || c("Sin archivo seleccionado")}
+              </span>
+            </div>
             <p className="text-xs text-muted-foreground">
-              Formatos permitidos: PDF, PNG, JPG, WEBP, GIF, HEIC/HEIF. Máximo 10MB.
+              {c("Formatos permitidos: PDF, PNG, JPG, WEBP, GIF, HEIC/HEIF. Máximo 10MB.")}
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="comprobante_url">URL del comprobante</Label>
+            <Label htmlFor="comprobante_url">{c("URL del comprobante")}</Label>
             <div className="flex gap-2">
               <Input
                 id="comprobante_url"
                 name="comprobante_url"
                 value={form.comprobante_url ?? ""}
                 onChange={handleChange}
-                placeholder="URL de Cloudinary o comprobante externo"
+                placeholder={c("URL de Cloudinary o comprobante externo")}
               />
               {form.comprobante_url ? (
                 <Button type="button" variant="outline" asChild>
-                  <a href={form.comprobante_url} target="_blank" rel="noreferrer" title="Abrir comprobante">
+                  <a href={form.comprobante_url} target="_blank" rel="noreferrer" title={c("Abrir comprobante")}>
                     <LinkIcon className="h-4 w-4" />
                   </a>
                 </Button>
               ) : null}
             </div>
             {form.comprobante_nombre ? (
-              <p className="text-xs text-muted-foreground">Archivo: {form.comprobante_nombre}</p>
+              <p className="text-xs text-muted-foreground">{c("Archivo:")} {form.comprobante_nombre}</p>
             ) : null}
           </div>
         </div>
       </section>
 
       <div className="space-y-2">
-        <Label htmlFor="observaciones">Observaciones</Label>
+        <Label htmlFor="observaciones">{c("Observaciones")}</Label>
         <textarea
           id="observaciones"
           name="observaciones"
           value={form.observaciones ?? ""}
           onChange={handleChange}
           rows={3}
-          placeholder="Notas internas, detalle del gasto, condiciones de pago..."
-          className="min-h-[90px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm"
+          placeholder={c("Notas internas, detalle del gasto, condiciones de pago...")}
+          className="min-h-[90px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm dark:border-neutral-800 dark:bg-neutral-950"
         />
       </div>
 
       <Button type="submit" disabled={loading || uploading} className="w-full bg-[#02a8e1] hover:bg-[#0288b1]">
-        {loading ? c("Guardando...") : gasto ? "Actualizar Gasto" : "Crear Gasto"}
+        {loading ? c("Guardando...") : gasto ? c("Actualizar Gasto") : c("Crear Gasto")}
       </Button>
     </form>
   );
