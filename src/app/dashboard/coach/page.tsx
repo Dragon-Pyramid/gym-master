@@ -24,6 +24,7 @@ import {
   ShieldCheck,
   Sparkles,
   UserRound,
+  Users,
 } from 'lucide-react';
 
 import { AppFooter } from '@/components/footer/AppFooter';
@@ -39,8 +40,11 @@ import type {
   RagCoachContextSnapshot,
   RagCoachConversationMemory,
 } from '@/interfaces/ragCoachChat.interface';
+import type { Socio } from '@/interfaces/socio.interface';
 import { enviarMensajeCoachIa } from '@/services/ragCoachChatClient';
+import { fetchSociosApi } from '@/services/browser/socioApiClient';
 import { useAuthStore } from '@/stores/authStore';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type ChatMessage = {
   id: string;
@@ -93,6 +97,42 @@ function createId() {
 
 function getDisplayName(user?: { nombre?: string | null; email?: string | null } | null) {
   return user?.nombre?.trim() || user?.email?.trim() || 'socio';
+}
+
+function normalizeRole(value?: string | null) {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s-]+/g, '_');
+}
+
+function isAdminUserRole(value?: string | null) {
+  const normalized = normalizeRole(value);
+  return ['admin', 'administrador', 'administrator'].includes(normalized);
+}
+
+function coachTx(locale: string, es: string, en: string) {
+  return locale === 'en' ? en : es;
+}
+
+function normalizeSearchText(value?: string | null) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+function socioOptionLabel(socio: Socio) {
+  const name = socio.nombre_completo?.trim() || 'Socio sin nombre';
+  const dni = socio.dni?.trim();
+  const email = socio.email?.trim();
+  return [name, dni ? `DNI ${dni}` : null, email].filter(Boolean).join(' · ');
+}
+
+function shortSocioLabel(socio?: Socio | null) {
+  if (!socio) return '';
+  return socio.nombre_completo?.trim() || socio.email?.trim() || socio.id_socio;
 }
 
 function actionLinkLabel(action: RagCoachChatActionResult) {
@@ -306,16 +346,52 @@ function renderAction(action: RagCoachChatActionResult) {
 export default function CoachIaPage() {
   const router = useRouter();
   const { user, isAuthenticated, initializeAuth, isInitialized } = useAuthStore();
+  const { locale } = useI18n();
+  const c = (es: string, en: string) => coachTx(locale, es, en);
   const displayName = useMemo(() => getDisplayName(user), [user]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [socios, setSocios] = useState<Socio[]>([]);
+  const [sociosLoading, setSociosLoading] = useState(false);
+  const [sociosError, setSociosError] = useState<string | null>(null);
+  const [selectedSocioId, setSelectedSocioId] = useState('');
+  const [socioSearch, setSocioSearch] = useState('');
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const totalAssistantMessages = messages.filter((message) => message.role === 'assistant').length;
   const totalActionMessages = messages.reduce((total, message) => total + (message.actions?.filter((action) => action.ok).length ?? 0), 0);
   const hasRagSources = messages.some((message) => hasSources(message.actions));
   const latestContextMessage = useMemo(() => getLatestContextMessage(messages), [messages]);
   const latestContextSnapshot = latestContextMessage?.contextSnapshot;
+  const isAdminSession = useMemo(
+    () => isAdminUserRole((user as any)?.rol || (user as any)?.role),
+    [user],
+  );
+  const filteredSocios = useMemo(() => {
+    const search = normalizeSearchText(socioSearch);
+    const ordered = [...socios].sort((a, b) => {
+      if (a.activo !== b.activo) return a.activo ? -1 : 1;
+      return (a.nombre_completo ?? '').localeCompare(b.nombre_completo ?? '', 'es');
+    });
+
+    if (!search) return ordered.slice(0, 80);
+
+    return ordered
+      .filter((socio) => {
+        const haystack = normalizeSearchText([
+          socio.nombre_completo,
+          socio.dni,
+          socio.email,
+          socio.telefono,
+        ].filter(Boolean).join(' '));
+        return haystack.includes(search);
+      })
+      .slice(0, 80);
+  }, [socioSearch, socios]);
+  const selectedSocio = useMemo(
+    () => socios.find((socio) => socio.id_socio === selectedSocioId) ?? null,
+    [selectedSocioId, socios],
+  );
 
   useEffect(() => {
     initializeAuth();
@@ -328,13 +404,38 @@ export default function CoachIaPage() {
   }, [isAuthenticated, isInitialized, router]);
 
   useEffect(() => {
+    if (!isInitialized || !isAuthenticated || !isAdminSession) return;
+
+    let isMounted = true;
+    setSociosLoading(true);
+    setSociosError(null);
+
+    fetchSociosApi()
+      .then((rows) => {
+        if (!isMounted) return;
+        setSocios(rows ?? []);
+      })
+      .catch((error) => {
+        if (!isMounted) return;
+        setSociosError(error instanceof Error ? error.message : 'No se pudo cargar el listado de socios.');
+      })
+      .finally(() => {
+        if (isMounted) setSociosLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAdminSession, isAuthenticated, isInitialized]);
+
+  useEffect(() => {
     if (!isInitialized || !isAuthenticated || messages.length > 0) return;
 
     setMessages([
       {
         id: createId(),
         role: 'assistant',
-        content: `Hola, ${displayName}. Soy tu Coach IA de Gym Master. Puedo ayudarte con rutinas, dietas y evolución física usando tu contexto del gimnasio cuando esté disponible.`,
+        content: `Hola, ${displayName}. Soy tu Coach IA de Gym Master. Puedo ayudarte con rutinas, dietas y evolución física usando el contexto del socio cuando esté disponible.`,
         suggestedReplies: quickPrompts,
         nextBestStep: 'Contame tu objetivo, disponibilidad semanal, nivel y restricciones.',
       },
@@ -374,9 +475,13 @@ export default function CoachIaPage() {
     setMessages((current) => [...current, userMessage]);
 
     try {
+      const effectiveSocioId = isAdminSession
+        ? selectedSocioId || undefined
+        : user?.id_socio || undefined;
+
       const res = await enviarMensajeCoachIa({
         message,
-        socio_id: user?.id_socio || 'me',
+        socio_id: effectiveSocioId,
         conversationContext: buildConversationMemory(messages, userMessage),
       });
 
@@ -433,7 +538,7 @@ export default function CoachIaPage() {
       {
         id: createId(),
         role: 'assistant',
-        content: `Conversación reiniciada, ${displayName}. Contame qué objetivo querés trabajar ahora.`,
+        content: `Conversación reiniciada, ${displayName}. Contame qué objetivo querés trabajar ahora${selectedSocio ? ` para ${shortSocioLabel(selectedSocio)}` : ''}.`,
         suggestedReplies: quickPrompts,
         nextBestStep: 'Elegí una sugerencia o escribí tu consulta completa.',
       },
@@ -445,7 +550,7 @@ export default function CoachIaPage() {
       <div className="flex h-[100dvh] w-full overflow-hidden bg-slate-50 dark:bg-slate-950">
         <AppSidebar />
         <SidebarInset className="h-[100dvh] overflow-hidden bg-slate-50 dark:bg-slate-950">
-          <AppHeader title="Coach IA" />
+          <AppHeader title={c("Coach IA", "AI Coach")} />
           <section className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-6">
             <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 pb-4">
               <div className="overflow-hidden rounded-3xl border border-cyan-100 bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950 p-5 text-white shadow-xl dark:border-cyan-500/20 sm:p-6">
@@ -453,32 +558,101 @@ export default function CoachIaPage() {
                   <div className="max-w-3xl">
                     <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-xs font-semibold text-cyan-100">
                       <Brain className="h-3.5 w-3.5" />
-                      RAG Coach contextual memory
+                      {c("RAG Coach con memoria contextual", "RAG Coach contextual memory")}
                     </div>
                     <h1 className="mt-4 text-2xl font-black tracking-tight sm:text-4xl">
-                      Coach IA con memoria contextual del socio
+                      {c("Coach IA con memoria contextual del socio", "AI Coach with member contextual memory")}
                     </h1>
                     <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-base">
-                      Consultá rutinas, dietas y evolución física con continuidad conversacional, contexto operativo y recomendaciones más personalizadas.
+                      {c("Consultá rutinas, dietas y evolución física con continuidad conversacional, contexto operativo y recomendaciones más personalizadas.", "Consult routines, diets and physical evolution with conversational continuity, operational context and more personalized recommendations.")}
                     </p>
                   </div>
 
                   <div className="grid grid-cols-3 gap-2 sm:min-w-[360px]">
                     <div className="rounded-2xl border border-white/10 bg-white/10 p-3 text-center backdrop-blur">
                       <div className="text-2xl font-black">{totalAssistantMessages}</div>
-                      <div className="text-[11px] text-slate-300">respuestas</div>
+                      <div className="text-[11px] text-slate-300">{c("respuestas", "responses")}</div>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/10 p-3 text-center backdrop-blur">
                       <div className="text-2xl font-black">{totalActionMessages}</div>
-                      <div className="text-[11px] text-slate-300">acciones</div>
+                      <div className="text-[11px] text-slate-300">{c("acciones", "actions")}</div>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/10 p-3 text-center backdrop-blur">
-                      <div className="text-2xl font-black">{hasRagSources ? 'Sí' : '—'}</div>
-                      <div className="text-[11px] text-slate-300">fuentes</div>
+                      <div className="text-2xl font-black">{hasRagSources ? c('Sí', 'Yes') : '—'}</div>
+                      <div className="text-[11px] text-slate-300">{c("fuentes", "sources")}</div>
                     </div>
                   </div>
                 </div>
               </div>
+
+              {isAdminSession && (
+                <Card className="rounded-3xl border-cyan-100 bg-white shadow-sm dark:border-cyan-500/20 dark:bg-slate-900">
+                  <CardContent className="p-4 sm:p-5">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-950 dark:text-white">
+                          <Users className="h-4 w-4 text-[#02a8e1]" />
+                          {c("Socio operativo del Coach IA", "Operational member for AI Coach")}
+                        </div>
+                        <p className="mb-3 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                          {c("Como administrador, seleccioná un socio real antes de generar dietas, rutinas o análisis. El Coach enviará ese id_socio válido al backend.", "As an administrator, select a real member before generating diets, routines or analyses. The Coach will send that valid id_socio to the backend.")}
+                        </p>
+                        <div className="grid gap-2 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+                          <input
+                            value={socioSearch}
+                            onChange={(event) => setSocioSearch(event.target.value)}
+                            placeholder={c("Buscar socio por nombre, DNI o email...", "Search member by name, ID or email...")}
+                            className="h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#02a8e1] focus:ring-2 focus:ring-cyan-100 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-cyan-500/20"
+                          />
+                          <select
+                            value={selectedSocioId}
+                            onChange={(event) => setSelectedSocioId(event.target.value)}
+                            disabled={sociosLoading || filteredSocios.length === 0}
+                            className="h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-[#02a8e1] focus:ring-2 focus:ring-cyan-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-cyan-500/20"
+                          >
+                            <option value="">
+                              {sociosLoading ? c('Cargando socios...', 'Loading members...') : c('Seleccionar socio para acciones automáticas', 'Select a member for automatic actions')}
+                            </option>
+                            {filteredSocios.map((socio) => (
+                              <option key={socio.id_socio} value={socio.id_socio}>
+                                {socioOptionLabel(socio)}{socio.activo ? '' : c(' · Inactivo', ' · Inactive')}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        {sociosError && (
+                          <p className="mt-2 text-xs font-medium text-rose-600 dark:text-rose-300">
+                            {sociosError}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-950/70 dark:text-slate-300 lg:min-w-[280px]">
+                        <div className="font-semibold text-slate-950 dark:text-white">
+                          {selectedSocio ? shortSocioLabel(selectedSocio) : c('Sin socio seleccionado', 'No member selected')}
+                        </div>
+                        <div className="mt-1 leading-relaxed">
+                          {selectedSocio
+                            ? c('Las próximas respuestas podrán generar y guardar datos en módulos del socio seleccionado.', 'The next responses can generate and save data in the selected member modules.')
+                            : c('Sin selección, el Coach solo dará orientación general segura y bloqueará acciones automáticas.', 'Without a selected member, the Coach will only provide safe general guidance and block automatic actions.')}
+                        </div>
+                        {selectedSocioId && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="mt-3 h-8 rounded-xl text-xs dark:border-slate-700 dark:bg-slate-900"
+                            onClick={() => setSelectedSocioId('')}
+                            disabled={loading}
+                          >
+                            {c("Limpiar selección", "Clear selection")}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
                 <Card className="flex min-h-[70dvh] flex-col overflow-hidden rounded-3xl border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
