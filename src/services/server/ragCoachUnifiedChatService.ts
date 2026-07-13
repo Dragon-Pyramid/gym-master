@@ -15,6 +15,7 @@ import { findAllEvolucionesSocioByIdSocio } from '@/services/evolucionSocioServi
 import { buildRutinasRagContext } from './ragRutinasCoachService';
 import { buildDietasRagContext } from './ragDietasCoachService';
 import { analyzeEvolucionFisicaWithRag } from './ragEvolucionFisicaCoachService';
+import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 import { buildRagCoachSocioContext, type RagCoachSocioContext } from './ragCoachSocioContextService';
 
 const MAX_MESSAGE_LENGTH = 1600;
@@ -43,10 +44,40 @@ function isAdminRole(role?: string | null) {
   return normalized === 'admin' || normalized === 'administrador';
 }
 
-function resolveSocioId(user: JwtUser, requested?: string | null) {
+function isValidUuid(value?: string | null): value is string {
+  if (typeof value !== 'string') return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.trim());
+}
+
+async function resolveSocioId(user: JwtUser, requested?: string | null) {
   const cleanRequested = cleanText(requested);
-  if (cleanRequested && cleanRequested !== 'me') return cleanRequested;
-  return user.id_socio || '';
+
+  if (isValidUuid(cleanRequested)) {
+    return cleanRequested.trim();
+  }
+
+  if (isValidUuid(user.id_socio)) {
+    return user.id_socio.trim();
+  }
+
+  if (!isAdminRole(user.rol) && isValidUuid(user.id)) {
+    const supabase = getSupabaseServerClient();
+    const { data, error } = await supabase
+      .from('socio')
+      .select('id_socio')
+      .eq('usuario_id', user.id)
+      .maybeSingle();
+
+    if (error) {
+      console.warn('No se pudo resolver id_socio para Coach IA:', error.message);
+    }
+
+    if (isValidUuid(data?.id_socio)) {
+      return data.id_socio.trim();
+    }
+  }
+
+  return '';
 }
 
 function getDisplayName(user: JwtUser) {
@@ -664,28 +695,28 @@ export async function handleUnifiedRagCoachChat(
 
   const name = getDisplayName(user);
   const greeting = `Hola, ${name}, ¿en qué te puedo ayudar?`;
-  const socioId = resolveSocioId(user, payload.socio_id);
+  const effectiveSocioId = await resolveSocioId(user, payload.socio_id);
+  const hasResolvedSocio = Boolean(effectiveSocioId);
 
-  if (!socioId && !isAdminRole(user.rol)) {
+  if (!hasResolvedSocio && !isAdminRole(user.rol)) {
     throw new Error('No se pudo identificar el socio autenticado.');
   }
 
-  const effectiveSocioId = socioId || cleanText(payload.socio_id);
-  if (!effectiveSocioId) {
-    throw new Error('Debe indicar un socio para usar el Coach IA.');
-  }
-
-  const socioContext = await buildRagCoachSocioContext(user, effectiveSocioId).catch((error) => {
-    console.warn('No se pudo construir contexto del socio para el Coach IA:', error);
-    return null;
-  });
+  const socioContext = hasResolvedSocio
+    ? await buildRagCoachSocioContext(user, effectiveSocioId).catch((error) => {
+        console.warn('No se pudo construir contexto del socio para el Coach IA:', error);
+        return null;
+      })
+    : null;
 
   const conversationMemory = sanitizeConversationMemory(payload.conversationContext);
   const detectedIntent = detectIntent(message);
   const intent = resolveIntentWithMemory(message, detectedIntent, conversationMemory);
   const memoryTrace = buildMemoryTrace(conversationMemory, intent, socioContext);
   const safetyNotes = buildSafetyNotes(message, intent, socioContext);
-  const evolutionSuggestion = await getEvolutionSuggestion(user, effectiveSocioId, socioContext);
+  const evolutionSuggestion = hasResolvedSocio
+    ? await getEvolutionSuggestion(user, effectiveSocioId, socioContext)
+    : 'Para generar dietas, rutinas o análisis automáticos necesito un socio real asociado a la sesión o seleccionado por administración.';
   const contextLine = getContextCoachLine(socioContext);
   const coachNotes: string[] = [];
   const suggestedReplies: string[] = [];
@@ -770,6 +801,53 @@ export async function handleUnifiedRagCoachChat(
       contextSummary: socioContext?.resumenHumano,
       contextHints: socioContext?.hints,
       nextBestStep: 'Derivar a orientación nutricional profesional antes de generar una dieta automática.',
+      safetySummary: safetyNotes.join(' '),
+      qaSummary: buildQaSummary([action]),
+      contextSnapshot: socioContext?.contextSnapshot,
+      memoryHighlights: socioContext?.memoryHighlights,
+      memoryTrace,
+      contextConfidence: buildContextConfidence(socioContext),
+    };
+  }
+
+  if (!hasResolvedSocio && (
+    intent === 'routine_request' ||
+    intent === 'diet_request' ||
+    intent === 'routine_and_diet_request' ||
+    intent === 'evolution_analysis_request'
+  )) {
+    const action: RagCoachChatActionResult = {
+      type: 'guidance_only',
+      ok: true,
+      title: 'Socio no identificado',
+      message: 'No ejecuté acciones automáticas porque no recibí un id_socio real. Así evitamos crear rutinas, dietas o consultas con un identificador inválido.',
+      safetyNotes,
+      qualityAudit: buildQualityAudit({
+        domain: 'orientacion',
+        message,
+        context: socioContext,
+        safetyNotes,
+        blocked: true,
+      }),
+    };
+
+    return {
+      greeting,
+      intent: 'general_guidance',
+      reply: [
+        `${name}, entendí tu pedido, pero no puedo generar una dieta, rutina o análisis automático sin identificar un socio real.`,
+        isAdminRole(user.rol)
+          ? 'Estás operando como administrador: seleccioná un socio real en el Coach IA o enviá la solicitud con un id_socio válido.'
+          : 'Tu sesión no trajo id_socio válido. Cerrá sesión y volvé a ingresar para refrescar el token; si persiste, revisá que tu usuario esté vinculado a un socio.',
+        'Puedo darte orientación general segura mientras tanto, pero no voy a guardar datos en módulos del socio sin ese vínculo.',
+      ].join('\n\n'),
+      actions: [action],
+      suggestedReplies: ['Quiero orientación general', 'Voy a seleccionar un socio'],
+      missingParams: ['id_socio'],
+      coachNotes: [...coachNotes, 'Se bloqueó automatización porque no hay id_socio real resuelto.'],
+      contextSummary: socioContext?.resumenHumano,
+      contextHints: socioContext?.hints,
+      nextBestStep: 'Seleccionar un socio real en el Coach IA o refrescar sesión de socio antes de generar dieta/rutina.',
       safetySummary: safetyNotes.join(' '),
       qaSummary: buildQaSummary([action]),
       contextSnapshot: socioContext?.contextSnapshot,
