@@ -21,8 +21,58 @@ import {
 } from '@/services/gimnasioParametrizacionService';
 import { useAuthStore } from '@/stores/authStore';
 import { useCatalogosParametrizables } from '@/hooks/useCatalogosParametrizables';
+import { useI18n } from '@/i18n/I18nProvider';
+import type { GymMasterLocale } from '@/i18n/config';
 
 const DEFAULT_LOGO = '/gm_logo.svg';
+
+function gymParamTx(locale: GymMasterLocale, es: string, en: string) {
+  return locale === 'en' ? en : es;
+}
+
+function normalizeGymParamText(value?: string | null) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+}
+
+const FISCAL_CONDITION_LABELS_EN: Record<string, string> = {
+  responsable_inscripto: 'Registered VAT taxpayer',
+  'responsable inscripto': 'Registered VAT taxpayer',
+  monotributo: 'Monotributo',
+  consumidor_final: 'Final consumer',
+  'consumidor final': 'Final consumer',
+  exento: 'Tax-exempt',
+  no_responsable: 'Not liable',
+  'no responsable': 'Not liable',
+  otro: 'Other',
+};
+
+function translateFiscalCondition(locale: GymMasterLocale, value?: string | null) {
+  const text = String(value ?? '');
+  if (locale !== 'en') return text;
+  return FISCAL_CONDITION_LABELS_EN[normalizeGymParamText(text)] ?? text;
+}
+
+const STRIPE_STATUS_LABELS: Record<string, { es: string; en: string }> = {
+  no_configurado: { es: 'No configurado', en: 'Not configured' },
+  configurado: { es: 'Configurado', en: 'Configured' },
+  activo: { es: 'Activo', en: 'Active' },
+  inactivo: { es: 'Inactivo', en: 'Inactive' },
+};
+
+function translateStripeStatus(locale: GymMasterLocale, value: string) {
+  const labels = STRIPE_STATUS_LABELS[value];
+  return labels ? gymParamTx(locale, labels.es, labels.en) : value;
+}
+
+function translateStripeMode(locale: GymMasterLocale, value: 'test' | 'live') {
+  if (value === 'live') return gymParamTx(locale, 'Producción', 'Production');
+  return gymParamTx(locale, 'Test / sandbox', 'Test / sandbox');
+}
+
 
 const emptyForm: GimnasioParametrizacionPayload = {
   nombre_comercial: '',
@@ -104,6 +154,8 @@ const fallbackCondicionesFiscales = [
 export default function GimnasioParametrizacionPage() {
   const { user } = useAuthStore();
   const { catalogos } = useCatalogosParametrizables();
+  const { locale } = useI18n();
+  const c = (es: string, en: string) => gymParamTx(locale, es, en);
   const logoFileInputRef = useRef<HTMLInputElement | null>(null);
   const [form, setForm] = useState<GimnasioParametrizacionPayload>(emptyForm);
   const [data, setData] = useState<GimnasioParametrizacion | null>(null);
@@ -127,7 +179,7 @@ export default function GimnasioParametrizacionPage() {
         setForm(formFromData(response));
       } catch (err) {
         if (!mounted) return;
-        setError(err instanceof Error ? err.message : 'No se pudo cargar la parametrización.');
+        setError(err instanceof Error ? err.message : c('No se pudo cargar la parametrización.', 'Could not load gym settings.'));
       } finally {
         if (mounted) setLoading(false);
       }
@@ -137,7 +189,7 @@ export default function GimnasioParametrizacionPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [locale]);
 
   const logoPreview = useMemo(() => {
     const value = textValue(form.logo_url).trim();
@@ -193,9 +245,9 @@ export default function GimnasioParametrizacionPage() {
     try {
       const uploaded = await uploadGimnasioLogo(file);
       updateField('logo_url', uploaded.secure_url || uploaded.url);
-      setSuccessMessage('Logo subido a Cloudinary. Guardá la parametrización para persistirlo.');
+      setSuccessMessage(c('Logo subido a Cloudinary. Guardá la parametrización para persistirlo.', 'Logo uploaded to Cloudinary. Save the settings to persist the change.'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo subir el logo a Cloudinary.');
+      setError(err instanceof Error ? err.message : c('No se pudo subir el logo a Cloudinary.', 'Could not upload the logo to Cloudinary.'));
     } finally {
       setUploadingLogo(false);
     }
@@ -211,9 +263,9 @@ export default function GimnasioParametrizacionPage() {
       const saved = await updateGimnasioParametrizacion(form);
       setData(saved);
       setForm(formFromData(saved));
-      setSuccessMessage('Parametrización del gimnasio actualizada correctamente.');
+      setSuccessMessage(c('Parametrización del gimnasio actualizada correctamente.', 'Gym settings updated successfully.'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo guardar la parametrización.');
+      setError(err instanceof Error ? err.message : c('No se pudo guardar la parametrización.', 'Could not save gym settings.'));
     } finally {
       setSaving(false);
     }
@@ -224,23 +276,22 @@ export default function GimnasioParametrizacionPage() {
       <AppSidebar />
       <SidebarInset>
         <div className='min-h-screen bg-slate-50 dark:bg-slate-950'>
-          <AppHeader title="Datos del Gimnasio" />
+          <AppHeader title={c('Datos del Gimnasio', 'Gym data')} />
           <main className='mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 lg:px-8'>
             <section className='rounded-3xl border border-sky-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900'>
               <div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
                 <div>
-                  <p className='text-sm font-semibold uppercase tracking-wide text-sky-600'>Parametrización</p>
+                  <p className='text-sm font-semibold uppercase tracking-wide text-sky-600'>{c('Parametrización', 'Settings')}</p>
                   <h1 className='mt-1 text-3xl font-bold tracking-tight text-slate-900 dark:text-white'>
-                    Branding y datos legales del gimnasio
+                    {c('Branding y datos legales del gimnasio', 'Branding and legal gym data')}
                   </h1>
                   <p className='mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300'>
-                    Configurá la identidad comercial y fiscal del gimnasio. Estos datos quedan listos para recibos,
-                    PDFs, reportes, exportaciones y futuras pantallas con branding propio del cliente.
+                    {c('Configurá la identidad comercial y fiscal del gimnasio. Estos datos quedan listos para recibos, PDFs, reportes, exportaciones y futuras pantallas con branding propio del cliente.', "Configure the gym's commercial and tax identity. These data are ready for receipts, PDFs, reports, exports, and future screens with the client's own branding.")}
                   </p>
                 </div>
                 <div className='rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-sky-800 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-100'>
-                  <div className='font-semibold'>Administrador</div>
-                  <div>{user?.email ?? 'Usuario actual'}</div>
+                  <div className='font-semibold'>{c('Administrador', 'Administrator')}</div>
+                  <div>{user?.email ?? c('Usuario actual', 'Current user')}</div>
                 </div>
               </div>
             </section>
@@ -249,20 +300,20 @@ export default function GimnasioParametrizacionPage() {
               <Card>
                 <CardContent className='flex items-center gap-3 p-6 text-sm text-muted-foreground'>
                   <Loader2 className='h-4 w-4 animate-spin' />
-                  Cargando parametrización del gimnasio...
+                  {c('Cargando parametrización del gimnasio...', 'Loading gym settings...')}
                 </CardContent>
               </Card>
             ) : (
               <form onSubmit={handleSubmit} className='grid gap-6 xl:grid-cols-[1fr_360px]'>
                 <div className='space-y-6'>
                   {error && (
-                    <div className='rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700'>
+                    <div className='rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200'>
                       {error}
                     </div>
                   )}
 
                   {successMessage && (
-                    <div className='flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700'>
+                    <div className='flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200'>
                       <CheckCircle2 className='h-4 w-4' />
                       {successMessage}
                     </div>
@@ -272,64 +323,64 @@ export default function GimnasioParametrizacionPage() {
                     <CardHeader>
                       <div className='flex items-center gap-2 text-lg font-semibold'>
                         <Building2 className='h-5 w-5 text-sky-600' />
-                        Identidad comercial y legal
+                        {c('Identidad comercial y legal', 'Commercial and legal identity')}
                       </div>
                     </CardHeader>
                     <CardContent className='grid gap-4 md:grid-cols-2'>
                       <div className='space-y-2'>
-                        <Label htmlFor='nombre_comercial'>Nombre comercial</Label>
+                        <Label htmlFor='nombre_comercial'>{c('Nombre comercial', 'Trade name')}</Label>
                         <Input id='nombre_comercial' value={textValue(form.nombre_comercial)} onChange={(e) => updateField('nombre_comercial', e.target.value)} required />
                       </div>
                       <div className='space-y-2'>
-                        <Label htmlFor='razon_social'>Razón social</Label>
+                        <Label htmlFor='razon_social'>{c('Razón social', 'Legal name')}</Label>
                         <Input id='razon_social' value={textValue(form.razon_social)} onChange={(e) => updateField('razon_social', e.target.value)} />
                       </div>
                       <div className='space-y-2'>
-                        <Label htmlFor='identificacion_fiscal'>CUIT / DNI fiscal</Label>
+                        <Label htmlFor='identificacion_fiscal'>{c('CUIT / DNI fiscal', 'Tax ID')}</Label>
                         <Input id='identificacion_fiscal' value={textValue(form.identificacion_fiscal)} onChange={(e) => updateField('identificacion_fiscal', e.target.value)} />
                       </div>
                       <div className='space-y-2'>
-                        <Label htmlFor='condicion_fiscal'>Condición fiscal</Label>
+                        <Label htmlFor='condicion_fiscal'>{c('Condición fiscal', 'Tax condition')}</Label>
                         <select
                           id='condicion_fiscal'
                           value={textValue(form.condicion_fiscal)}
                           onChange={(e) => updateField('condicion_fiscal', e.target.value)}
                           className='h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
                         >
-                          <option value=''>Seleccionar condición fiscal</option>
+                          <option value=''>{c('Seleccionar condición fiscal', 'Select tax condition')}</option>
                           {condicionesFiscales.map((item) => (
                             <option key={item.codigo} value={item.nombre}>
-                              {item.nombre}
+                              {translateFiscalCondition(locale, item.nombre)}
                             </option>
                           ))}
                         </select>
                       </div>
                       <div className='space-y-2 md:col-span-2'>
-                        <Label htmlFor='domicilio_legal'>Domicilio legal</Label>
+                        <Label htmlFor='domicilio_legal'>{c('Domicilio legal', 'Legal address')}</Label>
                         <Input id='domicilio_legal' value={textValue(form.domicilio_legal)} onChange={(e) => updateField('domicilio_legal', e.target.value)} />
                       </div>
                       <div className='space-y-2'>
-                        <Label htmlFor='ciudad'>Ciudad</Label>
+                        <Label htmlFor='ciudad'>{c('Ciudad', 'City')}</Label>
                         <Input id='ciudad' value={textValue(form.ciudad)} onChange={(e) => updateField('ciudad', e.target.value)} />
                       </div>
                       <div className='space-y-2'>
-                        <Label htmlFor='provincia'>Provincia</Label>
+                        <Label htmlFor='provincia'>{c('Provincia', 'Province')}</Label>
                         <Input id='provincia' value={textValue(form.provincia)} onChange={(e) => updateField('provincia', e.target.value)} />
                       </div>
                       <div className='space-y-2'>
-                        <Label htmlFor='pais'>País</Label>
+                        <Label htmlFor='pais'>{c('País', 'Country')}</Label>
                         <Input id='pais' value={textValue(form.pais)} onChange={(e) => updateField('pais', e.target.value)} />
                       </div>
                       <div className='space-y-2'>
-                        <Label htmlFor='telefono'>Teléfono</Label>
+                        <Label htmlFor='telefono'>{c('Teléfono', 'Phone')}</Label>
                         <Input id='telefono' value={textValue(form.telefono)} onChange={(e) => updateField('telefono', e.target.value)} />
                       </div>
                       <div className='space-y-2'>
-                        <Label htmlFor='email'>Email institucional</Label>
+                        <Label htmlFor='email'>{c('Email institucional', 'Institutional email')}</Label>
                         <Input id='email' type='email' value={textValue(form.email)} onChange={(e) => updateField('email', e.target.value)} />
                       </div>
                       <div className='space-y-2'>
-                        <Label htmlFor='sitio_web'>Sitio web</Label>
+                        <Label htmlFor='sitio_web'>{c('Sitio web', 'Website')}</Label>
                         <Input id='sitio_web' placeholder='https://...' value={textValue(form.sitio_web)} onChange={(e) => updateField('sitio_web', e.target.value)} />
                       </div>
                       <div className='space-y-2'>
@@ -347,16 +398,16 @@ export default function GimnasioParametrizacionPage() {
                     <CardHeader>
                       <div className='flex items-center gap-2 text-lg font-semibold'>
                         <Palette className='h-5 w-5 text-sky-600' />
-                        Branding visual
+                        {c('Branding visual', 'Visual branding')}
                       </div>
                     </CardHeader>
                     <CardContent className='grid gap-4 md:grid-cols-2'>
                       <div className='space-y-2 md:col-span-2'>
-                        <Label htmlFor='logo_url'>Logo principal</Label>
+                        <Label htmlFor='logo_url'>{c('Logo principal', 'Main logo')}</Label>
                         <div className='grid gap-2 md:grid-cols-[1fr_auto]'>
                           <Input
                             id='logo_url'
-                            placeholder='/gm_logo.svg o https://...'
+                            placeholder={c('/gm_logo.svg o https://...', '/gm_logo.svg or https://...')}
                             value={textValue(form.logo_url)}
                             onChange={(e) => updateField('logo_url', e.target.value)}
                           />
@@ -372,7 +423,7 @@ export default function GimnasioParametrizacionPage() {
                             ) : (
                               <UploadCloud className='mr-2 h-4 w-4' />
                             )}
-                            Subir a Cloudinary
+                            {c('Subir a Cloudinary', 'Upload to Cloudinary')}
                           </Button>
                         </div>
                         <input
@@ -382,28 +433,28 @@ export default function GimnasioParametrizacionPage() {
                           className='hidden'
                           onChange={handleLogoFileChange}
                         />
-                        <p className='text-xs text-muted-foreground'>Podés pegar una URL pública o subir el logo principal a Cloudinary. Luego guardá la parametrización para persistir el cambio.</p>
+                        <p className='text-xs text-muted-foreground'>{c('Podés pegar una URL pública o subir el logo principal a Cloudinary. Luego guardá la parametrización para persistir el cambio.', 'You can paste a public URL or upload the main logo to Cloudinary. Then save the settings to persist the change.')}</p>
                       </div>
                       <div className='space-y-2 md:col-span-2'>
-                        <Label htmlFor='logo_alternativo_url'>Logo alternativo</Label>
-                        <Input id='logo_alternativo_url' placeholder='Opcional: versión horizontal, blanco o membrete' value={textValue(form.logo_alternativo_url)} onChange={(e) => updateField('logo_alternativo_url', e.target.value)} />
+                        <Label htmlFor='logo_alternativo_url'>{c('Logo alternativo', 'Alternative logo')}</Label>
+                        <Input id='logo_alternativo_url' placeholder={c('Opcional: versión horizontal, blanco o membrete', 'Optional: horizontal, white, or letterhead version')} value={textValue(form.logo_alternativo_url)} onChange={(e) => updateField('logo_alternativo_url', e.target.value)} />
                       </div>
                       <div className='space-y-2'>
-                        <Label htmlFor='color_primario'>Color primario</Label>
+                        <Label htmlFor='color_primario'>{c('Color primario', 'Primary color')}</Label>
                         <div className='flex gap-2'>
                           <Input id='color_primario' type='color' value={textValue(form.color_primario) || '#0EA5E9'} onChange={(e) => updateField('color_primario', e.target.value)} className='h-10 w-16 p-1' />
                           <Input value={textValue(form.color_primario)} onChange={(e) => updateField('color_primario', e.target.value)} />
                         </div>
                       </div>
                       <div className='space-y-2'>
-                        <Label htmlFor='color_secundario'>Color secundario</Label>
+                        <Label htmlFor='color_secundario'>{c('Color secundario', 'Secondary color')}</Label>
                         <div className='flex gap-2'>
                           <Input id='color_secundario' type='color' value={textValue(form.color_secundario) || '#111827'} onChange={(e) => updateField('color_secundario', e.target.value)} className='h-10 w-16 p-1' />
                           <Input value={textValue(form.color_secundario)} onChange={(e) => updateField('color_secundario', e.target.value)} />
                         </div>
                       </div>
                       <div className='space-y-2'>
-                        <Label htmlFor='color_acento'>Color de acento</Label>
+                        <Label htmlFor='color_acento'>{c('Color de acento', 'Accent color')}</Label>
                         <div className='flex gap-2'>
                           <Input id='color_acento' type='color' value={textValue(form.color_acento) || '#22C55E'} onChange={(e) => updateField('color_acento', e.target.value)} className='h-10 w-16 p-1' />
                           <Input value={textValue(form.color_acento)} onChange={(e) => updateField('color_acento', e.target.value)} />
@@ -416,7 +467,7 @@ export default function GimnasioParametrizacionPage() {
                     <CardHeader>
                       <div className='flex items-center gap-2 text-lg font-semibold'>
                         <CreditCard className='h-5 w-5 text-sky-600' />
-                        Pagos online Stripe
+                        {c('Pagos online Stripe', 'Stripe online payments')}
                       </div>
                     </CardHeader>
                     <CardContent className='grid gap-4 md:grid-cols-2'>
@@ -429,68 +480,68 @@ export default function GimnasioParametrizacionPage() {
                             className='mt-1 h-4 w-4 rounded border-slate-300'
                           />
                           <span>
-                            <span className='block font-semibold text-slate-900 dark:text-white'>Habilitar pagos online con Stripe</span>
+                            <span className='block font-semibold text-slate-900 dark:text-white'>{c('Habilitar pagos online con Stripe', 'Enable online payments with Stripe')}</span>
                             <span className='mt-1 block text-xs leading-5 text-slate-600 dark:text-slate-300'>
-                              Si está desactivado, los socios no verán disponible el checkout online y deberán abonar por medios manuales registrados por administración.
+                              {c('Si está desactivado, los socios no verán disponible el checkout online y deberán abonar por medios manuales registrados por administración.', 'If disabled, members will not see online checkout available and must pay through manual methods registered by administration.')}
                             </span>
                           </span>
                         </label>
                       </div>
                       <div className='space-y-2'>
-                        <Label htmlFor='stripe_estado'>Estado de integración</Label>
+                        <Label htmlFor='stripe_estado'>{c('Estado de integración', 'Integration status')}</Label>
                         <select
                           id='stripe_estado'
                           value={textValue(form.stripe_estado) || 'no_configurado'}
                           onChange={(e) => updateStripeEstado(e.target.value)}
                           className='h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
                         >
-                          <option value='no_configurado'>No configurado</option>
-                          <option value='configurado'>Configurado</option>
-                          <option value='activo'>Activo</option>
-                          <option value='inactivo'>Inactivo</option>
+                          <option value='no_configurado'>{translateStripeStatus(locale, 'no_configurado')}</option>
+                          <option value='configurado'>{translateStripeStatus(locale, 'configurado')}</option>
+                          <option value='activo'>{translateStripeStatus(locale, 'activo')}</option>
+                          <option value='inactivo'>{translateStripeStatus(locale, 'inactivo')}</option>
                         </select>
                       </div>
                       <div className='space-y-2'>
-                        <Label htmlFor='stripe_modo'>Modo</Label>
+                        <Label htmlFor='stripe_modo'>{c('Modo', 'Mode')}</Label>
                         <select
                           id='stripe_modo'
                           value={textValue(form.stripe_modo) || 'test'}
                           onChange={(e) => updateField('stripe_modo', e.target.value)}
                           className='h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
                         >
-                          <option value='test'>Test / sandbox</option>
-                          <option value='live'>Producción</option>
+                          <option value='test'>{translateStripeMode(locale, 'test')}</option>
+                          <option value='live'>{translateStripeMode(locale, 'live')}</option>
                         </select>
                       </div>
                       <div className='space-y-2 md:col-span-2'>
-                        <Label htmlFor='stripe_public_key'>Publishable key / referencia pública</Label>
+                        <Label htmlFor='stripe_public_key'>{c('Publishable key / referencia pública', 'Publishable key / public reference')}</Label>
                         <Input
                           id='stripe_public_key'
-                          placeholder='Opcional. No guardar claves secretas acá.'
+                          placeholder={c('Opcional. No guardar claves secretas acá.', 'Optional. Do not store secret keys here.')}
                           value={textValue(form.stripe_public_key)}
                           onChange={(e) => updateField('stripe_public_key', e.target.value)}
                         />
                         <p className='text-xs text-muted-foreground'>
-                          Las claves secretas y webhooks se manejan por variables de entorno seguras. Este campo es solo referencia operativa.
+                          {c('Las claves secretas y webhooks se manejan por variables de entorno seguras. Este campo es solo referencia operativa.', 'Secret keys and webhooks are managed through secure environment variables. This field is only an operational reference.')}
                         </p>
                       </div>
                       <div className='space-y-2 md:col-span-2'>
-                        <Label htmlFor='stripe_account_reference'>Referencia de cuenta Stripe</Label>
+                        <Label htmlFor='stripe_account_reference'>{c('Referencia de cuenta Stripe', 'Stripe account reference')}</Label>
                         <Input
                           id='stripe_account_reference'
-                          placeholder='Ej: cuenta conectada, cliente, alias o identificador interno'
+                          placeholder={c('Ej: cuenta conectada, cliente, alias o identificador interno', 'Example: connected account, client, alias, or internal identifier')}
                           value={textValue(form.stripe_account_reference)}
                           onChange={(e) => updateField('stripe_account_reference', e.target.value)}
                         />
                       </div>
                       <div className='space-y-2 md:col-span-2'>
-                        <Label htmlFor='stripe_observaciones'>Observaciones Stripe</Label>
+                        <Label htmlFor='stripe_observaciones'>{c('Observaciones Stripe', 'Stripe notes')}</Label>
                         <textarea
                           id='stripe_observaciones'
                           value={textValue(form.stripe_observaciones)}
                           onChange={(e) => updateField('stripe_observaciones', e.target.value)}
                           className='min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm'
-                          placeholder='Notas internas sobre configuración, estado comercial o validaciones pendientes.'
+                          placeholder={c('Notas internas sobre configuración, estado comercial o validaciones pendientes.', 'Internal notes about configuration, commercial status, or pending validations.')}
                         />
                       </div>
                     </CardContent>
@@ -500,20 +551,20 @@ export default function GimnasioParametrizacionPage() {
                     <CardHeader>
                       <div className='flex items-center gap-2 text-lg font-semibold'>
                         <ReceiptText className='h-5 w-5 text-sky-600' />
-                        Textos legales para documentos
+                        {c('Textos legales para documentos', 'Legal texts for documents')}
                       </div>
                     </CardHeader>
                     <CardContent className='grid gap-4'>
                       <div className='space-y-2'>
-                        <Label htmlFor='texto_legal_recibos'>Texto legal para recibos</Label>
+                        <Label htmlFor='texto_legal_recibos'>{c('Texto legal para recibos', 'Legal text for receipts')}</Label>
                         <textarea id='texto_legal_recibos' value={textValue(form.texto_legal_recibos)} onChange={(e) => updateField('texto_legal_recibos', e.target.value)} className='min-h-[90px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm' />
                       </div>
                       <div className='space-y-2'>
-                        <Label htmlFor='texto_legal_reportes'>Texto legal para reportes/PDF</Label>
+                        <Label htmlFor='texto_legal_reportes'>{c('Texto legal para reportes/PDF', 'Legal text for reports/PDF')}</Label>
                         <textarea id='texto_legal_reportes' value={textValue(form.texto_legal_reportes)} onChange={(e) => updateField('texto_legal_reportes', e.target.value)} className='min-h-[90px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm' />
                       </div>
                       <div className='space-y-2'>
-                        <Label htmlFor='pie_pagina_documentos'>Pie de página institucional</Label>
+                        <Label htmlFor='pie_pagina_documentos'>{c('Pie de página institucional', 'Institutional footer')}</Label>
                         <textarea id='pie_pagina_documentos' value={textValue(form.pie_pagina_documentos)} onChange={(e) => updateField('pie_pagina_documentos', e.target.value)} className='min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm' />
                       </div>
                     </CardContent>
@@ -525,17 +576,17 @@ export default function GimnasioParametrizacionPage() {
                     <CardHeader>
                       <div className='flex items-center gap-2 text-lg font-semibold'>
                         <ShieldCheck className='h-5 w-5 text-sky-600' />
-                        Vista previa
+                        {c('Vista previa', 'Preview')}
                       </div>
                     </CardHeader>
                     <CardContent className='space-y-5'>
-                      <div className='rounded-2xl border bg-white p-5 text-center shadow-sm dark:bg-slate-950'>
-                        <div className='mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-2xl border bg-slate-50 p-3'>
-                          <img src={logoPreview} alt='Logo del gimnasio' className='max-h-20 max-w-20 object-contain' onError={() => setLogoBroken(true)} />
+                      <div className='rounded-2xl border bg-white p-5 text-center shadow-sm dark:border-slate-800 dark:bg-slate-950'>
+                        <div className='mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-2xl border bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900'>
+                          <img src={logoPreview} alt={c('Logo del gimnasio', 'Gym logo')} className='max-h-20 max-w-20 object-contain' onError={() => setLogoBroken(true)} />
                         </div>
                         <h2 className='text-xl font-bold'>{textValue(form.nombre_comercial) || 'Gym Master'}</h2>
-                        <p className='text-sm text-muted-foreground'>{textValue(form.razon_social) || 'Razón social pendiente'}</p>
-                        <p className='text-xs text-muted-foreground'>{textValue(form.identificacion_fiscal) || 'CUIT/DNI fiscal pendiente'}</p>
+                        <p className='text-sm text-muted-foreground'>{textValue(form.razon_social) || c('Razón social pendiente', 'Pending legal name')}</p>
+                        <p className='text-xs text-muted-foreground'>{textValue(form.identificacion_fiscal) || c('CUIT/DNI fiscal pendiente', 'Pending tax ID')}</p>
                         <div className='mt-4 flex justify-center gap-2'>
                           <span className='h-8 w-8 rounded-full border' style={{ backgroundColor: textValue(form.color_primario) || '#0EA5E9' }} />
                           <span className='h-8 w-8 rounded-full border' style={{ backgroundColor: textValue(form.color_secundario) || '#111827' }} />
@@ -543,28 +594,28 @@ export default function GimnasioParametrizacionPage() {
                         </div>
                       </div>
 
-                      <div className='rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-800'>
-                        La parametrización se usa como fuente única para recibos, reportes PDF comerciales y exportaciones. Los nuevos documentos deben consumir estos datos del gimnasio.
+                      <div className='rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200'>
+                        {c('La parametrización se usa como fuente única para recibos, reportes PDF comerciales y exportaciones. Los nuevos documentos deben consumir estos datos del gimnasio.', 'These settings are used as the single source for receipts, commercial PDF reports, and exports. New documents must consume these gym data.')}
                       </div>
 
                       <div className={`rounded-xl border px-4 py-3 text-xs leading-5 ${
                         form.stripe_habilitado && form.stripe_estado === 'activo'
-                          ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                          : 'border-slate-200 bg-slate-50 text-slate-700'
+                          ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200'
+                          : 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300'
                       }`}>
                         <strong>Stripe:</strong>{' '}
                         {form.stripe_habilitado && form.stripe_estado === 'activo'
-                          ? 'pagos online habilitados para socios.'
-                          : 'pagos online deshabilitados o pendientes de activación.'}
+                          ? c('pagos online habilitados para socios.', 'online payments enabled for members.')
+                          : c('pagos online deshabilitados o pendientes de activación.', 'online payments disabled or pending activation.')}
                       </div>
 
                       <Button type='submit' disabled={saving} className='w-full'>
                         {saving ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <Save className='mr-2 h-4 w-4' />}
-                        Guardar parametrización
+                        {c('Guardar parametrización', 'Save settings')}
                       </Button>
 
                       {data?.actualizado_en && (
-                        <p className='text-center text-xs text-muted-foreground'>Última actualización: {new Date(data.actualizado_en).toLocaleString('es-AR')}</p>
+                        <p className='text-center text-xs text-muted-foreground'>{c('Última actualización:', 'Last update:')} {new Date(data.actualizado_en).toLocaleString(locale === 'en' ? 'en-US' : 'es-AR')}</p>
                       )}
                     </CardContent>
                   </Card>

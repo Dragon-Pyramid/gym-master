@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { createAviso } from "@/services/avisoService";
 import { CreateAvisoDto } from "@/interfaces/aviso.interface";
 import TextEditor from "@/components/ui/TextEditor";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const emptyForm: CreateAvisoDto = {
   titulo: "",
@@ -19,6 +20,8 @@ const emptyForm: CreateAvisoDto = {
 };
 
 export default function AvisosForm({ onCreated }: { onCreated?: () => void }) {
+  const { locale } = useI18n();
+  const c = (es: string, en: string) => (locale === "en" ? en : es);
   const [form, setForm] = useState<CreateAvisoDto>(emptyForm);
   const [loading, setLoading] = useState(false);
 
@@ -53,33 +56,35 @@ export default function AvisosForm({ onCreated }: { onCreated?: () => void }) {
     <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4">
       <QaFileNameBadge file="src/components/forms/AvisosForm.tsx" />
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="titulo">Título</Label>
+        <Label htmlFor="titulo">{c("Título", "Title")}</Label>
         <Input
           id="titulo"
           name="titulo"
-          placeholder="Ingrese título"
+          placeholder={c("Ingrese título", "Enter title")}
           value={form.titulo}
           onChange={handleChange}
           required
+          className="dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="mensaje">Mensaje</Label>
+        <Label htmlFor="mensaje">{c("Mensaje", "Message")}</Label>
         <TextEditor value={form.mensaje} onChange={handleMensajeChange} />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="tipo">Tipo</Label>
+        <Label htmlFor="tipo">{c("Tipo", "Type")}</Label>
         <Input
           id="tipo"
           name="tipo"
-          placeholder="Tipo de aviso"
+          placeholder={c("Tipo de aviso", "Notice type")}
           value={form.tipo}
           onChange={handleChange}
           required
+          className="dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="fecha_envio">Fecha de envío</Label>
+        <Label htmlFor="fecha_envio">{c("Fecha de envío", "Send date")}</Label>
         <Input
           id="fecha_envio"
           name="fecha_envio"
@@ -87,6 +92,7 @@ export default function AvisosForm({ onCreated }: { onCreated?: () => void }) {
           value={form.fecha_envio}
           onChange={handleChange}
           required
+          className="dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
         />
       </div>
       <div className="flex items-center gap-2">
@@ -96,11 +102,12 @@ export default function AvisosForm({ onCreated }: { onCreated?: () => void }) {
           type="checkbox"
           checked={form.enviar_email}
           onChange={handleChange}
+          className="rounded border-slate-300 text-sky-600 focus:ring-sky-500"
         />
-        <Label htmlFor="enviar_email">Enviar por email</Label>
+        <Label htmlFor="enviar_email">{c("Enviar por email", "Send by email")}</Label>
       </div>
       <Button type="submit" className="justify-self-end" disabled={loading}>
-        {loading ? "Enviando..." : "Enviar Aviso"}
+        {loading ? c("Enviando...", "Sending...") : c("Enviar aviso", "Send notice")}
       </Button>
     </form>
   );

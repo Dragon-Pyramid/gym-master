@@ -105,6 +105,7 @@ export default function ProfileCard({
                   {roleLabel(locale, user?.rol)}
                 </p>
               </div>
+
               <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/10">
                 <div className="flex items-center gap-2 text-emerald-100">
                   <CheckCircle2 className="h-4 w-4" />
