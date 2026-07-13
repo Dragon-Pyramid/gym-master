@@ -14,6 +14,7 @@ import {
   Heading2,
   Heading3,
 } from "lucide-react";
+import { useI18n } from "@/i18n/I18nProvider";
 
 interface TextEditorProps {
   value: string;
@@ -25,6 +26,8 @@ const TextEditor = forwardRef<HTMLDivElement, TextEditorProps>(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   (props, ref) => {
     const { value, onChange } = props;
+    const { locale } = useI18n();
+    const tx = (es: string, en: string) => (locale === "en" ? en : es);
     const [activeTab, setActiveTab] = useState("write");
 
     const insertText = useCallback(
@@ -100,7 +103,10 @@ const TextEditor = forwardRef<HTMLDivElement, TextEditorProps>(
 
     const getPreviewHTML = () => {
       if (!value.trim())
-        return '<p class="text-gray-500 dark:text-gray-400 italic">Vista previa del contenido...</p>';
+        return `<p class="text-gray-500 dark:text-gray-400 italic">${tx(
+          "Vista previa del contenido...",
+          "Content preview..."
+        )}</p>`;
 
       let html = formatMarkdown(value);
 
@@ -120,63 +126,63 @@ const TextEditor = forwardRef<HTMLDivElement, TextEditorProps>(
     const toolbarButtons = [
       {
         icon: Bold,
-        action: () => insertText("**", "**", "texto en negrita"),
-        title: "Negrita",
+        action: () => insertText("**", "**", tx("texto en negrita", "bold text")),
+        title: tx("Negrita", "Bold"),
       },
       {
         icon: Italic,
-        action: () => insertText("*", "*", "texto en cursiva"),
-        title: "Cursiva",
+        action: () => insertText("*", "*", tx("texto en cursiva", "italic text")),
+        title: tx("Cursiva", "Italic"),
       },
       {
         icon: Heading1,
-        action: () => insertText("# ", "", "Título principal"),
-        title: "Título H1",
+        action: () => insertText("# ", "", tx("Título principal", "Main title")),
+        title: tx("Título H1", "H1 title"),
       },
       {
         icon: Heading2,
-        action: () => insertText("## ", "", "Subtítulo"),
-        title: "Título H2",
+        action: () => insertText("## ", "", tx("Subtítulo", "Subtitle")),
+        title: tx("Título H2", "H2 title"),
       },
       {
         icon: Heading3,
-        action: () => insertText("### ", "", "Título pequeño"),
-        title: "Título H3",
+        action: () => insertText("### ", "", tx("Título pequeño", "Small title")),
+        title: tx("Título H3", "H3 title"),
       },
       {
         icon: Link,
-        action: () => insertText("[", "](url)", "texto del enlace"),
-        title: "Enlace",
+        action: () => insertText("[", "](url)", tx("texto del enlace", "link text")),
+        title: tx("Enlace", "Link"),
       },
       {
         icon: Image,
-        action: () => insertText("![", "](url)", "descripción imagen"),
-        title: "Imagen",
+        action: () => insertText("![", "](url)", tx("descripción imagen", "image description")),
+        title: tx("Imagen", "Image"),
       },
       {
         icon: List,
-        action: () => insertText("* ", "", "elemento lista"),
-        title: "Lista",
+        action: () => insertText("* ", "", tx("elemento lista", "list item")),
+        title: tx("Lista", "List"),
       },
       {
         icon: ListOrdered,
-        action: () => insertText("1. ", "", "elemento numerado"),
-        title: "Lista numerada",
+        action: () => insertText("1. ", "", tx("elemento numerado", "numbered item")),
+        title: tx("Lista numerada", "Numbered list"),
       },
       {
         icon: Quote,
-        action: () => insertText("> ", "", "cita"),
-        title: "Cita",
+        action: () => insertText("> ", "", tx("cita", "quote")),
+        title: tx("Cita", "Quote"),
       },
       {
         icon: Code,
-        action: () => insertText("`", "`", "código"),
-        title: "Código",
+        action: () => insertText("`", "`", tx("código", "code")),
+        title: tx("Código", "Code"),
       },
     ];
 
     return (
-      <div className="w-full max-w-4xl mx-auto overflow-hidden bg-white rounded-lg shadow-lg dark:bg-background">
+      <div className="w-full max-w-4xl mx-auto overflow-hidden bg-white rounded-lg shadow-lg dark:border dark:border-slate-800 dark:bg-slate-900">
         <div className="border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between px-4 py-2">
             <div className="flex space-x-1">
@@ -189,7 +195,7 @@ const TextEditor = forwardRef<HTMLDivElement, TextEditorProps>(
                 }`}
                 type="button"
               >
-                Escribir
+                {tx("Escribir", "Write")}
               </button>
               <button
                 onClick={() => setActiveTab("preview")}
@@ -200,15 +206,15 @@ const TextEditor = forwardRef<HTMLDivElement, TextEditorProps>(
                 }`}
                 type="button"
               >
-                Vista previa
+                {tx("Vista previa", "Preview")}
               </button>
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400">
-              {value.length} caracteres
+              {value.length} {tx("caracteres", "characters")}
             </div>
           </div>
           {activeTab === "write" && (
-            <div className="flex flex-wrap gap-1 px-4 py-2 border-t bg-gray-50 dark:bg-muted">
+            <div className="flex flex-wrap gap-1 px-4 py-2 border-t bg-gray-50 dark:bg-slate-950 dark:border-slate-800">
               {toolbarButtons.map((button, index) => (
                 <button
                   key={index}
@@ -229,15 +235,18 @@ const TextEditor = forwardRef<HTMLDivElement, TextEditorProps>(
               id="markdown-textarea"
               value={value}
               onChange={(e) => onChange(e.target.value)}
-              placeholder="Escribe tu mensaje usando Markdown...\n\nEjemplos:\n**texto en negrita**\n*texto en cursiva*\n# Título principal\n## Subtítulo\n[enlace](https://ejemplo.com)\n![imagen](https://ejemplo.com/imagen.jpg)\n* Lista con viñetas\n1. Lista numerada\n> Cita\n`código`"
-              className="w-full p-4 font-mono text-sm text-gray-900 bg-white border-0 resize-none h-96 focus:outline-none focus:ring-0 dark:bg-background dark:text-gray-100"
+              placeholder={tx(
+                "Escribe tu mensaje usando Markdown...\n\nEjemplos:\n**texto en negrita**\n*texto en cursiva*\n# Título principal\n## Subtítulo\n[enlace](https://ejemplo.com)\n![imagen](https://ejemplo.com/imagen.jpg)\n* Lista con viñetas\n1. Lista numerada\n> Cita\n`código`",
+                "Write your message using Markdown...\n\nExamples:\n**bold text**\n*italic text*\n# Main title\n## Subtitle\n[link](https://example.com)\n![image](https://example.com/image.jpg)\n* Bulleted list\n1. Numbered list\n> Quote\n`code`"
+              )}
+              className="w-full p-4 font-mono text-sm text-gray-900 bg-white border-0 resize-none h-96 focus:outline-none focus:ring-0 dark:bg-slate-950 dark:text-gray-100"
               style={{
                 fontFamily:
                   'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
               }}
             />
           ) : (
-            <div className="p-4 overflow-y-auto text-gray-900 h-96 bg-gray-50 dark:bg-muted dark:text-gray-100">
+            <div className="p-4 overflow-y-auto text-gray-900 h-96 bg-gray-50 dark:bg-slate-950 dark:text-gray-100">
               <div
                 className="prose-sm prose max-w-none"
                 dangerouslySetInnerHTML={{ __html: getPreviewHTML() }}
@@ -245,11 +254,13 @@ const TextEditor = forwardRef<HTMLDivElement, TextEditorProps>(
             </div>
           )}
         </div>
-        <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-muted">
+        <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-slate-950">
           <div className="flex items-center justify-between">
             <div className="text-xs text-gray-500 dark:text-gray-400">
-              Soporta Markdown: **negrita**, *cursiva*, [enlaces](url),
-              ![imágenes](url), listas, citas y más
+              {tx(
+                "Soporta Markdown: **negrita**, *cursiva*, [enlaces](url), ![imágenes](url), listas, citas y más",
+                "Supports Markdown: **bold**, *italic*, [links](url), ![images](url), lists, quotes, and more"
+              )}
             </div>
           </div>
         </div>

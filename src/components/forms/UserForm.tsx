@@ -23,6 +23,7 @@ import { buildInitialPasswordFromDni, getPasswordPolicyChecks } from '@/utils/pa
 import { useCatalogosParametrizables } from '@/hooks/useCatalogosParametrizables';
 import type { CatalogoParametrizableItem, CatalogoParametrizableKey } from '@/interfaces/parametrizacion.interface';
 import { useI18n } from '@/i18n/I18nProvider';
+import type { GymMasterLocale } from '@/i18n/config';
 import { translateNavigationGroup, translateNavigationItem } from '@/i18n/navigationLabels';
 
 export interface UserFormProps {
@@ -121,6 +122,70 @@ const fallbackHorarios = [
   makeFallbackCatalogItem('rotativo_a_coordinar', 'Rotativo / a coordinar', null, 50),
 ];
 
+
+function userFormTx(locale: GymMasterLocale, es: string, en: string) {
+  return locale === 'en' ? en : es;
+}
+
+const CATALOG_LABELS_EN: Record<string, string> = {
+  'Mensual': 'Monthly',
+  'Pago mensual fijo.': 'Fixed monthly payment.',
+  'Por hora': 'Hourly',
+  'Pago por hora trabajada o clase.': 'Payment per worked hour or class.',
+  'Jornal': 'Daily wage',
+  'Pago por jornada.': 'Payment per workday.',
+  'Eventual': 'Temporary',
+  'Contratación temporal o suplencia.': 'Temporary hiring or replacement.',
+  'Pasantía': 'Internship',
+  'Práctica o pasantía formativa.': 'Training internship or practice.',
+  'Otro': 'Other',
+  'Modalidad no catalogada.': 'Uncatalogued modality.',
+  'Recepción y caja': 'Reception and cash desk',
+  'Atención al socio y cobros.': 'Member service and payments.',
+  'Administración': 'Administration',
+  'Gestión administrativa general.': 'General administrative management.',
+  'Entrenador de sala': 'Floor trainer',
+  'Rutinas y supervisión de entrenamiento.': 'Routines and training supervision.',
+  'Personal trainer': 'Personal trainer',
+  'Entrenamiento personalizado.': 'Personalized training.',
+  'Mantenimiento': 'Maintenance',
+  'Mantenimiento preventivo/correctivo.': 'Preventive/corrective maintenance.',
+  'Limpieza': 'Cleaning',
+  'Higiene general del gimnasio.': 'General gym cleaning.',
+  'Bar / snack': 'Bar / snack',
+  'Atención de bebidas, café y suplementos.': 'Beverages, coffee, and supplements service.',
+  'Recepción': 'Reception',
+  'Entrenamiento': 'Training',
+  'Mañana': 'Morning',
+  'Turno mañana.': 'Morning shift.',
+  'Tarde': 'Afternoon',
+  'Turno tarde.': 'Afternoon shift.',
+  'Noche': 'Night',
+  'Turno noche.': 'Night shift.',
+  'Rotativo': 'Rotating',
+  'Turno variable.': 'Variable shift.',
+  'Fin de semana': 'Weekend',
+  'Sábados, domingos o feriados.': 'Saturdays, Sundays, or holidays.',
+  'Lunes a viernes 08:00-16:00': 'Monday to Friday 08:00-16:00',
+  'Lunes a viernes 14:00-22:00': 'Monday to Friday 14:00-22:00',
+  'Lunes a sábado 07:00-13:00': 'Monday to Saturday 07:00-13:00',
+  'Lunes a sábado 16:00-22:00': 'Monday to Saturday 16:00-22:00',
+  'Rotativo / a coordinar': 'Rotating / to be coordinated',
+};
+
+function translateCatalogText(locale: GymMasterLocale, value?: string | null) {
+  if (!value) return '';
+  if (locale !== 'en') return value;
+  return CATALOG_LABELS_EN[value] ?? value;
+}
+
+function translateRoleOption(locale: GymMasterLocale, role: string) {
+  if (role === 'socio') return userFormTx(locale, 'Socio', 'Member');
+  if (role === 'admin') return userFormTx(locale, 'Administrador', 'Administrator');
+  if (role === 'usuario') return userFormTx(locale, 'Usuario interno', 'Internal user');
+  return role;
+}
+
 function getCatalogItems(
   catalogos: ReturnType<typeof useCatalogosParametrizables>['catalogos'],
   key: CatalogoParametrizableKey,
@@ -145,12 +210,14 @@ function CalendarDateInput({
   value,
   onChange,
   required = false,
+  locale,
 }: {
   id: string;
   name: string;
   value: string;
   onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   required?: boolean;
+  locale: GymMasterLocale;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -182,8 +249,8 @@ function CalendarDateInput({
         type='button'
         onClick={openNativePicker}
         className='absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-r-md text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
-        aria-label='Abrir calendario'
-        title='Abrir calendario'
+        aria-label={userFormTx(locale, 'Abrir calendario', 'Open calendar')}
+        title={userFormTx(locale, 'Abrir calendario', 'Open calendar')}
       >
         <CalendarDays className='h-4 w-4' />
       </button>
@@ -206,7 +273,8 @@ export default function UserForm({
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { catalogos } = useCatalogosParametrizables();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const c = (es: string, en: string) => userFormTx(locale, es, en);
 
   const tiposContratacion = useMemo(
     () => getCatalogItems(catalogos, 'empleado_tipo_contratacion', fallbackTiposContratacion),
@@ -306,13 +374,13 @@ export default function UserForm({
     try {
       if (isPasswordRequired) {
         if (!isPasswordValid) {
-          toast.error('La contraseña debe tener mínimo 8 caracteres, mayúscula, minúscula, número y símbolo.');
+          toast.error(c('La contraseña debe tener mínimo 8 caracteres, mayúscula, minúscula, número y símbolo.', 'Password must have at least 8 characters, uppercase, lowercase, number, and symbol.'));
           setLoading(false);
           return;
         }
 
         if (!passwordsMatch) {
-          toast.error('La confirmación de contraseña no coincide.');
+          toast.error(c('La confirmación de contraseña no coincide.', 'Password confirmation does not match.'));
           setLoading(false);
           return;
         }
@@ -331,7 +399,7 @@ export default function UserForm({
         };
 
         await updateUsuarioApi(usuario.id, updateData);
-        toast.success('Usuario actualizado exitosamente.');
+        toast.success(c('Usuario actualizado exitosamente.', 'User updated successfully.'));
       } else {
         const rol = form.rol || 'socio';
         const useInitialPassword = form.use_initial_password;
@@ -377,27 +445,27 @@ export default function UserForm({
         };
 
         if (useInitialPassword && !form.dni.trim()) {
-          toast.error('El DNI es obligatorio para generar la contraseña inicial.');
+          toast.error(c('El DNI es obligatorio para generar la contraseña inicial.', 'ID is required to generate the initial password.'));
           setLoading(false);
           return;
         }
 
         if (!useInitialPassword && !createData.password) {
           toast.error(
-            'La contraseña es obligatoria para crear un nuevo usuario.'
+            c('La contraseña es obligatoria para crear un nuevo usuario.', 'Password is required to create a new user.')
           );
           setLoading(false);
           return;
         }
 
         if (rol === 'socio' && !form.dni.trim()) {
-          toast.error('El DNI es obligatorio para crear un usuario socio.');
+          toast.error(c('El DNI es obligatorio para crear un usuario socio.', 'ID is required to create a member user.'));
           setLoading(false);
           return;
         }
 
         if (rol === 'usuario' && !form.dni.trim()) {
-          toast.error('El DNI es obligatorio para crear un usuario interno/empleado.');
+          toast.error(c('El DNI es obligatorio para crear un usuario interno/empleado.', 'ID is required to create an internal user/employee.'));
           setLoading(false);
           return;
         }
@@ -405,17 +473,17 @@ export default function UserForm({
         await createUsuarioApi(createData);
         toast.success(
           useInitialPassword
-            ? `Usuario creado. Contraseña inicial: ${initialPassword}`
-            : 'Usuario creado exitosamente.'
+            ? `${c('Usuario creado. Contraseña inicial:', 'User created. Initial password:')} ${initialPassword}`
+            : c('Usuario creado exitosamente.', 'User created successfully.')
         );
       }
       setForm(emptyForm);
       onCreated();
     } catch (error: any) {
-      let msg = error.message || 'Error al guardar el usuario.';
+      let msg = error.message || c('Error al guardar el usuario.', 'Error saving the user.');
       if (msg.includes('value too long')) {
         msg =
-          'Uno de los campos excede la cantidad máxima de caracteres permitidos.';
+          c('Uno de los campos excede la cantidad máxima de caracteres permitidos.', 'One of the fields exceeds the maximum allowed character length.');
       }
       toast.error(msg);
     } finally {
@@ -441,15 +509,15 @@ export default function UserForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className='grid grid-cols-1 gap-4 md:grid-cols-2'
+      className='grid grid-cols-1 gap-4 md:grid-cols-2 dark:text-slate-100'
     >
       <QaFileNameBadge file="src/components/forms/UserForm.tsx" />
       <div className='flex flex-col gap-1.5'>
-        <Label htmlFor='nombre'>Nombre</Label>
+        <Label htmlFor='nombre'>{c('Nombre', 'Name')}</Label>
         <Input
           id='nombre'
           name='nombre'
-          placeholder='Ingrese nombre'
+          placeholder={c('Ingrese nombre', 'Enter name')}
           value={form.nombre}
           onChange={handleChange}
           required
@@ -462,7 +530,7 @@ export default function UserForm({
           id='email'
           name='email'
           type='email'
-          placeholder='Ingrese correo electrónico'
+          placeholder={c('Ingrese correo electrónico', 'Enter email address')}
           value={form.email}
           onChange={handleChange}
           required
@@ -470,7 +538,7 @@ export default function UserForm({
       </div>
 
       <div className='flex flex-col gap-1.5'>
-        <Label htmlFor='rol'>Rol</Label>
+        <Label htmlFor='rol'>{c('Rol', 'Role')}</Label>
         <select
           id='rol'
           name='rol'
@@ -478,9 +546,9 @@ export default function UserForm({
           onChange={handleChange}
           className='flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
         >
-          <option value='socio'>Socio</option>
-          <option value='admin'>Administrador</option>
-          <option value='usuario'>Usuario interno</option>
+          <option value='socio'>{translateRoleOption(locale, 'socio')}</option>
+          <option value='admin'>{translateRoleOption(locale, 'admin')}</option>
+          <option value='usuario'>{translateRoleOption(locale, 'usuario')}</option>
         </select>
       </div>
 
@@ -490,7 +558,7 @@ export default function UserForm({
           <Input
             id='dni'
             name='dni'
-            placeholder='Ingrese DNI para contraseña inicial'
+            placeholder={c('Ingrese ID para contraseña inicial', 'Enter ID for initial password')}
             value={form.dni}
             onChange={handleChange}
             required={isSocio || isInternalUser || isInitialPasswordMode}
@@ -499,27 +567,27 @@ export default function UserForm({
       )}
 
       {!usuario && isSocio && (
-        <div className='col-span-full rounded-lg border bg-muted/20 p-4'>
+        <div className='col-span-full rounded-lg border bg-muted/20 p-4 dark:border-slate-800 dark:bg-slate-900/40'>
           <div className='mb-3'>
-            <h3 className='text-base font-semibold'>Datos operativos del socio</h3>
+            <h3 className='text-base font-semibold'>{c('Datos operativos del socio', 'Member operational data')}</h3>
             <p className='text-sm text-muted-foreground'>
-              Estos datos crean el perfil de socio vinculado al usuario. Después se pueden revisar o modificar desde el menú Socios.
+              {c('Estos datos crean el perfil de socio vinculado al usuario. Después se pueden revisar o modificar desde el menú Socios.', 'These details create the member profile linked to the user. They can later be reviewed or edited from the Members menu.')}
             </p>
           </div>
-          <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+          <div className='grid grid-cols-1 gap-4 md:grid-cols-2 dark:text-slate-100'>
             <div className='flex flex-col gap-1.5'>
-              <Label htmlFor='telefono'>Teléfono</Label>
+              <Label htmlFor='telefono'>{c('Teléfono', 'Phone')}</Label>
               <Input
                 id='telefono'
                 name='telefono'
-                placeholder='Ingrese teléfono'
+                placeholder={c('Ingrese teléfono', 'Enter phone')}
                 value={form.telefono}
                 onChange={handleChange}
               />
             </div>
 
             <div className='flex flex-col gap-1.5'>
-              <Label htmlFor='sexo'>Sexo</Label>
+              <Label htmlFor='sexo'>{c('Sexo', 'Sex')}</Label>
               <select
                 id='sexo'
                 name='sexo'
@@ -527,93 +595,95 @@ export default function UserForm({
                 onChange={handleChange}
                 className='flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
               >
-                <option value=''>Seleccionar</option>
-                <option value='M'>Masculino</option>
-                <option value='F'>Femenino</option>
+                <option value=''>{c('Seleccionar', 'Select')}</option>
+                <option value='M'>{c('Masculino', 'Male')}</option>
+                <option value='F'>{c('Femenino', 'Female')}</option>
               </select>
             </div>
 
             <div className='flex flex-col gap-1.5'>
-              <Label htmlFor='fecnac'>Fecha de nacimiento</Label>
+              <Label htmlFor='fecnac'>{c('Fecha de nacimiento', 'Birth date')}</Label>
               <CalendarDateInput
                 id='fecnac'
                 name='fecnac'
                 value={form.fecnac}
                 onChange={handleChange}
+                locale={locale}
               />
             </div>
 
             <div className='flex flex-col gap-1.5'>
-              <Label htmlFor='fecha_alta'>Fecha de alta</Label>
+              <Label htmlFor='fecha_alta'>{c('Fecha de alta', 'Registration date')}</Label>
               <CalendarDateInput
                 id='fecha_alta'
                 name='fecha_alta'
                 value={form.fecha_alta}
                 onChange={handleChange}
+                locale={locale}
               />
             </div>
 
             <div className='flex flex-col gap-1.5 md:col-span-2'>
-              <Label htmlFor='direccion'>Dirección</Label>
+              <Label htmlFor='direccion'>{c('Dirección', 'Address')}</Label>
               <Input
                 id='direccion'
                 name='direccion'
-                placeholder='Ingrese dirección'
+                placeholder={c('Ingrese dirección', 'Enter address')}
                 value={form.direccion}
                 onChange={handleChange}
               />
             </div>
 
             <div className='flex flex-col gap-1.5'>
-              <Label htmlFor='ciudad'>Ciudad</Label>
+              <Label htmlFor='ciudad'>{c('Ciudad', 'City')}</Label>
               <Input
                 id='ciudad'
                 name='ciudad'
-                placeholder='Ingrese ciudad'
+                placeholder={c('Ingrese ciudad', 'Enter city')}
                 value={form.ciudad}
                 onChange={handleChange}
               />
             </div>
 
             <div className='flex flex-col gap-1.5'>
-              <Label htmlFor='provincia'>Provincia</Label>
+              <Label htmlFor='provincia'>{c('Provincia', 'Province')}</Label>
               <Input
                 id='provincia'
                 name='provincia'
-                placeholder='Ingrese provincia'
+                placeholder={c('Ingrese provincia', 'Enter province')}
                 value={form.provincia}
                 onChange={handleChange}
               />
             </div>
 
             <div className='flex flex-col gap-1.5'>
-              <Label htmlFor='pais'>País</Label>
+              <Label htmlFor='pais'>{c('País', 'Country')}</Label>
               <Input
                 id='pais'
                 name='pais'
-                placeholder='Ingrese país'
+                placeholder={c('Ingrese país', 'Enter country')}
                 value={form.pais}
                 onChange={handleChange}
               />
             </div>
 
             <div className='flex flex-col gap-1.5'>
-              <Label htmlFor='contacto_emergencia_nombre'>Contacto de emergencia</Label>
+              <Label htmlFor='contacto_emergencia_nombre'>{c('Contacto de emergencia', 'Emergency contact')}</Label>
               <Input
                 id='contacto_emergencia_nombre'
                 name='contacto_emergencia_nombre'
-                placeholder='Nombre del contacto'
+                placeholder={c('Nombre del contacto', 'Contact name')}
                 value={form.contacto_emergencia_nombre}
                 onChange={handleChange}
               />
             </div>
 
             <div className='flex flex-col gap-1.5'>
-              <Label htmlFor='contacto_emergencia_telefono'>Teléfono de emergencia</Label>
+              <Label htmlFor='contacto_emergencia_telefono'>{c('Teléfono de emergencia', 'Emergency phone')}</Label>
               <Input
                 id='contacto_emergencia_telefono'
                 name='contacto_emergencia_telefono'
-                placeholder='Teléfono para urgencias'
+                placeholder={c('Teléfono para urgencias', 'Emergency phone')}
                 value={form.contacto_emergencia_telefono}
                 onChange={handleChange}
               />
@@ -623,36 +693,36 @@ export default function UserForm({
       )}
 
       {!usuario && isInternalUser && (
-        <div className='col-span-full rounded-lg border bg-muted/20 p-4'>
+        <div className='col-span-full rounded-lg border bg-muted/20 p-4 dark:border-slate-800 dark:bg-slate-900/40'>
           <div className='mb-3'>
-            <h3 className='text-base font-semibold'>Datos laborales del empleado</h3>
+            <h3 className='text-base font-semibold'>{c('Datos laborales del empleado', 'Employee work data')}</h3>
             <p className='text-sm text-muted-foreground'>
-              Estos datos crean el perfil laboral vinculado al usuario interno. Después se pueden revisar o modificar desde el menú Empleados.
+              {c('Estos datos crean el perfil laboral vinculado al usuario interno. Después se pueden revisar o modificar desde el menú Empleados.', 'These details create the work profile linked to the internal user. They can later be reviewed or edited from the Employees menu.')}
             </p>
           </div>
-          <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
+          <div className='grid grid-cols-1 gap-4 md:grid-cols-2 dark:text-slate-100'>
             <div className='flex flex-col gap-1.5'>
-              <Label htmlFor='telefono'>Teléfono</Label>
-              <Input id='telefono' name='telefono' placeholder='Ingrese teléfono' value={form.telefono} onChange={handleChange} />
+              <Label htmlFor='telefono'>{c('Teléfono', 'Phone')}</Label>
+              <Input id='telefono' name='telefono' placeholder={c('Ingrese teléfono', 'Enter phone')} value={form.telefono} onChange={handleChange} />
             </div>
             <div className='flex flex-col gap-1.5'>
-              <Label htmlFor='fecnac'>Fecha de nacimiento</Label>
-              <CalendarDateInput id='fecnac' name='fecnac' value={form.fecnac} onChange={handleChange} />
+              <Label htmlFor='fecnac'>{c('Fecha de nacimiento', 'Birth date')}</Label>
+              <CalendarDateInput id='fecnac' name='fecnac' value={form.fecnac} onChange={handleChange} locale={locale} />
             </div>
             <div className='flex flex-col gap-1.5'>
-              <Label htmlFor='fecha_alta'>Fecha de alta laboral</Label>
-              <CalendarDateInput id='fecha_alta' name='fecha_alta' value={form.fecha_alta} onChange={handleChange} />
+              <Label htmlFor='fecha_alta'>{c('Fecha de alta laboral', 'Work registration date')}</Label>
+              <CalendarDateInput id='fecha_alta' name='fecha_alta' value={form.fecha_alta} onChange={handleChange} locale={locale} />
             </div>
             <div className='flex flex-col gap-1.5'>
-              <Label htmlFor='fecha_inicio'>Fecha de inicio</Label>
-              <CalendarDateInput id='fecha_inicio' name='fecha_inicio' value={form.fecha_inicio} onChange={handleChange} />
+              <Label htmlFor='fecha_inicio'>{c('Fecha de inicio', 'Start date')}</Label>
+              <CalendarDateInput id='fecha_inicio' name='fecha_inicio' value={form.fecha_inicio} onChange={handleChange} locale={locale} />
             </div>
             <div className='flex flex-col gap-1.5 md:col-span-2'>
-              <Label htmlFor='direccion'>Dirección</Label>
-              <Input id='direccion' name='direccion' placeholder='Ingrese dirección' value={form.direccion} onChange={handleChange} />
+              <Label htmlFor='direccion'>{c('Dirección', 'Address')}</Label>
+              <Input id='direccion' name='direccion' placeholder={c('Ingrese dirección', 'Enter address')} value={form.direccion} onChange={handleChange} />
             </div>
             <div className='flex flex-col gap-1.5'>
-              <Label htmlFor='puesto'>Puesto / responsabilidad</Label>
+              <Label htmlFor='puesto'>{c('Puesto / responsabilidad', 'Position / responsibility')}</Label>
               <select
                 id='puesto'
                 name='puesto'
@@ -660,16 +730,16 @@ export default function UserForm({
                 onChange={handleChange}
                 className='flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
               >
-                <option value=''>Seleccionar puesto</option>
+                <option value=''>{c('Seleccionar puesto', 'Select position')}</option>
                 {puestos.map((item) => (
                   <option key={item.id} value={catalogValue(item)}>
-                    {item.nombre}
+                    {translateCatalogText(locale, item.nombre)}
                   </option>
                 ))}
               </select>
             </div>
             <div className='flex flex-col gap-1.5'>
-              <Label htmlFor='area'>Área</Label>
+              <Label htmlFor='area'>{c('Área', 'Area')}</Label>
               <select
                 id='area'
                 name='area'
@@ -677,16 +747,16 @@ export default function UserForm({
                 onChange={handleChange}
                 className='flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
               >
-                <option value=''>Seleccionar área</option>
+                <option value=''>{c('Seleccionar área', 'Select area')}</option>
                 {areas.map((item) => (
                   <option key={item.id} value={catalogValue(item)}>
-                    {item.nombre}
+                    {translateCatalogText(locale, item.nombre)}
                   </option>
                 ))}
               </select>
             </div>
             <div className='flex flex-col gap-1.5'>
-              <Label htmlFor='tipo_contratacion'>Tipo de contratación</Label>
+              <Label htmlFor='tipo_contratacion'>{c('Tipo de contratación', 'Contract type')}</Label>
               <select
                 id='tipo_contratacion'
                 name='tipo_contratacion'
@@ -694,16 +764,16 @@ export default function UserForm({
                 onChange={handleChange}
                 className='flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
               >
-                <option value=''>Seleccionar tipo</option>
+                <option value=''>{c('Seleccionar tipo', 'Select type')}</option>
                 {tiposContratacion.map((item) => (
                   <option key={item.id} value={item.codigo}>
-                    {item.nombre}
+                    {translateCatalogText(locale, item.nombre)}
                   </option>
                 ))}
               </select>
             </div>
             <div className='flex flex-col gap-1.5'>
-              <Label htmlFor='turno'>Turno</Label>
+              <Label htmlFor='turno'>{c('Turno', 'Shift')}</Label>
               <select
                 id='turno'
                 name='turno'
@@ -711,24 +781,24 @@ export default function UserForm({
                 onChange={handleChange}
                 className='flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
               >
-                <option value=''>Seleccionar turno</option>
+                <option value=''>{c('Seleccionar turno', 'Select shift')}</option>
                 {turnos.map((item) => (
                   <option key={item.id} value={catalogValue(item)}>
-                    {item.nombre}
+                    {translateCatalogText(locale, item.nombre)}
                   </option>
                 ))}
               </select>
             </div>
             <div className='flex flex-col gap-1.5'>
-              <Label htmlFor='sueldo_base'>Sueldo base</Label>
+              <Label htmlFor='sueldo_base'>{c('Sueldo base', 'Base salary')}</Label>
               <Input id='sueldo_base' name='sueldo_base' type='number' min='0' step='0.01' value={form.sueldo_base} onChange={handleChange} />
             </div>
             <div className='flex flex-col gap-1.5'>
-              <Label htmlFor='fecha_fin'>Fecha de fin</Label>
-              <CalendarDateInput id='fecha_fin' name='fecha_fin' value={form.fecha_fin} onChange={handleChange} />
+              <Label htmlFor='fecha_fin'>{c('Fecha de fin', 'End date')}</Label>
+              <CalendarDateInput id='fecha_fin' name='fecha_fin' value={form.fecha_fin} onChange={handleChange} locale={locale} />
             </div>
             <div className='flex flex-col gap-1.5 md:col-span-2'>
-              <Label htmlFor='horarios_texto'>Horario / disponibilidad</Label>
+              <Label htmlFor='horarios_texto'>{c('Horario / disponibilidad', 'Schedule / availability')}</Label>
               <select
                 id='horarios_texto'
                 name='horarios_texto'
@@ -736,17 +806,17 @@ export default function UserForm({
                 onChange={handleChange}
                 className='flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
               >
-                <option value=''>Seleccionar horario o disponibilidad</option>
+                <option value=''>{c('Seleccionar horario o disponibilidad', 'Select schedule or availability')}</option>
                 {horariosDisponibilidad.map((item) => (
                   <option key={item.id} value={catalogValue(item)}>
-                    {item.nombre}
+                    {translateCatalogText(locale, item.nombre)}
                   </option>
                 ))}
               </select>
             </div>
             <div className='flex flex-col gap-1.5 md:col-span-2'>
-              <Label htmlFor='observaciones'>Observaciones laborales</Label>
-              <Input id='observaciones' name='observaciones' placeholder='Notas internas del empleado' value={form.observaciones} onChange={handleChange} />
+              <Label htmlFor='observaciones'>{c('Observaciones laborales', 'Work notes')}</Label>
+              <Input id='observaciones' name='observaciones' placeholder={c('Notas internas del empleado', 'Internal employee notes')} value={form.observaciones} onChange={handleChange} />
             </div>
           </div>
         </div>
@@ -768,11 +838,11 @@ export default function UserForm({
             />
             <span>
               <span className='font-medium'>
-                Usar contraseña inicial automática
+                {c('Usar contraseña inicial automática', 'Use automatic initial password')}
               </span>
               <span className='block text-xs'>
-                Patrón: <strong>{initialPasswordPreview}</strong>. En el primer
-                ingreso el usuario deberá cambiarla obligatoriamente.
+                {c('Patrón:', 'Pattern:')} <strong>{initialPasswordPreview}</strong>.{' '}
+                {c('En el primer ingreso el usuario deberá cambiarla obligatoriamente.', 'On first login the user must change it obligatorily.')}
               </span>
             </span>
           </label>
@@ -782,14 +852,14 @@ export default function UserForm({
       {!isInitialPasswordMode && (
         <>
       <div className='flex flex-col gap-1.5'>
-        <Label htmlFor='password'>Contraseña</Label>
+        <Label htmlFor='password'>{c('Contraseña', 'Password')}</Label>
         <div className='relative'>
           <Input
             id='password'
             name='password'
             type={showPassword ? 'text' : 'password'}
             placeholder={
-              usuario ? 'Dejar vacío para no cambiar' : 'Ingrese contraseña'
+              usuario ? c('Dejar vacío para no cambiar', 'Leave empty to keep unchanged') : c('Ingrese contraseña', 'Enter password')
             }
             value={form.password}
             onChange={handleChange}
@@ -800,8 +870,8 @@ export default function UserForm({
             type='button'
             onClick={() => setShowPassword((prev) => !prev)}
             className='absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-r-md text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
-            aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-            title={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            aria-label={showPassword ? c('Ocultar contraseña', 'Hide password') : c('Mostrar contraseña', 'Show password')}
+            title={showPassword ? c('Ocultar contraseña', 'Hide password') : c('Mostrar contraseña', 'Show password')}
           >
             {showPassword ? <EyeOff className='h-4 w-4' /> : <Eye className='h-4 w-4' />}
           </button>
@@ -809,13 +879,13 @@ export default function UserForm({
       </div>
 
       <div className='flex flex-col gap-1.5'>
-        <Label htmlFor='confirmPassword'>Confirmar contraseña</Label>
+        <Label htmlFor='confirmPassword'>{c('Confirmar contraseña', 'Confirm password')}</Label>
         <div className='relative'>
           <Input
             id='confirmPassword'
             name='confirmPassword'
             type={showConfirmPassword ? 'text' : 'password'}
-            placeholder={usuario ? 'Repetir solo si cambia contraseña' : 'Repita la contraseña'}
+            placeholder={usuario ? c('Repetir solo si cambia contraseña', 'Repeat only if password changes') : c('Repita la contraseña', 'Repeat password')}
             value={form.confirmPassword}
             onChange={handleChange}
             required={!usuario}
@@ -825,8 +895,8 @@ export default function UserForm({
             type='button'
             onClick={() => setShowConfirmPassword((prev) => !prev)}
             className='absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-r-md text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
-            aria-label={showConfirmPassword ? 'Ocultar confirmación de contraseña' : 'Mostrar confirmación de contraseña'}
-            title={showConfirmPassword ? 'Ocultar confirmación de contraseña' : 'Mostrar confirmación de contraseña'}
+            aria-label={showConfirmPassword ? c('Ocultar confirmación de contraseña', 'Hide password confirmation') : c('Mostrar confirmación de contraseña', 'Show password confirmation')}
+            title={showConfirmPassword ? c('Ocultar confirmación de contraseña', 'Hide password confirmation') : c('Mostrar confirmación de contraseña', 'Show password confirmation')}
           >
             {showConfirmPassword ? <EyeOff className='h-4 w-4' /> : <Eye className='h-4 w-4' />}
           </button>
@@ -838,19 +908,19 @@ export default function UserForm({
 
       {showPasswordRules && (
         <div className='col-span-full rounded-md border bg-muted/20 p-3 text-sm'>
-          <p className='mb-2 font-medium'>Requisitos de contraseña</p>
+          <p className='mb-2 font-medium'>{c('Requisitos de contraseña', 'Password requirements')}</p>
           <div className='grid gap-1 md:grid-cols-2'>
-            <span className={passwordChecks.minLength ? 'text-emerald-600' : 'text-red-600'}>• Mínimo 8 caracteres</span>
-            <span className={passwordChecks.uppercase ? 'text-emerald-600' : 'text-red-600'}>• Al menos una mayúscula</span>
-            <span className={passwordChecks.lowercase ? 'text-emerald-600' : 'text-red-600'}>• Al menos una minúscula</span>
-            <span className={passwordChecks.number ? 'text-emerald-600' : 'text-red-600'}>• Al menos un número</span>
-            <span className={passwordChecks.symbol ? 'text-emerald-600' : 'text-red-600'}>• Al menos un símbolo</span>
-            <span className={passwordsMatch ? 'text-emerald-600' : 'text-red-600'}>• Ambas contraseñas coinciden</span>
+            <span className={passwordChecks.minLength ? 'text-emerald-600' : 'text-red-600'}>{c('• Mínimo 8 caracteres', '• Minimum 8 characters')}</span>
+            <span className={passwordChecks.uppercase ? 'text-emerald-600' : 'text-red-600'}>{c('• Al menos una mayúscula', '• At least one uppercase letter')}</span>
+            <span className={passwordChecks.lowercase ? 'text-emerald-600' : 'text-red-600'}>{c('• Al menos una minúscula', '• At least one lowercase letter')}</span>
+            <span className={passwordChecks.number ? 'text-emerald-600' : 'text-red-600'}>{c('• Al menos un número', '• At least one number')}</span>
+            <span className={passwordChecks.symbol ? 'text-emerald-600' : 'text-red-600'}>{c('• Al menos un símbolo', '• At least one symbol')}</span>
+            <span className={passwordsMatch ? 'text-emerald-600' : 'text-red-600'}>{c('• Ambas contraseñas coinciden', '• Both passwords match')}</span>
           </div>
         </div>
       )}
 
-      <div className='col-span-full rounded-lg border bg-muted/20 p-4'>
+      <div className='col-span-full rounded-lg border bg-muted/20 p-4 dark:border-slate-800 dark:bg-slate-900/40'>
         <div className='mb-3'>
           <h3 className='text-base font-semibold'>{t('users.form.menuPermissions.title')}</h3>
           <p className='text-sm text-muted-foreground'>
@@ -871,7 +941,7 @@ export default function UserForm({
             )}
             <div className='grid gap-4 md:grid-cols-2'>
               {availablePermissions.map((group) => (
-              <div key={group.group} className='rounded-md border bg-background p-3'>
+              <div key={group.group} className='rounded-md border bg-background p-3 dark:border-slate-800 dark:bg-slate-950/60'>
                 <p className='mb-2 text-sm font-semibold'>{translateNavigationGroup(group.group, t)}</p>
                 <div className='space-y-2'>
                   {group.items.map((item) => {
@@ -910,15 +980,15 @@ export default function UserForm({
           className='text-gray-800 bg-gray-200 hover:bg-gray-300'
           disabled={loading}
         >
-          Cancelar
+          {c('Cancelar', 'Cancel')}
         </Button>
 
         <Button type='submit' disabled={loading}>
           {loading
-            ? 'Guardando...'
+            ? c('Guardando...', 'Saving...')
             : usuario
-            ? 'Actualizar Usuario'
-            : 'Crear Usuario'}
+            ? c('Actualizar Usuario', 'Update User')
+            : c('Crear Usuario', 'Create User')}
         </Button>
       </div>
     </form>
