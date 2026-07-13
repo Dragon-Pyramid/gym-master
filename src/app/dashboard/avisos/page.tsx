@@ -16,10 +16,13 @@ import { getAllAvisos, deleteAviso } from "@/services/avisoService";
 import { Aviso } from "@/interfaces/aviso.interface";
 import AvisosModal from "@/components/modal/AvisosModal";
 import AvisosModalView from "@/components/modal/AvisosModalView";
+import { useI18n } from "@/i18n/I18nProvider";
 
 export default function AvisosPage() {
   const { user, isAuthenticated, initializeAuth, isInitialized } =
     useAuthStore();
+  const { locale } = useI18n();
+  const c = (es: string, en: string) => (locale === "en" ? en : es);
   const router = useRouter();
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [filteredAvisos, setFilteredAvisos] = useState<Aviso[]>([]);
@@ -80,7 +83,7 @@ export default function AvisosPage() {
   };
 
   if (!isInitialized) {
-    return <div>Cargando...</div>;
+    return <div>{c("Cargando...", "Loading...")}</div>;
   }
 
   if (!isAuthenticated) {
@@ -92,30 +95,43 @@ export default function AvisosPage() {
       <div className="flex w-full min-h-screen">
         <AppSidebar />
         <SidebarInset>
-          <AppHeader title="Avisos" />
-          <main className="flex-1 p-6 space-y-6">
-            <Card className="w-full">
-              <CardHeader className="flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap">
-                <h2 className="text-xl font-bold">Listado de Avisos</h2>
+          <AppHeader title={c("Avisos", "Notices")} />
+          <main className="flex-1 p-6 space-y-6 bg-slate-50/60 dark:bg-slate-950">
+            <Card className="w-full overflow-hidden border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
+              <CardHeader className="flex flex-wrap items-center justify-between gap-4 p-4 border-b border-slate-200 md:flex-nowrap dark:border-slate-800">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-950 dark:text-slate-50">
+                    {c("Listado de avisos", "Notices list")}
+                  </h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {c(
+                      "Gestioná avisos enviados, mensajes internos y comunicaciones al socio.",
+                      "Manage sent notices, internal messages, and member communications."
+                    )}
+                  </p>
+                </div>
                 <div className="flex flex-wrap items-center w-full gap-2 md:w-auto">
                   <div className="relative flex-grow md:flex-grow-0">
                     <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                       type="search"
-                      placeholder="Buscar por título, mensaje, tipo o fecha..."
-                      className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] w-full"
+                      placeholder={c(
+                        "Buscar por título, mensaje, tipo o fecha...",
+                        "Search by title, message, type, or date..."
+                      )}
+                      className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] w-full dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
                   </div>
                   <Button
-                    className="bg-[#02a8e1] hover:bg-[#0288b1]"
+                    className="bg-[#02a8e1] hover:bg-[#0288b1] text-white"
                     onClick={() => {
                       setSelectedAviso(null);
                       setOpenModal(true);
                     }}
                   >
-                    Nuevo Aviso
+                    {c("Nuevo aviso", "New notice")}
                   </Button>
                 </div>
               </CardHeader>
