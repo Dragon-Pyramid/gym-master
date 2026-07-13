@@ -44,7 +44,8 @@ const socioActions: QuickAction[] = [
     descriptionEn: "Update health status, clearance, and background.",
     href: "/dashboard/ficha-medica",
     icon: HeartPulse,
-    tone: "bg-rose-50 text-rose-700 border-rose-100 dark:bg-rose-950/60 dark:text-rose-100 dark:border-rose-700/70",
+    tone:
+      "bg-rose-50 text-rose-700 border-rose-100 dark:bg-rose-950/60 dark:text-rose-100 dark:border-rose-700/70",
   },
   {
     titleEs: "Rutinas",
@@ -53,7 +54,8 @@ const socioActions: QuickAction[] = [
     descriptionEn: "Review your training plan.",
     href: "/dashboard/rutinas",
     icon: Dumbbell,
-    tone: "bg-sky-50 text-sky-700 border-sky-100 dark:bg-sky-950/40 dark:text-sky-100 dark:border-sky-700/60",
+    tone:
+      "bg-sky-50 text-sky-700 border-sky-100 dark:bg-sky-950/40 dark:text-sky-100 dark:border-sky-700/60",
   },
   {
     titleEs: "Dietas",
@@ -62,7 +64,8 @@ const socioActions: QuickAction[] = [
     descriptionEn: "Check your assigned nutrition plan.",
     href: "/dashboard/dietas",
     icon: Utensils,
-    tone: "bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-100 dark:border-emerald-700/60",
+    tone:
+      "bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-100 dark:border-emerald-700/60",
   },
   {
     titleEs: "Evolución",
@@ -71,7 +74,8 @@ const socioActions: QuickAction[] = [
     descriptionEn: "Review your physical progress.",
     href: "/dashboard/evolucion-fisica",
     icon: TrendingUp,
-    tone: "bg-violet-50 text-violet-700 border-violet-100 dark:bg-violet-950/60 dark:text-violet-100 dark:border-violet-700/70",
+    tone:
+      "bg-violet-50 text-violet-700 border-violet-100 dark:bg-violet-950/60 dark:text-violet-100 dark:border-violet-700/70",
   },
   {
     titleEs: "Pagos",
@@ -80,7 +84,8 @@ const socioActions: QuickAction[] = [
     descriptionEn: "Fee status and receipts.",
     href: "/dashboard/mi-cuenta/historial-pagos",
     icon: CreditCard,
-    tone: "bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-950/40 dark:text-amber-100 dark:border-amber-700/60",
+    tone:
+      "bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-950/40 dark:text-amber-100 dark:border-amber-700/60",
   },
   {
     titleEs: "Mensajes",
@@ -89,7 +94,8 @@ const socioActions: QuickAction[] = [
     descriptionEn: "Contact administration.",
     href: "/dashboard/mensajes",
     icon: MessageCircle,
-    tone: "bg-indigo-50 text-indigo-700 border-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-100 dark:border-indigo-700/60",
+    tone:
+      "bg-indigo-50 text-indigo-700 border-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-100 dark:border-indigo-700/60",
   },
 ];
 
@@ -101,7 +107,8 @@ const staffActions: QuickAction[] = [
     descriptionEn: "Personal dashboard settings.",
     href: "/dashboard/settings/preferences",
     icon: Settings,
-    tone: "bg-sky-50 text-sky-700 border-sky-100 dark:bg-sky-950/40 dark:text-sky-100 dark:border-sky-700/60",
+    tone:
+      "bg-sky-50 text-sky-700 border-sky-100 dark:bg-sky-950/40 dark:text-sky-100 dark:border-sky-700/60",
   },
   {
     titleEs: "Contraseña",
@@ -110,7 +117,8 @@ const staffActions: QuickAction[] = [
     descriptionEn: "Change your access password.",
     href: "/auth/change-password",
     icon: KeyRound,
-    tone: "bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-100 dark:border-emerald-700/60",
+    tone:
+      "bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-100 dark:border-emerald-700/60",
   },
   {
     titleEs: "Notificaciones",
@@ -119,7 +127,8 @@ const staffActions: QuickAction[] = [
     descriptionEn: "Review system updates.",
     href: "/dashboard/notificaciones",
     icon: Bell,
-    tone: "bg-violet-50 text-violet-700 border-violet-100 dark:bg-violet-950/60 dark:text-violet-100 dark:border-violet-700/70",
+    tone:
+      "bg-violet-50 text-violet-700 border-violet-100 dark:bg-violet-950/60 dark:text-violet-100 dark:border-violet-700/70",
   },
   {
     titleEs: "Dashboard",
@@ -128,7 +137,8 @@ const staffActions: QuickAction[] = [
     descriptionEn: "Return to the operational home.",
     href: "/dashboard",
     icon: ClipboardList,
-    tone: "bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-950/40 dark:text-amber-100 dark:border-amber-700/60",
+    tone:
+      "bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-950/40 dark:text-amber-100 dark:border-amber-700/60",
   },
 ];
 
@@ -136,12 +146,28 @@ function profileTx(locale: GymMasterLocale, es: string, en: string) {
   return locale === "en" ? en : es;
 }
 
+function normalizeRole(rol?: string | null) {
+  return String(rol ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s-]+/g, "_");
+}
+
 function roleLabel(locale: GymMasterLocale, rol?: string | null) {
-  if (rol === "socio") return profileTx(locale, "Socio", "Member");
-  if (rol === "admin")
+  const normalized = normalizeRole(rol);
+
+  if (["socio", "member", "miembro"].includes(normalized)) {
+    return profileTx(locale, "Socio", "Member");
+  }
+
+  if (["admin", "administrador", "administrator"].includes(normalized)) {
     return profileTx(locale, "Administrador", "Administrator");
-  if (rol === "usuario")
+  }
+
+  if (["usuario", "usuario_interno", "internal_user", "staff"].includes(normalized)) {
     return profileTx(locale, "Usuario interno", "Internal user");
+  }
+
   return profileTx(locale, "Usuario", "User");
 }
 
@@ -218,7 +244,9 @@ export default function PerfilPage() {
     return null;
   }
 
-  const isSocio = profileUser.rol === "socio";
+  const isSocio = ["socio", "member", "miembro"].includes(
+    normalizeRole(profileUser.rol),
+  );
   const actions = isSocio ? socioActions : staffActions;
 
   return (

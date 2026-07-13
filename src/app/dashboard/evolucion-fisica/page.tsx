@@ -25,6 +25,7 @@ import {
 } from "@/services/evolucionSocioClient";
 import { descargarEvolucionFisicaPdf } from "@/utils/evolucionFisicaPdf";
 import { formatFrontendDate } from '@/utils/dateFormat';
+import { useI18n } from "@/i18n/I18nProvider";
 
 const formatSocioName = (socio: SocioBasico) => {
   const nombreCompleto = socio.nombre_completo;
@@ -223,6 +224,9 @@ const captureDashboardChartSnapshots = async (): Promise<DashboardChartSnapshot[
 
 export default function EvolucionFisicaPage() {
   const { user } = useAuthStore();
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const tx = useCallback((es: string, en: string) => (isEnglish ? en : es), [isEnglish]);
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [exportRows, setExportRows] = useState<EvolucionSocio[]>([]);
@@ -287,19 +291,19 @@ export default function EvolucionFisicaPage() {
       const authenticatedName = user?.nombre?.trim();
       const authenticatedEmail = user?.email?.trim();
 
-      return authenticatedName || authenticatedEmail || "Socio autenticado";
+      return authenticatedName || authenticatedEmail || tx("Socio autenticado", "Authenticated member");
     }
 
     const selectedSocio = socios.find((socio) => getSocioId(socio) === effectiveSocioId);
 
-    return selectedSocio ? formatSocioName(selectedSocio) : "Socio";
-  }, [effectiveSocioId, isAdmin, socios, user?.email, user?.nombre]);
+    return selectedSocio ? formatSocioName(selectedSocio) : tx("Socio", "Member");
+  }, [effectiveSocioId, isAdmin, socios, tx, user?.email, user?.nombre]);
 
   const canRenderEvolutionData = !isAdmin || effectiveSocioId !== "me";
 
   const handleDownloadPdf = async () => {
     if (!exportRows.length) {
-      toast.warning("No hay registros para descargar");
+      toast.warning(tx("No hay registros para descargar", "There are no records to download"));
       return;
     }
 
@@ -315,13 +319,13 @@ export default function EvolucionFisicaPage() {
         dashboardCharts,
       });
 
-      toast.success("PDF de evolución física generado");
+      toast.success(tx("PDF de evolución física generado", "Physical evolution PDF generated"));
     } catch (error) {
       console.error("Error al generar PDF de evolución física:", error);
       toast.error(
         error instanceof Error
           ? error.message
-          : "No se pudo generar el PDF de evolución física"
+          : tx("No se pudo generar el PDF de evolución física", "Could not generate the physical evolution PDF")
       );
     } finally {
       setGeneratingPdf(false);
@@ -418,16 +422,16 @@ export default function EvolucionFisicaPage() {
       <div className="gm-dashboard-page-evolucion-fisica gm-dashboard-shell flex min-h-[100dvh] w-full bg-background">
         <AppSidebar />
         <SidebarInset className="gm-evolucion-fisica-inset min-h-[100dvh]">
-          <AppHeader title="Evolución física" />
+          <AppHeader title={tx("Evolución física", "Physical evolution")} />
           <section data-gm-dashboard-content="true" className="gm-evolucion-fisica-content flex-1 space-y-4 p-3 pb-4 sm:p-4 sm:pb-5 md:space-y-8 md:p-6 md:pb-6">
-            <Card className="w-full overflow-hidden rounded-2xl">
+            <Card className="w-full overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-sm">
               <CardHeader className="space-y-2 border-b bg-gradient-to-r from-sky-50 to-background p-4 dark:from-slate-900 dark:to-background">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#02a8e1]">
-                  Progreso del socio
+                  {tx("Progreso del socio", "Member progress")}
                 </p>
-                <h1 className="text-xl font-bold md:text-2xl">Evolución física</h1>
+                <h1 className="text-xl font-bold md:text-2xl">{tx("Evolución física", "Physical evolution")}</h1>
                 <p className="text-sm text-muted-foreground">
-                  Registro profesional de medidas corporales, composición física e historial comparativo del socio.
+                  {tx("Registro profesional de medidas corporales, composición física e historial comparativo del socio.", "Professional record of body measurements, body composition, and member comparison history.")}
                 </p>
               </CardHeader>
               <CardContent
@@ -438,7 +442,7 @@ export default function EvolucionFisicaPage() {
                 {isAdmin && (
                   <div className="space-y-2">
                     <label htmlFor="socioId" className="text-sm font-medium">
-                      Socio a consultar
+                      {tx("Socio a consultar", "Member to review")}
                     </label>
                     <select
                       id="socioId"
@@ -451,7 +455,7 @@ export default function EvolucionFisicaPage() {
                       className="h-10 w-full max-w-xl rounded-md border bg-background px-3 text-sm md:min-w-[380px]"
                     >
                       <option value="me" disabled>
-                        Seleccionar socio
+                        {tx("Seleccionar socio", "Select member")}
                       </option>
                       {socios.map((socio) => {
                         const id = getSocioId(socio);
@@ -466,7 +470,7 @@ export default function EvolucionFisicaPage() {
                     </select>
                     {socios.length === 0 && (
                       <p className="text-xs text-muted-foreground">
-                        No hay socios disponibles para consultar en este momento.
+                        {tx("No hay socios disponibles para consultar en este momento.", "There are no members available to review right now.")}
                       </p>
                     )}
                   </div>
@@ -478,7 +482,7 @@ export default function EvolucionFisicaPage() {
                     disabled={!canRenderEvolutionData}
                     className="w-full bg-[#02a8e1] hover:bg-[#0288b1] md:w-auto"
                   >
-                    Nueva evolución
+                    {tx("Nueva evolución", "New evolution")}
                   </Button>
                 </div>
               </CardContent>
@@ -487,9 +491,9 @@ export default function EvolucionFisicaPage() {
             {showForm && (
               <Card className="w-full">
                 <CardHeader className="flex flex-wrap items-center justify-between gap-4 border-b p-4 md:flex-nowrap">
-                  <h2 className="text-xl font-bold">Registrar medidas</h2>
+                  <h2 className="text-xl font-bold">{tx("Registrar medidas", "Register measurements")}</h2>
                   <Button variant="outline" onClick={() => setShowForm(false)}>
-                    Cerrar
+                    {tx("Cerrar", "Close")}
                   </Button>
                 </CardHeader>
                 <CardContent className="p-4">
@@ -517,7 +521,7 @@ export default function EvolucionFisicaPage() {
             ) : (
               <Card className="w-full rounded-2xl border bg-card text-card-foreground shadow-sm">
                 <CardContent className="p-6 text-sm text-muted-foreground">
-                  Seleccioná un socio para consultar su evolución física.
+                  {tx("Seleccioná un socio para consultar su evolución física.", "Select a member to review their physical evolution.")}
                 </CardContent>
               </Card>
             )}
@@ -526,9 +530,9 @@ export default function EvolucionFisicaPage() {
               <Card className="w-full">
               <CardHeader className="flex flex-wrap items-center justify-between gap-4 border-b p-4 md:flex-nowrap">
                 <div>
-                  <h2 className="text-lg font-bold sm:text-xl">Historial de medidas</h2>
+                  <h2 className="text-lg font-bold sm:text-xl">{tx("Historial de medidas", "Measurement history")}</h2>
                   <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
-                    Revisá las mediciones cargadas y abrí cada registro para ver el detalle completo.
+                    {tx("Revisá las mediciones cargadas y abrí cada registro para ver el detalle completo.", "Review the loaded measurements and open each record to see the full detail.")}
                   </p>
                 </div>
                 <div className="flex w-full flex-wrap items-center gap-2 md:w-auto">
@@ -536,7 +540,7 @@ export default function EvolucionFisicaPage() {
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                       type="search"
-                      placeholder="Buscar por fecha, peso, cintura, observación..."
+                      placeholder={tx("Buscar por fecha, peso, cintura, observación...", "Search by date, weight, waist, note...")}
                       className="w-full pl-8 sm:w-[300px] md:w-[240px] lg:w-[300px]"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
@@ -550,10 +554,10 @@ export default function EvolucionFisicaPage() {
                   >
                     <Download className="h-4 w-4" />
                     <span className="hidden sm:inline">
-                      {generatingPdf ? "Generando PDF..." : "Descargar PDF"}
+                      {generatingPdf ? tx("Generando PDF...", "Generating PDF...") : tx("Descargar PDF", "Download PDF")}
                     </span>
                     <span className="sm:hidden">
-                      {generatingPdf ? "Generando..." : "PDF"}
+                      {generatingPdf ? tx("Generando...", "Generating...") : "PDF"}
                     </span>
                   </Button>
                   {isAdmin && (
@@ -564,7 +568,7 @@ export default function EvolucionFisicaPage() {
                       className="hidden items-center gap-2 border-[#02a8e1] bg-background text-[#02a8e1] hover:bg-[#e6f7fd] dark:bg-slate-950 dark:hover:bg-sky-950/60 sm:flex"
                     >
                       <FileSpreadsheet className="h-4 w-4" />
-                      <span>Exportar</span>
+                      <span>{tx("Exportar", "Export")}</span>
                     </Button>
                   )}
                 </div>

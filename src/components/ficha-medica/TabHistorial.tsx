@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   getFichaMedicaHistorial,
   getSocioByUsuarioId,
@@ -8,6 +8,7 @@ import { useAuthStore } from '../../stores/authStore';
 import HistorialViewModal from '../modal/HistorialViewModal';
 import { formatFrontendDate } from '@/utils/dateFormat';
 import { ExternalLink, FileText, History } from 'lucide-react';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type HistItem = {
   fecha_ultimo_control?: string;
@@ -35,6 +36,8 @@ export default function TabHistorial({
   isAdminReview?: boolean;
 }) {
   const authUser = useAuthStore((s) => s.user);
+  const { locale } = useI18n();
+  const tx = useCallback((es: string, en: string) => (locale === 'en' ? en : es), [locale]);
   const [historial, setHistorial] = useState<HistItem[]>([]);
   const [histPage, setHistPage] = useState<number>(1);
   const [histLoading, setHistLoading] = useState<boolean>(false);
@@ -65,7 +68,7 @@ export default function TabHistorial({
         if (!targetId) {
           if (cancelled) return;
           setHistorial([]);
-          setHistError('Socio no especificado');
+          setHistError(tx('Socio no especificado', 'Member not specified'));
           return;
         }
         const res = await getFichaMedicaHistorial(targetId, histPage);
@@ -81,12 +84,12 @@ export default function TabHistorial({
           setHistMeta(payload.meta || null);
         } else {
           setHistorial([]);
-          setHistError('No se pudo cargar historial');
+          setHistError(tx('No se pudo cargar historial', 'Could not load history'));
         }
       } catch {
         if (cancelled) return;
         setHistorial([]);
-        setHistError('No se pudo cargar historial');
+        setHistError(tx('No se pudo cargar historial', 'Could not load history'));
       } finally {
         if (cancelled) return;
         setHistLoading(false);
@@ -95,7 +98,7 @@ export default function TabHistorial({
     return () => {
       cancelled = true;
     };
-  }, [active, socioId, authUser?.id, histPage]);
+  }, [active, socioId, authUser?.id, histPage, tx]);
 
   const formatDate = (v: unknown) => {
     if (!v) return '—';
@@ -112,20 +115,20 @@ export default function TabHistorial({
         <div>
           <div className='inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-blue-700 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200'>
             <History className='h-3.5 w-3.5' />
-            {isAdminReview ? 'Auditoría admin' : 'Historial personal'}
+            {isAdminReview ? tx('Auditoría admin', 'Admin audit') : tx('Historial personal', 'Personal history')}
           </div>
-          <h3 className='mt-3 text-xl font-black'>Historial de fichas</h3>
+          <h3 className='mt-3 text-xl font-black'>{tx('Historial de fichas', 'Record history')}</h3>
           <p className='mt-1 text-sm text-muted-foreground'>
-            Registros anteriores ordenados por fecha{socioLabel ? ` para ${socioLabel}` : ''}.
+            {tx('Registros anteriores ordenados por fecha', 'Previous records sorted by date')}{socioLabel ? ` ${tx('para', 'for')} ${socioLabel}` : ''}.
           </p>
         </div>
       </div>
       {histLoading ? (
-        <div className='mt-4 rounded-xl border bg-muted/30 p-4 text-sm text-muted-foreground'>Cargando historial...</div>
+        <div className='mt-4 rounded-xl border bg-muted/30 p-4 text-sm text-muted-foreground'>{tx('Cargando historial...', 'Loading history...')}</div>
       ) : histError ? (
         <div className='mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/20 dark:text-red-300'>{histError}</div>
       ) : historial.length === 0 ? (
-        <div className='mt-4 rounded-xl border border-dashed bg-muted/20 p-6 text-sm text-muted-foreground dark:border-slate-700 dark:bg-slate-900/40'>No se encontraron registros anteriores para este socio.</div>
+        <div className='mt-4 rounded-xl border border-dashed bg-muted/20 p-6 text-sm text-muted-foreground dark:border-slate-700 dark:bg-slate-900/40'>{tx('No se encontraron registros anteriores para este socio.', 'No previous records were found for this member.')}</div>
       ) : (
         <>
           <ul className='mt-4 grid w-full gap-3'>
@@ -139,7 +142,7 @@ export default function TabHistorial({
                   </div>
                   <div className='flex items-center gap-3'>
                     <div className='text-sm'>
-                      {item.usuario_id ? `Usuario ${item.usuario_id}` : ''}
+                      {item.usuario_id ? `${tx('Usuario', 'User')} ${item.usuario_id}` : ''}
                     </div>
                     <button
                       type='button'
@@ -155,19 +158,19 @@ export default function TabHistorial({
                 </div>
                 <div className='mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3'>
                   <div>
-                    <div className='text-xs text-muted-foreground'>Peso</div>
+                    <div className='text-xs text-muted-foreground'>{tx('Peso', 'Weight')}</div>
                     <div className='text-sm'>
                       {item.peso ? `${item.peso} kg` : '—'}
                     </div>
                   </div>
                   <div>
-                    <div className='text-xs text-muted-foreground'>Altura</div>
+                    <div className='text-xs text-muted-foreground'>{tx('Altura', 'Height')}</div>
                     <div className='text-sm'>
                       {item.altura ? `${item.altura} cm` : '—'}
                     </div>
                   </div>
                   <div>
-                    <div className='text-xs text-muted-foreground'>Presión</div>
+                    <div className='text-xs text-muted-foreground'>{tx('Presión', 'Blood pressure')}</div>
                     <div className='text-sm'>
                       {item.presion_arterial ?? '—'}
                     </div>
@@ -192,7 +195,7 @@ export default function TabHistorial({
                           rel='noopener noreferrer'
                           className='mr-2 mt-2 inline-flex items-center gap-2 rounded-xl border bg-background px-3 py-2 text-sm font-semibold hover:bg-muted dark:border-slate-700 dark:bg-slate-950'
                         >
-                          <FileText className='h-4 w-4 text-blue-600' /> Ver archivo {i + 1} <ExternalLink className='h-3.5 w-3.5' />
+                          <FileText className='h-4 w-4 text-blue-600' /> {tx('Ver archivo', 'View file')} {i + 1} <ExternalLink className='h-3.5 w-3.5' />
                         </a>
                       ));
                     }
@@ -203,7 +206,7 @@ export default function TabHistorial({
                         rel='noopener noreferrer'
                         className='mt-2 inline-flex items-center gap-2 rounded-xl border bg-background px-3 py-2 text-sm font-semibold hover:bg-muted dark:border-slate-700 dark:bg-slate-950'
                       >
-                        <FileText className='h-4 w-4 text-blue-600' /> Ver archivo <ExternalLink className='h-3.5 w-3.5' />
+                        <FileText className='h-4 w-4 text-blue-600' /> {tx('Ver archivo', 'View file')} <ExternalLink className='h-3.5 w-3.5' />
                       </a>
                     );
                   })()}
@@ -214,7 +217,7 @@ export default function TabHistorial({
           <div className='mt-4 flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
             <div className='text-sm'>
               {histMeta
-                ? `Página ${histMeta.page} de ${histMeta.totalPages} — ${histMeta.total} registros`
+                ? `${tx('Página', 'Page')} ${histMeta.page} ${tx('de', 'of')} ${histMeta.totalPages} — ${histMeta.total} ${tx('registros', 'records')}`
                 : ''}
             </div>
             <div className='flex gap-2'>
@@ -224,7 +227,7 @@ export default function TabHistorial({
                 onClick={() => setHistPage((p) => Math.max(1, p - 1))}
                 className='rounded-xl border px-3 py-2 text-sm font-semibold disabled:opacity-50'
               >
-                Anterior
+                {tx('Anterior', 'Previous')}
               </button>
               <button
                 type='button'
@@ -234,7 +237,7 @@ export default function TabHistorial({
                 onClick={() => setHistPage((p) => p + 1)}
                 className='rounded-xl border px-3 py-2 text-sm font-semibold disabled:opacity-50'
               >
-                Siguiente
+                {tx('Siguiente', 'Next')}
               </button>
             </div>
           </div>

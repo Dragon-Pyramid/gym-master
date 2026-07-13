@@ -18,12 +18,28 @@ function profileCardTx(locale: GymMasterLocale, es: string, en: string) {
   return locale === "en" ? en : es;
 }
 
+function normalizeRole(rol?: string | null) {
+  return String(rol ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s-]+/g, "_");
+}
+
 function roleLabel(locale: GymMasterLocale, rol?: string | null) {
-  if (rol === "socio") return profileCardTx(locale, "Socio", "Member");
-  if (rol === "admin")
+  const normalized = normalizeRole(rol);
+
+  if (["socio", "member", "miembro"].includes(normalized)) {
+    return profileCardTx(locale, "Socio", "Member");
+  }
+
+  if (["admin", "administrador", "administrator"].includes(normalized)) {
     return profileCardTx(locale, "Administrador", "Administrator");
-  if (rol === "usuario")
+  }
+
+  if (["usuario", "usuario_interno", "internal_user", "staff"].includes(normalized)) {
     return profileCardTx(locale, "Usuario interno", "Internal user");
+  }
+
   return profileCardTx(locale, "Usuario", "User");
 }
 
@@ -89,6 +105,7 @@ export default function ProfileCard({
                   {roleLabel(locale, user?.rol)}
                 </p>
               </div>
+
               <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/10">
                 <div className="flex items-center gap-2 text-emerald-100">
                   <CheckCircle2 className="h-4 w-4" />

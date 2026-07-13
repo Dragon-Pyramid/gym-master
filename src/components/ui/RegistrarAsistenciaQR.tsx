@@ -9,6 +9,8 @@ import BienvenidaSocio from "./BienvenidaSocio";
 import { Socio } from "@/interfaces/socio.interface";
 import { Usuario } from "@/interfaces/usuario.interface";
 import { supabaseBrowser } from "@/lib/supabase-browser";
+import { useI18n } from "@/i18n/I18nProvider";
+import type { GymMasterLocale } from "@/i18n/config";
 
 type BrowserBarcodeDetector = {
   detect: (source: HTMLVideoElement) => Promise<Array<{ rawValue?: string }>>;
@@ -17,6 +19,40 @@ type BrowserBarcodeDetector = {
 type BrowserBarcodeDetectorConstructor = new (options?: {
   formats?: string[];
 }) => BrowserBarcodeDetector;
+
+
+function qrTx(locale: GymMasterLocale, es: string, en: string) {
+  return locale === "en" ? en : es;
+}
+
+function translateQrAccessMessage(locale: GymMasterLocale, value?: string | null) {
+  if (!value || locale !== "en") return value ?? "";
+
+  const normalized = value.trim().toLowerCase();
+
+  const exact: Record<string, string> = {
+    "asistencia registrada correctamente.": "Attendance registered successfully.",
+    "asistencia registrada correctamente": "Attendance registered successfully.",
+    "salida registrada correctamente.": "Exit registered successfully.",
+    "salida registrada correctamente": "Exit registered successfully.",
+    "no se pudo registrar la asistencia.": "Attendance could not be registered.",
+    "no se pudo registrar la asistencia": "Attendance could not be registered.",
+    "socio desactivado.": "Member deactivated.",
+    "socio desactivado": "Member deactivated.",
+    "usted está desactivado. regularice su situación en administración.":
+      "Your account is deactivated. Please contact administration to regularize your status.",
+  };
+
+  if (exact[normalized]) return exact[normalized];
+
+  return value
+    .replace(/Asistencia registrada correctamente\.?/gi, "Attendance registered successfully.")
+    .replace(/Salida registrada correctamente\.?/gi, "Exit registered successfully.")
+    .replace(/No se pudo registrar la asistencia\.?/gi, "Attendance could not be registered.")
+    .replace(/Socio desactivado\.?/gi, "Member deactivated.")
+    .replace(/cuota pendiente/gi, "pending fee")
+    .replace(/deuda/gi, "debt");
+}
 
 function getBarcodeDetectorConstructor() {
   if (typeof window === "undefined") return null;
@@ -89,6 +125,10 @@ function broadcastAdminAccessEvent(payload: {
 }
 
 export function RegistrarAsistenciaQR() {
+  const { locale } = useI18n();
+  const tr = (es: string, en: string) => qrTx(locale, es, en);
+  const translateMessage = (value?: string | null) => translateQrAccessMessage(locale, value);
+
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -202,7 +242,7 @@ export function RegistrarAsistenciaQR() {
             res.mensaje_acceso ||
             res.message ||
             res.error ||
-            "Asistencia registrada correctamente.",
+            tr("Asistencia registrada correctamente.", "Attendance registered successfully."),
           socio: {
             id_socio,
             nombre_completo: nombre,
@@ -220,16 +260,16 @@ export function RegistrarAsistenciaQR() {
           foto,
           variant: "inactive",
           message:
-            res.error ||
-            "Usted está desactivado. Regularice su situación en administración.",
+            translateMessage(res.error) ||
+            tr("Usted está desactivado. Regularice su situación en administración.", "Your account is deactivated. Please contact administration to regularize your status."),
         });
-        setError(res.error || "Socio desactivado.");
+        setError(translateMessage(res.error) || tr("Socio desactivado.", "Member deactivated."));
         setShowWelcome(true);
         return;
       }
 
       if (res.error && !res.valido) {
-        setError(res.error || "No se pudo registrar la asistencia.");
+        setError(translateMessage(res.error) || tr("No se pudo registrar la asistencia.", "Attendance could not be registered."));
         return;
       }
 
@@ -237,9 +277,8 @@ export function RegistrarAsistenciaQR() {
         const variant = res.alert_type === "debt" ? "debt" : "success";
         const movementType = res.tipo_movimiento;
         const finalMessage =
-          res.mensaje_acceso ||
-          res.message ||
-          "Asistencia registrada correctamente.";
+          translateMessage(res.mensaje_acceso || res.message) ||
+          tr("Asistencia registrada correctamente.", "Attendance registered successfully.");
 
         setMessage(finalMessage);
         setWelcomeData({
@@ -254,7 +293,7 @@ export function RegistrarAsistenciaQR() {
         });
         setShowWelcome(true);
       } else {
-        setError("No se pudo registrar la asistencia.");
+        setError(tr("No se pudo registrar la asistencia.", "Attendance could not be registered."));
       }
     } finally {
       loadingRef.current = false;
@@ -269,13 +308,13 @@ export function RegistrarAsistenciaQR() {
       stopCamera();
       setError("");
       setMessage("");
-      setCameraHint("Iniciando cámara...");
+      setCameraHint(tr("Iniciando cámara...", "Starting camera..."));
       setCameraReady(false);
 
       try {
         if (!navigator.mediaDevices?.getUserMedia) {
           setCameraHint(
-            "Este navegador no permite acceder a la cámara desde esta página.",
+            tr("Este navegador no permite acceder a la cámara desde esta página.", "This browser does not allow camera access from this page."),
           );
           return;
         }
@@ -313,7 +352,7 @@ export function RegistrarAsistenciaQR() {
 
         if (!BarcodeDetectorClass) {
           setCameraHint(
-            "La cámara está activa, pero este navegador no soporta detección QR nativa. Probá con Chrome actualizado.",
+            tr("La cámara está activa, pero este navegador no soporta detección QR nativa. Probá con Chrome actualizado.", "The camera is active, but this browser does not support native QR detection. Try an updated version of Chrome."),
           );
           return;
         }
@@ -347,25 +386,25 @@ export function RegistrarAsistenciaQR() {
 
         if (name === "NotAllowedError") {
           setCameraHint(
-            "No se pudo acceder a la cámara. Revisá los permisos del navegador.",
+            tr("No se pudo acceder a la cámara. Revisá los permisos del navegador.", "Camera access was denied. Check your browser permissions."),
           );
           return;
         }
 
         if (name === "NotFoundError") {
-          setCameraHint("No se encontró una cámara disponible para escanear.");
+          setCameraHint(tr("No se encontró una cámara disponible para escanear.", "No available camera was found for scanning."));
           return;
         }
 
         if (name === "NotReadableError") {
           setCameraHint(
-            "La cámara está ocupada por otra aplicación o el navegador no pudo iniciarla.",
+            tr("La cámara está ocupada por otra aplicación o el navegador no pudo iniciarla.", "The camera is being used by another app or the browser could not start it."),
           );
           return;
         }
 
         setCameraHint(
-          "No se pudo iniciar la cámara. Reintentá o actualizá la página.",
+          tr("No se pudo iniciar la cámara. Reintentá o actualizá la página.", "The camera could not be started. Try again or refresh the page."),
         );
       }
     }
@@ -380,9 +419,9 @@ export function RegistrarAsistenciaQR() {
   }, [cameraKey]);
 
   return (
-    <Card className="w-full max-w-xl mx-auto">
+    <Card className="w-full max-w-xl mx-auto border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
       <CardHeader>
-        <CardTitle>Escanear QR para registrar asistencia</CardTitle>
+        <CardTitle>{tr("Escanear QR para registrar asistencia", "Scan QR to register attendance")}</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col items-center gap-6">
         <div className="relative flex items-center justify-center w-full max-w-xs overflow-hidden bg-slate-900 border rounded-lg aspect-square">
@@ -396,7 +435,7 @@ export function RegistrarAsistenciaQR() {
 
           {!cameraReady && (
             <div className="absolute inset-0 flex items-center justify-center px-6 text-sm text-center text-white bg-slate-900">
-              Iniciando cámara...
+              {tr("Iniciando cámara...", "Starting camera...")}
             </div>
           )}
 
@@ -406,8 +445,10 @@ export function RegistrarAsistenciaQR() {
         </div>
 
         <p className="max-w-sm text-xs text-center text-muted-foreground">
-          Apuntá la cámara al QR del día. El lector usa la cámara nativa del
-          navegador para mostrar el preview y detectar el código.
+          {tr(
+            "Apuntá la cámara al QR del día. El lector usa la cámara nativa del navegador para mostrar el preview y detectar el código.",
+            "Point the camera at today's QR code. The reader uses the browser's native camera to show the preview and detect the code.",
+          )}
         </p>
 
         {cameraHint && (
@@ -416,7 +457,7 @@ export function RegistrarAsistenciaQR() {
           </div>
         )}
 
-        {loading && <div className="text-blue-600">Registrando...</div>}
+        {loading && <div className="text-blue-600 dark:text-sky-400">{tr("Registrando...", "Registering...")}</div>}
         {message && (
           <div
             className={`font-semibold text-center ${
@@ -440,11 +481,12 @@ export function RegistrarAsistenciaQR() {
             lastScanRef.current = null;
           }}
         >
-          Reintentar
+          {tr("Reintentar", "Try again")}
         </Button>
       </CardContent>
       {showWelcome && (
         <BienvenidaSocio
+          locale={locale}
           nombre={welcomeData.nombre}
           foto={welcomeData.foto}
           variant={welcomeData.variant}

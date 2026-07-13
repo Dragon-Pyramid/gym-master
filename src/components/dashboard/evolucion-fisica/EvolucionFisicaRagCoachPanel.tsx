@@ -3,10 +3,13 @@
 import { useState } from "react";
 import { Brain, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/i18n/I18nProvider";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { analizarEvolucionFisicaConRag } from "@/services/evolucionSocioClient";
 import type { RagEvolucionFisicaAssistantResponseData } from "@/interfaces/ragEvolucionFisicaAssistant.interface";
+
+const translate = (isEnglish: boolean, es: string, en: string) => (isEnglish ? en : es);
 
 const formatDelta = (value?: number | null, suffix = "") => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return "-";
@@ -27,6 +30,9 @@ export default function EvolucionFisicaRagCoachPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<RagEvolucionFisicaAssistantResponseData | null>(null);
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const tx = (es: string, en: string) => translate(isEnglish, es, en);
 
   const handleAnalyze = async () => {
     setLoading(true);
@@ -35,7 +41,7 @@ export default function EvolucionFisicaRagCoachPanel({
     try {
       const res = await analizarEvolucionFisicaConRag({
         socio_id: socioId,
-        idioma: "es",
+        idioma: isEnglish ? "en" : "es",
         objetivo,
         mensajeSocio,
         restricciones,
@@ -43,7 +49,7 @@ export default function EvolucionFisicaRagCoachPanel({
 
       setResult(res.data as RagEvolucionFisicaAssistantResponseData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo analizar la evolución física.");
+      setError(err instanceof Error ? err.message : tx("No se pudo analizar la evolución física.", "Could not analyze the physical evolution."));
     } finally {
       setLoading(false);
     }
@@ -56,10 +62,10 @@ export default function EvolucionFisicaRagCoachPanel({
           <div>
             <div className="flex items-center gap-2">
               <Brain className="h-5 w-5 text-[#02a8e1]" />
-              <h2 className="text-xl font-bold text-foreground">RAG Coach evolución física</h2>
+              <h2 className="text-xl font-bold text-foreground">{tx("RAG Coach evolución física", "Physical evolution RAG Coach")}</h2>
             </div>
             <p className="text-sm text-muted-foreground">
-              Analiza el progreso de {socioNombre} y sugiere ajustes prudentes sin reemplazar criterio profesional.
+              {tx("Analiza el progreso de", "Analyzes the progress of")} {socioNombre} {tx("y sugiere ajustes prudentes sin reemplazar criterio profesional.", "and suggests prudent adjustments without replacing professional judgment.")}
             </p>
           </div>
           <Button
@@ -68,40 +74,40 @@ export default function EvolucionFisicaRagCoachPanel({
             className="bg-[#02a8e1] hover:bg-[#0288b1]"
           >
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-            {loading ? "Analizando..." : "Analizar con IA"}
+            {loading ? tx("Analizando...", "Analyzing...") : tx("Analizar con IA", "Analyze with AI")}
           </Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-4 p-4">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="space-y-1.5 md:col-span-1">
-            <Label htmlFor="rag-evolucion-objetivo">Objetivo actual</Label>
+            <Label htmlFor="rag-evolucion-objetivo">{tx("Objetivo actual", "Current goal")}</Label>
             <textarea
               id="rag-evolucion-objetivo"
               className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
-              placeholder="Ejemplo: bajar grasa, ganar masa muscular, recomposición corporal."
+              placeholder={tx("Ejemplo: bajar grasa, ganar masa muscular, recomposición corporal.", "Example: lose fat, gain muscle mass, body recomposition.")}
               value={objetivo}
               maxLength={1200}
               onChange={(e) => setObjetivo(e.target.value)}
             />
           </div>
           <div className="space-y-1.5 md:col-span-1">
-            <Label htmlFor="rag-evolucion-mensaje">Pedido o consulta</Label>
+            <Label htmlFor="rag-evolucion-mensaje">{tx("Pedido o consulta", "Request or question")}</Label>
             <textarea
               id="rag-evolucion-mensaje"
               className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
-              placeholder="Ejemplo: quiero saber si voy bien y qué debería ajustar esta semana."
+              placeholder={tx("Ejemplo: quiero saber si voy bien y qué debería ajustar esta semana.", "Example: I want to know if I am doing well and what I should adjust this week.")}
               value={mensajeSocio}
               maxLength={1200}
               onChange={(e) => setMensajeSocio(e.target.value)}
             />
           </div>
           <div className="space-y-1.5 md:col-span-1">
-            <Label htmlFor="rag-evolucion-restricciones">Restricciones o cuidados</Label>
+            <Label htmlFor="rag-evolucion-restricciones">{tx("Restricciones o cuidados", "Restrictions or precautions")}</Label>
             <textarea
               id="rag-evolucion-restricciones"
               className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
-              placeholder="Ejemplo: dolor de rodilla, lesión, hipertensión, fatiga."
+              placeholder={tx("Ejemplo: dolor de rodilla, lesión, hipertensión, fatiga.", "Example: knee pain, injury, hypertension, fatigue.")}
               value={restricciones}
               maxLength={1200}
               onChange={(e) => setRestricciones(e.target.value)}
@@ -116,41 +122,41 @@ export default function EvolucionFisicaRagCoachPanel({
         )}
 
         {result && (
-          <div className="space-y-4 rounded-md border bg-muted/40 p-4 text-sm">
+          <div className="space-y-4 rounded-md border bg-muted/40 p-4 text-sm text-foreground">
             <div>
-              <p className="font-semibold">Resumen del RAG Coach</p>
+              <p className="font-semibold">{tx("Resumen del RAG Coach", "RAG Coach summary")}</p>
               <p className="mt-1 text-muted-foreground">{result.resumen}</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Modo: {result.modo} · Registros analizados: {result.progreso.totalRegistros}
+                {tx("Modo", "Mode")}: {result.modo} · {tx("Registros analizados", "Records analyzed")}: {result.progreso.totalRegistros}
               </p>
             </div>
 
             <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
-              <div className="rounded-md border bg-background p-3">
-                <p className="text-xs text-muted-foreground">Peso</p>
+              <div className="rounded-md border bg-background p-3 text-foreground">
+                <p className="text-xs text-muted-foreground">{tx("Peso", "Weight")}</p>
                 <p className="font-semibold">{formatDelta(result.progreso.peso.diferencia, " kg")}</p>
               </div>
-              <div className="rounded-md border bg-background p-3">
-                <p className="text-xs text-muted-foreground">Cintura</p>
+              <div className="rounded-md border bg-background p-3 text-foreground">
+                <p className="text-xs text-muted-foreground">{tx("Cintura", "Waist")}</p>
                 <p className="font-semibold">{formatDelta(result.progreso.cintura.diferencia, " cm")}</p>
               </div>
-              <div className="rounded-md border bg-background p-3">
+              <div className="rounded-md border bg-background p-3 text-foreground">
                 <p className="text-xs text-muted-foreground">IMC</p>
                 <p className="font-semibold">{formatDelta(result.progreso.imc.diferencia)}</p>
               </div>
-              <div className="rounded-md border bg-background p-3">
-                <p className="text-xs text-muted-foreground">% grasa</p>
+              <div className="rounded-md border bg-background p-3 text-foreground">
+                <p className="text-xs text-muted-foreground">{tx("% grasa", "Fat %")}</p>
                 <p className="font-semibold">{formatDelta(result.progreso.porcentajeGrasa.diferencia, "%")}</p>
               </div>
-              <div className="rounded-md border bg-background p-3">
-                <p className="text-xs text-muted-foreground">Masa muscular</p>
+              <div className="rounded-md border bg-background p-3 text-foreground">
+                <p className="text-xs text-muted-foreground">{tx("Masa muscular", "Muscle mass")}</p>
                 <p className="font-semibold">{formatDelta(result.progreso.masaMuscular.diferencia, " kg")}</p>
               </div>
             </div>
 
             {result.recomendaciones.length > 0 && (
               <div>
-                <p className="font-semibold">Recomendaciones prudentes</p>
+                <p className="font-semibold">{tx("Recomendaciones prudentes", "Prudent recommendations")}</p>
                 <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
                   {result.recomendaciones.map((item) => (
                     <li key={item}>{item}</li>
@@ -161,7 +167,7 @@ export default function EvolucionFisicaRagCoachPanel({
 
             {result.ragContext?.used && result.ragContext.results.length > 0 && (
               <div>
-                <p className="font-semibold">Referencias RAG aplicadas</p>
+                <p className="font-semibold">{tx("Referencias RAG aplicadas", "Applied RAG references")}</p>
                 <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
                   {result.ragContext.results.slice(0, 5).map((source) => (
                     <li key={source.chunkId}>
@@ -175,7 +181,7 @@ export default function EvolucionFisicaRagCoachPanel({
 
             {result.alertas.length > 0 && (
               <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-amber-900">
-                <p className="font-semibold">Alertas / cuidados</p>
+                <p className="font-semibold">{tx("Alertas / cuidados", "Alerts / precautions")}</p>
                 <ul className="mt-2 list-disc space-y-1 pl-5">
                   {result.alertas.map((item) => (
                     <li key={item}>{item}</li>
@@ -186,7 +192,7 @@ export default function EvolucionFisicaRagCoachPanel({
 
             {result.disclaimers.length > 0 && (
               <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-blue-900">
-                <p className="font-semibold">Disclaimer de salud</p>
+                <p className="font-semibold">{tx("Disclaimer de salud", "Health disclaimer")}</p>
                 <ul className="mt-2 list-disc space-y-1 pl-5">
                   {result.disclaimers.map((item) => (
                     <li key={item}>{item}</li>

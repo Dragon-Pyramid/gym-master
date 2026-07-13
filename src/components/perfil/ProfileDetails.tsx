@@ -26,12 +26,28 @@ function formatDate(locale: GymMasterLocale, d?: string | Date | null) {
   return formatFrontendDate(date);
 }
 
+function normalizeRole(rol?: string | null) {
+  return String(rol ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s-]+/g, "_");
+}
+
 function roleLabel(locale: GymMasterLocale, rol?: string | null) {
-  if (rol === "socio") return profileDetailsTx(locale, "Socio", "Member");
-  if (rol === "admin")
+  const normalized = normalizeRole(rol);
+
+  if (["socio", "member", "miembro"].includes(normalized)) {
+    return profileDetailsTx(locale, "Socio", "Member");
+  }
+
+  if (["admin", "administrador", "administrator"].includes(normalized)) {
     return profileDetailsTx(locale, "Administrador", "Administrator");
-  if (rol === "usuario")
+  }
+
+  if (["usuario", "usuario_interno", "internal_user", "staff"].includes(normalized)) {
     return profileDetailsTx(locale, "Usuario interno", "Internal user");
+  }
+
   return profileDetailsTx(locale, "Usuario", "User");
 }
 
