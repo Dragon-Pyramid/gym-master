@@ -33,6 +33,7 @@ import {
 import { toast } from "sonner";
 
 import { useAuthStore } from "@/stores/authStore";
+import { useI18n } from "@/i18n/I18nProvider";
 import { AppHeader } from "@/components/header/AppHeader";
 import { AppFooter } from "@/components/footer/AppFooter";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
@@ -101,6 +102,61 @@ const DIAS_SEMANA = [
   { value: 7, label: "Domingo" },
 ];
 
+type ActivityLocale = "es" | "en";
+
+function activityTx(locale: ActivityLocale, es: string, en: string) {
+  return locale === "en" ? en : es;
+}
+
+function countLabel(locale: ActivityLocale, count: number, singularEs: string, pluralEs: string, singularEn: string, pluralEn: string) {
+  const label = locale === "en" ? (count === 1 ? singularEn : pluralEn) : (count === 1 ? singularEs : pluralEs);
+  return `${count} ${label}`;
+}
+
+const DAY_LABELS: Record<number, { es: string; en: string }> = {
+  1: { es: "Lunes", en: "Monday" },
+  2: { es: "Martes", en: "Tuesday" },
+  3: { es: "Miércoles", en: "Wednesday" },
+  4: { es: "Jueves", en: "Thursday" },
+  5: { es: "Viernes", en: "Friday" },
+  6: { es: "Sábado", en: "Saturday" },
+  7: { es: "Domingo", en: "Sunday" },
+};
+
+const ACTIVITY_TEXT_TRANSLATIONS: Record<string, string> = {
+  "actividad": "Activity",
+  "turno": "Shift",
+  "a confirmar": "To be confirmed",
+  "sala principal": "Main room",
+  "sala funcional": "Functional room",
+  "sala wellness": "Wellness room",
+  "box entrenamiento": "Training box",
+  "zona vip": "VIP zone",
+  "funcional manana": "Functional morning",
+  "funcional tarde": "Functional afternoon",
+  "yoga inicial": "Beginner yoga",
+  "boxeo tecnico": "Technical boxing",
+  "shift demo para control de cupos.": "Demo shift for capacity control.",
+  "shift demo para horario pico.": "Demo shift for peak hours.",
+  "shift demo de baja intensidad.": "Low-intensity demo shift.",
+  "shift demo de entrenamiento tecnico.": "Technical training demo shift.",
+};
+
+function normalizeActivityText(value?: string | null) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function translateActivityText(locale: ActivityLocale, value?: string | null, fallback = "") {
+  const original = String(value ?? fallback ?? "");
+  if (locale !== "en") return original;
+  const normalized = normalizeActivityText(original);
+  return ACTIVITY_TEXT_TRANSLATIONS[normalized] ?? original;
+}
+
 const ESTADOS_TURNO: Array<{ value: ActividadTurnoEstado; label: string }> = [
   { value: "activo", label: "Activo" },
   { value: "pausado", label: "Pausado" },
@@ -163,22 +219,31 @@ const emptyInscripcionForm: InscripcionFormState = {
   observaciones: "",
 };
 
-function diaLabel(value?: number | null) {
-  return DIAS_SEMANA.find((dia) => dia.value === value)?.label ?? "Sin día";
+function diaLabel(value?: number | null, locale: ActivityLocale = "es") {
+  const day = value ? DAY_LABELS[value] : null;
+  if (!day) return activityTx(locale, "Sin día", "No day");
+  return activityTx(locale, day.es, day.en);
 }
 
-function estadoLabel(value?: string | null) {
-  if (!value) return "Sin estado";
-  return value.replaceAll("_", " ");
+function estadoLabel(value?: string | null, locale: ActivityLocale = "es") {
+  if (!value) return activityTx(locale, "Sin estado", "No status");
+  const normalized = value.replaceAll("_", " ");
+  const map: Record<string, { es: string; en: string }> = {
+    activo: { es: "Activo", en: "Active" },
+    pausado: { es: "Pausado", en: "Paused" },
+    cancelado: { es: "Cancelado", en: "Cancelled" },
+  };
+  const translated = map[normalizeActivityText(normalized)];
+  return translated ? activityTx(locale, translated.es, translated.en) : normalized;
 }
 
-function socioEstadoLabel(value?: ActividadInscripcionEstado | string | null) {
-  if (value === "lista_espera") return "Solicitud pendiente";
-  if (value === "inscripto") return "Inscripción aprobada";
-  if (value === "asistio") return "Asistencia registrada";
-  if (value === "ausente") return "Ausencia registrada";
-  if (value === "cancelado") return "Cancelada";
-  return "Sin estado";
+function socioEstadoLabel(value?: ActividadInscripcionEstado | string | null, locale: ActivityLocale = "es") {
+  if (value === "lista_espera") return activityTx(locale, "Solicitud pendiente", "Pending request");
+  if (value === "inscripto") return activityTx(locale, "Inscripción aprobada", "Enrollment approved");
+  if (value === "asistio") return activityTx(locale, "Asistencia registrada", "Attendance recorded");
+  if (value === "ausente") return activityTx(locale, "Ausencia registrada", "Absence recorded");
+  if (value === "cancelado") return activityTx(locale, "Cancelada", "Cancelled");
+  return activityTx(locale, "Sin estado", "No status");
 }
 
 function socioEstadoClass(value?: ActividadInscripcionEstado | string | null) {
@@ -207,14 +272,14 @@ function safeOccupancyPercent(
 
 function cupoEstadoLabel(
   turno: Pick<ActividadTurno, "cupo_maximo" | "cupos_disponibles">,
+  locale: ActivityLocale = "es",
 ) {
   const maximo = Number(turno.cupo_maximo ?? 0);
   const disponibles = Number(turno.cupos_disponibles ?? 0);
 
-  if (!maximo) return "Cupo a confirmar";
-  if (disponibles <= 0) return "Sin cupo libre";
-  if (disponibles === 1) return "1 cupo libre";
-  return `${disponibles} cupos libres`;
+  if (!maximo) return activityTx(locale, "Cupo a confirmar", "Capacity to be confirmed");
+  if (disponibles <= 0) return activityTx(locale, "Sin cupo libre", "No free slots");
+  return countLabel(locale, disponibles, "cupo libre", "cupos libres", "free slot", "free slots");
 }
 
 function cupoEstadoClass(
@@ -298,6 +363,12 @@ export default function ActividadesPage() {
   const { isAuthenticated, initializeAuth, isInitialized, user } =
     useAuthStore();
   const router = useRouter();
+  const { locale: currentLocale } = useI18n();
+  const locale: ActivityLocale = currentLocale === "en" ? "en" : "es";
+  const tx = useCallback(
+    (es: string, en: string) => activityTx(locale, es, en),
+    [locale],
+  );
   const [actividades, setActividades] = useState<Actividad[]>([]);
   const [filteredActividades, setFilteredActividades] = useState<Actividad[]>(
     [],
@@ -634,7 +705,7 @@ export default function ActividadesPage() {
 
   const handleDeleteTurno = async (turno: ActividadTurno) => {
     const confirmar = window.confirm(
-      `¿Eliminar el turno "${turno.nombre_turno}" y sus inscripciones?`,
+      `¿Eliminar el turno "${translateActivityText(locale, turno.nombre_turno)}" y sus inscripciones?`,
     );
     if (!confirmar) return;
 
@@ -731,7 +802,7 @@ export default function ActividadesPage() {
   const handleSocioRequestInscripcion = async (turno: ActividadTurno) => {
     if (!ownSocioId) {
       toast.error(
-        "Tu usuario socio no tiene id_socio asociado. Contactá a administración.",
+        tx("Tu usuario socio no tiene id_socio asociado. Contactá a administración.", "Your member user has no linked member ID. Contact administration."),
       );
       return;
     }
@@ -739,7 +810,7 @@ export default function ActividadesPage() {
     const current = activeOwnInscripcionByTurno.get(turno.id);
     if (current) {
       toast.info(
-        `Ya tenés una solicitud o inscripción para este turno: ${socioEstadoLabel(current.estado)}.`,
+        `${tx("Ya tenés una solicitud o inscripción para este turno", "You already have a request or enrollment for this shift")}: ${socioEstadoLabel(current.estado, locale)}.`,
       );
       return;
     }
@@ -751,9 +822,9 @@ export default function ActividadesPage() {
         socio_id: ownSocioId,
         estado: "lista_espera",
         observaciones:
-          "Solicitud enviada por el socio desde la app mobile. Pendiente de revisión administrativa.",
+          tx("Solicitud enviada por el socio desde la app mobile. Pendiente de revisión administrativa.", "Request sent by the member from the mobile app. Pending administrative review."),
       });
-      toast.success("Solicitud enviada a administración");
+      toast.success(tx("Solicitud enviada a administración", "Request sent to administration"));
       await loadDashboard();
     } catch (error) {
       const message =
@@ -778,9 +849,9 @@ export default function ActividadesPage() {
     try {
       await updateActividadInscripcion(inscripcion.id, {
         estado: "cancelado",
-        observaciones: "Cancelado por el socio desde el módulo de actividades.",
+        observaciones: tx("Cancelado por el socio desde el módulo de actividades.", "Cancelled by the member from the activities module."),
       });
-      toast.success("Solicitud o inscripción cancelada correctamente");
+      toast.success(tx("Solicitud o inscripción cancelada correctamente", "Request or enrollment cancelled successfully"));
       await loadDashboard();
     } catch (error) {
       const message =
@@ -817,12 +888,12 @@ export default function ActividadesPage() {
         filtersLabel: `Día: ${diaFilter === "todos" ? "todos" : diaLabel(Number(diaFilter))}; Estado: ${estadoFilter}; Búsqueda: ${turnoSearchTerm || "sin búsqueda"}`,
         columns: [
           {
-            header: "Actividad",
+            header: tx("Actividad", "Activity"),
             width: 36,
             getValue: (turno) => turno.actividad_nombre ?? "",
           },
           {
-            header: "Turno",
+            header: tx("Turno", "Shift"),
             width: 42,
             getValue: (turno) => turno.nombre_turno,
           },
@@ -866,7 +937,7 @@ export default function ActividadesPage() {
 
     actividadesSheet.columns = [
       { header: "ID", key: "id", width: 36 },
-      { header: "Actividad", key: "nombre_actividad", width: 42 },
+      { header: tx("Actividad", "Activity"), key: "nombre_actividad", width: 42 },
       { header: "Creado en", key: "creado_en", width: 24 },
     ];
     actividades.forEach((actividad) => {
@@ -878,8 +949,8 @@ export default function ActividadesPage() {
     });
 
     turnosSheet.columns = [
-      { header: "Actividad", key: "actividad", width: 35 },
-      { header: "Turno", key: "turno", width: 35 },
+      { header: tx("Actividad", "Activity"), key: "actividad", width: 35 },
+      { header: tx("Turno", "Shift"), key: "turno", width: 35 },
       { header: "Día", key: "dia", width: 16 },
       { header: "Horario", key: "horario", width: 18 },
       { header: "Ubicación", key: "ubicacion", width: 25 },
@@ -907,8 +978,8 @@ export default function ActividadesPage() {
     });
 
     inscripcionesSheet.columns = [
-      { header: "Actividad", key: "actividad", width: 35 },
-      { header: "Turno", key: "turno", width: 35 },
+      { header: tx("Actividad", "Activity"), key: "actividad", width: 35 },
+      { header: tx("Turno", "Shift"), key: "turno", width: 35 },
       { header: "Socio", key: "socio", width: 35 },
       { header: "DNI", key: "dni", width: 15 },
       { header: "Estado", key: "estado", width: 18 },
@@ -940,7 +1011,7 @@ export default function ActividadesPage() {
     window.URL.revokeObjectURL(url);
   };
 
-  if (!isInitialized) return <div>Cargando...</div>;
+  if (!isInitialized) return <div>{tx("Cargando...", "Loading...")}</div>;
   if (!isAuthenticated) return null;
 
   if (isSocioRole) {
@@ -949,7 +1020,7 @@ export default function ActividadesPage() {
         <div className="flex h-[100dvh] min-h-0 w-full overflow-hidden bg-background">
           <AppSidebar />
           <SidebarInset className="!grid !h-[100dvh] !min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden">
-            <AppHeader title="Mis actividades" />
+            <AppHeader title={tx("Mis actividades", "My activities")} />
             <section className="min-h-0 min-w-0 space-y-4 overflow-y-auto overflow-x-hidden overscroll-contain p-3 sm:p-4 md:space-y-5 md:p-6">
               <QaFileNameBadge file="src/app/dashboard/actividades/page.tsx" />
 
@@ -957,22 +1028,19 @@ export default function ActividadesPage() {
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                   <div className="max-w-3xl">
                     <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-black uppercase tracking-[0.22em] text-cyan-50">
-                      <CalendarDays className="h-4 w-4" /> Solicitud de
-                      inscripción
+                      <CalendarDays className="h-4 w-4" /> {tx("Solicitud de inscripción", "Enrollment request")}
                     </span>
                     <h1 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">
-                      Actividades y clases
+                      {tx("Actividades y clases", "Activities and classes")}
                     </h1>
                     <p className="mt-3 max-w-2xl text-sm leading-6 text-cyan-50/90">
-                      Consultá cupos, personas inscriptas y el estado de tus
-                      solicitudes. Cuando administración apruebe tu inscripción,
-                      el turno queda destacado en tu agenda.
+                      {tx("Consultá cupos, personas inscriptas y el estado de tus solicitudes. Cuando administración apruebe tu inscripción, el turno queda destacado en tu agenda.", "Check slots, enrolled people, and the status of your requests. When administration approves your enrollment, the shift is highlighted in your schedule.")}
                     </p>
                   </div>
                   <div className="grid grid-cols-3 gap-2 rounded-2xl border border-white/15 bg-white/10 p-2 text-center backdrop-blur">
                     <div className="rounded-xl bg-white/10 px-3 py-2">
                       <p className="text-[11px] font-semibold uppercase text-cyan-50/80">
-                        Cupos libres
+                        {tx("Cupos libres", "Free slots")}
                       </p>
                       <p className="text-2xl font-black">
                         {socioAvailableSlots}
@@ -980,7 +1048,7 @@ export default function ActividadesPage() {
                     </div>
                     <div className="rounded-xl bg-white/10 px-3 py-2">
                       <p className="text-[11px] font-semibold uppercase text-cyan-50/80">
-                        Pendientes
+                        {tx("Pendientes", "Pending")}
                       </p>
                       <p className="text-2xl font-black">
                         {socioPendingRequests}
@@ -988,7 +1056,7 @@ export default function ActividadesPage() {
                     </div>
                     <div className="rounded-xl bg-white/10 px-3 py-2">
                       <p className="text-[11px] font-semibold uppercase text-cyan-50/80">
-                        Mis turnos
+                        {tx("Mis turnos", "My shifts")}
                       </p>
                       <p className="text-2xl font-black">
                         {socioAgendaItems.length}
@@ -1001,7 +1069,7 @@ export default function ActividadesPage() {
               {dashboard?.warnings?.length ? (
                 <Card className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30">
                   <CardContent className="p-4 text-sm leading-6 text-amber-900 dark:text-amber-100">
-                    <strong>Configuración pendiente:</strong>{" "}
+                    <strong>{tx("Configuración pendiente:", "Pending setup:")}</strong>{" "}
                     {dashboard.warnings.join(" ")}
                   </CardContent>
                 </Card>
@@ -1009,28 +1077,28 @@ export default function ActividadesPage() {
 
               <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <MetricCard
-                  title="Turnos activos"
+                  title={tx("Turnos activos", "Active shifts")}
                   value={socioVisibleTurnos.length}
                   icon={CalendarDays}
-                  helper="Disponibles para solicitar"
+                  helper={tx("Disponibles para solicitar", "Available to request")}
                 />
                 <MetricCard
-                  title="Cupos libres"
+                  title={tx("Cupos libres", "Free slots")}
                   value={socioAvailableSlots}
                   icon={Users}
-                  helper="Según agenda cargada"
+                  helper={tx("Según agenda cargada", "According to the loaded schedule")}
                 />
                 <MetricCard
-                  title="Pendientes"
+                  title={tx("Pendientes", "Pending")}
                   value={socioPendingRequests}
                   icon={ListChecks}
-                  helper="En revisión admin"
+                  helper={tx("En revisión admin", "Under admin review")}
                 />
                 <MetricCard
-                  title="Mis inscripciones"
+                  title={tx("Mis inscripciones", "My enrollments")}
                   value={socioApprovedRequests}
                   icon={CheckCircle2}
-                  helper={`${socioCancelledRequests} canceladas`}
+                  helper={tx(`${socioCancelledRequests} canceladas`, `${socioCancelledRequests} cancelled`)}
                 />
               </section>
 
@@ -1039,33 +1107,30 @@ export default function ActividadesPage() {
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <h2 className="text-xl font-black text-indigo-950 dark:text-indigo-50">
-                        Mis cupos e inscripciones
+                        {tx("Mis cupos e inscripciones", "My slots and enrollments")}
                       </h2>
                       <p className="mt-1 text-sm text-indigo-900/80 dark:text-indigo-100/80">
-                        Acá ves si estás aprobado, en lista de espera o si
-                        todavía falta confirmación administrativa.
+                        {tx("Acá ves si estás aprobado, en lista de espera o si todavía falta confirmación administrativa.", "Here you can see whether you are approved, waitlisted, or still pending administrative confirmation.")}
                       </p>
                     </div>
                     <span className="w-fit rounded-full border border-indigo-200 bg-white px-3 py-1 text-xs font-black text-indigo-700 shadow-sm dark:border-indigo-800 dark:bg-slate-950 dark:text-indigo-200">
-                      {socioAgendaItems.length} activas
+                      {tx(`${socioAgendaItems.length} activas`, `${socioAgendaItems.length} active`)}
                     </span>
                   </div>
                 </CardHeader>
                 <CardContent className="p-4 pt-2">
                   {loadingDashboard ? (
                     <div className="rounded-2xl border border-dashed border-indigo-200 bg-white/70 p-5 text-center text-sm text-indigo-900 dark:border-indigo-900 dark:bg-slate-950/50 dark:text-indigo-100">
-                      Cargando tus inscripciones...
+                      {tx("Cargando tus inscripciones...", "Loading your enrollments...")}
                     </div>
                   ) : socioAgendaItems.length === 0 ? (
                     <div className="rounded-2xl border border-dashed border-indigo-200 bg-white/70 p-5 text-center dark:border-indigo-900 dark:bg-slate-950/50">
                       <ListChecks className="mx-auto h-8 w-8 text-indigo-400" />
                       <p className="mt-2 text-sm font-black text-slate-950 dark:text-slate-50">
-                        Todavía no tenés solicitudes activas
+                        {tx("Todavía no tenés solicitudes activas", "You do not have active requests yet")}
                       </p>
                       <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                        Elegí una actividad disponible y solicitá inscripción.
-                        El estado aparecerá acá cuando quede pendiente o
-                        aprobada.
+                        {tx("Elegí una actividad disponible y solicitá inscripción. El estado aparecerá acá cuando quede pendiente o aprobada.", "Choose an available activity and request enrollment. The status will appear here when it is pending or approved.")}
                       </p>
                     </div>
                   ) : (
@@ -1087,17 +1152,13 @@ export default function ActividadesPage() {
                                 <span
                                   className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-black uppercase ${socioEstadoClass(inscripcion.estado)}`}
                                 >
-                                  {socioEstadoLabel(inscripcion.estado)}
+                                  {socioEstadoLabel(inscripcion.estado, locale)}
                                 </span>
                                 <h3 className="mt-3 line-clamp-1 text-lg font-black text-slate-950 dark:text-slate-50">
-                                  {inscripcion.actividad_nombre ||
-                                    turno?.actividad_nombre ||
-                                    "Actividad"}
+                                  {translateActivityText(locale, inscripcion.actividad_nombre || turno?.actividad_nombre, tx("Actividad", "Activity"))}
                                 </h3>
                                 <p className="mt-1 line-clamp-1 text-sm font-semibold text-muted-foreground">
-                                  {inscripcion.turno_nombre ||
-                                    turno?.nombre_turno ||
-                                    "Turno"}
+                                  {translateActivityText(locale, inscripcion.turno_nombre || turno?.nombre_turno, tx("Turno", "Shift"))}
                                 </p>
                               </div>
                               <div className="shrink-0 rounded-2xl bg-indigo-100 p-2 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-200">
@@ -1110,28 +1171,28 @@ export default function ActividadesPage() {
                                 <Clock className="h-4 w-4 text-[#02a8e1]" />
                                 <span>
                                   {turno
-                                    ? `${diaLabel(turno.dia_semana)} · ${timeRange(turno)}`
-                                    : "Horario a confirmar"}
+                                    ? `${diaLabel(turno.dia_semana, locale)} · ${timeRange(turno)}`
+                                    : tx("Horario a confirmar", "Schedule to be confirmed")}
                                 </span>
                               </div>
                               <div className="flex items-center gap-2">
                                 <Users className="h-4 w-4 text-[#02a8e1]" />
                                 <span>
                                   {turno
-                                    ? `${turno.inscriptos}/${turno.cupo_maximo} inscriptos`
-                                    : "Cupo a confirmar"}
+                                    ? `${turno.inscriptos}/${turno.cupo_maximo} ${tx("inscriptos", "enrolled")}`
+                                    : tx("Cupo a confirmar", "Capacity to be confirmed")}
                                 </span>
                               </div>
                               <div className="sm:col-span-2 text-muted-foreground">
-                                Instructor:{" "}
+                                {tx("Instructor:", "Instructor:")}{" "}
                                 <span className="font-semibold text-slate-900 dark:text-slate-100">
-                                  {turno?.instructor_nombre || "A confirmar"}
+                                  {translateActivityText(locale, turno?.instructor_nombre, tx("A confirmar", "To be confirmed"))}
                                 </span>
                               </div>
                               <div className="sm:col-span-2 text-muted-foreground">
-                                Ubicación:{" "}
+                                {tx("Ubicación:", "Location:")}{" "}
                                 <span className="font-semibold text-slate-900 dark:text-slate-100">
-                                  {turno?.ubicacion || "A confirmar"}
+                                  {translateActivityText(locale, turno?.ubicacion, tx("A confirmar", "To be confirmed"))}
                                 </span>
                               </div>
                             </div>
@@ -1139,7 +1200,7 @@ export default function ActividadesPage() {
                             {turno ? (
                               <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/60">
                                 <div className="flex items-center justify-between gap-3 text-xs font-bold text-slate-700 dark:text-slate-200">
-                                  <span>Ocupación del turno</span>
+                                  <span>{tx("Ocupación del turno", "Shift occupancy")}</span>
                                   <span>
                                     {percentLabel(turno.ocupacion_porcentaje)}
                                   </span>
@@ -1151,8 +1212,8 @@ export default function ActividadesPage() {
                                   />
                                 </div>
                                 <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-semibold text-muted-foreground">
-                                  <span>{cupoEstadoLabel(turno)}</span>
-                                  <span>{turno.lista_espera} en espera</span>
+                                  <span>{cupoEstadoLabel(turno, locale)}</span>
+                                  <span>{tx(`${turno.lista_espera} en espera`, `${turno.lista_espera} waiting`)}</span>
                                 </div>
                               </div>
                             ) : null}
@@ -1167,8 +1228,8 @@ export default function ActividadesPage() {
                               className="mt-4 w-full border-rose-200 text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-200 dark:hover:bg-rose-950/20"
                             >
                               {isCancelling
-                                ? "Cancelando..."
-                                : "Cancelar solicitud / inscripción"}
+                                ? tx("Cancelando...", "Cancelling...")
+                                : tx("Cancelar solicitud / inscripción", "Cancel request / enrollment")}
                             </Button>
                           </div>
                         );
@@ -1187,7 +1248,7 @@ export default function ActividadesPage() {
                       onChange={(event) =>
                         setTurnoSearchTerm(event.target.value)
                       }
-                      placeholder="Buscar actividad, turno, instructor o ubicación..."
+                      placeholder={tx("Buscar actividad, turno, instructor o ubicación...", "Search activity, shift, instructor, or location...")}
                       className="h-11 pl-9"
                     />
                   </div>
@@ -1196,10 +1257,10 @@ export default function ActividadesPage() {
                     value={diaFilter}
                     onChange={(event) => setDiaFilter(event.target.value)}
                   >
-                    <option value="todos">Todos los días</option>
+                    <option value="todos">{tx("Todos los días", "All days")}</option>
                     {DIAS_SEMANA.map((dia) => (
                       <option key={dia.value} value={String(dia.value)}>
-                        {dia.label}
+                        {diaLabel(dia.value, locale)}
                       </option>
                     ))}
                   </select>
@@ -1210,7 +1271,7 @@ export default function ActividadesPage() {
                 {loadingDashboard ? (
                   <Card className="xl:col-span-2">
                     <CardContent className="p-8 text-center text-sm text-muted-foreground">
-                      Cargando actividades disponibles...
+                      {tx("Cargando actividades disponibles...", "Loading available activities...")}
                     </CardContent>
                   </Card>
                 ) : socioVisibleTurnos.length === 0 ? (
@@ -1218,11 +1279,10 @@ export default function ActividadesPage() {
                     <CardContent className="p-8 text-center">
                       <CalendarDays className="mx-auto h-10 w-10 text-indigo-400" />
                       <p className="mt-3 text-lg font-black">
-                        No hay actividades disponibles
+                        {tx("No hay actividades disponibles", "No activities available")}
                       </p>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Cuando administración cargue turnos activos, aparecerán
-                        acá para solicitar inscripción.
+                        {tx("Cuando administración cargue turnos activos, aparecerán acá para solicitar inscripción.", "When administration loads active shifts, they will appear here so you can request enrollment.")}
                       </p>
                     </CardContent>
                   </Card>
@@ -1250,28 +1310,28 @@ export default function ActividadesPage() {
                             <div className="min-w-0">
                               <div className="flex flex-wrap items-center gap-2">
                                 <span className="rounded-full bg-indigo-100 px-2.5 py-1 text-[11px] font-black uppercase text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-200">
-                                  {diaLabel(turno.dia_semana)}
+                                  {diaLabel(turno.dia_semana, locale)}
                                 </span>
                                 <span
                                   className={`rounded-full px-2.5 py-1 text-[11px] font-black uppercase ${hasSlots ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-200" : "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-100"}`}
                                 >
                                   {hasSlots
-                                    ? `${turno.cupos_disponibles} cupos libres`
-                                    : "Lista de espera"}
+                                    ? countLabel(locale, Number(turno.cupos_disponibles ?? 0), "cupo libre", "cupos libres", "free slot", "free slots")
+                                    : tx("Lista de espera", "Waitlist")}
                                 </span>
                               </div>
                               <h2 className="mt-3 line-clamp-1 text-xl font-black text-slate-950 dark:text-slate-50">
-                                {turno.actividad_nombre || "Actividad"}
+                                {translateActivityText(locale, turno.actividad_nombre, tx("Actividad", "Activity"))}
                               </h2>
                               <p className="mt-1 line-clamp-1 text-sm font-semibold text-muted-foreground">
-                                {turno.nombre_turno}
+                                {translateActivityText(locale, turno.nombre_turno)}
                               </p>
                             </div>
                             {currentInscripcion ? (
                               <span
                                 className={`shrink-0 rounded-full border px-3 py-1 text-xs font-black ${socioEstadoClass(currentInscripcion.estado)}`}
                               >
-                                {socioEstadoLabel(currentInscripcion.estado)}
+                                {socioEstadoLabel(currentInscripcion.estado, locale)}
                               </span>
                             ) : null}
                           </div>
@@ -1285,26 +1345,26 @@ export default function ActividadesPage() {
                               <Users className="h-4 w-4 text-[#02a8e1]" />
                               <span>
                                 {turno.inscriptos}/{turno.cupo_maximo}{" "}
-                                inscriptos
+                                {tx("inscriptos", "enrolled")}
                               </span>
                             </div>
                             <div className="sm:col-span-2 text-muted-foreground">
-                              Instructor:{" "}
+                              {tx("Instructor:", "Instructor:")}{" "}
                               <span className="font-semibold text-slate-900 dark:text-slate-100">
-                                {turno.instructor_nombre || "A confirmar"}
+                                {translateActivityText(locale, turno.instructor_nombre, tx("A confirmar", "To be confirmed"))}
                               </span>
                             </div>
                             <div className="sm:col-span-2 text-muted-foreground">
-                              Ubicación:{" "}
+                              {tx("Ubicación:", "Location:")}{" "}
                               <span className="font-semibold text-slate-900 dark:text-slate-100">
-                                {turno.ubicacion || "A confirmar"}
+                                {translateActivityText(locale, turno.ubicacion, tx("A confirmar", "To be confirmed"))}
                               </span>
                             </div>
                           </div>
 
                           <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950/60">
                             <div className="flex items-center justify-between gap-3 text-xs font-bold text-slate-700 dark:text-slate-200">
-                              <span>Ocupación</span>
+                              <span>{tx("Ocupación", "Occupancy")}</span>
                               <span>
                                 {percentLabel(turno.ocupacion_porcentaje)}
                               </span>
@@ -1321,37 +1381,36 @@ export default function ActividadesPage() {
                               <div className="rounded-xl bg-slate-100 px-2 py-2 text-slate-700 dark:bg-slate-900 dark:text-slate-200">
                                 {turno.inscriptos}
                                 <br />
-                                inscriptos
+                                {tx("inscriptos", "enrolled")}
                               </div>
                               <div
                                 className={`rounded-xl px-2 py-2 ${cupoEstadoClass(turno)}`}
                               >
                                 {turno.cupos_disponibles}
                                 <br />
-                                libres
+                                {tx("libres", "free")}
                               </div>
                               <div className="rounded-xl bg-amber-100 px-2 py-2 text-amber-700 dark:bg-amber-950/50 dark:text-amber-100">
                                 {turno.lista_espera}
                                 <br />
-                                espera
+                                {tx("espera", "waiting")}
                               </div>
                             </div>
                           </div>
 
                           {currentInscripcion ? (
                             <div className="mt-3 rounded-xl border border-indigo-200 bg-indigo-50 p-3 text-xs leading-5 text-indigo-950 dark:border-indigo-900 dark:bg-indigo-950/20 dark:text-indigo-100">
-                              Tu estado actual para este turno es{" "}
+                              {tx("Tu estado actual para este turno es", "Your current status for this shift is")}{" "}
                               <strong>
-                                {socioEstadoLabel(currentInscripcion.estado)}
+                                {socioEstadoLabel(currentInscripcion.estado, locale)}
                               </strong>
-                              . También podés verlo en el bloque “Mis cupos e
-                              inscripciones”.
+                              {tx(". También podés verlo en el bloque “Mis cupos e inscripciones”", ". You can also see it in the “My slots and enrollments” block")}.
                             </div>
                           ) : null}
 
                           {turno.observaciones ? (
                             <p className="mt-3 rounded-xl border border-cyan-200 bg-cyan-50 p-3 text-xs leading-5 text-cyan-900 dark:border-cyan-900/60 dark:bg-cyan-950/30 dark:text-cyan-100">
-                              {turno.observaciones}
+                              {translateActivityText(locale, turno.observaciones)}
                             </p>
                           ) : null}
 
@@ -1362,12 +1421,12 @@ export default function ActividadesPage() {
                             className="mt-4 w-full bg-[#02a8e1] font-black text-white hover:bg-[#0288b1] disabled:opacity-70"
                           >
                             {isSubmitting
-                              ? "Enviando solicitud..."
+                              ? tx("Enviando solicitud...", "Sending request...")
                               : currentInscripcion
                                 ? socioEstadoLabel(currentInscripcion.estado)
                                 : hasSlots
-                                  ? "Solicitar inscripción"
-                                  : "Solicitar lista de espera"}
+                                  ? tx("Solicitar inscripción", "Request enrollment")
+                                  : tx("Solicitar lista de espera", "Request waitlist")}
                           </Button>
                         </CardContent>
                       </Card>
@@ -1378,10 +1437,10 @@ export default function ActividadesPage() {
 
               <Card className="border-indigo-200 bg-indigo-50/70 dark:border-indigo-900 dark:bg-indigo-950/20">
                 <CardContent className="p-4 text-sm leading-6 text-indigo-950 dark:text-indigo-100">
-                  Las solicitudes quedan registradas para revisión
-                  administrativa. El bloque “Mis cupos e inscripciones” muestra
-                  tus estados activos, cupos del turno, lista de espera y opción
-                  de cancelación.
+                  {tx(
+                    "Las solicitudes quedan registradas para revisión administrativa. El bloque “Mis cupos e inscripciones” muestra tus estados activos, cupos del turno, lista de espera y opción de cancelación.",
+                    "Requests are recorded for administrative review. The “My slots and enrollments” block shows your active statuses, shift slots, waitlist, and cancellation option.",
+                  )}
                 </CardContent>
               </Card>
             </section>
@@ -1600,7 +1659,7 @@ export default function ActividadesPage() {
                         >
                           {DIAS_SEMANA.map((dia) => (
                             <option key={dia.value} value={dia.value}>
-                              {dia.label}
+                              {diaLabel(dia.value, locale)}
                             </option>
                           ))}
                         </select>
@@ -1830,10 +1889,10 @@ export default function ActividadesPage() {
                     value={diaFilter}
                     onChange={(event) => setDiaFilter(event.target.value)}
                   >
-                    <option value="todos">Todos los días</option>
+                    <option value="todos">{tx("Todos los días", "All days")}</option>
                     {DIAS_SEMANA.map((dia) => (
                       <option key={dia.value} value={dia.value}>
-                        {dia.label}
+                        {diaLabel(dia.value, locale)}
                       </option>
                     ))}
                   </select>
@@ -1910,7 +1969,7 @@ export default function ActividadesPage() {
                                 {turno.actividad_nombre}
                               </p>
                               <p className="truncate text-xs text-muted-foreground">
-                                {turno.nombre_turno}
+                                {translateActivityText(locale, turno.nombre_turno)}
                               </p>
                             </div>
                             <span
@@ -1924,18 +1983,18 @@ export default function ActividadesPage() {
                             <div className="flex items-center gap-2 text-slate-700">
                               <Clock className="h-4 w-4 shrink-0 text-[#02a8e1]" />
                               <span>
-                                {diaLabel(turno.dia_semana)} ·{" "}
+                                {diaLabel(turno.dia_semana, locale)} ·{" "}
                                 {timeRange(turno)}
                               </span>
                             </div>
                             <div className="text-muted-foreground">
-                              Instructor:{" "}
+                              {tx("Instructor:", "Instructor:")}{" "}
                               <span className="text-slate-900">
                                 {turno.instructor_nombre || "Sin instructor"}
                               </span>
                             </div>
                             <div className="text-muted-foreground">
-                              Ubicación:{" "}
+                              {tx("Ubicación:", "Location:")}{" "}
                               <span className="text-slate-900">
                                 {turno.ubicacion || "Sin ubicación"}
                               </span>
@@ -2009,13 +2068,13 @@ export default function ActividadesPage() {
                                   {turno.actividad_nombre}
                                 </div>
                                 <div className="text-xs text-muted-foreground">
-                                  {turno.nombre_turno}
+                                  {translateActivityText(locale, turno.nombre_turno)}
                                 </div>
                               </TableCell>
                               <TableCell>
                                 <div className="flex items-center gap-2">
                                   <Clock className="h-4 w-4 text-[#02a8e1]" />{" "}
-                                  {diaLabel(turno.dia_semana)}
+                                  {diaLabel(turno.dia_semana, locale)}
                                 </div>
                                 <div className="text-xs text-muted-foreground">
                                   {timeRange(turno)}
@@ -2229,8 +2288,8 @@ export default function ActividadesPage() {
                           .filter((turno) => turno.estado === "activo")
                           .map((turno) => (
                             <option key={turno.id} value={turno.id}>
-                              {turno.actividad_nombre} · {turno.nombre_turno} ·{" "}
-                              {diaLabel(turno.dia_semana)}{" "}
+                              {turno.actividad_nombre} · {translateActivityText(locale, turno.nombre_turno)} ·{" "}
+                              {diaLabel(turno.dia_semana, locale)}{" "}
                               {String(turno.hora_inicio).slice(0, 5)}
                             </option>
                           ))}

@@ -198,7 +198,7 @@ export default function EvolucionSocioTable({
 
   if (error) {
     return (
-      <div className="rounded-md border border-red-200 bg-red-50 p-6 text-center text-red-600">
+      <div className="rounded-md border border-red-200 bg-red-50 p-6 text-center text-red-600 dark:border-red-500/40 dark:bg-red-950/30 dark:text-red-100">
         {error}
         <div className="mt-4">
           <Button variant="outline" onClick={loadData}>
@@ -274,7 +274,7 @@ export default function EvolucionSocioTable({
 
             <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
               <span className="rounded-full bg-muted px-2.5 py-1">
-                Grasa: {formatNumber(e.porcentaje_grasa, "%")}
+                {tx("Grasa", "Fat")}: {formatNumber(e.porcentaje_grasa, "%")}
               </span>
               <span className="rounded-full bg-muted px-2.5 py-1">
                 {tx("Tipo", "Type")}: {translateBodyType(e.tipo_corporal, tx)}

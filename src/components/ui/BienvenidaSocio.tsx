@@ -1,5 +1,7 @@
 import { useRef } from "react";
 import ProfileImage from "@/components/perfil/ProfileImage";
+import { useI18n } from "@/i18n/I18nProvider";
+import type { GymMasterLocale } from "@/i18n/config";
 
 type BienvenidaVariant = "success" | "debt" | "inactive";
 
@@ -13,6 +15,7 @@ type BienvenidaSocioProps = {
   variant?: BienvenidaVariant;
   movementType?: "entrada" | "salida";
   message?: string | null;
+  locale?: GymMasterLocale;
 };
 
 const variantStyles: Record<
@@ -50,6 +53,24 @@ const variantStyles: Record<
   },
 };
 
+function welcomeTx(locale: GymMasterLocale, es: string, en: string) {
+  return locale === "en" ? en : es;
+}
+
+function translateWelcomeMessage(locale: GymMasterLocale, value?: string | null) {
+  if (!value || locale !== "en") return value ?? "";
+
+  return value
+    .replace(/Salida registrada correctamente\.?/gi, "Exit registered successfully.")
+    .replace(/Asistencia registrada correctamente\.?/gi, "Attendance registered successfully.")
+    .replace(/Regularice su situación en administración/gi, "Please contact administration to regularize your status")
+    .replace(/Usted adeuda la cuota correspondiente/gi, "You have a pending fee")
+    .replace(/Socio desactivado/gi, "Member deactivated")
+    .replace(/Acceso bloqueado/gi, "Access blocked")
+    .replace(/Atención requerida/gi, "Attention required")
+    .replace(/Acceso permitido/gi, "Access allowed");
+}
+
 export default function BienvenidaSocio({
   foto,
   nombre,
@@ -59,7 +80,11 @@ export default function BienvenidaSocio({
   variant = "success",
   movementType = "entrada",
   message,
+  locale,
 }: BienvenidaSocioProps) {
+  const { locale: contextLocale } = useI18n();
+  const activeLocale = locale ?? contextLocale;
+  const tr = (es: string, en: string) => welcomeTx(activeLocale, es, en);
   const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleClose = () => {
@@ -69,33 +94,39 @@ export default function BienvenidaSocio({
     onClose?.();
   };
 
-  const displayNombre = nombre || "Socio";
+  const displayNombre = nombre || tr("Socio", "Member");
   const displayFoto = foto;
   const displayIdSocio = id_socio;
   const styles = variantStyles[variant];
 
   const title =
     movementType === "salida"
-      ? `¡Hasta luego, ${displayNombre}!`
+      ? tr(`¡Hasta luego, ${displayNombre}!`, `See you soon, ${displayNombre}!`)
       : variant === "inactive"
-        ? "Socio desactivado"
+        ? tr("Socio desactivado", "Member deactivated")
         : variant === "debt"
-          ? "Cuota pendiente"
+          ? tr("Cuota pendiente", "Pending fee")
           : isAdminView
-            ? `¡Socio accedió! ${displayNombre}`
-            : `¡Bienvenido, ${displayNombre}`;
+            ? tr(`¡Socio accedió! ${displayNombre}`, `Member accessed! ${displayNombre}`)
+            : tr(`¡Bienvenido, ${displayNombre}`, `Welcome, ${displayNombre}`);
 
   const description =
-    message ||
+    translateWelcomeMessage(activeLocale, message) ||
     (movementType === "salida"
-      ? "Salida registrada correctamente."
+      ? tr("Salida registrada correctamente.", "Exit registered successfully.")
       : variant === "inactive"
-        ? "Regularice su situación en administración para poder registrar el ingreso."
+        ? tr(
+            "Regularice su situación en administración para poder registrar el ingreso.",
+            "Please contact administration to regularize your status before registering entry.",
+          )
         : variant === "debt"
-          ? "Usted adeuda la cuota correspondiente. Regularice su situación en administración."
+          ? tr(
+              "Usted adeuda la cuota correspondiente. Regularice su situación en administración.",
+              "You have a pending fee. Please contact administration to regularize your status.",
+            )
           : isAdminView
-            ? "Un socio ha registrado su asistencia"
-            : "Asistencia registrada correctamente");
+            ? tr("Un socio ha registrado su asistencia", "A member has registered attendance")
+            : tr("Asistencia registrada correctamente", "Attendance registered successfully"));
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-black/50 backdrop-blur-sm">
@@ -118,12 +149,12 @@ export default function BienvenidaSocio({
                 className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide ${styles.badge}`}
               >
                 {variant === "inactive"
-                  ? "Acceso bloqueado"
+                  ? tr("Acceso bloqueado", "Access blocked")
                   : variant === "debt"
-                    ? "Atención requerida"
+                    ? tr("Atención requerida", "Attention required")
                     : movementType === "salida"
-                      ? "Salida registrada"
-                      : "Acceso permitido"}
+                      ? tr("Salida registrada", "Exit registered")
+                      : tr("Acceso permitido", "Access allowed")}
               </span>
 
               <h1
@@ -139,7 +170,7 @@ export default function BienvenidaSocio({
               {isAdminView && displayIdSocio && (
                 <div className="p-3 mt-4 rounded-lg bg-white/70 dark:bg-slate-800/70">
                   <p className="text-sm text-gray-700 dark:text-gray-300">
-                    <strong>ID Socio:</strong> {displayIdSocio}
+                    <strong>{tr("ID Socio", "Member ID")}:</strong> {displayIdSocio}
                   </p>
                 </div>
               )}
@@ -150,7 +181,7 @@ export default function BienvenidaSocio({
                     onClick={handleClose}
                     className={`px-6 py-3 font-semibold rounded-lg shadow ${styles.button}`}
                   >
-                    Continuar
+                    {tr("Continuar", "Continue")}
                   </button>
                 </div>
               )}

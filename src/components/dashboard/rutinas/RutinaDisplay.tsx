@@ -519,6 +519,29 @@ const traducirTextoDemoRutina = (value: string | null | undefined, isEnglish: bo
   return EXERCISE_NAME_EN[value] ?? value;
 };
 
+const ROUTINE_VALUE_EN: Record<string, string> = {
+  "Definición": "Definition",
+  "definicion": "Definition",
+  "definición": "Definition",
+  "Volumen": "Volume",
+  "volumen": "Volume",
+  "Bajar de peso": "Lose weight",
+  "bajar de peso": "Lose weight",
+  "Fuerza": "Strength",
+  "fuerza": "Strength",
+  "Resistencia": "Endurance",
+  "resistencia": "Endurance",
+  "Inicial": "Beginner",
+  "Intermedio": "Intermediate",
+  "Avanzado": "Advanced",
+};
+
+const traducirValorRutinaLibre = (value: string | null | undefined, isEnglish: boolean): string => {
+  if (!value) return "";
+  if (!isEnglish) return value;
+  return ROUTINE_VALUE_EN[value] ?? value;
+};
+
 const traducirGrupoMuscular = (value: string | null, isEnglish: boolean): string | null => {
   if (!value) return null;
   if (!isEnglish) return value;
@@ -641,7 +664,7 @@ export default function RutinaEjercicios({
 }) {
   const { locale } = useI18n();
   const isEnglish = locale === "en";
-  const tx = (es: string, en: string) => (isEnglish ? en : es);
+  const tx = useCallback((es: string, en: string) => (isEnglish ? en : es), [isEnglish]);
   const { user, token } = useAuthStore();
   const usuarioEsAdmin = isAdmin(user?.rol);
   const puedeGestionarRutinas = usuarioEsAdmin;
@@ -682,7 +705,7 @@ export default function RutinaEjercicios({
       const response = await getHistorialRutinas();
 
       if (!response.ok) {
-        throw new Error("Error al cargar rutinas");
+        throw new Error(tx("Error al cargar rutinas", "Error loading routines"));
       }
 
       const rutinasData: Rutina[] = response.data ?? [];
@@ -693,7 +716,7 @@ export default function RutinaEjercicios({
     } finally {
       setLoading(false);
     }
-  }, [user, token]);
+  }, [user, token, tx]);
 
   useEffect(() => {
     fetchRutinas();
@@ -758,7 +781,7 @@ export default function RutinaEjercicios({
         const response = await getRutinaTrainingSessions(rutinaId);
 
         if (!response.ok) {
-          throw new Error(response.error || 'Error al cargar sesiones de entrenamiento');
+          throw new Error(response.error || tx('Error al cargar sesiones de entrenamiento', 'Error loading training sessions'));
         }
 
         setTrainingSessions(response.data ?? []);
@@ -769,7 +792,7 @@ export default function RutinaEjercicios({
         setTrainingSessionsLoading(false);
       }
     },
-    [puedeMarcarEjercicios, token]
+    [puedeMarcarEjercicios, token, tx]
   );
 
   useEffect(() => {
@@ -833,7 +856,7 @@ export default function RutinaEjercicios({
         );
       } catch (error) {
         console.error('Error al actualizar ejercicio de sesión:', error);
-        toast.error('No se pudo guardar el avance de la sesión');
+        toast.error(tx('No se pudo guardar el avance de la sesión', 'Could not save session progress'));
       } finally {
         setSessionActionLoading(null);
       }
@@ -856,7 +879,7 @@ export default function RutinaEjercicios({
   const resetearProgresoRutina = () => {
     if (!puedeMarcarEjercicios) return;
 
-    const confirmar = window.confirm('¿Querés reiniciar el progreso marcado para esta rutina?');
+    const confirmar = window.confirm(tx('¿Querés reiniciar el progreso marcado para esta rutina?', 'Do you want to reset the marked progress for this routine?'));
     if (!confirmar) return;
 
     setEjerciciosCompletados({});
@@ -865,7 +888,7 @@ export default function RutinaEjercicios({
       window.localStorage.removeItem(progressStorageKey);
     }
 
-    toast.success('Progreso local de rutina reiniciado');
+    toast.success(tx('Progreso local de rutina reiniciado', 'Local routine progress reset'));
   };
 
   const iniciarSesionEntrenamiento = async (
@@ -876,7 +899,7 @@ export default function RutinaEjercicios({
 
     const exercises = construirEjerciciosSesionInputs(rutina, ejerciciosPorDia);
     if (exercises.length === 0) {
-      toast.error('La rutina no tiene ejercicios para iniciar una sesión');
+      toast.error(tx('La rutina no tiene ejercicios para iniciar una sesión', 'This routine has no exercises to start a session'));
       return;
     }
 
@@ -889,7 +912,7 @@ export default function RutinaEjercicios({
       });
 
       if (!response.ok) {
-        throw new Error(response.error || 'Error al iniciar sesión');
+        throw new Error(response.error || tx('Error al iniciar sesión', 'Error starting session'));
       }
 
       const session = response.data as RutinaTrainingSession;
@@ -897,10 +920,10 @@ export default function RutinaEjercicios({
         const withoutSame = prev.filter((item) => item.id !== session.id);
         return [session, ...withoutSame];
       });
-      toast.success('Sesión de entrenamiento iniciada');
+      toast.success(tx('Sesión de entrenamiento iniciada', 'Training session started'));
     } catch (error) {
       console.error('Error al iniciar sesión de entrenamiento:', error);
-      toast.error('No se pudo iniciar la sesión de entrenamiento');
+      toast.error(tx('No se pudo iniciar la sesión de entrenamiento', 'Could not start the training session'));
     } finally {
       setSessionActionLoading(null);
     }
@@ -917,7 +940,7 @@ export default function RutinaEjercicios({
       });
 
       if (!response.ok) {
-        throw new Error(response.error || 'Error al finalizar sesión');
+        throw new Error(response.error || tx('Error al finalizar sesión', 'Error finishing session'));
       }
 
       const session = response.data as RutinaTrainingSession;
@@ -927,10 +950,10 @@ export default function RutinaEjercicios({
       );
       setEjerciciosCompletados(completedSnapshot);
       persistirProgreso(completedSnapshot);
-      toast.success('Sesión de entrenamiento finalizada');
+      toast.success(tx('Sesión de entrenamiento finalizada', 'Training session finished'));
     } catch (error) {
       console.error('Error al finalizar sesión:', error);
-      toast.error('No se pudo finalizar la sesión');
+      toast.error(tx('No se pudo finalizar la sesión', 'Could not finish the session'));
     } finally {
       setSessionActionLoading(null);
     }
@@ -939,7 +962,7 @@ export default function RutinaEjercicios({
   const cancelarSesionEntrenamiento = async () => {
     if (!activeTrainingSession) return;
 
-    const confirmar = window.confirm('¿Querés cancelar esta sesión de entrenamiento?');
+    const confirmar = window.confirm(tx('¿Querés cancelar esta sesión de entrenamiento?', 'Do you want to cancel this training session?'));
     if (!confirmar) return;
 
     setSessionActionLoading('cancel-session');
@@ -950,17 +973,17 @@ export default function RutinaEjercicios({
       });
 
       if (!response.ok) {
-        throw new Error(response.error || 'Error al cancelar sesión');
+        throw new Error(response.error || tx('Error al cancelar sesión', 'Error cancelling session'));
       }
 
       const session = response.data as RutinaTrainingSession;
       setTrainingSessions((prev) =>
         prev.map((item) => (item.id === session.id ? session : item))
       );
-      toast.success('Sesión de entrenamiento cancelada');
+      toast.success(tx('Sesión de entrenamiento cancelada', 'Training session cancelled'));
     } catch (error) {
       console.error('Error al cancelar sesión:', error);
-      toast.error('No se pudo cancelar la sesión');
+      toast.error(tx('No se pudo cancelar la sesión', 'Could not cancel the session'));
     } finally {
       setSessionActionLoading(null);
     }
@@ -1058,7 +1081,7 @@ export default function RutinaEjercicios({
               className="inline-flex items-center gap-2 px-5 py-2 text-sm font-medium text-white transition-colors bg-gray-900 rounded-full hover:bg-gray-800"
             >
               <ArrowLeft className="w-4 h-4" />
-              {backLabel}
+              {isEnglish && backLabel === "VOLVER" ? "BACK" : backLabel}
             </button>
           </div>
         </div>
@@ -1178,7 +1201,7 @@ export default function RutinaEjercicios({
                 className="inline-flex min-h-11 items-center justify-center self-start gap-2 rounded-full border border-white/30 bg-transparent px-4 py-2 text-xs font-medium tracking-wide text-white transition-colors cursor-pointer sm:px-6 sm:py-3 sm:text-sm hover:bg-white/10 sm:self-auto"
               >
                 <ArrowLeft className="w-4 h-4" />
-                {backLabel}
+                {isEnglish && backLabel === "VOLVER" ? "BACK" : backLabel}
               </button>
             </div>
           </div>
@@ -1223,7 +1246,7 @@ export default function RutinaEjercicios({
               <div className={`mt-4 rounded-2xl border p-4 ${
                 activeTrainingSession
                   ? 'border-neutral-200 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900'
-                  : 'border-emerald-100 bg-emerald-50'
+                  : 'border-emerald-100 bg-emerald-50 dark:border-emerald-900/60 dark:bg-emerald-950/30'
               }`}>
                 <div className={`mb-2 flex items-center justify-between gap-3 text-sm font-semibold ${
                   activeTrainingSession ? 'text-neutral-950 dark:text-neutral-100' : 'text-emerald-950 dark:text-emerald-200'
@@ -1670,16 +1693,16 @@ export default function RutinaEjercicios({
 
   return (
     <>
-      <div className="min-h-screen bg-slate-50/60 px-2 py-4 sm:px-5 sm:py-10">
+      <div className="min-h-screen bg-slate-50/60 px-2 py-4 sm:px-5 sm:py-10 dark:bg-black">
         <div className="mx-auto max-w-7xl">
           <div className="mb-8 text-center sm:mb-12 lg:mb-15">
-            <h1 className="mb-3 text-3xl font-semibold tracking-tight text-gray-900 sm:mb-4 sm:text-4xl lg:text-5xl sm:tracking-wide">
-              {usuarioEsAdmin ? "RUTINAS ASIGNADAS" : "RUTINAS"}
+            <h1 className="mb-3 text-3xl font-semibold tracking-tight text-gray-900 sm:mb-4 sm:text-4xl lg:text-5xl sm:tracking-wide dark:text-neutral-50">
+              {usuarioEsAdmin ? tx("RUTINAS ASIGNADAS", "ASSIGNED ROUTINES") : tx("RUTINAS", "ROUTINES")}
             </h1>
-            <p className="text-base font-light tracking-wide text-gray-600 sm:text-lg sm:tracking-widest">
+            <p className="text-base font-light tracking-wide text-gray-600 sm:text-lg sm:tracking-widest dark:text-neutral-300">
               {usuarioEsAdmin
-                ? "RUTINAS ASIGNADAS A SOCIOS"
-                : "ENTRENA CON PROPÓSITO"}
+                ? tx("RUTINAS ASIGNADAS A SOCIOS", "ROUTINES ASSIGNED TO MEMBERS")
+                : tx("ENTRENA CON PROPÓSITO", "TRAIN WITH PURPOSE")}
             </p>
           </div>
 
@@ -1687,7 +1710,7 @@ export default function RutinaEjercicios({
             {rutinas.map((rutina) => (
               <div
                 key={rutina.id_rutina}
-                className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm"
+                className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950 dark:shadow-black/40"
               >
                 <div className="p-5 sm:p-8 lg:p-10">
                   <h2 className="mb-2 text-xl font-semibold tracking-tight text-gray-950 break-words dark:text-neutral-50 sm:mb-3 sm:text-2xl lg:text-3xl sm:tracking-wide">
@@ -1695,7 +1718,7 @@ export default function RutinaEjercicios({
                   </h2>
 
                   {usuarioEsAdmin && rutina.socio && (
-                    <div className="mb-3 text-sm font-light tracking-wide text-gray-600">
+                    <div className="mb-3 text-sm font-light tracking-wide text-gray-600 dark:text-neutral-300">
                       <span className="font-medium">{tx("Socio", "Member")}:</span>{" "}
                       {rutina.socio.nombre_completo}
                       {rutina.socio.dni ? ` · ${tx("DNI", "ID")}: ${rutina.socio.dni}` : ""}
@@ -1703,7 +1726,7 @@ export default function RutinaEjercicios({
                     </div>
                   )}
 
-                  <div className="flex flex-col gap-2 text-xs font-light tracking-wide text-gray-600 sm:flex-row sm:gap-6 sm:text-sm">
+                  <div className="flex flex-col gap-2 text-xs font-light tracking-wide text-gray-600 sm:flex-row sm:gap-6 sm:text-sm dark:text-neutral-300">
                     <span>
                       {tx("CREADO", "CREATED")}{" "}
                       {rutina.creado_en
@@ -1720,13 +1743,13 @@ export default function RutinaEjercicios({
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-3 border-t border-gray-100 bg-gray-50 p-4 sm:flex-row sm:flex-wrap sm:gap-4 sm:p-5">
+                <div className="flex flex-col gap-3 border-t border-gray-100 bg-gray-50 p-4 sm:flex-row sm:flex-wrap sm:gap-4 sm:p-5 dark:border-neutral-800 dark:bg-neutral-900/70">
                   <button
                     onClick={() => {
                       onView?.(rutina);
                       verRutina(rutina.id_rutina);
                     }}
-                    className="min-h-11 rounded-full border-none bg-gray-900 px-6 py-2 text-xs font-semibold tracking-wide text-white transition-colors cursor-pointer sm:px-8 sm:py-3 sm:text-sm hover:bg-gray-800"
+                    className="min-h-11 rounded-full border-none bg-gray-900 px-6 py-2 text-xs font-semibold tracking-wide text-white transition-colors cursor-pointer sm:px-8 sm:py-3 sm:text-sm hover:bg-gray-800 dark:bg-neutral-100 dark:text-black dark:hover:bg-white"
                   >
                     {tx("Ver rutina", "View routine")}
                   </button>
@@ -1734,9 +1757,9 @@ export default function RutinaEjercicios({
                   {puedeGestionarRutinas && onEdit && (
                     <button
                       onClick={() => onEdit(rutina)}
-                      className="min-h-11 rounded-full border border-yellow-500 bg-transparent px-6 py-2 text-xs font-semibold tracking-wide text-yellow-700 transition-colors cursor-pointer sm:px-8 sm:py-3 sm:text-sm hover:bg-yellow-50"
+                      className="min-h-11 rounded-full border border-yellow-500 bg-transparent px-6 py-2 text-xs font-semibold tracking-wide text-yellow-700 transition-colors cursor-pointer sm:px-8 sm:py-3 sm:text-sm hover:bg-yellow-50 dark:text-yellow-300 dark:hover:bg-yellow-950/30"
                     >
-                      Editar
+                      {tx("Editar", "Edit")}
                     </button>
                   )}
 
@@ -1744,9 +1767,9 @@ export default function RutinaEjercicios({
                     <button
                       onClick={() => handleDelete(rutina)}
                       disabled={deletingId === rutina.id_rutina}
-                      className="min-h-11 rounded-full border border-red-600 bg-transparent px-6 py-2 text-xs font-semibold tracking-wide text-red-600 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 sm:px-8 sm:py-3 sm:text-sm hover:bg-red-50"
+                      className="min-h-11 rounded-full border border-red-600 bg-transparent px-6 py-2 text-xs font-semibold tracking-wide text-red-600 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 sm:px-8 sm:py-3 sm:text-sm hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950/30"
                     >
-                      {deletingId === rutina.id_rutina ? "Eliminando..." : "Eliminar"}
+                      {deletingId === rutina.id_rutina ? tx("Eliminando...", "Deleting...") : tx("Eliminar", "Delete")}
                     </button>
                   )}
                 </div>

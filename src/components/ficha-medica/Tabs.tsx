@@ -4,6 +4,7 @@ import { ClipboardList, FilePlus2, History } from 'lucide-react';
 import TabActual from './TabActual';
 import TabNueva from './TabNueva';
 import TabHistorial from './TabHistorial';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type TabKey = 'actual' | 'nueva' | 'historial';
 
@@ -21,24 +22,26 @@ export default function Tabs({
   isAdminReview = false,
 }: TabsProps) {
   const [active, setActive] = useState<TabKey>('actual');
+  const { locale } = useI18n();
+  const tx = (es: string, en: string) => (locale === 'en' ? en : es);
 
   const tabs: { key: TabKey; label: string; helper: string; icon: React.ReactNode }[] = [
     {
       key: 'actual',
-      label: 'Actual',
-      helper: 'Datos vigentes',
+      label: tx('Actual', 'Current'),
+      helper: tx('Datos vigentes', 'Current data'),
       icon: <ClipboardList className='h-4 w-4' aria-hidden />,
     },
     {
       key: 'nueva',
-      label: 'Nueva',
-      helper: 'Registrar control',
+      label: tx('Nueva', 'New'),
+      helper: tx('Registrar control', 'Register check'),
       icon: <FilePlus2 className='h-4 w-4' aria-hidden />,
     },
     {
       key: 'historial',
-      label: 'Historial',
-      helper: 'Controles previos',
+      label: tx('Historial', 'History'),
+      helper: tx('Controles previos', 'Previous checks'),
       icon: <History className='h-4 w-4' aria-hidden />,
     },
   ];
@@ -50,7 +53,7 @@ export default function Tabs({
           <nav
             className='grid w-full grid-cols-1 gap-2 sm:grid-cols-3'
             role='tablist'
-            aria-label='Pestañas ficha médica'
+            aria-label={tx('Pestañas ficha médica', 'Medical record tabs')}
           >
             {tabs.map((tab) => {
               const isActive = tab.key === active;

@@ -13,6 +13,7 @@ import { Search, Printer, Filter } from "lucide-react";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
+import { useI18n } from "@/i18n/I18nProvider";
 import RutinaModal from "@/components/modal/RutinaModal";
 import {
   Popover,
@@ -36,10 +37,38 @@ interface RutinaDisplayData {
   creado_en: string;
 }
 
+const ROUTINE_FILTER_LABEL_EN: Record<string, string> = {
+  inicial: "Beginner",
+  intermedio: "Intermediate",
+  avanzado: "Advanced",
+  definicion: "Definition",
+  volumen: "Volume",
+  fuerza: "Strength",
+  resistencia: "Endurance",
+  bajar_de_peso: "Lose weight",
+  perder_peso: "Lose weight",
+};
+
+const normalizeRoutineFilterLabel = (value: string): string =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+const translateRoutineFilterLabel = (value: string, isEnglish: boolean): string => {
+  if (!isEnglish) return value;
+  return ROUTINE_FILTER_LABEL_EN[normalizeRoutineFilterLabel(value)] ?? value;
+};
+
 export default function RutinasPage() {
   const { user, isAuthenticated, initializeAuth, isInitialized, token } =
     useAuthStore();
   const router = useRouter();
+  const { locale } = useI18n();
+  const isEnglish = locale === "en";
+  const tx = useCallback((es: string, en: string) => (isEnglish ? en : es), [isEnglish]);
   const [rutinas, setRutinas] = useState<RutinaDisplayData[]>([]);
   const [rutinasRefreshKey, setRutinasRefreshKey] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
@@ -62,7 +91,7 @@ export default function RutinasPage() {
       const response = await getHistorialRutinas();
 
       if (!response.ok) {
-        throw new Error("Error al cargar rutinas");
+        throw new Error(tx("Error al cargar rutinas", "Error loading routines"));
       }
 
       const rutinasData: Rutina[] = response.data;
@@ -88,12 +117,12 @@ export default function RutinasPage() {
       setRutinas(rutinasDisplay);
     } catch (error) {
       console.error("Error al cargar rutinas:", error);
-      toast.error("Error al cargar rutinas");
+      toast.error(tx("Error al cargar rutinas", "Error loading routines"));
       setRutinas([]);
     } finally {
       setLoading(false);
     }
-  }, [user, token]);
+  }, [user, token, tx]);
 
   const fetchObjetivos = useCallback(async () => {
     if (!user || !token) return;
@@ -131,7 +160,7 @@ export default function RutinasPage() {
   const handleDeleteRutina = useCallback(
     async (rutina: Rutina) => {
       const confirmar = window.confirm(
-        "¿Está seguro de eliminar la rutina?",
+        tx("¿Está seguro de eliminar la rutina?", "Are you sure you want to delete this routine?"),
       );
 
       if (!confirmar) return;
@@ -140,18 +169,18 @@ export default function RutinasPage() {
         const response = await eliminarRutina(rutina.id_rutina);
 
         if (!response.ok) {
-          throw new Error(response.error || "Error al eliminar rutina");
+          throw new Error(response.error || tx("Error al eliminar rutina", "Error deleting routine"));
         }
 
-        toast.success("Rutina eliminada correctamente");
+        toast.success(tx("Rutina eliminada correctamente", "Routine deleted successfully"));
         await refreshRutinas();
       } catch (error) {
         console.error("Error al eliminar rutina:", error);
-        toast.error("Error al eliminar la rutina");
+        toast.error(tx("Error al eliminar la rutina", "Error deleting the routine"));
         throw error;
       }
     },
-    [refreshRutinas],
+    [refreshRutinas, tx],
   );
 
   useEffect(() => {
@@ -200,7 +229,7 @@ export default function RutinasPage() {
   };
 
   if (!isInitialized) {
-    return <div>Cargando...</div>;
+    return <div>{tx("Cargando...", "Loading...")}</div>;
   }
 
   if (!isAuthenticated) {
@@ -212,14 +241,14 @@ export default function RutinasPage() {
       <div className="flex w-full min-h-[100dvh]">
         <AppSidebar />
         <SidebarInset className="!grid !min-h-[100dvh] grid-rows-[auto_minmax(0,1fr)_auto]">
-          <AppHeader title="Rutinas" />
-          <section className="min-h-0 overflow-y-auto">
-            <Card className="w-full">
-              <CardHeader className="flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap">
-                <h2 className="text-xl font-bold">
+          <AppHeader title={tx("Rutinas", "Routines")} />
+          <section className="min-h-0 overflow-y-auto bg-white dark:bg-black">
+            <Card className="w-full border-gray-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100">
+              <CardHeader className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 p-4 md:flex-nowrap dark:border-neutral-800 dark:bg-neutral-950">
+                <h2 className="text-xl font-bold text-gray-950 dark:text-neutral-50">
                   {usuarioEsAdmin
-                    ? "Rutinas asignadas a socios"
-                    : "Mis Rutinas"}
+                    ? tx("Rutinas asignadas a socios", "Routines assigned to members")
+                    : tx("Mis rutinas", "My routines")}
                 </h2>
                 <div className="flex flex-wrap items-center w-full gap-2 md:w-auto">
                   <div className="flex items-center flex-grow gap-2 md:flex-grow-0">
@@ -227,16 +256,16 @@ export default function RutinasPage() {
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
-                          className="flex items-center gap-2 bg-transparent"
+                          className="flex items-center gap-2 bg-white text-gray-900 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 dark:hover:bg-neutral-800"
                         >
                           <Filter className="w-4 h-4" />
-                          Filtros
+                          {tx("Filtros", "Filters")}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-80">
+                      <PopoverContent className="w-80 border-gray-200 bg-white text-gray-950 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100">
                         <div className="space-y-4">
                           <div>
-                            <h4 className="mb-2 font-medium">Niveles</h4>
+                            <h4 className="mb-2 font-medium">{tx("Niveles", "Levels")}</h4>
                             <div className="space-y-2">
                               {niveles.map((nivel) => (
                                 <div
@@ -259,14 +288,14 @@ export default function RutinasPage() {
                                     htmlFor={`nivel-${nivel.id_nivel}`}
                                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                   >
-                                    {nivel.nombre_nivel}
+                                    {translateRoutineFilterLabel(nivel.nombre_nivel, isEnglish)}
                                   </label>
                                 </div>
                               ))}
                             </div>
                           </div>
                           <div>
-                            <h4 className="mb-2 font-medium">Objetivos</h4>
+                            <h4 className="mb-2 font-medium">{tx("Objetivos", "Goals")}</h4>
                             <div className="space-y-2">
                               {objetivos.map((objetivo) => (
                                 <div
@@ -289,7 +318,7 @@ export default function RutinasPage() {
                                     htmlFor={`objetivo-${objetivo.id_objetivo}`}
                                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                                   >
-                                    {objetivo.nombre_objetivo}
+                                    {translateRoutineFilterLabel(objetivo.nombre_objetivo, isEnglish)}
                                   </label>
                                 </div>
                               ))}
@@ -302,8 +331,8 @@ export default function RutinasPage() {
                       <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                       <Input
                         type="search"
-                        placeholder="Buscar rutinas..."
-                        className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] w-full"
+                        placeholder={tx("Buscar rutinas...", "Search routines...")}
+                        className="w-full pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 dark:placeholder:text-neutral-500"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                       />
@@ -312,21 +341,21 @@ export default function RutinasPage() {
                   <Button
                     onClick={handlePrint}
                     variant="outline"
-                    className="hidden items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd] sm:flex"
+                    className="hidden items-center gap-2 border-[#02a8e1] bg-white text-[#02a8e1] hover:bg-[#e6f7fd] dark:border-cyan-500 dark:bg-neutral-900 dark:text-cyan-300 dark:hover:bg-cyan-950/40 sm:flex"
                   >
                     <Printer className="w-4 h-4" />
-                    <span>Imprimir listado</span>
+                    <span>{tx("Imprimir listado", "Print list")}</span>
                   </Button>
                   <Button
                     onClick={() => setOpenModal(true)}
-                    className="bg-[#02a8e1] hover:bg-[#0288b1]"
+                    className="bg-[#02a8e1] text-white hover:bg-[#0288b1]"
                   >
-                    <span className="hidden sm:inline">Generar Rutina</span>
-                    <span className="sm:hidden">Generar</span>
+                    <span className="hidden sm:inline">{tx("Generar rutina", "Generate routine")}</span>
+                    <span className="sm:hidden">{tx("Generar", "Generate")}</span>
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent className="p-4">
+              <CardContent className="p-4 dark:bg-neutral-950">
                 <RutinaDisplay
                   refreshKey={rutinasRefreshKey}
                   onEdit={

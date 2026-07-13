@@ -1,7 +1,8 @@
 'use client';
 import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
 import React from 'react';
-import { formatFrontendDateTime, formatFrontendDate } from '@/utils/dateFormat';
+import { formatFrontendDateTime } from '@/utils/dateFormat';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type HistItem = {
   fecha_ultimo_control?: string;
@@ -36,6 +37,9 @@ export default function HistorialViewModal({
   onClose: () => void;
   item: HistItem | null;
 }) {
+  const { locale } = useI18n();
+  const tx = (es: string, en: string) => (locale === 'en' ? en : es);
+
   if (!open || !item) return null;
 
   const formatDate = (v: unknown) => {
@@ -59,9 +63,9 @@ export default function HistorialViewModal({
           href={u}
           target='_blank'
           rel='noopener noreferrer'
-          className='inline-block px-2 py-1 mt-1 mr-2 text-sm rounded-md'
+          className='mt-1 mr-2 inline-block rounded-md border px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900'
         >
-          Ver archivo {i + 1}
+          {tx('Ver archivo', 'View file')} {i + 1}
         </a>
       ));
     }
@@ -70,9 +74,9 @@ export default function HistorialViewModal({
         href={String(val)}
         target='_blank'
         rel='noopener noreferrer'
-        className='inline-block px-2 py-1 mt-1 text-sm rounded-md'
+        className='mt-1 inline-block rounded-md border px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-900'
       >
-        Ver archivo
+        {tx('Ver archivo', 'View file')}
       </a>
     );
   };
@@ -80,12 +84,12 @@ export default function HistorialViewModal({
   return (
     <div className='fixed inset-0 z-50 flex items-center justify-center p-4'>
       <div className='absolute inset-0 backdrop-blur-sm' onClick={onClose} />
-      <div className='relative w-full max-w-3xl p-4 rounded-lg shadow-lg page-bg'>
+      <div className='relative w-full max-w-3xl rounded-2xl border bg-background p-4 shadow-lg dark:border-slate-800 dark:bg-slate-950'>
         <QaFileNameBadge file="src/components/modal/HistorialViewModal.tsx" />
-        <div className='relative p-6 rounded-lg panel'>
+        <div className='relative rounded-xl border bg-background p-6 dark:border-slate-800 dark:bg-slate-950'>
           <div className='flex items-start justify-between gap-4'>
             <div>
-              <h3 className='text-lg font-semibold'>Detalle de registro</h3>
+              <h3 className='text-lg font-semibold'>{tx('Detalle de registro', 'Record details')}</h3>
               <div className='mt-1 text-sm'>
                 {formatDate(
                   item.fecha_ultimo_control ?? item.created_at ?? item.fecha
@@ -95,20 +99,20 @@ export default function HistorialViewModal({
             <button
               type='button'
               onClick={onClose}
-              className='px-3 py-1 text-sm border rounded-md'
+              className='rounded-md border px-3 py-1 text-sm dark:border-slate-700 dark:bg-slate-900'
             >
-              Cerrar
+              {tx('Cerrar', 'Close')}
             </button>
           </div>
           <div className='grid grid-cols-1 gap-3 mt-4 sm:grid-cols-3'>
             <div>
-              <div className='text-xs'>Peso</div>
+              <div className='text-xs'>{tx('Peso', 'Weight')}</div>
               <div className='text-sm'>
                 {item.peso ? `${item.peso} kg` : '—'}
               </div>
             </div>
             <div>
-              <div className='text-xs'>Altura</div>
+              <div className='text-xs'>{tx('Altura', 'Height')}</div>
               <div className='text-sm'>
                 {item.altura ? `${item.altura} cm` : '—'}
               </div>
@@ -118,15 +122,15 @@ export default function HistorialViewModal({
               <div className='text-sm'>{item.imc ?? '—'}</div>
             </div>
             <div>
-              <div className='text-xs'>Grupo sanguíneo</div>
+              <div className='text-xs'>{tx('Grupo sanguíneo', 'Blood type')}</div>
               <div className='text-sm'>{item.grupo_sanguineo ?? '—'}</div>
             </div>
             <div>
-              <div className='text-xs'>Presión arterial</div>
+              <div className='text-xs'>{tx('Presión arterial', 'Blood pressure')}</div>
               <div className='text-sm'>{item.presion_arterial ?? '—'}</div>
             </div>
             <div>
-              <div className='text-xs'>Frecuencia cardíaca</div>
+              <div className='text-xs'>{tx('Frecuencia cardíaca', 'Heart rate')}</div>
               <div className='text-sm'>
                 {item.frecuencia_cardiaca
                   ? `${item.frecuencia_cardiaca} bpm`
@@ -135,15 +139,15 @@ export default function HistorialViewModal({
             </div>
           </div>
           <div className='mt-4'>
-            <div className='text-xs'>Alergias</div>
+            <div className='text-xs'>{tx('Alergias', 'Allergies')}</div>
             <div className='mt-1 text-sm'>{item.alergias ?? '—'}</div>
           </div>
           <div className='mt-3'>
-            <div className='text-xs'>Medicación</div>
+            <div className='text-xs'>{tx('Medicación', 'Medication')}</div>
             <div className='mt-1 text-sm'>{item.medicacion ?? '—'}</div>
           </div>
           <div className='mt-3'>
-            <div className='text-xs'>Observaciones</div>
+            <div className='text-xs'>{tx('Observaciones', 'Notes')}</div>
             <div className='mt-1 text-sm'>
               {item.observaciones_medico ??
                 item.observaciones_entrenador ??
@@ -151,17 +155,17 @@ export default function HistorialViewModal({
             </div>
           </div>
           <div className='mt-4'>
-            <div className='text-xs'>Historial médico completo</div>
+            <div className='text-xs'>{tx('Historial médico completo', 'Full medical history')}</div>
             <div className='mt-1 text-sm'>
               <div>
-                <strong>Lesiones:</strong> {item.lesiones_previas ?? '—'}
+                <strong>{tx('Lesiones', 'Injuries')}:</strong> {item.lesiones_previas ?? '—'}
               </div>
               <div className='mt-1'>
-                <strong>Enfermedades crónicas:</strong>{' '}
+                <strong>{tx('Enfermedades crónicas', 'Chronic diseases')}:</strong>{' '}
                 {item.enfermedades_cronicas ?? '—'}
               </div>
               <div className='mt-1'>
-                <strong>Cirugías previas:</strong>{' '}
+                <strong>{tx('Cirugías previas', 'Previous surgeries')}:</strong>{' '}
                 {item.cirugias_previas ?? '—'}
               </div>
             </div>
@@ -169,16 +173,16 @@ export default function HistorialViewModal({
           {(item.aprobacion_medica !== undefined ||
             item.archivo_aprobacion) && (
             <div className='mt-4'>
-              <div className='text-xs'>Aprobación médica</div>
+              <div className='text-xs'>{tx('Aprobación médica', 'Medical approval')}</div>
               <div className='mt-1 text-sm'>
-                {item.aprobacion_medica ? 'Sí' : 'No'}
+                {item.aprobacion_medica ? tx('Sí', 'Yes') : tx('No', 'No')}
               </div>
               <div className='mt-2'>{renderFiles(item.archivo_aprobacion)}</div>
             </div>
           )}
           {item.archivos_adjuntos && (
             <div className='mt-4'>
-              <div className='text-xs'>Archivos adjuntos</div>
+              <div className='text-xs'>{tx('Archivos adjuntos', 'Attachments')}</div>
               <div className='mt-1'>{renderFiles(item.archivos_adjuntos)}</div>
             </div>
           )}

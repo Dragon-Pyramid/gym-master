@@ -8,11 +8,14 @@ import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { AppHeader } from "@/components/header/AppHeader";
 import { AppFooter } from "@/components/footer/AppFooter";
 import { RegistrarAsistenciaQR } from "@/components/ui/RegistrarAsistenciaQR";
+import { useI18n } from "@/i18n/I18nProvider";
 
 export default function ControlAsistenciaPage() {
   const { user, isAuthenticated, initializeAuth, isInitialized } =
     useAuthStore();
   const router = useRouter();
+  const { locale } = useI18n();
+  const tr = (es: string, en: string) => (locale === "en" ? en : es);
 
   useEffect(() => {
     initializeAuth();
@@ -25,7 +28,7 @@ export default function ControlAsistenciaPage() {
   }, [isAuthenticated, isInitialized, router]);
 
   if (!isInitialized) {
-    return <div>Cargando...</div>;
+    return <div>{tr("Cargando...", "Loading...")}</div>;
   }
 
   if (!isAuthenticated) {
@@ -37,7 +40,7 @@ export default function ControlAsistenciaPage() {
       <div className="gm-dashboard-scroll-root flex min-h-[100dvh] w-full bg-background">
         <AppSidebar />
         <div className="flex flex-col flex-1 w-full">
-          <AppHeader title="Control de Asistencia" />
+          <AppHeader title={tr("Control de Asistencia", "Attendance control")} />
           <main data-gm-dashboard-content="true" className="flex-1 w-full max-w-full px-4 py-6 space-y-6 md:px-8">
             <RegistrarAsistenciaQR />
           </main>

@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
 import { AlertTriangle, CheckCircle2, FileText, UploadCloud, X } from 'lucide-react';
 import { crearFichaMedica } from '../../services/apiClient';
 import { useAuthStore } from '../../stores/authStore';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type FormValues = {
   altura: number | null;
@@ -61,6 +62,7 @@ function FileDropZone({
   multiple = false,
   error,
   onChange,
+  tx,
 }: {
   label: string;
   description: string;
@@ -68,6 +70,7 @@ function FileDropZone({
   multiple?: boolean;
   error?: string;
   onChange: (files: FileList | null) => void;
+  tx: (es: string, en: string) => string;
 }) {
   const [isDragging, setIsDragging] = useState(false);
   const fileArray = fileListToArray(files);
@@ -100,7 +103,7 @@ function FileDropZone({
         }`}
       >
         <UploadCloud className='mb-2 h-8 w-8 text-blue-600' />
-        <span className='text-sm font-medium'>Arrastrá el archivo o tocá para buscar</span>
+        <span className='text-sm font-medium'>{tx('Arrastrá el archivo o tocá para buscar', 'Drag the file here or tap to browse')}</span>
         <span className='mt-1 text-xs text-muted-foreground'>{description}</span>
         <input
           type='file'
@@ -129,7 +132,7 @@ function FileDropZone({
                 type='button'
                 onClick={() => onChange(null)}
                 className='rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground'
-                aria-label='Quitar archivo'
+                aria-label={tx('Quitar archivo', 'Remove file')}
               >
                 <X className='h-4 w-4' />
               </button>
@@ -151,48 +154,50 @@ export default function TabNueva({
   onSaved?: () => void;
 }) {
   const authUser = useAuthStore((s) => s.user);
+  const { locale } = useI18n();
+  const tx = useCallback((es: string, en: string) => (locale === 'en' ? en : es), [locale]);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const schema = yup.object().shape({
+  const schema = useMemo(() => yup.object().shape({
     altura: yup
       .number()
-      .typeError('Altura debe ser número')
-      .positive('Altura debe ser mayor que 0')
-      .required('Altura obligatoria'),
+      .typeError(tx('Altura debe ser número', 'Height must be a number'))
+      .positive(tx('Altura debe ser mayor que 0', 'Height must be greater than 0'))
+      .required(tx('Altura obligatoria', 'Height is required')),
     peso: yup
       .number()
-      .typeError('Peso debe ser número')
-      .positive('Peso debe ser mayor que 0')
-      .required('Peso obligatorio'),
+      .typeError(tx('Peso debe ser número', 'Weight must be a number'))
+      .positive(tx('Peso debe ser mayor que 0', 'Weight must be greater than 0'))
+      .required(tx('Peso obligatorio', 'Weight is required')),
     imc: yup.number().nullable(),
-    grupo_sanguineo: yup.string().required('Grupo sanguíneo obligatorio'),
+    grupo_sanguineo: yup.string().required(tx('Grupo sanguíneo obligatorio', 'Blood type is required')),
     presion_arterial: yup
       .string()
-      .matches(/^\d{2,3}\/\d{2,3}$/, 'Formato 120/80')
-      .required('Presión arterial obligatoria'),
+      .matches(/^\d{2,3}\/\d{2,3}$/, tx('Formato 120/80', 'Format 120/80'))
+      .required(tx('Presión arterial obligatoria', 'Blood pressure is required')),
     frecuencia_cardiaca: yup
       .number()
-      .typeError('Valor numérico')
-      .positive('Debe ser mayor que 0')
-      .integer('Entero')
-      .required('Frecuencia cardíaca obligatoria'),
+      .typeError(tx('Valor numérico', 'Numeric value'))
+      .positive(tx('Debe ser mayor que 0', 'Must be greater than 0'))
+      .integer(tx('Entero', 'Integer'))
+      .required(tx('Frecuencia cardíaca obligatoria', 'Heart rate is required')),
     alergias: yup.string().nullable(),
     medicacion: yup.string().nullable(),
     lesiones_previas: yup.string().nullable(),
     enfermedades_cronicas: yup.string().nullable(),
     cirugias_previas: yup.string().nullable(),
-    problemas_cardiacos: yup.boolean().required('Debe indicar si/no'),
-    problemas_respiratorios: yup.boolean().required('Debe indicar si/no'),
-    aprobacion_medica: yup.boolean().required('Debe indicar si/no'),
+    problemas_cardiacos: yup.boolean().required(tx('Debe indicar si/no', 'Select yes/no')),
+    problemas_respiratorios: yup.boolean().required(tx('Debe indicar si/no', 'Select yes/no')),
+    aprobacion_medica: yup.boolean().required(tx('Debe indicar si/no', 'Select yes/no')),
     archivo_aprobacion: yup
       .mixed()
-      .test('requiredIfApproved', 'Adjuntá el apto o certificado médico', function (value) {
+      .test('requiredIfApproved', tx('Adjuntá el apto o certificado médico', 'Attach the medical clearance or certificate'), function (value) {
         const { aprobacion_medica } = this.parent as { aprobacion_medica?: boolean };
         if (!aprobacion_medica) return true;
         return Boolean(value && (value as FileList).length > 0);
       })
-      .test('fileFormat', 'Usá PDF, JPG o PNG. Máximo 5MB por archivo.', function (value) {
+      .test('fileFormat', tx('Usá PDF, JPG o PNG. Máximo 5MB por archivo.', 'Use PDF, JPG, or PNG. Maximum 5MB per file.'), function (value) {
         if (!value) return true;
         return validateMedicalFiles(value as FileList);
       }),
@@ -201,12 +206,12 @@ export default function TabNueva({
     observaciones_medico: yup.string().nullable(),
     archivos_adjuntos: yup
       .mixed()
-      .test('fileFormatMultiple', 'Usá PDF, JPG o PNG. Máximo 5MB por archivo.', function (value) {
+      .test('fileFormatMultiple', tx('Usá PDF, JPG o PNG. Máximo 5MB por archivo.', 'Use PDF, JPG, or PNG. Maximum 5MB per file.'), function (value) {
         if (!value) return true;
         return validateMedicalFiles(value as FileList);
       }),
     proxima_revision: yup.date().nullable(),
-  });
+  }), [tx]);
 
   const formik = useFormik<FormValues>({
     initialValues: {
@@ -277,13 +282,13 @@ export default function TabNueva({
         const res = await crearFichaMedica(socioId, payload, files);
         if (res.ok) {
           helpers.resetForm();
-          setSuccessMessage('Ficha médica guardada correctamente.');
+          setSuccessMessage(tx('Ficha médica guardada correctamente.', 'Medical record saved successfully.'));
           if (onSaved) onSaved();
         } else {
-          alert(res.data?.message || res.data?.error || 'Error al guardar ficha');
+          alert(res.data?.message || res.data?.error || tx('Error al guardar ficha', 'Error saving medical record'));
         }
       } catch {
-        alert('Error al guardar ficha');
+        alert(tx('Error al guardar ficha', 'Error saving medical record'));
       } finally {
         setSubmitting(false);
       }
@@ -313,25 +318,25 @@ export default function TabNueva({
   const imcStatus = useMemo(() => {
     const value = Number(formik.values.imc ?? 0);
     if (!value) return null;
-    if (value < 18.5) return 'Bajo peso';
-    if (value < 25) return 'Rango saludable';
-    if (value < 30) return 'Sobrepeso';
-    return 'Obesidad';
-  }, [formik.values.imc]);
+    if (value < 18.5) return tx('Bajo peso', 'Underweight');
+    if (value < 25) return tx('Rango saludable', 'Healthy range');
+    if (value < 30) return tx('Sobrepeso', 'Overweight');
+    return tx('Obesidad', 'Obesity');
+  }, [formik.values.imc, tx]);
 
   return (
-    <div className='w-full rounded-xl border bg-background p-4 shadow-sm md:p-6'>
+    <div className='w-full rounded-xl border bg-background p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950/80 md:p-6'>
       <div className='flex flex-col gap-3 md:flex-row md:items-start md:justify-between'>
         <div>
-          <h3 className='text-xl font-semibold'>Nueva ficha médica</h3>
+          <h3 className='text-xl font-semibold'>{tx('Nueva ficha médica', 'New medical record')}</h3>
           <p className='mt-1 text-sm text-muted-foreground'>
-            Registrá controles, antecedentes, apto médico y documentos adjuntos del socio.
+            {tx('Registrá controles, antecedentes, apto médico y documentos adjuntos del socio.', 'Register checks, background, medical clearance, and attached documents for the member.')}
           </p>
         </div>
         <div className='rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200'>
           <div className='flex gap-2'>
             <AlertTriangle className='h-4 w-4 shrink-0' />
-            <span>Ante dolor, lesión o condición clínica, derivar a un profesional de salud.</span>
+            <span>{tx('Ante dolor, lesión o condición clínica, derivar a un profesional de salud.', 'For pain, injury, or a clinical condition, refer to a health professional.')}</span>
           </div>
         </div>
       </div>
@@ -344,14 +349,14 @@ export default function TabNueva({
       ) : null}
 
       <form onSubmit={formik.handleSubmit} className='mt-6 space-y-6'>
-        <section className='space-y-4 rounded-xl border p-4'>
+        <section className='space-y-4 rounded-xl border p-4 dark:border-slate-800 dark:bg-slate-950/50'>
           <div>
-            <h4 className='font-semibold'>Datos biométricos</h4>
-            <p className='text-sm text-muted-foreground'>Peso, altura, signos básicos y cálculo automático de IMC.</p>
+            <h4 className='font-semibold'>{tx('Datos biométricos', 'Biometric data')}</h4>
+            <p className='text-sm text-muted-foreground'>{tx('Peso, altura, signos básicos y cálculo automático de IMC.', 'Weight, height, basic signs, and automatic BMI calculation.')}</p>
           </div>
           <div className='grid grid-cols-1 gap-4 md:grid-cols-4'>
             <div>
-              <label className='text-xs font-medium'>Altura (cm)</label>
+              <label className='text-xs font-medium'>{tx('Altura (cm)', 'Height (cm)')}</label>
               <input
                 type='number'
                 step='0.1'
@@ -359,12 +364,12 @@ export default function TabNueva({
                 value={formik.values.altura ?? ''}
                 onChange={(e) => formik.setFieldValue('altura', e.target.value === '' ? null : Number(e.target.value))}
                 onBlur={formik.handleBlur}
-                className='mt-1 w-full rounded-md border px-3 py-2'
+                className='mt-1 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950'
               />
               {formik.touched.altura && formik.errors.altura ? <div className='mt-1 text-xs text-red-600'>{formik.errors.altura as string}</div> : null}
             </div>
             <div>
-              <label className='text-xs font-medium'>Peso (kg)</label>
+              <label className='text-xs font-medium'>{tx('Peso (kg)', 'Weight (kg)')}</label>
               <input
                 type='number'
                 step='0.1'
@@ -372,7 +377,7 @@ export default function TabNueva({
                 value={formik.values.peso ?? ''}
                 onChange={(e) => formik.setFieldValue('peso', e.target.value === '' ? null : Number(e.target.value))}
                 onBlur={formik.handleBlur}
-                className='mt-1 w-full rounded-md border px-3 py-2'
+                className='mt-1 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950'
               />
               {formik.touched.peso && formik.errors.peso ? <div className='mt-1 text-xs text-red-600'>{formik.errors.peso as string}</div> : null}
             </div>
@@ -384,12 +389,12 @@ export default function TabNueva({
                 name='imc'
                 value={formik.values.imc ?? ''}
                 readOnly
-                className='mt-1 w-full rounded-md border bg-muted px-3 py-2'
+                className='mt-1 w-full rounded-md border bg-muted px-3 py-2 dark:border-slate-700 dark:bg-slate-900'
               />
               {imcStatus ? <div className='mt-1 text-xs text-muted-foreground'>{imcStatus}</div> : null}
             </div>
             <div>
-              <label className='text-xs font-medium'>Grupo sanguíneo</label>
+              <label className='text-xs font-medium'>{tx('Grupo sanguíneo', 'Blood type')}</label>
               <select
                 name='grupo_sanguineo'
                 value={formik.values.grupo_sanguineo}
@@ -397,7 +402,7 @@ export default function TabNueva({
                 onBlur={formik.handleBlur}
                 className='mt-1 w-full rounded-md border bg-background px-3 py-2'
               >
-                <option value=''>Seleccionar</option>
+                <option value=''>{tx('Seleccionar', 'Select')}</option>
                 {GRUPOS_SANGUINEOS.map((grupo) => (
                   <option key={grupo} value={grupo}>{grupo}</option>
                 ))}
@@ -407,7 +412,7 @@ export default function TabNueva({
           </div>
           <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
             <div>
-              <label className='text-xs font-medium'>Presión arterial</label>
+              <label className='text-xs font-medium'>{tx('Presión arterial', 'Blood pressure')}</label>
               <input
                 type='text'
                 name='presion_arterial'
@@ -415,118 +420,120 @@ export default function TabNueva({
                 value={formik.values.presion_arterial}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
-                className='mt-1 w-full rounded-md border px-3 py-2'
+                className='mt-1 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950'
               />
               {formik.touched.presion_arterial && formik.errors.presion_arterial ? <div className='mt-1 text-xs text-red-600'>{formik.errors.presion_arterial as string}</div> : null}
             </div>
             <div>
-              <label className='text-xs font-medium'>Frecuencia cardíaca (bpm)</label>
+              <label className='text-xs font-medium'>{tx('Frecuencia cardíaca (bpm)', 'Heart rate (bpm)')}</label>
               <input
                 type='number'
                 name='frecuencia_cardiaca'
                 value={formik.values.frecuencia_cardiaca ?? ''}
                 onChange={(e) => formik.setFieldValue('frecuencia_cardiaca', e.target.value === '' ? null : Number(e.target.value))}
                 onBlur={formik.handleBlur}
-                className='mt-1 w-full rounded-md border px-3 py-2'
+                className='mt-1 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950'
               />
               {formik.touched.frecuencia_cardiaca && formik.errors.frecuencia_cardiaca ? <div className='mt-1 text-xs text-red-600'>{formik.errors.frecuencia_cardiaca as string}</div> : null}
             </div>
           </div>
         </section>
 
-        <section className='space-y-4 rounded-xl border p-4'>
+        <section className='space-y-4 rounded-xl border p-4 dark:border-slate-800 dark:bg-slate-950/50'>
           <div>
-            <h4 className='font-semibold'>Antecedentes y alertas</h4>
-            <p className='text-sm text-muted-foreground'>Información preventiva para el gimnasio. No reemplaza evaluación médica.</p>
+            <h4 className='font-semibold'>{tx('Antecedentes y alertas', 'Background and alerts')}</h4>
+            <p className='text-sm text-muted-foreground'>{tx('Información preventiva para el gimnasio. No reemplaza evaluación médica.', 'Preventive information for the gym. It does not replace a medical evaluation.')}</p>
           </div>
           <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
             <div>
-              <label className='text-xs font-medium'>Alergias</label>
-              <input type='text' name='alergias' value={formik.values.alergias ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 w-full rounded-md border px-3 py-2' />
+              <label className='text-xs font-medium'>{tx('Alergias', 'Allergies')}</label>
+              <input type='text' name='alergias' value={formik.values.alergias ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950' />
             </div>
             <div>
-              <label className='text-xs font-medium'>Medicación actual</label>
-              <input type='text' name='medicacion_actual' value={formik.values.medicacion_actual ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 w-full rounded-md border px-3 py-2' />
+              <label className='text-xs font-medium'>{tx('Medicación actual', 'Current medication')}</label>
+              <input type='text' name='medicacion_actual' value={formik.values.medicacion_actual ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950' />
             </div>
           </div>
           <div className='grid grid-cols-1 gap-4 md:grid-cols-3'>
             <div>
-              <label className='text-xs font-medium'>Lesiones previas</label>
-              <textarea name='lesiones_previas' value={formik.values.lesiones_previas ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 min-h-24 w-full rounded-md border px-3 py-2' />
+              <label className='text-xs font-medium'>{tx('Lesiones previas', 'Previous injuries')}</label>
+              <textarea name='lesiones_previas' value={formik.values.lesiones_previas ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 min-h-24 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950' />
             </div>
             <div>
-              <label className='text-xs font-medium'>Enfermedades crónicas</label>
-              <textarea name='enfermedades_cronicas' value={formik.values.enfermedades_cronicas ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 min-h-24 w-full rounded-md border px-3 py-2' />
+              <label className='text-xs font-medium'>{tx('Enfermedades crónicas', 'Chronic diseases')}</label>
+              <textarea name='enfermedades_cronicas' value={formik.values.enfermedades_cronicas ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 min-h-24 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950' />
             </div>
             <div>
-              <label className='text-xs font-medium'>Cirugías previas</label>
-              <textarea name='cirugias_previas' value={formik.values.cirugias_previas ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 min-h-24 w-full rounded-md border px-3 py-2' />
+              <label className='text-xs font-medium'>{tx('Cirugías previas', 'Previous surgeries')}</label>
+              <textarea name='cirugias_previas' value={formik.values.cirugias_previas ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 min-h-24 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950' />
             </div>
           </div>
           <div className='grid grid-cols-1 gap-3 md:grid-cols-3'>
-            <label className='flex items-center gap-2 rounded-lg border p-3 text-sm'>
+            <label className='flex items-center gap-2 rounded-lg border p-3 text-sm dark:border-slate-700 dark:bg-slate-950/60'>
               <input type='checkbox' name='problemas_cardiacos' checked={formik.values.problemas_cardiacos} onChange={(e) => formik.setFieldValue('problemas_cardiacos', e.target.checked)} />
-              Problemas cardíacos
+              {tx('Problemas cardíacos', 'Heart problems')}
             </label>
-            <label className='flex items-center gap-2 rounded-lg border p-3 text-sm'>
+            <label className='flex items-center gap-2 rounded-lg border p-3 text-sm dark:border-slate-700 dark:bg-slate-950/60'>
               <input type='checkbox' name='problemas_respiratorios' checked={formik.values.problemas_respiratorios} onChange={(e) => formik.setFieldValue('problemas_respiratorios', e.target.checked)} />
-              Problemas respiratorios
+              {tx('Problemas respiratorios', 'Respiratory problems')}
             </label>
-            <label className='flex items-center gap-2 rounded-lg border p-3 text-sm'>
+            <label className='flex items-center gap-2 rounded-lg border p-3 text-sm dark:border-slate-700 dark:bg-slate-950/60'>
               <input type='checkbox' name='aprobacion_medica' checked={formik.values.aprobacion_medica} onChange={(e) => formik.setFieldValue('aprobacion_medica', e.target.checked)} />
-              Apto médico para actividad física
+              {tx('Apto médico para actividad física', 'Medical clearance for physical activity')}
             </label>
           </div>
         </section>
 
-        <section className='space-y-4 rounded-xl border p-4'>
+        <section className='space-y-4 rounded-xl border p-4 dark:border-slate-800 dark:bg-slate-950/50'>
           <div>
-            <h4 className='font-semibold'>Seguimiento y documentación</h4>
-            <p className='text-sm text-muted-foreground'>Usá PDF, JPG o PNG. Los archivos se guardan en Cloudinary.</p>
+            <h4 className='font-semibold'>{tx('Seguimiento y documentación', 'Follow-up and documentation')}</h4>
+            <p className='text-sm text-muted-foreground'>{tx('Usá PDF, JPG o PNG. Los archivos se guardan en Cloudinary.', 'Use PDF, JPG, or PNG. Files are stored in Cloudinary.')}</p>
           </div>
           <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
             <div>
-              <label className='text-xs font-medium'>Fecha de último control médico</label>
-              <input type='date' name='fecha_ultimo_control' value={formik.values.fecha_ultimo_control ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 w-full rounded-md border px-3 py-2' />
+              <label className='text-xs font-medium'>{tx('Fecha de último control médico', 'Date of last medical check')}</label>
+              <input type='date' name='fecha_ultimo_control' value={formik.values.fecha_ultimo_control ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950' />
             </div>
             <div>
-              <label className='text-xs font-medium'>Próxima fecha de revisión</label>
-              <input type='date' name='proxima_revision' value={formik.values.proxima_revision ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 w-full rounded-md border px-3 py-2' />
+              <label className='text-xs font-medium'>{tx('Próxima fecha de revisión', 'Next review date')}</label>
+              <input type='date' name='proxima_revision' value={formik.values.proxima_revision ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950' />
             </div>
           </div>
           <FileDropZone
-            label='Apto o certificado médico'
-            description='Obligatorio si marcaste apto médico. Formatos: PDF, JPG, PNG.'
+            label={tx('Apto o certificado médico', 'Medical clearance or certificate')}
+            description={tx('Obligatorio si marcaste apto médico. Formatos: PDF, JPG, PNG.', 'Required if you checked medical clearance. Formats: PDF, JPG, PNG.')}
             files={formik.values.archivo_aprobacion}
             error={formik.touched.archivo_aprobacion ? (formik.errors.archivo_aprobacion as string | undefined) : undefined}
+            tx={tx}
             onChange={(files) => formik.setFieldValue('archivo_aprobacion', files)}
           />
           <FileDropZone
-            label='Archivos adjuntos adicionales'
-            description='Estudios, recomendaciones o imágenes relevantes. Podés adjuntar varios archivos.'
+            label={tx('Archivos adjuntos adicionales', 'Additional attachments')}
+            description={tx('Estudios, recomendaciones o imágenes relevantes. Podés adjuntar varios archivos.', 'Studies, recommendations, or relevant images. You can attach multiple files.')}
             files={formik.values.archivos_adjuntos}
             multiple
             error={formik.touched.archivos_adjuntos ? (formik.errors.archivos_adjuntos as string | undefined) : undefined}
+            tx={tx}
             onChange={(files) => formik.setFieldValue('archivos_adjuntos', files)}
           />
           <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
             <div>
-              <label className='text-xs font-medium'>Observaciones del entrenador</label>
-              <textarea name='observaciones_entrenador' value={formik.values.observaciones_entrenador ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 min-h-24 w-full rounded-md border px-3 py-2' />
+              <label className='text-xs font-medium'>{tx('Observaciones del entrenador', 'Trainer notes')}</label>
+              <textarea name='observaciones_entrenador' value={formik.values.observaciones_entrenador ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 min-h-24 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950' />
             </div>
             <div>
-              <label className='text-xs font-medium'>Observaciones médicas</label>
-              <textarea name='observaciones_medico' value={formik.values.observaciones_medico ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 min-h-24 w-full rounded-md border px-3 py-2' />
+              <label className='text-xs font-medium'>{tx('Observaciones médicas', 'Medical notes')}</label>
+              <textarea name='observaciones_medico' value={formik.values.observaciones_medico ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 min-h-24 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950' />
             </div>
           </div>
         </section>
 
         <div className='flex flex-col gap-2 md:flex-row md:justify-end'>
-          <button type='button' onClick={() => formik.resetForm()} className='rounded-md border px-4 py-2'>
-            Limpiar
+          <button type='button' onClick={() => formik.resetForm()} className='rounded-md border px-4 py-2 dark:border-slate-700 dark:bg-slate-950'>
+            {tx('Limpiar', 'Clear')}
           </button>
           <button type='submit' disabled={submitting} className='rounded-md bg-blue-600 px-4 py-2 font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-60'>
-            {submitting ? 'Guardando...' : 'Guardar ficha médica'}
+            {submitting ? tx('Guardando...', 'Saving...') : tx('Guardar ficha médica', 'Save medical record')}
           </button>
         </div>
       </form>
