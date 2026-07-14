@@ -25,67 +25,9 @@ import ExcelJS from "exceljs";
 import { FileSpreadsheet, FileText, Search, UserCog, UsersRound } from "lucide-react";
 import { toast } from "sonner";
 import { useI18n } from "@/i18n/I18nProvider";
-import type { GymMasterLocale } from "@/i18n/config";
 
 const EMPLEADOS_PAGE_SIZE = 10;
 type EstadoFilter = "todos" | "activos" | "inactivos";
-
-function empleadosExportTx(locale: GymMasterLocale, es: string, en: string) {
-  return locale === "en" ? en : es;
-}
-
-function normalizeEmpleadoExportText(value?: string | null) {
-  return String(value ?? "")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[\s_-]+/g, " ")
-    .replace(/\s*\/\s*/g, " / ");
-}
-
-const EMPLEADO_EXPORT_DYNAMIC_TRANSLATIONS: Record<string, string> = {
-  "administrativo": "Administrative",
-  "administracion": "Administration",
-  "administracion y caja": "Administration and cash desk",
-  "recepcion y administracion": "Reception and administration",
-  "caja y atencion al socio": "Cash desk and member service",
-  "entrenador": "Trainer",
-  "entrenadora sala musculacion": "Weight room trainer",
-  "entrenamiento": "Training",
-  "personal trainer": "Personal trainer",
-  "mantenimiento": "Maintenance",
-  "mantenimiento correctivo": "Corrective maintenance",
-  "mantenimiento preventivo": "Preventive maintenance",
-  "limpieza": "Cleaning",
-  "limpieza tarde": "Afternoon cleaning",
-  "limpieza general": "General cleaning",
-  "bar / snack": "Bar / Snack",
-  "atencion bar/snack": "Bar/snack service",
-  "atencion bar / snack": "Bar/snack service",
-  "caja bar/snack": "Bar/snack cash desk",
-  "caja bar / snack": "Bar/snack cash desk",
-};
-
-function translateEmpleadoExportText(locale: GymMasterLocale, value?: string | null) {
-  const raw = String(value ?? "").trim();
-  if (!raw) return "";
-  if (locale !== "en") return raw;
-  return EMPLEADO_EXPORT_DYNAMIC_TRANSLATIONS[normalizeEmpleadoExportText(raw)] ?? raw;
-}
-
-function empleadoStatusExportLabel(locale: GymMasterLocale, active?: boolean | null) {
-  return active === false
-    ? empleadosExportTx(locale, "Inactivo", "Inactive")
-    : empleadosExportTx(locale, "Activo", "Active");
-}
-
-function empleadoStatusFilterExportLabel(locale: GymMasterLocale, filter: EstadoFilter) {
-  if (filter === "activos") return empleadosExportTx(locale, "Activos", "Active");
-  if (filter === "inactivos") return empleadosExportTx(locale, "Inactivos", "Inactive");
-  return empleadosExportTx(locale, "Todos", "All");
-}
-
 
 const fallbackTiposEmpleado: CatalogoParametrizableItem[] = [
   { id: "fallback-administrativo", codigo: "administrativo", nombre: "Administrativo", descripcion: "Empleado administrativo del gimnasio.", activo: true, orden: 10 },
@@ -216,33 +158,33 @@ export default function EmpleadosPage() {
 
   const handleExportExcel = async () => {
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet(empleadosExportTx(locale, "Empleados", "Employees"));
+    const worksheet = workbook.addWorksheet("Empleados");
 
     worksheet.columns = [
-      { header: empleadosExportTx(locale, "Nombre completo", "Full name"), key: "nombre_completo", width: 30 },
+      { header: "Nombre completo", key: "nombre_completo", width: 30 },
       { header: "DNI", key: "dni", width: 18 },
-      { header: empleadosExportTx(locale, "Tipo", "Type"), key: "tipo", width: 24 },
-      { header: empleadosExportTx(locale, "Puesto", "Position"), key: "puesto", width: 28 },
-      { header: empleadosExportTx(locale, "Área", "Area"), key: "area", width: 24 },
+      { header: "Tipo", key: "tipo", width: 24 },
+      { header: "Puesto", key: "puesto", width: 28 },
+      { header: "Área", key: "area", width: 24 },
       { header: "Email", key: "email", width: 30 },
-      { header: empleadosExportTx(locale, "Teléfono", "Phone"), key: "telefono", width: 20 },
-      { header: empleadosExportTx(locale, "Fecha alta", "Hire date"), key: "fecha_alta", width: 16 },
-      { header: empleadosExportTx(locale, "Sueldo base", "Base salary"), key: "sueldo_base", width: 16 },
-      { header: empleadosExportTx(locale, "Estado", "Status"), key: "estado", width: 12 },
+      { header: "Teléfono", key: "telefono", width: 20 },
+      { header: "Fecha alta", key: "fecha_alta", width: 16 },
+      { header: "Sueldo base", key: "sueldo_base", width: 16 },
+      { header: "Estado", key: "estado", width: 12 },
     ];
 
     filteredEmpleados.forEach((empleado) => {
       worksheet.addRow({
         nombre_completo: empleado.nombre_completo,
         dni: empleado.dni,
-        tipo: translateEmpleadoExportText(locale, empleado.tipo_empleado?.nombre) || empleadosExportTx(locale, "Sin tipo", "No type"),
-        puesto: translateEmpleadoExportText(locale, empleado.puesto) || "-",
-        area: translateEmpleadoExportText(locale, empleado.area) || "-",
+        tipo: empleado.tipo_empleado?.nombre || "Sin tipo",
+        puesto: empleado.puesto || "-",
+        area: empleado.area || "-",
         email: empleado.email || "-",
         telefono: empleado.telefono || "-",
         fecha_alta: empleado.fecha_alta,
         sueldo_base: empleado.sueldo_base ?? 0,
-        estado: empleadoStatusExportLabel(locale, empleado.activo),
+        estado: empleado.activo === false ? "Inactivo" : "Activo",
       });
     });
 
@@ -253,7 +195,7 @@ export default function EmpleadosPage() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = buildTimestampedDownloadFileName(empleadosExportTx(locale, "listado-empleados", "employee-roster"), "xlsx");
+    a.download = buildTimestampedDownloadFileName("listado-empleados", "xlsx");
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -261,32 +203,30 @@ export default function EmpleadosPage() {
   const handleDownloadPdf = async () => {
     try {
       await downloadCommercialReportPdf({
-        title: empleadosExportTx(locale, "Listado de Empleados", "Employee roster"),
-        subtitle: empleadosExportTx(locale, "Base operativa de empleados del gimnasio, tipos, responsabilidades y preparación para sueldos/RBAC.", "Operational employee base, types, responsibilities, and payroll/RBAC readiness."),
-        fileName: empleadosExportTx(locale, "listado-empleados-gym-master", "employee-roster-gym-master"),
-        locale: locale === "en" ? "en" : "es",
-        footerText: empleadosExportTx(locale, "Documento generado por Gym Master.", "Document generated by Gym Master."),
+        title: "Listado de Empleados",
+        subtitle: "Base operativa de empleados del gimnasio, tipos, responsabilidades y preparación para sueldos/RBAC.",
+        fileName: "listado-empleados-gym-master",
         rows: filteredEmpleados,
         metrics: [
-          { label: empleadosExportTx(locale, "Total", "Total"), value: metrics.total },
-          { label: empleadosExportTx(locale, "Activos", "Active"), value: metrics.activos },
-          { label: empleadosExportTx(locale, "Administrativos", "Administrative"), value: metrics.administrativos },
-          { label: empleadosExportTx(locale, "Nómina estimada", "Estimated payroll"), value: formatCurrencyARS(metrics.nominaEstimada) },
+          { label: "Total", value: metrics.total },
+          { label: "Activos", value: metrics.activos },
+          { label: "Administrativos", value: metrics.administrativos },
+          { label: "Nómina estimada", value: formatCurrencyARS(metrics.nominaEstimada) },
         ],
-        filtersLabel: `${empleadosExportTx(locale, "Estado", "Status")}: ${empleadoStatusFilterExportLabel(locale, estadoFilter)} · ${empleadosExportTx(locale, "Tipo", "Type")}: ${tipoFilter === "todos" ? empleadosExportTx(locale, "Todos", "All") : translateEmpleadoExportText(locale, tipos.find((tipo) => tipo.id === tipoFilter)?.nombre || tipoFilter)}${searchTerm.trim() ? ` · ${empleadosExportTx(locale, "Búsqueda", "Search")}: ${searchTerm.trim()}` : ""}`,
+        filtersLabel: `Estado: ${estadoFilter} · Tipo: ${tipoFilter === "todos" ? "Todos" : tipos.find((tipo) => tipo.id === tipoFilter)?.nombre || tipoFilter}${searchTerm.trim() ? ` · Búsqueda: ${searchTerm.trim()}` : ""}`,
         columns: [
-          { header: empleadosExportTx(locale, "Empleado", "Employee"), width: 40, getValue: (e) => e.nombre_completo },
+          { header: "Empleado", width: 40, getValue: (e) => e.nombre_completo },
           { header: "DNI", width: 22, getValue: (e) => e.dni },
-          { header: empleadosExportTx(locale, "Tipo", "Type"), width: 30, getValue: (e) => translateEmpleadoExportText(locale, e.tipo_empleado?.nombre) || empleadosExportTx(locale, "Sin tipo", "No type") },
-          { header: empleadosExportTx(locale, "Puesto", "Position"), width: 34, getValue: (e) => translateEmpleadoExportText(locale, e.puesto) || "-" },
-          { header: empleadosExportTx(locale, "Área", "Area"), width: 26, getValue: (e) => translateEmpleadoExportText(locale, e.area) || "-" },
-          { header: empleadosExportTx(locale, "Teléfono", "Phone"), width: 24, getValue: (e) => e.telefono || "-" },
-          { header: empleadosExportTx(locale, "Sueldo", "Salary"), width: 22, getValue: (e) => formatCurrencyARS(e.sueldo_base ?? 0), align: "right" },
-          { header: empleadosExportTx(locale, "Estado", "Status"), width: 18, getValue: (e) => empleadoStatusExportLabel(locale, e.activo) },
+          { header: "Tipo", width: 30, getValue: (e) => e.tipo_empleado?.nombre || "Sin tipo" },
+          { header: "Puesto", width: 34, getValue: (e) => e.puesto || "-" },
+          { header: "Área", width: 26, getValue: (e) => e.area || "-" },
+          { header: "Teléfono", width: 24, getValue: (e) => e.telefono || "-" },
+          { header: "Sueldo", width: 22, getValue: (e) => formatCurrencyARS(e.sueldo_base ?? 0), align: "right" },
+          { header: "Estado", width: 18, getValue: (e) => (e.activo === false ? "Inactivo" : "Activo") },
         ],
       });
     } catch {
-      toast.error(empleadosExportTx(locale, "No se pudo generar el PDF de empleados", "Could not generate the employee PDF"));
+      toast.error("No se pudo generar el PDF de empleados");
     }
   };
 

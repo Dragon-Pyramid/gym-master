@@ -370,7 +370,7 @@ function normalizeSearch(value?: string | null) {
 function sanitizeActivity(actividad: ActividadBaseOption): Actividad {
   return {
     id: actividad.id,
-    nombre_actividad: actividad.nombre_actividad,
+    nombre_actividad: translateActivityText(locale, actividad.nombre_actividad),
     creado_en: actividad.creado_en ?? "",
     actualizado_en: actividad.actualizado_en ?? "",
   };
@@ -670,7 +670,7 @@ export default function ActividadesPage() {
       cupo_minimo: turno.cupo_minimo ? String(turno.cupo_minimo) : "",
       instructor_id: turno.instructor_id ?? "",
       ubicacion: turno.ubicacion ?? "",
-      estado: turno.estado,
+      estado: estadoLabel(turno.estado, locale),
       fecha_inicio: turno.fecha_inicio ?? "",
       fecha_fin: turno.fecha_fin ?? "",
       observaciones: turno.observaciones ?? "",
@@ -998,7 +998,7 @@ export default function ActividadesPage() {
         horario: timeRange(turno),
         ubicacion: translateActivityText(locale, turno.ubicacion),
         instructor: translateActivityText(locale, turno.instructor_nombre, tx("A confirmar", "To be confirmed")),
-        estado: estadoLabel(turno.estado, locale),
+        estado: turno.estado,
         cupo: turno.cupo_maximo,
         inscriptos: turno.inscriptos,
         lista_espera: turno.lista_espera,
