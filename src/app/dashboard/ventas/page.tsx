@@ -80,6 +80,120 @@ const VENTA_FILTER_LABELS: Record<VentaFilter, string> = {
   anuladas: 'Anuladas',
 };
 
+function ventaExportTx(locale: string, es: string, en: string) {
+  return locale === 'en' ? en : es;
+}
+
+function normalizeVentaExportText(value?: string | null) {
+  return String(value ?? '')
+    .trim()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+}
+
+const VENTA_EXPORT_TEXTS: Record<string, string> = {
+  socio: 'Member',
+  socios: 'Members',
+  miembro: 'Member',
+  member: 'Member',
+  consumidor_final: 'Final consumer',
+  consumidor: 'Consumer',
+  consumidor_final_label: 'Final consumer',
+  visitante: 'Visitor',
+  visitantes: 'Visitors',
+  efectivo: 'Cash',
+  cash: 'Cash',
+  debito: 'Debit card',
+  credito: 'Credit card',
+  tarjeta_de_debito: 'Debit card',
+  tarjeta_de_credito: 'Credit card',
+  transferencia: 'Bank transfer',
+  mercado_pago: 'Mercado Pago',
+  stripe: 'Stripe',
+  pagada: 'Paid',
+  pagado: 'Paid',
+  paid: 'Paid',
+  anulada: 'Cancelled',
+  anulado: 'Cancelled',
+  cancelada: 'Cancelled',
+  cancelled: 'Cancelled',
+  sin_detalle: 'No details',
+  producto: 'Product',
+  servicio: 'Service',
+  todos: 'All',
+  todas: 'All',
+  sin_busqueda: 'no search',
+  final_consumer: 'Final consumer',
+};
+
+function translateVentaExportText(locale: string, value?: string | null, fallback = '') {
+  const original = String(value ?? fallback ?? '').trim();
+  if (!original) return '';
+  if (locale !== 'en') return original;
+
+  const normalized = normalizeVentaExportText(original);
+  if (normalized === 'consumidor_final') return 'Final consumer';
+  if (normalized === 'consumidor_final_label') return 'Final consumer';
+
+  return VENTA_EXPORT_TEXTS[normalized] ?? original;
+}
+
+function getVentaClienteExportLabel(locale: string, venta: Venta) {
+  const label = getVentaClienteLabel(venta);
+  return translateVentaExportText(locale, label);
+}
+
+function getVentaItemsExportLabel(locale: string, venta: Venta) {
+  const detalles = venta.venta_detalle ?? venta.detalles ?? [];
+  if (!detalles.length) return ventaExportTx(locale, 'Sin detalle', 'No details');
+
+  return detalles
+    .map((detalle) => {
+      const nombre =
+        detalle.item_tipo === 'servicio'
+          ? detalle.servicio?.nombre ?? ventaExportTx(locale, 'Servicio', 'Service')
+          : detalle.producto?.nombre ?? ventaExportTx(locale, 'Producto', 'Product');
+      return `${detalle.cantidad} x ${nombre}`;
+    })
+    .join(' | ');
+}
+
+function ventaFilterExportLabel(locale: string, filter: VentaFilter) {
+  return translateVentaExportText(locale, VENTA_FILTER_LABELS[filter] ?? filter);
+}
+
+function formatVentaExportDate(locale: string, value?: string | null) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return formatFrontendDate(raw);
+
+  return new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'es-AR').format(date);
+}
+
+function getVentaDateRangeExportLabel(locale: string, from: string, to: string) {
+  if (from && to) {
+    return `${ventaExportTx(locale, 'Período', 'Period')}: ${formatVentaExportDate(locale, from)} ${ventaExportTx(locale, 'a', 'to')} ${formatVentaExportDate(locale, to)}`;
+  }
+
+  if (from) return `${ventaExportTx(locale, 'Desde', 'From')}: ${formatVentaExportDate(locale, from)}`;
+  if (to) return `${ventaExportTx(locale, 'Hasta', 'To')}: ${formatVentaExportDate(locale, to)}`;
+  return `${ventaExportTx(locale, 'Período', 'Period')}: ${ventaExportTx(locale, 'todos', 'all')}`;
+}
+
+function getVentasExportFiltersLabel(
+  locale: string,
+  ventaFilter: VentaFilter,
+  dateFrom: string,
+  dateTo: string,
+  searchTerm: string,
+) {
+  const search = searchTerm.trim();
+  return `${ventaExportTx(locale, 'Filtro', 'Filter')}: ${ventaFilterExportLabel(locale, ventaFilter)} · ${getVentaDateRangeExportLabel(locale, dateFrom, dateTo)}${search ? ` · ${ventaExportTx(locale, 'Búsqueda', 'Search')}: ${search}` : ''}`;
+}
+
 export default function VentasPage() {
   const { locale } = useI18n();
   const c = (text: string) => translateCommercialUi(locale, text);
@@ -154,42 +268,50 @@ export default function VentasPage() {
 
   const handleExportExcel = async () => {
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Ventas');
+    const worksheet = workbook.addWorksheet(ventaExportTx(locale, "Ventas", "Sales"));
 
     worksheet.columns = [
-      { header: 'Cliente', key: 'cliente', width: 30 },
-      { header: 'Tipo cliente', key: 'cliente_tipo', width: 18 },
-      { header: 'Documento', key: 'cliente_documento', width: 18 },
-      { header: 'Items', key: 'items', width: 60 },
-      { header: 'Método de pago', key: 'metodo_pago', width: 18 },
-      { header: 'Estado', key: 'estado', width: 14 },
-      { header: 'Total', key: 'total', width: 15 },
-      { header: 'Fecha', key: 'fecha', width: 16 },
-      { header: 'Comprobante', key: 'comprobante', width: 24 },
+      { header: ventaExportTx(locale, "Cliente", "Customer"), key: "cliente", width: 30 },
+      { header: ventaExportTx(locale, "Tipo cliente", "Customer type"), key: "cliente_tipo", width: 18 },
+      { header: ventaExportTx(locale, "Documento", "Document"), key: "cliente_documento", width: 18 },
+      { header: ventaExportTx(locale, "Ítems", "Items"), key: "items", width: 60 },
+      { header: ventaExportTx(locale, "Método de pago", "Payment method"), key: "metodo_pago", width: 18 },
+      { header: ventaExportTx(locale, "Estado", "Status"), key: "estado", width: 14 },
+      { header: "Total", key: "total", width: 15 },
+      { header: ventaExportTx(locale, "Fecha", "Date"), key: "fecha", width: 16 },
+      { header: ventaExportTx(locale, "Comprobante", "Receipt"), key: "comprobante", width: 24 },
     ];
 
     filteredVentas.forEach((venta) => {
+      const estado = venta.estado ?? (venta.activo === false ? "anulada" : "pagada");
+
       worksheet.addRow({
-        cliente: getVentaClienteLabel(venta),
-        cliente_tipo: venta.cliente_tipo ?? 'consumidor_final',
-        cliente_documento: venta.cliente_documento ?? '',
-        items: getVentaItemsLabel(venta),
-        metodo_pago: venta.metodo_pago ?? 'efectivo',
-        estado: venta.estado ?? (venta.activo === false ? 'anulada' : 'pagada'),
+        cliente: getVentaClienteExportLabel(locale, venta),
+        cliente_tipo: translateVentaExportText(locale, venta.cliente_tipo ?? "consumidor_final"),
+        cliente_documento: venta.cliente_documento ?? "",
+        items: getVentaItemsExportLabel(locale, venta),
+        metodo_pago: translateVentaExportText(locale, venta.metodo_pago ?? "efectivo"),
+        estado: translateVentaExportText(locale, estado),
         total: venta.total,
-        fecha: venta.fecha,
-        comprobante: venta.comprobante_codigo ?? '',
+        fecha: formatVentaExportDate(locale, venta.fecha),
+        comprobante: venta.comprobante_codigo ?? "",
       });
     });
 
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.views = [{ state: "frozen", ySplit: 1 }];
+
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = buildTimestampedDownloadFileName('listado-ventas-kiosco', 'xlsx');
+    a.download = buildTimestampedDownloadFileName(
+      ventaExportTx(locale, "listado-ventas-kiosco", "kiosk-sales-list"),
+      "xlsx",
+    );
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -198,29 +320,51 @@ export default function VentasPage() {
   const handleDownloadPdf = async () => {
     try {
       await downloadCommercialReportPdf({
-        title: 'Listado de Ventas',
-        subtitle: 'Ventas de kiosco a socios, visitantes y consumidores finales.',
-        fileName: 'listado-ventas-kiosco',
+        title: ventaExportTx(locale, "Listado de Ventas", "Sales list"),
+        subtitle: ventaExportTx(
+          locale,
+          "Ventas de kiosco a socios, visitantes y consumidores finales.",
+          "Kiosk sales to members, visitors, and final consumers.",
+        ),
+        fileName: ventaExportTx(locale, "listado-ventas-kiosco", "kiosk-sales-list"),
+        locale,
+        footerText: ventaExportTx(
+          locale,
+          "Documento generado por Gym Master.",
+          "Document generated by Gym Master.",
+        ),
+        labels: {
+          generated: ventaExportTx(locale, "Generado", "Generated"),
+          page: ventaExportTx(locale, "Página", "Page"),
+          of: ventaExportTx(locale, "de", "of"),
+          detail: ventaExportTx(locale, "Detalle", "Details"),
+          records: ventaExportTx(locale, "registros", "records"),
+          empty: ventaExportTx(
+            locale,
+            "No hay registros para el filtro seleccionado.",
+            "No records found for the selected filter.",
+          ),
+        },
         rows: filteredVentas,
         metrics: [
-          { label: 'Ventas activas', value: metrics.activas },
-          { label: 'Total vendido', value: formatCurrencyARS(metrics.totalVendido) },
-          { label: 'Ítems vendidos', value: metrics.itemsVendidos },
-          { label: 'Anuladas', value: metrics.anuladas },
+          { label: ventaExportTx(locale, "Ventas activas", "Active sales"), value: metrics.activas },
+          { label: ventaExportTx(locale, "Total vendido", "Total sold"), value: formatCurrencyARS(metrics.totalVendido) },
+          { label: ventaExportTx(locale, "Ítems vendidos", "Items sold"), value: metrics.itemsVendidos },
+          { label: ventaExportTx(locale, "Anuladas", "Cancelled"), value: metrics.anuladas },
         ],
-        filtersLabel: `${c('Filtro')}: ${c(VENTA_FILTER_LABELS[ventaFilter])} · ${getDateRangeLabel(dateFrom, dateTo, c)}${searchTerm.trim() ? ` · ${c('Búsqueda')}: ${searchTerm.trim()}` : ''}`,
+        filtersLabel: getVentasExportFiltersLabel(locale, ventaFilter, dateFrom, dateTo, searchTerm),
         columns: [
-          { header: 'Cliente', width: 34, getValue: (venta) => getVentaClienteLabel(venta) },
-          { header: 'Tipo', width: 20, getValue: (venta) => venta.cliente_tipo ?? 'consumidor_final' },
-          { header: 'Detalle', width: 72, getValue: (venta) => getVentaItemsLabel(venta) },
-          { header: 'Método', width: 20, getValue: (venta) => venta.metodo_pago ?? 'efectivo' },
-          { header: 'Total', width: 22, getValue: (venta) => formatCurrencyARS(venta.total), align: 'right' },
-          { header: 'Fecha', width: 18, getValue: (venta) => formatFrontendDate(venta.fecha) },
-          { header: 'Estado', width: 18, getValue: (venta) => venta.estado ?? (venta.activo === false ? 'anulada' : 'pagada') },
+          { header: ventaExportTx(locale, "Cliente", "Customer"), width: 34, getValue: (venta) => getVentaClienteExportLabel(locale, venta) },
+          { header: ventaExportTx(locale, "Tipo", "Type"), width: 20, getValue: (venta) => translateVentaExportText(locale, venta.cliente_tipo ?? "consumidor_final") },
+          { header: ventaExportTx(locale, "Detalle", "Detail"), width: 72, getValue: (venta) => getVentaItemsExportLabel(locale, venta) },
+          { header: ventaExportTx(locale, "Método", "Method"), width: 20, getValue: (venta) => translateVentaExportText(locale, venta.metodo_pago ?? "efectivo") },
+          { header: "Total", width: 22, getValue: (venta) => formatCurrencyARS(venta.total), align: "right" },
+          { header: ventaExportTx(locale, "Fecha", "Date"), width: 18, getValue: (venta) => formatVentaExportDate(locale, venta.fecha) },
+          { header: ventaExportTx(locale, "Estado", "Status"), width: 18, getValue: (venta) => translateVentaExportText(locale, venta.estado ?? (venta.activo === false ? "anulada" : "pagada")) },
         ],
       });
     } catch {
-      toast.error('No se pudo generar el PDF de ventas');
+      toast.error(ventaExportTx(locale, "No se pudo generar el PDF de ventas", "Could not generate the sales PDF"));
     }
   };
 

@@ -43,6 +43,118 @@ const CATEGORIA_LABELS: Record<string, string> = {
   otro: "Otro",
 };
 
+function serviceExportTx(locale: string, es: string, en: string) {
+  return locale === "en" ? en : es;
+}
+
+function normalizeServiceExportText(value?: string | null) {
+  return String(value ?? "")
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[_\s/.,;:()"'¿?¡!+\-]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+const SERVICE_EXPORT_TEXTS: Record<string, string> = {
+  todos: "All",
+  todas: "All",
+  all: "All",
+  activo: "Active",
+  activos: "Active",
+  active: "Active",
+  inactivo: "Inactive",
+  inactivos: "Inactive",
+  inactive: "Inactive",
+  si: "Yes",
+  yes: "Yes",
+  no: "No",
+  servicio: "Service",
+  servicios: "Services",
+  listado_de_servicios: "Service list",
+  alquiler: "Rental",
+  rental: "Rental",
+  premium: "Premium",
+  otro: "Other",
+  otros: "Other",
+  other: "Other",
+  evaluacion: "Assessment",
+  assessment: "Assessment",
+  nutricion: "Nutrition",
+  nutrition: "Nutrition",
+  clase_especial: "Special class",
+  special_class: "Special class",
+  pase: "Pass",
+  pass: "Pass",
+  personal_trainer: "Personal trainer",
+  presencial: "In person",
+  online: "Online",
+  hibrido: "Hybrid",
+  hybrid: "Hybrid",
+  cama_solar: "Tanning bed",
+  tanning_bed: "Tanning bed",
+  servicio_de_cama_solar_incluye_bornceador_y_toalla: "Tanning bed service, includes bronzer and towel.",
+  servicio_de_cama_solar_incluye_bronceador_y_toalla: "Tanning bed service, includes bronzer and towel.",
+  servicio_de_orientacion_nutricional_basica_ofrecido_por_profesional_autorizado: "Basic nutritional guidance service provided by an authorized professional.",
+  servicio_especial_1: "Special service 1",
+  servicio_especial_2: "Special service 2",
+  servicio_especial_3: "Special service 3",
+  servicio_especial_4: "Special service 4",
+  servicio_especial_5: "Special service 5",
+  servicio_de_prueba_2: "Test service 2",
+  es_un_servicio_de_prueba: "This is a test service.",
+  testeo_nomas: "Test only",
+  servicio_premium_mensual: "Monthly premium service",
+  paquete_premium_mensual_con_beneficios_comerciales_adicionales_definidos_por_el_gimnasio: "Monthly premium package with additional commercial benefits defined by the gym.",
+  orientacion_nutricional_basica: "Basic nutritional guidance",
+};
+
+function translateServiceExportText(locale: string, value?: string | null, fallback = "") {
+  const original = String(value ?? fallback ?? "").trim();
+  if (!original) return "";
+  if (locale !== "en") return original;
+
+  const normalized = normalizeServiceExportText(original);
+  return SERVICE_EXPORT_TEXTS[normalized] ?? original;
+}
+
+function serviceNameExportLabel(locale: string, value?: string | null) {
+  return translateServiceExportText(locale, value);
+}
+
+function serviceDescriptionExportLabel(locale: string, value?: string | null) {
+  return translateServiceExportText(locale, value);
+}
+
+function serviceCategoryExportLabel(locale: string, value?: string | null) {
+  const raw = String(value ?? "otro");
+  const fromCatalog = CATEGORIA_LABELS[raw] ?? raw;
+  return translateServiceExportText(locale, fromCatalog, serviceExportTx(locale, "Otro", "Other"));
+}
+
+function serviceBooleanExportLabel(locale: string, value: boolean) {
+  return value ? serviceExportTx(locale, "Sí", "Yes") : serviceExportTx(locale, "No", "No");
+}
+
+function serviceStatusExportLabel(locale: string, active: boolean) {
+  return active ? serviceExportTx(locale, "Activo", "Active") : serviceExportTx(locale, "Inactivo", "Inactive");
+}
+
+function serviceStatusFilterExportLabel(locale: string, filter: string) {
+  if (filter === "todos") return serviceExportTx(locale, "Todos", "All");
+  if (filter === "activos") return serviceExportTx(locale, "Activos", "Active");
+  if (filter === "inactivos") return serviceExportTx(locale, "Inactivos", "Inactive");
+  return translateServiceExportText(locale, filter);
+}
+
+function serviceCategoryFilterExportLabel(locale: string, filter: string) {
+  return filter === "todas"
+    ? serviceExportTx(locale, "Todas", "All")
+    : serviceCategoryExportLabel(locale, filter);
+}
+
+
 export default function ServiciosPage() {
   const { locale } = useI18n();
   const c = (text: string) => translateCommercialUi(locale, text);
@@ -85,64 +197,99 @@ export default function ServiciosPage() {
   const handleDownloadPdf = async () => {
     try {
       await downloadCommercialReportPdf({
-        title: c("Listado de Servicios"),
-        subtitle: c("Reporte de servicios adicionales disponibles para venta."),
-        fileName: "listado-servicios-gym-master",
+        title: serviceExportTx(locale, "Listado de Servicios", "Service list"),
+        subtitle: serviceExportTx(
+          locale,
+          "Reporte de servicios adicionales disponibles para venta.",
+          "Additional services available for sale report.",
+        ),
+        fileName: serviceExportTx(locale, "listado-servicios-gym-master", "gym-master-service-list"),
+        locale,
+        footerText: serviceExportTx(
+          locale,
+          "Documento generado por Gym Master.",
+          "Document generated by Gym Master.",
+        ),
+        labels: {
+          generated: serviceExportTx(locale, "Generado", "Generated"),
+          page: serviceExportTx(locale, "Página", "Page"),
+          of: serviceExportTx(locale, "de", "of"),
+          detail: serviceExportTx(locale, "Detalle", "Details"),
+          records: serviceExportTx(locale, "registros", "records"),
+          empty: serviceExportTx(
+            locale,
+            "No hay registros para el filtro seleccionado.",
+            "No records found for the selected filter.",
+          ),
+        },
         rows: filteredServicios,
         metrics: [
-          { label: c("Servicios filtrados"), value: filteredServicios.length },
-          { label: c("Activos"), value: filteredServicios.filter((s) => s.activo).length },
-          { label: c("Requieren reserva"), value: filteredServicios.filter((s) => s.requiere_reserva).length },
+          { label: serviceExportTx(locale, "Servicios filtrados", "Filtered services"), value: filteredServicios.length },
+          { label: serviceExportTx(locale, "Activos", "Active"), value: filteredServicios.filter((s) => s.activo).length },
+          { label: serviceExportTx(locale, "Requieren reserva", "Require booking"), value: filteredServicios.filter((s) => s.requiere_reserva).length },
         ],
-        filtersLabel: `${c("Estado")}: ${c(filtroLabel)} · ${c("Categoría")}: ${c(categoriaLabel)}${searchTerm.trim() ? ` · ${c("Búsqueda")}: ${searchTerm.trim()}` : ""}`,
+        filtersLabel:
+          serviceExportTx(locale, "Estado", "Status") +
+          ": " +
+          serviceStatusFilterExportLabel(locale, filtroActivo) +
+          " · " +
+          serviceExportTx(locale, "Categoría", "Category") +
+          ": " +
+          serviceCategoryFilterExportLabel(locale, filtroCategoria) +
+          (searchTerm.trim()
+            ? " · " + serviceExportTx(locale, "Búsqueda", "Search") + ": " + searchTerm.trim()
+            : ""),
         columns: [
-          { header: c("Servicio"), width: 42, getValue: (s) => c(s.nombre) },
-          { header: c("Categoría"), width: 26, getValue: (s) => c(CATEGORIA_LABELS[String(s.categoria ?? "otro")] ?? "Otro") },
-          { header: c("Descripción"), width: 60, getValue: (s) => s.descripcion ? c(s.descripcion) : "-" },
-          { header: c("Precio"), width: 20, getValue: (s) => `$${Number(s.precio || 0).toLocaleString("es-AR")}`, align: "right" },
-          { header: c("Duración"), width: 18, getValue: (s) => s.duracion_minutos ? `${s.duracion_minutos} min` : "-" },
-          { header: c("Reserva"), width: 18, getValue: (s) => (s.requiere_reserva ? c("Sí") : c("No")) },
-          { header: c("Estado"), width: 20, getValue: (s) => (s.activo ? c("Activo") : c("Inactivo")) },
+          { header: serviceExportTx(locale, "Servicio", "Service"), width: 42, getValue: (s) => serviceNameExportLabel(locale, s.nombre) },
+          { header: serviceExportTx(locale, "Categoría", "Category"), width: 26, getValue: (s) => serviceCategoryExportLabel(locale, String(s.categoria ?? "otro")) },
+          { header: serviceExportTx(locale, "Descripción", "Description"), width: 60, getValue: (s) => s.descripcion ? serviceDescriptionExportLabel(locale, s.descripcion) : "-" },
+          { header: serviceExportTx(locale, "Precio", "Price"), width: 20, getValue: (s) => `$${Number(s.precio || 0).toLocaleString("es-AR")}`, align: "right" },
+          { header: serviceExportTx(locale, "Duración", "Duration"), width: 18, getValue: (s) => s.duracion_minutos ? `${s.duracion_minutos} min` : "-" },
+          { header: serviceExportTx(locale, "Reserva", "Booking"), width: 18, getValue: (s) => serviceBooleanExportLabel(locale, Boolean(s.requiere_reserva)) },
+          { header: serviceExportTx(locale, "Estado", "Status"), width: 20, getValue: (s) => serviceStatusExportLabel(locale, Boolean(s.activo)) },
         ],
       });
     } catch {
-      toast.error(c("No se pudo generar el PDF de servicios"));
+      toast.error(serviceExportTx(locale, "No se pudo generar el PDF de servicios", "Could not generate the services PDF"));
     }
   };
 
   const handleExportExcel = async () => {
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet(c("Servicios"));
+    const worksheet = workbook.addWorksheet(serviceExportTx(locale, "Servicios", "Services"));
 
     worksheet.columns = [
-      { header: c("Nombre"), key: "nombre", width: 30 },
-      { header: c("Categoría"), key: "categoria", width: 24 },
-      { header: c("Descripción"), key: "descripcion", width: 40 },
-      { header: c("Precio"), key: "precio", width: 15 },
-      { header: c("Duración minutos"), key: "duracion_minutos", width: 18 },
-      { header: c("Requiere reserva"), key: "requiere_reserva", width: 18 },
-      { header: c("Cupo máximo"), key: "cupo_maximo", width: 14 },
-      { header: c("Modalidad"), key: "modalidad", width: 16 },
-      { header: c("Disponible online"), key: "disponible_online", width: 18 },
-      { header: c("Observaciones"), key: "observaciones", width: 40 },
-      { header: c("Activo"), key: "activo", width: 10 },
+      { header: serviceExportTx(locale, "Nombre", "Name"), key: "nombre", width: 30 },
+      { header: serviceExportTx(locale, "Categoría", "Category"), key: "categoria", width: 24 },
+      { header: serviceExportTx(locale, "Descripción", "Description"), key: "descripcion", width: 44 },
+      { header: serviceExportTx(locale, "Precio", "Price"), key: "precio", width: 15 },
+      { header: serviceExportTx(locale, "Duración minutos", "Duration minutes"), key: "duracion_minutos", width: 18 },
+      { header: serviceExportTx(locale, "Requiere reserva", "Requires booking"), key: "requiere_reserva", width: 18 },
+      { header: serviceExportTx(locale, "Cupo máximo", "Max capacity"), key: "cupo_maximo", width: 14 },
+      { header: serviceExportTx(locale, "Modalidad", "Mode"), key: "modalidad", width: 16 },
+      { header: serviceExportTx(locale, "Disponible online", "Available online"), key: "disponible_online", width: 18 },
+      { header: serviceExportTx(locale, "Observaciones", "Notes"), key: "observaciones", width: 40 },
+      { header: serviceExportTx(locale, "Activo", "Active"), key: "activo", width: 12 },
     ];
 
     filteredServicios.forEach((s) => {
       worksheet.addRow({
-        nombre: c(s.nombre),
-        categoria: c(CATEGORIA_LABELS[String(s.categoria ?? "otro")] ?? "Otro"),
-        descripcion: s.descripcion ? c(s.descripcion) : "",
+        nombre: serviceNameExportLabel(locale, s.nombre),
+        categoria: serviceCategoryExportLabel(locale, String(s.categoria ?? "otro")),
+        descripcion: s.descripcion ? serviceDescriptionExportLabel(locale, s.descripcion) : "",
         precio: s.precio,
         duracion_minutos: s.duracion_minutos ?? "",
-        requiere_reserva: s.requiere_reserva ? c("Sí") : c("No"),
+        requiere_reserva: serviceBooleanExportLabel(locale, Boolean(s.requiere_reserva)),
         cupo_maximo: s.cupo_maximo ?? "",
-        modalidad: c(s.modalidad ?? "presencial"),
-        disponible_online: s.disponible_online ? c("Sí") : c("No"),
-        observaciones: s.observaciones ? c(s.observaciones) : "",
-        activo: s.activo ? c("Sí") : c("No"),
+        modalidad: translateServiceExportText(locale, s.modalidad ?? "presencial"),
+        disponible_online: serviceBooleanExportLabel(locale, Boolean(s.disponible_online)),
+        observaciones: s.observaciones ? translateServiceExportText(locale, s.observaciones) : "",
+        activo: serviceStatusExportLabel(locale, Boolean(s.activo)),
       });
     });
+
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.views = [{ state: "frozen", ySplit: 1 }];
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], {
@@ -151,10 +298,14 @@ export default function ServiciosPage() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = buildTimestampedDownloadFileName("listado-servicios", "xlsx");
+    a.download = buildTimestampedDownloadFileName(
+      serviceExportTx(locale, "listado-servicios", "service-list"),
+      "xlsx",
+    );
     a.click();
     window.URL.revokeObjectURL(url);
   };
+
 
   useEffect(() => {
     if (isInitialized && isAuthenticated) {

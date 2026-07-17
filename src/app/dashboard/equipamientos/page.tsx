@@ -206,6 +206,109 @@ export default function EquipamientosPage() {
     if (match) return tx(text, `Next review in ${match[1]} day${match[1] === "1" ? "" : "s"}.`);
     return text;
   };
+
+  const tEquipmentType = (value?: string | null) => {
+    const text = String(value ?? "").trim();
+    const normalized = text.toLowerCase();
+
+    switch (normalized) {
+      case "accesorio":
+        return tx(text || "Accesorio", "Accessory");
+      case "fuerza":
+        return tx(text || "Fuerza", "Strength");
+      case "cardio":
+        return tx(text || "Cardio", "Cardio");
+      default:
+        return text;
+    }
+  };
+
+  const tEquipmentLocation = (value?: string | null) => {
+    const text = String(value ?? "").trim();
+    const normalized = text.toLowerCase();
+
+    if (!text) return "";
+    if (normalized === "sala de cardio") return tx(text, "Cardio room");
+    if (normalized === "sala funcional") return tx(text, "Functional room");
+    if (normalized === "sala principal") return tx(text, "Main room");
+    if (normalized === "sala spinning") return tx(text, "Spinning room");
+    if (normalized === "zona vip") return tx(text, "VIP zone");
+
+    const zoneMatch = text.match(/^zona\s+(.+)$/i);
+    if (zoneMatch) {
+      return isEnglish ? `Zone ${zoneMatch[1]}` : text;
+    }
+
+    return text;
+  };
+
+  const tMaintenanceType = (value?: string | null) => {
+    const text = String(value ?? "").trim();
+    const normalized = text.toLowerCase();
+
+    switch (normalized) {
+      case "preventivo":
+        return tx(text || "preventivo", "preventive");
+      case "correctivo":
+        return tx(text || "correctivo", "corrective");
+      case "lubricacion":
+      case "lubricación":
+        return tx(text || "lubricación", "lubrication");
+      case "cableado / correas":
+        return tx(text || "cableado / correas", "cabling / belts");
+      default:
+        return text;
+    }
+  };
+
+  const tMaintenanceStatus = (value?: string | null) => {
+    const text = String(value ?? "").trim();
+    const normalized = text.toLowerCase();
+
+    switch (normalized) {
+      case "en proceso":
+        return tx(text || "en proceso", "in progress");
+      case "completado":
+      case "completa":
+        return tx(text || "completado", "completed");
+      case "pendiente":
+        return tx(text || "pendiente", "pending");
+      case "cancelado":
+        return tx(text || "cancelado", "cancelled");
+      default:
+        return tStatus(text);
+    }
+  };
+
+  const tEquipmentExportText = (value?: string | null) => {
+    const text = String(value ?? "").trim();
+    const normalized = text.toLowerCase();
+
+    if (!text) return "";
+    if (normalized === "equipo no identificado") {
+      return tx(text, "Unidentified equipment");
+    }
+
+    return text;
+  };
+
+  const formatExportFilters = () => {
+    const typeValue = selectedTipos.length
+      ? selectedTipos.map(tEquipmentType).join(", ")
+      : tx("todos", "all");
+    const statusValue = selectedEstados.length
+      ? selectedEstados.map(tStatus).join(", ")
+      : tx("todos", "all");
+    const locationValue = selectedUbicaciones.length
+      ? selectedUbicaciones.map(tEquipmentLocation).join(", ")
+      : tx("todas", "all");
+    const searchValue = searchTerm.trim() || tx("sin búsqueda", "no search");
+
+    return tx(
+      `Filtros: tipo=${typeValue}; estado=${statusValue}; ubicación=${locationValue}; búsqueda=${searchValue}`,
+      `Filters: type=${typeValue}; status=${statusValue}; location=${locationValue}; search=${searchValue}`,
+    );
+  };
   const { isAuthenticated, initializeAuth, isInitialized } = useAuthStore();
   const router = useRouter();
   const [equipos, setEquipos] = useState<Equipamento[]>([]);
@@ -342,32 +445,35 @@ export default function EquipamientosPage() {
 
   const handleExportExcel = async () => {
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Equipamientos");
+    const worksheet = workbook.addWorksheet(tx("Equipamientos", "Equipment"));
     worksheet.columns = [
       { header: "ID", key: "id", width: 36 },
-      { header: "Nombre", key: "nombre", width: 30 },
-      { header: "Tipo", key: "tipo", width: 22 },
-      { header: "Marca", key: "marca", width: 22 },
-      { header: "Modelo", key: "modelo", width: 22 },
-      { header: "Estado", key: "estado", width: 20 },
-      { header: "Ubicación", key: "ubicacion", width: 24 },
-      { header: "Última revisión", key: "ultima_revision", width: 18 },
-      { header: "Próxima revisión", key: "proxima_revision", width: 18 },
+      { header: tx("Nombre", "Name"), key: "nombre", width: 30 },
+      { header: tx("Tipo", "Type"), key: "tipo", width: 22 },
+      { header: tx("Marca", "Brand"), key: "marca", width: 22 },
+      { header: tx("Modelo", "Model"), key: "modelo", width: 22 },
+      { header: tx("Estado", "Status"), key: "estado", width: 20 },
+      { header: tx("Ubicación", "Location"), key: "ubicacion", width: 24 },
+      { header: tx("Última revisión", "Last review"), key: "ultima_revision", width: 18 },
+      { header: tx("Próxima revisión", "Next review"), key: "proxima_revision", width: 18 },
     ];
 
     filteredEquipos.forEach((e) => {
       worksheet.addRow({
         id: e.id,
         nombre: e.nombre,
-        tipo: e.tipo,
+        tipo: tEquipmentType(e.tipo),
         marca: e.marca,
         modelo: e.modelo,
-        estado: e.estado,
-        ubicacion: e.ubicacion,
+        estado: tStatus(e.estado),
+        ubicacion: tEquipmentLocation(e.ubicacion),
         ultima_revision: e.ultima_revision,
         proxima_revision: e.proxima_revision,
       });
     });
+
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.views = [{ state: "frozen", ySplit: 1 }];
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], {
@@ -376,7 +482,10 @@ export default function EquipamientosPage() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = buildTimestampedDownloadFileName("listado-equipamientos", "xlsx");
+    a.download = buildTimestampedDownloadFileName(
+      tx("listado-equipamientos", "equipment-list"),
+      "xlsx",
+    );
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -389,6 +498,8 @@ export default function EquipamientosPage() {
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 12;
     let y = margin;
+
+    const localeCode = isEnglish ? "en-US" : "es-AR";
 
     const addPageIfNeeded = (needed = 14) => {
       if (y + needed > pageHeight - margin - 10) {
@@ -408,8 +519,8 @@ export default function EquipamientosPage() {
         doc.setFont("helvetica", "normal");
         doc.setFontSize(8);
         doc.setTextColor(100, 116, 139);
-        doc.text("Gym Master · Equipamiento y mantenimiento", margin, pageHeight - 5);
-        doc.text(`Página ${page} de ${totalPages}`, pageWidth - margin, pageHeight - 5, { align: "right" });
+        doc.text(tx("Gym Master · Equipamiento y mantenimiento", "Gym Master · Equipment and maintenance"), margin, pageHeight - 5);
+        doc.text(`${tx("Página", "Page")} ${page} ${tx("de", "of")} ${totalPages}`, pageWidth - margin, pageHeight - 5, { align: "right" });
       }
     };
 
@@ -573,71 +684,81 @@ export default function EquipamientosPage() {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(18);
     doc.setTextColor(2, 132, 199);
-    doc.text("Gym Master · Reporte de equipamiento y mantenimiento", margin, y);
+    doc.text(tx("Gym Master · Reporte de equipamiento y mantenimiento", "Gym Master · Equipment and maintenance report"), margin, y);
     y += 8;
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     doc.setTextColor(71, 85, 105);
-    doc.text(`Generado: ${new Date().toLocaleString("es-AR")}`, margin, y);
+    doc.text(`${tx("Generado", "Generated")}: ${new Date().toLocaleString(localeCode)}`, margin, y);
     y += 6;
-    doc.text(
-      `Filtros: tipo=${selectedTipos.join(", ") || "todos"}; estado=${selectedEstados.join(", ") || "todos"}; ubicación=${selectedUbicaciones.join(", ") || "todas"}; búsqueda=${searchTerm || "sin búsqueda"}`,
-      margin,
-      y,
-    );
+    doc.text(formatExportFilters(), margin, y);
     y += 8;
 
-    sectionTitle("Resumen ejecutivo");
+    sectionTitle(tx("Resumen ejecutivo", "Executive summary"));
     const metricWidth = (pageWidth - margin * 2 - 10) / 6;
     const metricsY = y;
-    drawMetric("Total equipos", String(biMantenimiento?.resumen.total_equipos ?? equipos.length), margin, metricsY, metricWidth);
-    drawMetric("Operativos", String(biMantenimiento?.resumen.operativos ?? 0), margin + (metricWidth + 2) * 1, metricsY, metricWidth);
-    drawMetric("En mantenimiento", String(biMantenimiento?.resumen.en_mantenimiento ?? 0), margin + (metricWidth + 2) * 2, metricsY, metricWidth);
-    drawMetric("Fuera servicio", String(biMantenimiento?.resumen.fuera_de_servicio ?? 0), margin + (metricWidth + 2) * 3, metricsY, metricWidth);
-    drawMetric("Vencidos", String(biMantenimiento?.resumen.vencidos ?? 0), margin + (metricWidth + 2) * 4, metricsY, metricWidth);
-    drawMetric("Costo 90 días", formatCurrency(biMantenimiento?.resumen.costo_ultimos_90_dias), margin + (metricWidth + 2) * 5, metricsY, metricWidth);
+    drawMetric(tx("Total equipos", "Total equipment"), String(biMantenimiento?.resumen.total_equipos ?? equipos.length), margin, metricsY, metricWidth);
+    drawMetric(tx("Operativos", "Operational"), String(biMantenimiento?.resumen.operativos ?? 0), margin + (metricWidth + 2) * 1, metricsY, metricWidth);
+    drawMetric(tx("En mantenimiento", "Under maintenance"), String(biMantenimiento?.resumen.en_mantenimiento ?? 0), margin + (metricWidth + 2) * 2, metricsY, metricWidth);
+    drawMetric(tx("Fuera servicio", "Out of service"), String(biMantenimiento?.resumen.fuera_de_servicio ?? 0), margin + (metricWidth + 2) * 3, metricsY, metricWidth);
+    drawMetric(tx("Vencidos", "Overdue"), String(biMantenimiento?.resumen.vencidos ?? 0), margin + (metricWidth + 2) * 4, metricsY, metricWidth);
+    drawMetric(tx("Costo 90 días", "90-day cost"), formatCurrency(biMantenimiento?.resumen.costo_ultimos_90_dias), margin + (metricWidth + 2) * 5, metricsY, metricWidth);
     y += 25;
 
-    sectionTitle("Gráficos de métricas");
-    drawHorizontalBars("Estado del parque", biMantenimiento?.por_estado ?? [], margin, y, 86, 56);
-    drawMonthlyCost("Costo mensual", biMantenimiento?.costo_mensual ?? [], margin + 94, y, 86, 56);
-    drawHorizontalBars("Equipos por tipo", biMantenimiento?.por_tipo ?? [], margin + 188, y, 86, 56);
+    sectionTitle(tx("Gráficos de métricas", "Metrics charts"));
+    drawHorizontalBars(
+      tx("Estado del parque", "Equipment status"),
+      (biMantenimiento?.por_estado ?? []).map((item) => ({ ...item, label: tStatus(item.label) })),
+      margin,
+      y,
+      86,
+      56,
+    );
+    drawMonthlyCost(tx("Costo mensual", "Monthly cost"), biMantenimiento?.costo_mensual ?? [], margin + 94, y, 86, 56);
+    drawHorizontalBars(
+      tx("Equipos por tipo", "Equipment by type"),
+      (biMantenimiento?.por_tipo ?? []).map((item) => ({ ...item, label: tEquipmentType(item.label) })),
+      margin + 188,
+      y,
+      86,
+      56,
+    );
     y += 64;
 
-    sectionTitle("Listado de equipamientos");
+    sectionTitle(tx("Listado de equipamientos", "Equipment list"));
     drawTable(
-      ["Nombre", "Tipo", "Estado", "Ubicación", "Marca/Modelo", "Próx. rev."],
+      [tx("Nombre", "Name"), tx("Tipo", "Type"), tx("Estado", "Status"), tx("Ubicación", "Location"), tx("Marca/Modelo", "Brand/Model"), tx("Próx. rev.", "Next rev.")],
       filteredEquipos.map((equipo) => [
-        sanitizePdfText(equipo.nombre),
-        sanitizePdfText(equipo.tipo),
-        sanitizePdfText(equipo.estado),
-        sanitizePdfText(equipo.ubicacion),
+        sanitizePdfText(tEquipmentExportText(equipo.nombre)),
+        sanitizePdfText(tEquipmentType(equipo.tipo)),
+        sanitizePdfText(tStatus(equipo.estado)),
+        sanitizePdfText(tEquipmentLocation(equipo.ubicacion)),
         `${sanitizePdfText(equipo.marca)} ${sanitizePdfText(equipo.modelo)}`.trim(),
         sanitizePdfText(equipo.proxima_revision),
       ]),
       [46, 32, 34, 34, 56, 34],
     );
 
-    sectionTitle("Historial reciente de mantenimiento");
+    sectionTitle(tx("Historial reciente de mantenimiento", "Recent maintenance history"));
     drawTable(
-      ["Equipo", "Fecha", "Tipo mant.", "Estado", "Costo", "Técnico"],
+      [tx("Equipo", "Equipment"), tx("Fecha", "Date"), tx("Tipo mant.", "Maint. type"), tx("Estado", "Status"), tx("Costo", "Cost"), tx("Técnico", "Technician")],
       (biMantenimiento?.mantenimientos_recientes ?? []).map((mantenimiento) => [
-        sanitizePdfText(mantenimiento.equipo_nombre),
+        sanitizePdfText(tEquipmentExportText(mantenimiento.equipo_nombre)),
         sanitizePdfText(mantenimiento.fecha_mantenimiento),
-        sanitizePdfText(mantenimiento.tipo_mantenimiento),
-        sanitizePdfText(mantenimiento.estado),
+        sanitizePdfText(tMaintenanceType(mantenimiento.tipo_mantenimiento)),
+        sanitizePdfText(tMaintenanceStatus(mantenimiento.estado)),
         formatCurrency(mantenimiento.costo),
         sanitizePdfText(mantenimiento.tecnico_responsable),
       ]),
       [48, 28, 38, 32, 30, 60],
     );
 
-    sectionTitle("Recomendaciones de venta/reemplazo");
+    sectionTitle(tx("Recomendaciones de venta/reemplazo", "Sales/replacement recommendations"));
     drawTable(
-      ["Equipo", "Ubicación", "Score", "Costo 180", "Recomendación"],
+      [tx("Equipo", "Equipment"), tx("Ubicación", "Location"), "Score", tx("Costo 180", "180-day cost"), tx("Recomendación", "Recommendation")],
       (biMantenimiento?.recomendaciones_reemplazo ?? []).map((item) => [
-        sanitizePdfText(item.nombre),
-        sanitizePdfText(item.ubicacion),
+        sanitizePdfText(tEquipmentExportText(item.nombre)),
+        sanitizePdfText(tEquipmentLocation(item.ubicacion)),
         String(item.score_reemplazo),
         formatCurrency(item.costo_180_dias),
         sanitizePdfText(item.recomendacion),
@@ -646,7 +767,7 @@ export default function EquipamientosPage() {
     );
 
     addReportFooters();
-    doc.save(buildTimestampedDownloadFileName("reporte-equipamiento-mantenimiento", "pdf"));
+    doc.save(buildTimestampedDownloadFileName(tx("reporte-equipamiento-mantenimiento", "equipment-maintenance-report"), "pdf"));
   };
 
   const riskRadar = useMemo(() => {

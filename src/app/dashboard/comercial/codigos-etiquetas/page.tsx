@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { useAuthStore } from '@/stores/authStore';
 import { useI18n } from '@/i18n/I18nProvider';
+import type { GymMasterLocale } from '@/i18n/config';
 import { translateCommercialUi } from '@/i18n/commercialUi';
 import type { ComercialCodigoLabelItem, ComercialCodigoTargetType, ComercialCodigosLabelsDashboard } from '@/interfaces/comercialCodigos.interface';
 import { generateComercialQrCodeClient, getComercialCodigosLabelsDashboardClient } from '@/services/comercialCodigosService';
@@ -50,6 +51,17 @@ function escapeHtml(value?: string | null) {
     .replaceAll("'", '&#039;');
 }
 
+function commercialLabelsPrintTx(locale: GymMasterLocale, es: string, en: string) {
+  return locale === 'en' ? en : es;
+}
+
+function commercialLabelTypeForPrint(locale: GymMasterLocale, type: string) {
+  if (type === 'producto') return commercialLabelsPrintTx(locale, 'Producto', 'Product');
+  if (type === 'servicio') return commercialLabelsPrintTx(locale, 'Servicio', 'Service');
+  if (type === 'pack') return 'Pack';
+  return type;
+}
+
 function typeLabel(type: string, c?: (text: string) => string) {
   if (type === 'producto') return c ? c('Producto') : 'Producto';
   if (type === 'servicio') return c ? c('Servicio') : 'Servicio';
@@ -72,7 +84,7 @@ function MetricCard({ title, value, description }: { title: string; value: numbe
   );
 }
 
-function printLabels(items: ComercialCodigoLabelItem[], columns: number) {
+function printLabels(items: ComercialCodigoLabelItem[], columns: number, locale: GymMasterLocale) {
   const labelWidth = columns === 3 ? '62mm' : '92mm';
   const htmlLabels = items
     .map((item) => {
@@ -81,13 +93,13 @@ function printLabels(items: ComercialCodigoLabelItem[], columns: number) {
       return `
         <article class="label-card">
           <div class="brand">Gym Master</div>
-          <div class="type">${escapeHtml(typeLabel(item.target_type))}</div>
+          <div class="type">${escapeHtml(commercialLabelTypeForPrint(locale, item.target_type))}</div>
           <div class="title">${escapeHtml(item.nombre)}</div>
           <div class="price">${escapeHtml(formatCurrency(item.precio))}</div>
-          ${qrUrl ? `<img class="qr" src="${escapeHtml(qrUrl)}" alt="QR ${escapeHtml(code)}" />` : '<div class="no-code">Sin código</div>'}
-          <div class="code">${escapeHtml(code || 'SIN CÓDIGO')}</div>
+          ${qrUrl ? `<img class="qr" src="${escapeHtml(qrUrl)}" alt="QR ${escapeHtml(code)}" />` : '<div class="no-code">' + escapeHtml(commercialLabelsPrintTx(locale, 'Sin código', 'No code')) + '</div>'}
+          <div class="code">${escapeHtml(code || commercialLabelsPrintTx(locale, 'SIN CÓDIGO', 'NO CODE'))}</div>
           ${item.sku ? `<div class="small">SKU: ${escapeHtml(item.sku)}</div>` : ''}
-          ${item.codigo_barras ? `<div class="small">Barra: ${escapeHtml(item.codigo_barras)}</div>` : ''}
+          ${item.codigo_barras ? `<div class="small">${escapeHtml(commercialLabelsPrintTx(locale, 'Barra', 'Barcode'))}: ${escapeHtml(item.codigo_barras)}</div>` : ''}
         </article>
       `;
     })
@@ -99,7 +111,7 @@ function printLabels(items: ComercialCodigoLabelItem[], columns: number) {
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Etiquetas comerciales Gym Master</title>
+  <title>${escapeHtml(commercialLabelsPrintTx(locale, 'Etiquetas comerciales Gym Master', 'Gym Master commercial labels'))}</title>
   <style>
     @page { size: A4; margin: 10mm; }
     * { box-sizing: border-box; }
@@ -121,8 +133,8 @@ function printLabels(items: ComercialCodigoLabelItem[], columns: number) {
 </head>
 <body>
   <div class="toolbar">
-    <strong>Etiquetas comerciales Gym Master · ${items.length} etiquetas</strong>
-    <button onclick="window.print()">Imprimir / Guardar PDF</button>
+    <strong>${escapeHtml(commercialLabelsPrintTx(locale, 'Etiquetas comerciales Gym Master', 'Gym Master commercial labels'))} · ${items.length} ${escapeHtml(commercialLabelsPrintTx(locale, 'etiquetas', 'labels'))}</strong>
+    <button onclick="window.print()">${escapeHtml(commercialLabelsPrintTx(locale, 'Imprimir / Guardar PDF', 'Print / Save PDF'))}</button>
   </div>
   <main class="sheet">${htmlLabels}</main>
 </body>
@@ -229,7 +241,7 @@ export default function ComercialCodigosEtiquetasPage() {
                   <Button variant='outline' className='border-white/30 bg-white/10 text-white hover:bg-white/20' onClick={loadDashboard} disabled={loading}>
                     {loading ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <RefreshCw className='mr-2 h-4 w-4' />}{c('Actualizar')}
                   </Button>
-                  <Button onClick={() => printLabels(selectedItems.length ? selectedItems : filteredItems.slice(0, 24), columns)} disabled={!filteredItems.length}>
+                  <Button onClick={() => printLabels(selectedItems.length ? selectedItems : filteredItems.slice(0, 24), columns, locale)} disabled={!filteredItems.length}>
                     <Printer className='mr-2 h-4 w-4' /> {c('Imprimir etiquetas')}
                   </Button>
                 </div>
@@ -297,7 +309,7 @@ export default function ComercialCodigosEtiquetasPage() {
                         <Button type='button' size='sm' variant='outline' onClick={() => handleGenerateQr(item)} disabled={item.target_type === 'pack' || savingKey === key}>
                           {savingKey === key ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <QrCode className='mr-2 h-4 w-4' />}{c('Generar QR')}
                         </Button>
-                        <Button type='button' size='sm' variant='outline' onClick={() => printLabels([item], columns)} disabled={!code}>
+                        <Button type='button' size='sm' variant='outline' onClick={() => printLabels([item], columns, locale)} disabled={!code}>
                           <Barcode className='mr-2 h-4 w-4' />{c('Etiqueta')}
                         </Button>
                       </div>

@@ -58,6 +58,18 @@ function getDateOnlyTime(value?: string | null) {
   return Number.isNaN(time) ? null : time;
 }
 
+
+function safeOtrosGastosWorksheetName(name: string) {
+  const safeName = String(name || "Gastos - Egresos")
+    .replace(/[\/*?:[]]/g, " - ")
+    .replace(/s+-s+/g, " - ")
+    .replace(/s{2,}/g, " ")
+    .trim()
+    .slice(0, 31);
+
+  return safeName || "Gastos - Egresos";
+}
+
 export default function OtrosGastosPage() {
   const { isAuthenticated, initializeAuth, isInitialized } = useAuthStore();
   const { locale } = useI18n();
@@ -171,7 +183,7 @@ export default function OtrosGastosPage() {
 
   const handleExportExcel = async () => {
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet(c("Gastos / Egresos"));
+    const worksheet = workbook.addWorksheet(locale === "en" ? "Expenses - Outflows" : "Gastos - Egresos");
 
     worksheet.columns = [
       { header: c("Descripción"), key: "descripcion", width: 38 },
@@ -214,16 +226,20 @@ export default function OtrosGastosPage() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = buildTimestampedDownloadFileName("listado-gastos-egresos", "xlsx");
+    a.download = buildTimestampedDownloadFileName(
+      locale === "en" ? "expenses-outflows-list" : "listado-gastos-egresos",
+      "xlsx",
+    );
     a.click();
     window.URL.revokeObjectURL(url);
   };
 
   const handleDownloadPdf = async () => {
     await downloadCommercialReportPdf<OtrosGastos>({
+      locale,
       title: c("Listado de Gastos / Egresos"),
       subtitle: c("Control operativo de egresos del gimnasio"),
-      fileName: "listado-gastos-egresos",
+      fileName: locale === "en" ? "expenses-outflows-list" : "listado-gastos-egresos",
       rows: filteredGastos,
       filtersLabel,
       metrics: [
