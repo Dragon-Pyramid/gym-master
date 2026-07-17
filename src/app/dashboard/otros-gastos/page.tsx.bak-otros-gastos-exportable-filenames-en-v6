@@ -226,10 +226,7 @@ export default function OtrosGastosPage() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = buildTimestampedDownloadFileName(
-      locale === "en" ? "expenses-outflows-list" : "listado-gastos-egresos",
-      "xlsx",
-    );
+    a.download = buildTimestampedDownloadFileName("listado-gastos-egresos", "xlsx");
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -239,7 +236,7 @@ export default function OtrosGastosPage() {
       locale,
       title: c("Listado de Gastos / Egresos"),
       subtitle: c("Control operativo de egresos del gimnasio"),
-      fileName: locale === "en" ? "expenses-outflows-list" : "listado-gastos-egresos",
+      fileName: "listado-gastos-egresos",
       rows: filteredGastos,
       filtersLabel,
       metrics: [

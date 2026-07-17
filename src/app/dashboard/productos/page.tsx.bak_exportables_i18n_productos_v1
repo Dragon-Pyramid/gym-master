@@ -41,114 +41,6 @@ const PRODUCTOS_PAGE_SIZE = 10;
 
 type StockFilter = "todos" | "activos" | "critico" | "sin_stock" | "inactivos";
 
-function productoExportTx(locale: string, es: string, en: string) {
-  return locale === 'en' ? en : es;
-}
-
-function normalizeProductoExportText(value?: string | null) {
-  return String(value ?? '')
-    .trim()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[\s/-]+/g, '_');
-}
-
-const PRODUCTO_EXPORT_TEXTS: Record<string, string> = {
-  todos: 'All',
-  todas: 'All',
-  activos: 'Active',
-  activo: 'Active',
-  active: 'Active',
-  inactivos: 'Inactive',
-  inactivo: 'Inactive',
-  inactive: 'Inactive',
-  discontinuados: 'Discontinued',
-  discontinuado: 'Discontinued',
-  critico: 'Critical stock',
-  stock_critico: 'Critical stock',
-  critical_stock: 'Critical stock',
-  sin_stock: 'Out of stock',
-  out_of_stock: 'Out of stock',
-  stock_ok: 'Stock OK',
-  ok: 'OK',
-  bajo_stock: 'Low stock',
-  low_stock: 'Low stock',
-  no: 'No',
-  si: 'Yes',
-  yes: 'Yes',
-  no_category: 'No category',
-  sin_categoria: 'No category',
-  categoria_no_encontrada: 'Category not found',
-  sin_proveedor_asignado: 'No supplier assigned',
-  proveedor_no_encontrado: 'Supplier not found',
-  bebidas: 'Drinks',
-  bebida: 'Drink',
-  suplementos: 'Supplements',
-  suplemento: 'Supplement',
-  accesorios: 'Accessories',
-  accesorio: 'Accessory',
-  higiene: 'Hygiene',
-  indumentaria: 'Apparel',
-  snacks: 'Snacks',
-  servicios: 'Services',
-  otros: 'Other',
-  otro: 'Other',
-  productos_no_clasificados: 'Unclassified products',
-  descripcion_del_producto_1: 'Product 1 description',
-  descripcion_del_producto_2: 'Product 2 description',
-  descripcion_del_producto_3: 'Product 3 description',
-  descripcion_del_producto_4: 'Product 4 description',
-  descripcion_del_producto_5: 'Product 5 description',
-  energizante: 'Energy drink',
-  bebida_isotonica_post_entrenamiento: 'Post-workout isotonic drink',
-  bebida_isotonica_post_entrenamiento_: 'Post-workout isotonic drink.',
-  barra_proteica_sabor_chocolate: 'Chocolate-flavored protein bar',
-  barra_proteica_sabor_chocolate_: 'Chocolate-flavored protein bar.',
-  creatina_monohidrato_micronizada: 'Micronized creatine monohydrate',
-  creatina_monohidrato_micronizada_: 'Micronized creatine monohydrate.',
-  proteina_de_suero_sabor_vainilla: 'Vanilla-flavored whey protein',
-  proteina_de_suero_sabor_vainilla_: 'Vanilla-flavored whey protein.',
-  shaker_para_suplementos: 'Supplement shaker',
-  shaker_para_suplementos_: 'Supplement shaker.',
-  guantes_basicos_para_entrenamiento: 'Basic training gloves',
-  guantes_basicos_para_entrenamiento_: 'Basic training gloves.',
-  toalla_deportiva_mediana: 'Medium sports towel',
-  toalla_deportiva_mediana_: 'Medium sports towel.',
-  agua_mineral_para_venta_rapida_en_kiosco: 'Mineral water for quick kiosk sales',
-  agua_mineral_para_venta_rapida_en_kiosco_: 'Mineral water for quick kiosk sales.',
-  sabor_neutro_300_grms: 'Neutral flavor 300 g',
-};
-
-function translateProductoExportText(locale: string, value?: string | null, fallback = '') {
-  const original = String(value ?? fallback ?? '').trim();
-  if (!original) return '';
-  if (locale !== 'en') return original;
-
-  const normalized = normalizeProductoExportText(original);
-  const genericProductMatch = normalized.match(/^producto_(\d+)$/);
-  if (genericProductMatch) return 'Product ' + genericProductMatch[1];
-
-  const genericDescriptionMatch = normalized.match(/^descripcion_del_producto_(\d+)$/);
-  if (genericDescriptionMatch) return 'Product ' + genericDescriptionMatch[1] + ' description';
-
-  return PRODUCTO_EXPORT_TEXTS[normalized] ?? original;
-}
-
-function stockFilterExportLabel(locale: string, filter: StockFilter) {
-  if (filter === 'todos') return productoExportTx(locale, 'Todos', 'All');
-  if (filter === 'activos') return productoExportTx(locale, 'Activos', 'Active');
-  if (filter === 'critico') return productoExportTx(locale, 'Stock crítico', 'Critical stock');
-  if (filter === 'sin_stock') return productoExportTx(locale, 'Sin stock', 'Out of stock');
-  if (filter === 'inactivos') return productoExportTx(locale, 'Inactivos / discontinuados', 'Inactive / discontinued');
-  return translateProductoExportText(locale, filter);
-}
-
-function getProductoExportFiltersLabel(locale: string, stockFilter: StockFilter, searchTerm: string) {
-  const search = searchTerm.trim();
-  return `${productoExportTx(locale, 'Filtro', 'Filter')}: ${stockFilterExportLabel(locale, stockFilter)}${search ? ` · ${productoExportTx(locale, 'Búsqueda', 'Search')}: ${search}` : ''}`;
-}
-
 const fallbackCategoriasProducto: CatalogoParametrizableItem[] = [
   {
     id: "fallback-otros",
@@ -250,52 +142,40 @@ export default function ProductoPage() {
 
   const handleExportExcel = async () => {
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet(productoExportTx(locale, 'Productos', 'Products'));
+    const worksheet = workbook.addWorksheet(c("Productos"));
 
     worksheet.columns = [
-      { header: productoExportTx(locale, 'Producto', 'Product'), key: 'nombre', width: 30 },
-      { header: productoExportTx(locale, 'Descripción', 'Description'), key: 'descripcion', width: 38 },
-      { header: productoExportTx(locale, 'Categoría', 'Category'), key: 'categoria', width: 24 },
-      { header: productoExportTx(locale, 'Proveedor', 'Supplier'), key: 'proveedor', width: 30 },
-      { header: productoExportTx(locale, 'Precio', 'Price'), key: 'precio', width: 15 },
-      { header: productoExportTx(locale, 'Costo', 'Cost'), key: 'costo', width: 15 },
-      { header: productoExportTx(locale, 'Margen', 'Margin'), key: 'margen', width: 15 },
-      { header: 'Stock', key: 'stock', width: 10 },
-      { header: productoExportTx(locale, 'Stock mínimo', 'Minimum stock'), key: 'stock_minimo', width: 16 },
-      { header: productoExportTx(locale, 'Estado', 'Status'), key: 'estado', width: 18 },
-      { header: productoExportTx(locale, 'Activo', 'Active'), key: 'activo', width: 12 },
+      { header: c("Nombre"), key: "nombre", width: 30 },
+      { header: c("Descripción"), key: "descripcion", width: 30 },
+      { header: c("Precio"), key: "precio", width: 15 },
+      { header: c("Costo"), key: "costo", width: 15 },
+      { header: c("Margen"), key: "margen", width: 15 },
+      { header: c("Stock"), key: "stock", width: 10 },
+      { header: c("Proveedor"), key: "proveedor", width: 30 },
+      { header: c("Activo"), key: "activo", width: 12 },
     ];
 
     filteredProductos.forEach((p) => {
       worksheet.addRow({
-        nombre: translateProductoExportText(locale, p.nombre),
-        descripcion: translateProductoExportText(locale, p.descripcion),
-        categoria: translateProductoExportText(locale, getCategoriaNombre(p.id_categoria_producto)),
-        proveedor: translateProductoExportText(locale, getProveedorNombre(p.proveedor_id)),
+        nombre: p.nombre,
+        descripcion: p.descripcion,
         precio: p.precio,
         costo: p.costo ?? 0,
         margen: Number(p.precio ?? 0) - Number(p.costo ?? 0),
         stock: p.stock,
-        stock_minimo: p.stock_minimo ?? 5,
-        estado: translateProductoExportText(locale, getProductoStockEstado(p).replace(/_/g, ' ')),
-        activo: p.activo === false ? productoExportTx(locale, 'No', 'No') : productoExportTx(locale, 'Sí', 'Yes'),
+        proveedor: getProveedorNombre(p.proveedor_id),
+        activo: p.activo === false ? c("No") : c("Sí"),
       });
     });
 
-    worksheet.getRow(1).font = { bold: true };
-    worksheet.views = [{ state: 'frozen', ySplit: 1 }];
-
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = buildTimestampedDownloadFileName(
-      productoExportTx(locale, 'listado-productos', 'products-list'),
-      'xlsx',
-    );
+    a.download = buildTimestampedDownloadFileName("listado-productos", "xlsx");
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -303,55 +183,33 @@ export default function ProductoPage() {
   const handleDownloadPdf = async () => {
     try {
       await downloadCommercialReportPdf({
-        title: productoExportTx(locale, 'Listado de Productos', 'Product list'),
-        subtitle: productoExportTx(
-          locale,
-          'Control operativo de productos, stock, proveedores y estado comercial.',
-          'Operational control of products, stock, suppliers and commercial status.',
-        ),
-        fileName: productoExportTx(locale, 'listado-productos-gym-master', 'gym-master-products-list'),
-        locale,
-        footerText: productoExportTx(
-          locale,
-          'Documento generado por Gym Master.',
-          'Document generated by Gym Master.',
-        ),
-        labels: {
-          generated: productoExportTx(locale, 'Generado', 'Generated'),
-          page: productoExportTx(locale, 'Página', 'Page'),
-          of: productoExportTx(locale, 'de', 'of'),
-          detail: productoExportTx(locale, 'Detalle', 'Details'),
-          records: productoExportTx(locale, 'registros', 'records'),
-          empty: productoExportTx(
-            locale,
-            'No hay registros para el filtro seleccionado.',
-            'No records found for the selected filter.',
-          ),
-        },
+        title: c("Listado de Productos"),
+        subtitle: c("Control operativo de productos, stock, proveedores y estado comercial."),
+        fileName: "listado-productos-gym-master",
         rows: filteredProductos,
         metrics: [
-          { label: productoExportTx(locale, 'Productos activos', 'Active products'), value: metrics.activos },
-          { label: productoExportTx(locale, 'Stock crítico', 'Critical stock'), value: metrics.criticos },
-          { label: productoExportTx(locale, 'Sin stock', 'Out of stock'), value: metrics.sinStock },
-          { label: productoExportTx(locale, 'Inventario estimado', 'Estimated inventory'), value: formatCurrencyARS(metrics.valorInventario) },
+          { label: c("Productos activos"), value: metrics.activos },
+          { label: c("Stock crítico"), value: metrics.criticos },
+          { label: c("Sin stock"), value: metrics.sinStock },
+          { label: c("Inventario estimado"), value: formatCurrencyARS(metrics.valorInventario) },
         ],
-        filtersLabel: getProductoExportFiltersLabel(locale, stockFilter, searchTerm),
+        filtersLabel: `${c("Filtro")}: ${c(stockFilter.replace(/_/g, " "))}${searchTerm.trim() ? ` · ${c("Búsqueda")}: ${searchTerm.trim()}` : ""}`,
         columns: [
-          { header: productoExportTx(locale, 'Producto', 'Product'), width: 30, getValue: (p) => translateProductoExportText(locale, p.nombre) },
-          { header: productoExportTx(locale, 'Descripción', 'Description'), width: 34, getValue: (p) => p.descripcion ? translateProductoExportText(locale, p.descripcion) : '-' },
-          { header: productoExportTx(locale, 'Categoría', 'Category'), width: 25, getValue: (p) => translateProductoExportText(locale, getCategoriaNombre(p.id_categoria_producto)) },
-          { header: productoExportTx(locale, 'Proveedor', 'Supplier'), width: 30, getValue: (p) => translateProductoExportText(locale, getProveedorNombre(p.proveedor_id)) },
-          { header: productoExportTx(locale, 'Precio', 'Price'), width: 18, getValue: (p) => formatCurrencyARS(p.precio), align: 'right' },
-          { header: productoExportTx(locale, 'Costo', 'Cost'), width: 18, getValue: (p) => formatCurrencyARS(p.costo ?? 0), align: 'right' },
-          { header: productoExportTx(locale, 'Margen', 'Margin'), width: 18, getValue: (p) => formatCurrencyARS((p.precio ?? 0) - (p.costo ?? 0)), align: 'right' },
-          { header: 'Stock', width: 14, getValue: (p) => p.stock, align: 'right' },
-          { header: productoExportTx(locale, 'Stock mínimo', 'Minimum stock'), width: 20, getValue: (p) => p.stock_minimo ?? 5, align: 'right' },
-          { header: productoExportTx(locale, 'Estado', 'Status'), width: 22, getValue: (p) => translateProductoExportText(locale, getProductoStockEstado(p).replace(/_/g, ' ')) },
-          { header: productoExportTx(locale, 'Activo', 'Active'), width: 16, getValue: (p) => (p.activo === false ? productoExportTx(locale, 'No', 'No') : productoExportTx(locale, 'Sí', 'Yes')) },
+          { header: c("Producto"), width: 34, getValue: (p) => c(p.nombre) },
+          { header: c("Descripción"), width: 38, getValue: (p) => (p.descripcion ? c(p.descripcion) : "-") },
+          { header: c("Categoría"), width: 28, getValue: (p) => getCategoriaNombre(p.id_categoria_producto) },
+          { header: c("Proveedor"), width: 34, getValue: (p) => getProveedorNombre(p.proveedor_id) },
+          { header: c("Precio"), width: 20, getValue: (p) => formatCurrencyARS(p.precio), align: "right" },
+          { header: c("Costo"), width: 20, getValue: (p) => formatCurrencyARS(p.costo ?? 0), align: "right" },
+          { header: c("Margen"), width: 20, getValue: (p) => formatCurrencyARS((p.precio ?? 0) - (p.costo ?? 0)), align: "right" },
+          { header: c("Stock"), width: 15, getValue: (p) => p.stock, align: "right" },
+          { header: c("Stock mínimo"), width: 20, getValue: (p) => p.stock_minimo ?? 5, align: "right" },
+          { header: c("Estado"), width: 24, getValue: (p) => c(getProductoStockEstado(p).replace(/_/g, " ")) },
+          { header: c("Activo"), width: 16, getValue: (p) => (p.activo === false ? c("No") : c("Sí")) },
         ],
       });
     } catch {
-      toast.error(productoExportTx(locale, 'No se pudo generar el PDF de productos', 'Could not generate the products PDF'));
+      toast.error(c("No se pudo generar el PDF de productos"));
     }
   };
 

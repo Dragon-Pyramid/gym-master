@@ -66,102 +66,6 @@ const COMPRA_FILTER_LABELS: Record<CompraFilter, string> = {
   anulada: 'Anuladas',
 };
 
-function compraExportTx(locale: string, es: string, en: string) {
-  return locale === 'en' ? en : es;
-}
-
-function normalizeCompraExportText(value?: string | null) {
-  return String(value ?? '')
-    .trim()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[\s-]+/g, '_');
-}
-
-const COMPRA_EXPORT_TEXTS: Record<string, string> = {
-  todas: 'All',
-  todos: 'All',
-  pendiente: 'Pending',
-  pendientes: 'Pending',
-  pagada: 'Paid',
-  pagadas: 'Paid',
-  paid: 'Paid',
-  anulada: 'Canceled',
-  anuladas: 'Canceled',
-  cancelada: 'Canceled',
-  canceled: 'Canceled',
-  cancelled: 'Canceled',
-  efectivo: 'Cash',
-  cash: 'Cash',
-  debito: 'Debit card',
-  credito: 'Credit card',
-  tarjeta_de_debito: 'Debit card',
-  tarjeta_de_credito: 'Credit card',
-  transferencia: 'Transfer',
-  transfer: 'Transfer',
-  mercado_pago: 'Mercado Pago',
-  stripe: 'Stripe',
-  otro: 'Other',
-  otros: 'Other',
-  other: 'Other',
-  proveedor_no_encontrado: 'Supplier not found',
-  sin_detalle: 'No details',
-  producto: 'Product',
-  productos: 'Products',
-};
-
-function translateCompraExportText(locale: string, value?: string | null, fallback = '') {
-  const original = String(value ?? fallback ?? '').trim();
-  if (!original) return '';
-  if (locale !== 'en') return original;
-
-  const normalized = normalizeCompraExportText(original);
-  return COMPRA_EXPORT_TEXTS[normalized] ?? original;
-}
-
-function getCompraItemsExportLabel(locale: string, compra: Compra) {
-  const detalles = compra.compra_detalle ?? compra.detalles ?? [];
-  if (!detalles.length) return compraExportTx(locale, 'Sin detalle', 'No details');
-  return detalles
-    .map((detalle) => `${detalle.cantidad} x ${detalle.producto?.nombre ?? compraExportTx(locale, 'Producto', 'Product')}`)
-    .join(' | ');
-}
-
-function compraFilterExportLabel(locale: string, filter: CompraFilter) {
-  return translateCompraExportText(locale, COMPRA_FILTER_LABELS[filter] ?? filter);
-}
-
-function formatCompraExportDate(locale: string, value?: string | null) {
-  const raw = String(value ?? '').trim();
-  if (!raw) return '';
-  const date = new Date(raw);
-  if (Number.isNaN(date.getTime())) return formatFrontendDate(raw);
-
-  return new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'es-AR').format(date);
-}
-
-function getCompraDateRangeExportLabel(locale: string, from: string, to: string) {
-  if (from && to) {
-    return `${compraExportTx(locale, 'Período', 'Period')}: ${formatCompraExportDate(locale, from)} ${compraExportTx(locale, 'a', 'to')} ${formatCompraExportDate(locale, to)}`;
-  }
-
-  if (from) return `${compraExportTx(locale, 'Desde', 'From')}: ${formatCompraExportDate(locale, from)}`;
-  if (to) return `${compraExportTx(locale, 'Hasta', 'To')}: ${formatCompraExportDate(locale, to)}`;
-  return `${compraExportTx(locale, 'Período', 'Period')}: ${compraExportTx(locale, 'todos', 'all')}`;
-}
-
-function getComprasExportFiltersLabel(
-  locale: string,
-  filter: CompraFilter,
-  dateFrom: string,
-  dateTo: string,
-  searchTerm: string,
-) {
-  const search = searchTerm.trim();
-  return `${compraExportTx(locale, 'Filtro', 'Filter')}: ${compraFilterExportLabel(locale, filter)} · ${getCompraDateRangeExportLabel(locale, dateFrom, dateTo)}${search ? ` · ${compraExportTx(locale, 'Búsqueda', 'Search')}: ${search}` : ''}`;
-}
-
 export default function ComprasPage() {
   const { locale } = useI18n();
   const c = (text: string) => translateCommercialUi(locale, text);
@@ -255,39 +159,33 @@ export default function ComprasPage() {
 
   const handleExportExcel = async () => {
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet(compraExportTx(locale, 'Compras', 'Purchases'));
+    const worksheet = workbook.addWorksheet(c('Compras'));
     worksheet.columns = [
-      { header: compraExportTx(locale, 'Proveedor', 'Supplier'), key: 'proveedor', width: 30 },
-      { header: compraExportTx(locale, 'Fecha', 'Date'), key: 'fecha', width: 16 },
-      { header: compraExportTx(locale, 'Comprobante', 'Receipt'), key: 'comprobante', width: 24 },
-      { header: compraExportTx(locale, 'Estado', 'Status'), key: 'estado', width: 14 },
-      { header: compraExportTx(locale, 'Medio de pago', 'Payment method'), key: 'medio_pago', width: 18 },
-      { header: compraExportTx(locale, 'Productos', 'Products'), key: 'productos', width: 60 },
-      { header: 'Total', key: 'total', width: 15 },
+      { header: c('Proveedor'), key: 'proveedor', width: 30 },
+      { header: c('Fecha'), key: 'fecha', width: 16 },
+      { header: c('Comprobante'), key: 'comprobante', width: 24 },
+      { header: c('Estado'), key: 'estado', width: 14 },
+      { header: c('Medio de pago'), key: 'medio_pago', width: 18 },
+      { header: c('Productos'), key: 'productos', width: 60 },
+      { header: c('Total'), key: 'total', width: 15 },
     ];
     filteredCompras.forEach((compra) => {
       worksheet.addRow({
-        proveedor: compra.proveedor?.nombre ?? compraExportTx(locale, 'Proveedor no encontrado', 'Supplier not found'),
-        fecha: formatCompraExportDate(locale, compra.fecha),
+        proveedor: compra.proveedor?.nombre ?? c('Proveedor no encontrado'),
+        fecha: formatFrontendDate(compra.fecha),
         comprobante: compra.numero_comprobante ?? '',
-        estado: translateCompraExportText(locale, compra.estado),
-        medio_pago: translateCompraExportText(locale, compra.medio_pago),
-        productos: getCompraItemsExportLabel(locale, compra),
+        estado: c(compra.estado),
+        medio_pago: c(compra.medio_pago),
+        productos: getItemsLabel(compra),
         total: compra.total,
       });
     });
-    worksheet.getRow(1).font = { bold: true };
-    worksheet.views = [{ state: 'frozen', ySplit: 1 }];
-
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = buildTimestampedDownloadFileName(
-      compraExportTx(locale, 'listado-compras-proveedores', 'supplier-purchases-list'),
-      'xlsx',
-    );
+    a.download = buildTimestampedDownloadFileName('listado-compras-proveedores', 'xlsx');
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -295,50 +193,28 @@ export default function ComprasPage() {
   const handleDownloadPdf = async () => {
     try {
       await downloadCommercialReportPdf({
-        title: compraExportTx(locale, 'Listado de Compras', 'Purchases list'),
-        subtitle: compraExportTx(
-          locale,
-          'Compras a proveedores, reposición de stock y trazabilidad comercial.',
-          'Supplier purchases, stock replenishment and commercial traceability.',
-        ),
-        fileName: compraExportTx(locale, 'listado-compras-gym-master', 'gym-master-purchases-list'),
-        locale,
-        footerText: compraExportTx(
-          locale,
-          'Documento generado por Gym Master.',
-          'Document generated by Gym Master.',
-        ),
-        labels: {
-          generated: compraExportTx(locale, 'Generado', 'Generated'),
-          page: compraExportTx(locale, 'Página', 'Page'),
-          of: compraExportTx(locale, 'de', 'of'),
-          detail: compraExportTx(locale, 'Detalle', 'Details'),
-          records: compraExportTx(locale, 'registros', 'records'),
-          empty: compraExportTx(
-            locale,
-            'No hay registros para el filtro seleccionado.',
-            'No records found for the selected filter.',
-          ),
-        },
+        title: c('Listado de Compras'),
+        subtitle: c('Compras a proveedores, reposición de stock y trazabilidad comercial.'),
+        fileName: 'listado-compras-gym-master',
         rows: filteredCompras,
         metrics: [
-          { label: compraExportTx(locale, 'Compras activas', 'Active purchases'), value: metrics.activas },
-          { label: compraExportTx(locale, 'Pendientes', 'Pending'), value: metrics.pendientes },
-          { label: compraExportTx(locale, 'Anuladas', 'Canceled'), value: metrics.anuladas },
-          { label: compraExportTx(locale, 'Total comprado', 'Total purchased'), value: formatCurrencyARS(metrics.totalComprado) },
+          { label: c('Compras activas'), value: metrics.activas },
+          { label: c('Pendientes'), value: metrics.pendientes },
+          { label: c('Anuladas'), value: metrics.anuladas },
+          { label: c('Total comprado'), value: formatCurrencyARS(metrics.totalComprado) },
         ],
-        filtersLabel: getComprasExportFiltersLabel(locale, filter, dateFrom, dateTo, searchTerm),
+        filtersLabel: `${c('Filtro')}: ${c(COMPRA_FILTER_LABELS[filter])} · ${getDateRangeLabel(dateFrom, dateTo, c)}${searchTerm.trim() ? ` · ${c('Búsqueda')}: ${searchTerm.trim()}` : ''}`,
         columns: [
-          { header: compraExportTx(locale, 'Proveedor', 'Supplier'), width: 34, getValue: (compra) => compra.proveedor?.nombre ?? '-' },
-          { header: compraExportTx(locale, 'Fecha', 'Date'), width: 18, getValue: (compra) => formatCompraExportDate(locale, compra.fecha) },
-          { header: compraExportTx(locale, 'Comprobante', 'Receipt'), width: 24, getValue: (compra) => compra.numero_comprobante ?? '-' },
-          { header: compraExportTx(locale, 'Estado', 'Status'), width: 18, getValue: (compra) => translateCompraExportText(locale, compra.estado) },
-          { header: compraExportTx(locale, 'Productos', 'Products'), width: 70, getValue: (compra) => getCompraItemsExportLabel(locale, compra) },
-          { header: 'Total', width: 22, getValue: (compra) => formatCurrencyARS(compra.total), align: 'right' },
+          { header: c('Proveedor'), width: 34, getValue: (compra) => compra.proveedor?.nombre ?? '-' },
+          { header: c('Fecha'), width: 18, getValue: (compra) => formatFrontendDate(compra.fecha) },
+          { header: c('Comprobante'), width: 24, getValue: (compra) => compra.numero_comprobante ?? '-' },
+          { header: c('Estado'), width: 18, getValue: (compra) => c(compra.estado) },
+          { header: c('Productos'), width: 70, getValue: (compra) => getItemsLabel(compra) },
+          { header: c('Total'), width: 22, getValue: (compra) => formatCurrencyARS(compra.total), align: 'right' },
         ],
       });
     } catch {
-      toast.error(compraExportTx(locale, 'No se pudo generar el PDF de compras', 'Could not generate the purchases PDF'));
+      toast.error(c('No se pudo generar el PDF de compras'));
     }
   };
 

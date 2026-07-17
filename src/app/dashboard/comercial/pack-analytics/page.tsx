@@ -161,10 +161,10 @@ export default function ComercialPackAnalyticsPage() {
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Button asChild variant="outline">
+                  <Button asChild variant="outline" className="border-white/70 bg-white text-slate-950 shadow-sm hover:bg-slate-100 hover:text-slate-950 dark:border-white/20 dark:bg-white/10 dark:text-white dark:hover:bg-white/20 dark:hover:text-white">
                     <Link href="/dashboard/comercial/kiosco">{c('Abrir POS')}</Link>
                   </Button>
-                  <Button asChild variant="outline">
+                  <Button asChild variant="outline" className="border-white/70 bg-white text-slate-950 shadow-sm hover:bg-slate-100 hover:text-slate-950 dark:border-white/20 dark:bg-white/10 dark:text-white dark:hover:bg-white/20 dark:hover:text-white">
                     <Link href="/dashboard/comercial/servicios-promociones">
                       {c('Gestionar packs')}
                     </Link>
