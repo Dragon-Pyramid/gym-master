@@ -232,7 +232,7 @@ export default function RespaldoNegocioPage() {
 
     setExporting(format);
     try {
-      await downloadRespaldoNegocio(format, selectedModules);
+      await downloadRespaldoNegocio(format, selectedModules, locale);
       toast.success(c('Respaldo generado correctamente.', 'Backup generated successfully.'));
       await loadData();
     } catch (error) {

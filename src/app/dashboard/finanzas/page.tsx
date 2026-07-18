@@ -106,6 +106,37 @@ function translateFinanceCategory(locale: GymMasterLocale, value?: string | null
   return raw;
 }
 
+function translateFinanceKind(locale: GymMasterLocale, value?: string | null) {
+  const raw = String(value ?? "").trim();
+  if (!raw || locale !== "en") return raw;
+
+  const normalized = normalizeFinanceText(raw);
+  const dictionary: Record<string, string> = {
+    ingreso: "Income",
+    ingresos: "Income",
+    egreso: "Outflow",
+    egresos: "Outflow",
+    gasto: "Expense",
+    gastos: "Expense",
+    compra: "Purchase",
+    compras: "Purchases",
+    compromiso: "Commitment",
+    compromisos: "Commitments",
+    pendiente: "Pending",
+    pendientes: "Pending",
+    vencido: "Overdue",
+    vencidos: "Overdue",
+    cuotas: "Fees",
+    cuota: "Fee",
+    ventas: "Sales",
+    venta: "Sale",
+    servicios: "Services",
+    servicio: "Service",
+  };
+
+  return dictionary[normalized] ?? translateFinanceCategory(locale, raw);
+}
+
 function financeRecordCount(locale: GymMasterLocale, count: number) {
   if (locale === "en") {
     return `${count} ${count === 1 ? "record" : "records"}`;
@@ -275,29 +306,53 @@ export default function FinanzasIngresosEgresosBiPage() {
   const handleExportExcel = async () => {
     if (!data) return;
 
+    const exportFileBaseName =
+      locale === "en" ? "finance-bi-income-outflows" : "bi-finanzas-ingresos-egresos";
+
+    const translateFinanceExcelType = (value: unknown) => {
+      const raw = String(value ?? "").trim();
+      if (locale !== "en") return raw;
+
+      const normalized = raw
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+
+      if (normalized.includes("ingreso")) return "Income";
+      if (normalized.includes("egreso")) return "Outflow";
+      if (normalized.includes("pendiente")) return "Pending";
+      if (normalized.includes("compromiso")) return "Commitment";
+
+      return raw;
+    };
+
     const workbook = new ExcelJS.Workbook();
-    const resumen = workbook.addWorksheet("Resumen mensual");
+    const resumen = workbook.addWorksheet(
+      locale === "en" ? "Monthly summary" : "Resumen mensual",
+    );
 
     resumen.columns = [
-      { header: "Período", key: "periodo", width: 16 },
-      { header: "Ingresos cuotas", key: "ingresos_cuotas", width: 18 },
-      { header: "Ingresos ventas", key: "ingresos_ventas", width: 18 },
-      { header: "Ingresos servicios", key: "ingresos_servicios", width: 18 },
-      { header: "Ingresos total", key: "ingresos_total", width: 18 },
-      { header: "Egresos compras", key: "egresos_compras", width: 18 },
-      { header: "Egresos gastos", key: "egresos_gastos", width: 18 },
-      { header: "Egresos total", key: "egresos_total", width: 18 },
-      { header: "Resultado neto", key: "resultado_neto", width: 18 },
+      { header: c("Período", "Period"), key: "periodo", width: 16 },
+      { header: c("Ingresos cuotas", "Fee income"), key: "ingresos_cuotas", width: 18 },
+      { header: c("Ingresos ventas", "Sales income"), key: "ingresos_ventas", width: 18 },
+      { header: c("Ingresos servicios", "Service income"), key: "ingresos_servicios", width: 18 },
+      { header: c("Ingresos total", "Total income"), key: "ingresos_total", width: 18 },
+      { header: c("Egresos compras", "Purchase outflows"), key: "egresos_compras", width: 18 },
+      { header: c("Egresos gastos", "Expense outflows"), key: "egresos_gastos", width: 18 },
+      { header: c("Egresos total", "Total outflows"), key: "egresos_total", width: 18 },
+      { header: c("Resultado neto", "Net result"), key: "resultado_neto", width: 18 },
     ];
 
     data.serie_mensual.forEach((item) => resumen.addRow(item));
 
-    const categorias = workbook.addWorksheet("Categorías");
+    const categorias = workbook.addWorksheet(
+      locale === "en" ? "Categories" : "Categorías",
+    );
     categorias.columns = [
-      { header: "Tipo", key: "tipo", width: 16 },
-      { header: "Categoría", key: "categoria", width: 34 },
-      { header: "Cantidad", key: "cantidad", width: 12 },
-      { header: "Total", key: "total", width: 18 },
+      { header: c("Tipo", "Type"), key: "tipo", width: 16 },
+      { header: c("Categoría", "Category"), key: "categoria", width: 34 },
+      { header: c("Cantidad", "Quantity"), key: "cantidad", width: 12 },
+      { header: c("Total", "Total"), key: "total", width: 18 },
     ];
 
     [
@@ -305,7 +360,11 @@ export default function FinanzasIngresosEgresosBiPage() {
       ...data.egresos_por_categoria,
       ...data.compromisos_por_categoria,
     ].forEach((item) => {
-      categorias.addRow(item);
+      categorias.addRow({
+        ...item,
+        tipo: translateFinanceExcelType(item.tipo),
+        categoria: translateFinanceCategory(locale, item.categoria),
+      });
     });
 
     const buffer = await workbook.xlsx.writeBuffer();
@@ -315,10 +374,7 @@ export default function FinanzasIngresosEgresosBiPage() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = buildTimestampedDownloadFileName(
-      "bi-finanzas-ingresos-egresos",
-      "xlsx",
-    );
+    a.download = buildTimestampedDownloadFileName(exportFileBaseName, "xlsx");
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -326,35 +382,62 @@ export default function FinanzasIngresosEgresosBiPage() {
   const handleDownloadPdf = async () => {
     if (!data) return;
 
+    const exportFileBaseName =
+      locale === "en" ? "finance-bi-income-outflows" : "bi-finanzas-ingresos-egresos";
+
     try {
       await downloadCommercialReportPdf({
-        title: "BI Finanzas",
-        subtitle:
+        locale,
+        title: c("BI Finanzas", "Finance BI"),
+        subtitle: c(
           "Ingresos, egresos, resultado neto y compromisos del gimnasio.",
-        fileName: "bi-finanzas-ingresos-egresos",
+          "Income, outflows, net result, and gym commitments.",
+        ),
+        fileName: exportFileBaseName,
+        footerText: c(
+          "Documento generado por Gym Master.",
+          "Document generated by Gym Master.",
+        ),
+        labels: {
+          generated: c("Generado", "Generated"),
+          page: c("Página", "Page"),
+          of: c("de", "of"),
+          detail: c("Detalle", "Details"),
+          records: c("registros", "records"),
+          empty: c(
+            "No hay registros para el período seleccionado.",
+            "No records for the selected period.",
+          ),
+        },
         rows: data.serie_mensual,
         metrics: [
           {
-            label: "Ingresos",
+            label: c("Ingresos", "Income"),
             value: formatCurrencyARS(data.metricas.ingresos_total),
           },
           {
-            label: "Egresos",
+            label: c("Egresos", "Outflows"),
             value: formatCurrencyARS(data.metricas.egresos_total),
           },
           {
-            label: "Resultado",
+            label: c("Resultado", "Result"),
             value: formatCurrencyARS(data.metricas.resultado_neto),
           },
           {
-            label: "Pendientes",
+            label: c("Pendientes", "Pending"),
             value: formatCurrencyARS(data.metricas.compromisos_pendientes),
           },
         ],
-        filtersLabel: `Período: ${formatFrontendDate(data.desde)} al ${formatFrontendDate(data.hasta)}`,
+        filtersLabel:
+          locale === "en"
+            ? `Period: ${formatFrontendDate(data.desde)} to ${formatFrontendDate(data.hasta)}`
+            : `Período: ${formatFrontendDate(data.desde)} al ${formatFrontendDate(data.hasta)}`,
         charts: [
           {
-            title: "Evolución mensual: ingresos vs egresos",
+            title: c(
+              "Evolución mensual: ingresos vs egresos",
+              "Monthly evolution: income vs outflows",
+            ),
             kind: "bars",
             data: data.serie_mensual.map((item) => ({ ...item })) as Record<
               string,
@@ -364,14 +447,18 @@ export default function FinanzasIngresosEgresosBiPage() {
             series: [
               {
                 key: "ingresos_total",
-                label: "Ingresos",
+                label: c("Ingresos", "Income"),
                 color: [22, 163, 74],
               },
-              { key: "egresos_total", label: "Egresos", color: [220, 38, 38] },
+              {
+                key: "egresos_total",
+                label: c("Egresos", "Outflows"),
+                color: [220, 38, 38],
+              },
             ],
           },
           {
-            title: "Resultado neto mensual",
+            title: c("Resultado neto mensual", "Monthly net result"),
             kind: "line",
             data: data.serie_mensual.map((item) => ({ ...item })) as Record<
               string,
@@ -381,7 +468,7 @@ export default function FinanzasIngresosEgresosBiPage() {
             series: [
               {
                 key: "resultado_neto",
-                label: "Resultado",
+                label: c("Resultado", "Result"),
                 color: [2, 132, 199],
               },
             ],
@@ -389,48 +476,48 @@ export default function FinanzasIngresosEgresosBiPage() {
         ],
         columns: [
           {
-            header: "Período",
+            header: c("Período", "Period"),
             width: 22,
             getValue: (row) => row.periodo_label,
           },
           {
-            header: "Ingresos",
+            header: c("Ingresos", "Income"),
             width: 28,
             getValue: (row) => formatCurrencyARS(row.ingresos_total),
             align: "right",
           },
           {
-            header: "Egresos",
+            header: c("Egresos", "Outflows"),
             width: 28,
             getValue: (row) => formatCurrencyARS(row.egresos_total),
             align: "right",
           },
           {
-            header: "Resultado",
+            header: c("Resultado", "Result"),
             width: 30,
             getValue: (row) => formatCurrencyARS(row.resultado_neto),
             align: "right",
           },
           {
-            header: "Cuotas",
+            header: c("Cuotas", "Fees"),
             width: 26,
             getValue: (row) => formatCurrencyARS(row.ingresos_cuotas),
             align: "right",
           },
           {
-            header: "Ventas",
+            header: c("Ventas", "Sales"),
             width: 26,
             getValue: (row) => formatCurrencyARS(row.ingresos_ventas),
             align: "right",
           },
           {
-            header: "Compras",
+            header: c("Compras", "Purchases"),
             width: 26,
             getValue: (row) => formatCurrencyARS(row.egresos_compras),
             align: "right",
           },
           {
-            header: "Gastos",
+            header: c("Gastos", "Expenses"),
             width: 26,
             getValue: (row) => formatCurrencyARS(row.egresos_gastos),
             align: "right",
@@ -438,7 +525,7 @@ export default function FinanzasIngresosEgresosBiPage() {
         ],
       });
     } catch {
-      toast.error("No se pudo generar el PDF financiero");
+      toast.error(c("No se pudo generar el PDF financiero", "Unable to generate the financial PDF"));
     }
   };
 
