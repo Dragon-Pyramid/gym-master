@@ -336,7 +336,7 @@ export default function DietaDisplay({
   const handleDescargarPdf = async () => {
     try {
       setPdfLoading(true);
-      await descargarDietaPdf({ dieta, socioNombre });
+      await descargarDietaPdf({ dieta, socioNombre, locale });
     } finally {
       setPdfLoading(false);
     }

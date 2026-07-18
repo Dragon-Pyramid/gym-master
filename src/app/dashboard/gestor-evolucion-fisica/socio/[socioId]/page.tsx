@@ -106,6 +106,7 @@ export default function GestorEvolucionFisicaDetallePage() {
         rows: dashboardRows,
         socioNombre,
         logoUrl: "/gm_logo.svg",
+        locale,
       });
 
       toast.success(tx("PDF de evolución física generado", "Physical evolution PDF generated"));

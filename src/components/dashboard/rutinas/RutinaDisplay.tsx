@@ -1040,6 +1040,7 @@ export default function RutinaEjercicios({
         ejerciciosPorDia,
         socioNombre,
         logoUrl: "/gm_logo.svg",
+        locale,
       });
       toast.success(tx("Rutina descargada correctamente", "Routine downloaded successfully"));
     } catch (error) {

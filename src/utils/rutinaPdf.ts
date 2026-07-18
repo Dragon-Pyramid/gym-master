@@ -5,11 +5,14 @@ import { Rutina } from "@/interfaces/rutina.interface";
 
 type EjerciciosPorDia = Record<string, any[]>;
 
+type RutinaPdfLocale = "es" | "en";
+
 interface DescargarRutinaPdfParams {
   rutina: Rutina;
   ejerciciosPorDia: EjerciciosPorDia;
   socioNombre: string;
   logoUrl?: string;
+  locale?: RutinaPdfLocale;
 }
 
 const PAGE_MARGIN = 14;
@@ -26,6 +29,75 @@ const normalizarTexto = (value: unknown, fallback = "-"): string => {
 const capitalizar = (value: string): string => {
   if (!value) return value;
   return value.charAt(0).toUpperCase() + value.slice(1);
+};
+
+
+const rutinaPdfTx = (locale: RutinaPdfLocale = "es", es: string, en: string): string =>
+  locale === "en" ? en : es;
+
+const RUTINA_PDF_DAY_EN: Record<string, string> = {
+  lunes: "Monday",
+  martes: "Tuesday",
+  miercoles: "Wednesday",
+  miércoles: "Wednesday",
+  jueves: "Thursday",
+  viernes: "Friday",
+  sabado: "Saturday",
+  sábado: "Saturday",
+  domingo: "Sunday",
+};
+
+const RUTINA_PDF_MUSCLE_GROUP_EN: Record<string, string> = {
+  pecho: "Chest",
+  espalda: "Back",
+  piernas: "Legs",
+  pierna: "Legs",
+  biceps: "Biceps",
+  bíceps: "Biceps",
+  triceps: "Triceps",
+  tríceps: "Triceps",
+  hombros: "Shoulders",
+  hombro: "Shoulders",
+  abdomen: "Core",
+  abdominales: "Core",
+  core: "Core",
+  gluteos: "Glutes",
+  glúteos: "Glutes",
+  gemelos: "Calves",
+  pantorrillas: "Calves",
+  cardio: "Cardio",
+};
+
+const normalizeRutinaPdfKey = (value: string): string =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
+const traducirDiaRutinaPdf = (dia: string, locale: RutinaPdfLocale = "es"): string => {
+  if (locale !== "en") return capitalizar(dia);
+  const normalized = normalizeRutinaPdfKey(dia);
+  return RUTINA_PDF_DAY_EN[normalized] || RUTINA_PDF_DAY_EN[String(dia || "").toLowerCase()] || capitalizar(dia);
+};
+
+const traducirGrupoRutinaPdf = (grupo: string, locale: RutinaPdfLocale = "es"): string => {
+  if (locale !== "en") return grupo;
+  const normalized = normalizeRutinaPdfKey(grupo);
+  return RUTINA_PDF_MUSCLE_GROUP_EN[normalized] || RUTINA_PDF_MUSCLE_GROUP_EN[String(grupo || "").toLowerCase()] || grupo;
+};
+
+const traducirTituloRutinaPdf = (titulo: string, locale: RutinaPdfLocale = "es"): string => {
+  if (locale !== "en") return titulo;
+  if (titulo.startsWith("Rutina auto ")) return titulo.replace("Rutina auto ", "Auto routine ");
+  if (titulo.startsWith("Rutina semana ")) return titulo.replace("Rutina semana ", "Routine week ");
+  if (titulo.startsWith("Rutina #")) return titulo.replace("Rutina #", "Routine #");
+  return titulo;
+};
+
+const buildRutinaPdfFileTitle = (titulo: string, socioNombre: string, locale: RutinaPdfLocale = "es"): string => {
+  const translatedTitle = traducirTituloRutinaPdf(titulo, locale);
+  return translatedTitle + "-" + socioNombre;
 };
 
 const obtenerNombreEjercicio = (ejercicio: any): string => {
@@ -169,15 +241,17 @@ const ensureSpace = (doc: jsPDF, y: number, requiredHeight: number): number => {
   return PAGE_MARGIN;
 };
 
-const addFooter = (doc: jsPDF): void => {
+const addFooter = (doc: jsPDF, locale: RutinaPdfLocale = "es"): void => {
   const totalPages = doc.getNumberOfPages();
+  const pageLabel = rutinaPdfTx(locale, "Página", "Page");
+  const ofLabel = rutinaPdfTx(locale, "de", "of");
 
   for (let page = 1; page <= totalPages; page += 1) {
     doc.setPage(page);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.setTextColor(130, 130, 130);
-    doc.text(`Gym Master · Página ${page} de ${totalPages}`, PAGE_MARGIN, 288);
+    doc.text(`Gym Master · ${pageLabel} ${page} ${ofLabel} ${totalPages}`, PAGE_MARGIN, 288);
   }
 };
 
@@ -186,9 +260,11 @@ export const descargarRutinaPdf = async ({
   ejerciciosPorDia,
   socioNombre,
   logoUrl = "/gm_logo.svg",
+  locale = "es",
 }: DescargarRutinaPdfParams): Promise<void> => {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const titulo = obtenerTituloRutina(rutina);
+  const tituloPdf = traducirTituloRutinaPdf(titulo, locale);
   const logoData = await loadImageAsDataUrl(logoUrl, 500, 500);
 
   let y = PAGE_MARGIN;
@@ -207,33 +283,33 @@ export const descargarRutinaPdf = async ({
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text("Rutina de entrenamiento", logoData ? 44 : PAGE_MARGIN, 24);
-  doc.text(`Socio: ${socioNombre}`, logoData ? 44 : PAGE_MARGIN, 31);
+  doc.text(rutinaPdfTx(locale, "Rutina de entrenamiento", "Training routine"), logoData ? 44 : PAGE_MARGIN, 24);
+  doc.text(`${rutinaPdfTx(locale, "Socio", "Member")}: ${socioNombre}`, logoData ? 44 : PAGE_MARGIN, 31);
 
   y = 52;
 
   doc.setTextColor(20, 20, 20);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(15);
-  y = addWrappedText(doc, titulo, PAGE_MARGIN, y, CONTENT_WIDTH, 7) + 4;
+  y = addWrappedText(doc, tituloPdf, PAGE_MARGIN, y, CONTENT_WIDTH, 7) + 4;
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.setTextColor(80, 80, 80);
   const creado = rutina.creado_en ? formatFrontendDate(rutina.creado_en) : "-";
   const actualizado = rutina.actualizado_en ? formatFrontendDate(rutina.actualizado_en) : "-";
-  doc.text(`Creado: ${creado}`, PAGE_MARGIN, y);
-  doc.text(`Actualizado: ${actualizado}`, PAGE_MARGIN + 50, y);
-  doc.text(`ID rutina: ${rutina.id_rutina}`, PAGE_MARGIN + 108, y);
+  doc.text(`${rutinaPdfTx(locale, "Creado", "Created")}: ${creado}`, PAGE_MARGIN, y);
+  doc.text(`${rutinaPdfTx(locale, "Actualizado", "Updated")}: ${actualizado}`, PAGE_MARGIN + 50, y);
+  doc.text(`${rutinaPdfTx(locale, "ID rutina", "Routine ID")}: ${rutina.id_rutina}`, PAGE_MARGIN + 108, y);
   y += 10;
 
   const dias = Object.entries(ejerciciosPorDia).filter(([, ejercicios]) => Array.isArray(ejercicios));
 
   if (dias.length === 0) {
     doc.setTextColor(110, 110, 110);
-    doc.text("Esta rutina no tiene ejercicios cargados o usa un formato no reconocido.", PAGE_MARGIN, y);
-    addFooter(doc);
-    doc.save(buildTimestampedDownloadFileName(titulo, "pdf"));
+    doc.text(rutinaPdfTx(locale, "Esta rutina no tiene ejercicios cargados o usa un formato no reconocido.", "This routine has no loaded exercises or uses an unrecognized format."), PAGE_MARGIN, y);
+    addFooter(doc, locale);
+    doc.save(buildTimestampedDownloadFileName(buildRutinaPdfFileTitle(titulo, socioNombre, locale), "pdf"));
     return;
   }
 
@@ -244,14 +320,14 @@ export const descargarRutinaPdf = async ({
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
     doc.setTextColor(17, 24, 39);
-    doc.text(capitalizar(dia), PAGE_MARGIN + 4, y);
+    doc.text(traducirDiaRutinaPdf(dia, locale), PAGE_MARGIN + 4, y);
     y += 10;
 
     if (!ejercicios.length) {
       doc.setFont("helvetica", "italic");
       doc.setFontSize(9);
       doc.setTextColor(100, 100, 100);
-      doc.text("Día de descanso", PAGE_MARGIN + 4, y);
+      doc.text(rutinaPdfTx(locale, "Día de descanso", "Rest day"), PAGE_MARGIN + 4, y);
       y += 10;
       continue;
     }
@@ -259,7 +335,7 @@ export const descargarRutinaPdf = async ({
     for (const ejercicio of ejercicios) {
       y = ensureSpace(doc, y, 44);
       const nombre = obtenerNombreEjercicio(ejercicio);
-      const grupo = obtenerGrupoEjercicio(ejercicio);
+      const grupo = traducirGrupoRutinaPdf(obtenerGrupoEjercicio(ejercicio), locale);
       const series = obtenerSeries(ejercicio);
       const repeticiones = obtenerRepeticiones(ejercicio);
       const descanso = obtenerDescanso(ejercicio);
@@ -281,8 +357,8 @@ export const descargarRutinaPdf = async ({
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8.5);
       doc.setTextColor(80, 80, 80);
-      doc.text(`Grupo: ${grupo}`, PAGE_MARGIN + 4, textEndY + 2);
-      doc.text(`Series: ${series} · Repeticiones: ${repeticiones} · Descanso: ${descanso}`, PAGE_MARGIN + 4, textEndY + 8);
+      doc.text(`${rutinaPdfTx(locale, "Grupo", "Group")}: ${grupo}`, PAGE_MARGIN + 4, textEndY + 2);
+      doc.text(`${rutinaPdfTx(locale, "Series", "Sets")}: ${series} · ${rutinaPdfTx(locale, "Repeticiones", "Reps")}: ${repeticiones} · ${rutinaPdfTx(locale, "Descanso", "Rest")}: ${descanso}`, PAGE_MARGIN + 4, textEndY + 8);
 
       if (imageData) {
         doc.addImage(imageData, "PNG", imageBoxX, cardStartY, 28, 24);
@@ -301,6 +377,6 @@ export const descargarRutinaPdf = async ({
     }
   }
 
-  addFooter(doc);
-  doc.save(buildTimestampedDownloadFileName(`${titulo}-${socioNombre}`, "pdf"));
+  addFooter(doc, locale);
+  doc.save(buildTimestampedDownloadFileName(buildRutinaPdfFileTitle(titulo, socioNombre, locale), "pdf"));
 };

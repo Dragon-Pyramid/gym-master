@@ -30,12 +30,15 @@ interface BeforeAfterStudioSnapshot {
   scoreLabel?: string;
 }
 
+type EvolucionFisicaPdfLocale = "es" | "en";
+
 interface DescargarEvolucionFisicaPdfParams {
   rows: EvolucionSocio[];
   socioNombre?: string;
   logoUrl?: string;
   dashboardCharts?: DashboardChartSnapshot[];
   beforeAfterVisuals?: BeforeAfterStudioSnapshot[];
+  locale?: EvolucionFisicaPdfLocale;
 }
 
 const PAGE_MARGIN = 14;
@@ -47,7 +50,7 @@ const formatDate = (value?: string | Date | null) => {
   if (!value) return "-";
 
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "-" : formatFrontendDate(value);
+  return Number.isNaN(date.getTime()) ? "-" : formatFrontendDate(value, evoPdfLocaleTag());
 };
 
 const toNumber = (value: unknown): number | null => {
@@ -62,7 +65,7 @@ const formatNumber = (value: unknown, suffix = "") => {
 
   if (parsed === null) return "-";
 
-  return `${parsed.toLocaleString("es-AR", {
+  return `${parsed.toLocaleString(evoPdfLocaleTag(), {
     maximumFractionDigits: 2,
   })}${suffix}`;
 };
@@ -82,6 +85,53 @@ const formatDelta = (current: unknown, initial: unknown, suffix = "") => {
 const normalizarTexto = (value: unknown, fallback = "-"): string => {
   if (value === undefined || value === null || value === "") return fallback;
   return String(value);
+};
+
+let activeEvolucionFisicaPdfLocale: EvolucionFisicaPdfLocale = "es";
+
+const normalizeEvolucionFisicaPdfLocale = (locale?: EvolucionFisicaPdfLocale): EvolucionFisicaPdfLocale =>
+  locale === "en" ? "en" : "es";
+
+const evoPdfLocaleTag = () =>
+  activeEvolucionFisicaPdfLocale === "en" ? "en-US" : "es-AR";
+
+const evoPdfTx = (es: string, en: string) =>
+  activeEvolucionFisicaPdfLocale === "en" ? en : es;
+
+const translateBodyTypeForPdf = (value: unknown): string => {
+  const raw = normalizarTexto(value);
+  if (activeEvolucionFisicaPdfLocale !== "en") return raw;
+  const normalized = raw.trim().toLowerCase();
+  const map: Record<string, string> = { ectomorfo: "Ectomorph", mesomorfo: "Mesomorph", endomorfo: "Endomorph" };
+  return map[normalized] || raw;
+};
+
+const translateSexReferenceForPdf = (value: unknown): string => {
+  const raw = normalizarTexto(value);
+  if (activeEvolucionFisicaPdfLocale !== "en") return raw;
+  const normalized = raw.trim().toLowerCase();
+  const map: Record<string, string> = { masculino: "Male", femenino: "Female", hombre: "Male", mujer: "Female" };
+  return map[normalized] || raw;
+};
+
+const translateChartLabelForPdf = (value: string): string => {
+  if (activeEvolucionFisicaPdfLocale !== "en") return value;
+  const normalized = value.trim().toLowerCase();
+  const map: Record<string, string> = {
+    peso: "Weight",
+    imc: "BMI",
+    cintura: "Waist",
+    pecho: "Chest",
+    cadera: "Hip",
+    "% grasa": "Fat %",
+    "masa muscular": "Muscle mass",
+  };
+  return map[normalized] || value;
+};
+
+const buildEvolucionFisicaPdfFileStem = (socioNombre?: string): string => {
+  const base = activeEvolucionFisicaPdfLocale === "en" ? "physical-evolution" : "evolucion-fisica";
+  return base + "-" + safeFileName(socioNombre || evoPdfTx("socio", "member"));
 };
 
 const safeFileName = (value: string): string => {
@@ -247,7 +297,7 @@ const addFooter = (doc: jsPDF): void => {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.setTextColor(130, 130, 130);
-    doc.text(`Gym Master · Evolución física · Página ${page} de ${totalPages}`, PAGE_MARGIN, 288);
+    doc.text(`Gym Master · ${evoPdfTx("Evolución física", "Physical evolution")} · ${evoPdfTx("Página", "Page")} ${page} ${evoPdfTx("de", "of")} ${totalPages}`, PAGE_MARGIN, 288);
   }
 };
 
@@ -391,15 +441,15 @@ const addInfoBox = (
 
 const addTableHeader = (doc: jsPDF, y: number) => {
   const columns = [
-    { label: "Fecha", width: 23 },
-    { label: "Peso", width: 18 },
-    { label: "IMC", width: 14 },
-    { label: "Cintura", width: 20 },
-    { label: "Pecho", width: 18 },
-    { label: "Cadera", width: 18 },
-    { label: "% Grasa", width: 18 },
-    { label: "Masa", width: 22 },
-    { label: "Observaciones", width: 31 },
+    { label: evoPdfTx("Fecha", "Date"), width: 23 },
+    { label: evoPdfTx("Peso", "Weight"), width: 18 },
+    { label: evoPdfTx("IMC", "BMI"), width: 14 },
+    { label: evoPdfTx("Cintura", "Waist"), width: 20 },
+    { label: evoPdfTx("Pecho", "Chest"), width: 18 },
+    { label: evoPdfTx("Cadera", "Hip"), width: 18 },
+    { label: evoPdfTx("% Grasa", "Fat %"), width: 18 },
+    { label: evoPdfTx("Masa", "Mass"), width: 22 },
+    { label: evoPdfTx("Observaciones", "Notes"), width: 31 },
   ];
 
   doc.setFillColor(240, 244, 248);
@@ -425,7 +475,7 @@ const formatCompactNumber = (value: unknown): string => {
 
   if (parsed === null) return "-";
 
-  return parsed.toLocaleString("es-AR", {
+  return parsed.toLocaleString(evoPdfLocaleTag(), {
     maximumFractionDigits: 1,
   });
 };
@@ -454,13 +504,13 @@ const formatTriple = (...values: unknown[]): string => {
 
 const addSegmentedTableHeader = (doc: jsPDF, y: number) => {
   const columns = [
-    { label: "Fecha", width: 22 },
-    { label: "Bíceps I/D", width: 25 },
-    { label: "Tríceps I/D", width: 25 },
-    { label: "Anteb. I/D", width: 25 },
-    { label: "Muslo I/D", width: 25 },
-    { label: "Pant. I/D", width: 25 },
-    { label: "Abd/Cue/Hom", width: 35 },
+    { label: evoPdfTx("Fecha", "Date"), width: 22 },
+    { label: evoPdfTx("Bíceps I/D", "Biceps L/R"), width: 25 },
+    { label: evoPdfTx("Tríceps I/D", "Triceps L/R"), width: 25 },
+    { label: evoPdfTx("Anteb. I/D", "Forearm L/R"), width: 25 },
+    { label: evoPdfTx("Muslo I/D", "Thigh L/R"), width: 25 },
+    { label: evoPdfTx("Pant. I/D", "Calf L/R"), width: 25 },
+    { label: evoPdfTx("Abd/Cue/Hom", "Abd/Neck/Shld"), width: 35 },
   ];
 
   doc.setFillColor(240, 244, 248);
@@ -492,13 +542,13 @@ const addSegmentedMeasurementsTable = (
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
   doc.setTextColor(17, 24, 39);
-  doc.text("Mediciones segmentarias", PAGE_MARGIN, y);
+  doc.text(evoPdfTx("Mediciones segmentarias", "Segmented measurements"), PAGE_MARGIN, y);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.3);
   doc.setTextColor(90, 90, 90);
   doc.text(
-    "Detalle en centímetros de brazos, piernas y segmentos corporales. I/D indica izquierda/derecha.",
+    evoPdfTx("Detalle en centímetros de brazos, piernas y segmentos corporales. I/D indica izquierda/derecha.", "Detail in centimeters for arms, legs, and body segments. L/R means left/right."),
     PAGE_MARGIN,
     y + 6
   );
@@ -559,7 +609,7 @@ const addSegmentedMeasurementsTable = (
   doc.setTextColor(110, 110, 110);
   y = addWrappedText(
     doc,
-    "Referencias: Bíceps, tríceps, antebrazo, muslo y pantorrilla muestran izquierda/derecha. Abd/Cue/Hom corresponde a abdomen, cuello y hombros.",
+    evoPdfTx("Referencias: Bíceps, tríceps, antebrazo, muslo y pantorrilla muestran izquierda/derecha. Abd/Cue/Hom corresponde a abdomen, cuello y hombros.", "References: Biceps, triceps, forearm, thigh, and calf show left/right. Abd/Neck/Shld corresponds to abdomen, neck, and shoulders."),
     PAGE_MARGIN,
     y + 6,
     CONTENT_WIDTH,
@@ -616,7 +666,7 @@ const addChartLegend = (
   const lineY = y + 3;
 
   legends.forEach((legend) => {
-    const label = normalizarTexto(legend.label);
+    const label = translateChartLabelForPdf(normalizarTexto(legend.label));
     const labelWidth = doc.getTextWidth(label);
 
     doc.setFillColor(legend.color);
@@ -644,13 +694,13 @@ const addDashboardCharts = (
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
   doc.setTextColor(17, 24, 39);
-  doc.text("Gráficos de evolución", PAGE_MARGIN, y);
+  doc.text(evoPdfTx("Gráficos de evolución", "Evolution charts"), PAGE_MARGIN, y);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
   doc.setTextColor(90, 90, 90);
   doc.text(
-    "Capturas generadas desde los mismos gráficos visibles en el dashboard.",
+    evoPdfTx("Capturas generadas desde los mismos gráficos visibles en el dashboard.", "Screenshots generated from the same charts visible on the dashboard."),
     PAGE_MARGIN,
     y + 6
   );
@@ -702,10 +752,10 @@ const addDashboardCharts = (
 
 
 const formatBeforeAfterViewLabel = (snapshot: BeforeAfterStudioSnapshot): string => {
-  const view = snapshot.view === "back" ? "Espalda" : "Frente";
+  const view = snapshot.view === "back" ? evoPdfTx("Espalda", "Back") : evoPdfTx("Frente", "Front");
   const mode =
     snapshot.mode === "overlay"
-      ? "superpuesto"
+      ? evoPdfTx("superpuesto", "overlay")
       : snapshot.mode === "heatmap"
         ? "heatmap"
         : "slider";
@@ -725,13 +775,13 @@ const addBeforeAfterVisualSection = (
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
   doc.setTextColor(17, 24, 39);
-  doc.text("Estudio visual antes/después", PAGE_MARGIN, y);
+  doc.text(evoPdfTx("Estudio visual antes/después", "Before/after visual study"), PAGE_MARGIN, y);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
   doc.setTextColor(90, 90, 90);
   doc.text(
-    "Captura del mapa corporal interactivo validado en pantalla, incluyendo vista, modo de comparación y lectura.",
+    evoPdfTx("Captura del mapa corporal interactivo validado en pantalla, incluyendo vista, modo de comparación y lectura.", "Capture of the interactive body map validated on screen, including view, comparison mode, and reading."),
     PAGE_MARGIN,
     y + 6,
     { maxWidth: CONTENT_WIDTH }
@@ -755,7 +805,7 @@ const addBeforeAfterVisualSection = (
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10.2);
     doc.setTextColor(15, 23, 42);
-    doc.text(snapshot.title || "Mapa corporal antes/después", PAGE_MARGIN + 4, y + 7);
+    doc.text(snapshot.title || evoPdfTx("Mapa corporal antes/después", "Before/after body map"), PAGE_MARGIN + 4, y + 7);
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
@@ -934,12 +984,12 @@ const getBiometricMetricRows = (row: EvolucionSocio) => {
   const metrics = getBiometricMetrics(row);
 
   return [
-    { icon: "scale" as const, label: "Peso", value: formatNumber(metrics.peso, " kg") },
-    { icon: "ruler" as const, label: "Cintura", value: formatNumber(metrics.cintura, " cm") },
-    { icon: "percent" as const, label: "% grasa", value: formatNumber(metrics.grasa, "%") },
-    { icon: "muscle" as const, label: "Masa", value: formatNumber(metrics.masaMuscular, " kg") },
-    { icon: "ruler" as const, label: "Brazo prom.", value: formatNumber(metrics.brazoPromedio, " cm") },
-    { icon: "ruler" as const, label: "Muslo prom.", value: formatNumber(metrics.musloPromedio, " cm") },
+    { icon: "scale" as const, label: evoPdfTx("Peso", "Weight"), value: formatNumber(metrics.peso, " kg") },
+    { icon: "ruler" as const, label: evoPdfTx("Cintura", "Waist"), value: formatNumber(metrics.cintura, " cm") },
+    { icon: "percent" as const, label: evoPdfTx("% grasa", "Fat %"), value: formatNumber(metrics.grasa, "%") },
+    { icon: "muscle" as const, label: evoPdfTx("Masa", "Mass"), value: formatNumber(metrics.masaMuscular, " kg") },
+    { icon: "ruler" as const, label: evoPdfTx("Brazo prom.", "Avg. arm"), value: formatNumber(metrics.brazoPromedio, " cm") },
+    { icon: "ruler" as const, label: evoPdfTx("Muslo prom.", "Avg. thigh"), value: formatNumber(metrics.musloPromedio, " cm") },
   ];
 };
 
@@ -948,12 +998,12 @@ const getBiometricDeltaRows = (initial: EvolucionSocio, current: EvolucionSocio)
   const currentMetrics = getBiometricMetrics(current);
 
   return [
-    { icon: "scale" as const, label: "Peso", value: formatDelta(currentMetrics.peso, initialMetrics.peso, " kg"), positiveDirection: "lower" as const },
-    { icon: "ruler" as const, label: "Cintura", value: formatDelta(currentMetrics.cintura, initialMetrics.cintura, " cm"), positiveDirection: "lower" as const },
-    { icon: "percent" as const, label: "% grasa", value: formatDelta(currentMetrics.grasa, initialMetrics.grasa, "%"), positiveDirection: "lower" as const },
-    { icon: "muscle" as const, label: "Masa muscular", value: formatDelta(currentMetrics.masaMuscular, initialMetrics.masaMuscular, " kg"), positiveDirection: "higher" as const },
-    { icon: "muscle" as const, label: "Brazo promedio", value: formatDelta(currentMetrics.brazoPromedio, initialMetrics.brazoPromedio, " cm"), positiveDirection: "higher" as const },
-    { icon: "ruler" as const, label: "Muslo promedio", value: formatDelta(currentMetrics.musloPromedio, initialMetrics.musloPromedio, " cm"), positiveDirection: "higher" as const },
+    { icon: "scale" as const, label: evoPdfTx("Peso", "Weight"), value: formatDelta(currentMetrics.peso, initialMetrics.peso, " kg"), positiveDirection: "lower" as const },
+    { icon: "ruler" as const, label: evoPdfTx("Cintura", "Waist"), value: formatDelta(currentMetrics.cintura, initialMetrics.cintura, " cm"), positiveDirection: "lower" as const },
+    { icon: "percent" as const, label: evoPdfTx("% grasa", "Fat %"), value: formatDelta(currentMetrics.grasa, initialMetrics.grasa, "%"), positiveDirection: "lower" as const },
+    { icon: "muscle" as const, label: evoPdfTx("Masa muscular", "Muscle mass"), value: formatDelta(currentMetrics.masaMuscular, initialMetrics.masaMuscular, " kg"), positiveDirection: "higher" as const },
+    { icon: "muscle" as const, label: evoPdfTx("Brazo promedio", "Average arm"), value: formatDelta(currentMetrics.brazoPromedio, initialMetrics.brazoPromedio, " cm"), positiveDirection: "higher" as const },
+    { icon: "ruler" as const, label: evoPdfTx("Muslo promedio", "Average thigh"), value: formatDelta(currentMetrics.musloPromedio, initialMetrics.musloPromedio, " cm"), positiveDirection: "higher" as const },
   ];
 };
 
@@ -1134,18 +1184,18 @@ const addBiometricReadingCard = (
   doc.setFont("helvetica", "normal");
   doc.setFontSize(6.6);
   doc.setTextColor(2, 132, 199);
-  doc.text("LECTURA AUTOMÁTICA", x + 4, y + 6);
+  doc.text(evoPdfTx("LECTURA AUTOMÁTICA", "AUTOMATIC READING"), x + 4, y + 6);
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
   doc.setTextColor(15, 23, 42);
-  doc.text("Cambios corporales detectados", x + 4, y + 13);
+  doc.text(evoPdfTx("Cambios corporales detectados", "Detected body changes"), x + 4, y + 13);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(6.6);
   doc.setTextColor(100, 116, 139);
   doc.text(
-    "Resumen final de variaciones entre el registro inicial y la última medición.",
+    evoPdfTx("Resumen final de variaciones entre el registro inicial y la última medición.", "Final summary of changes between the initial record and the latest measurement."),
     x + 4,
     y + 19,
     { maxWidth: width - 8 }
@@ -1192,7 +1242,7 @@ const addBiometricReadingCard = (
   doc.setFontSize(5.4);
   doc.setTextColor(2, 132, 199);
   doc.text(
-    doc.splitTextToSize("Cierre visual del informe de evolución física.", 44),
+    doc.splitTextToSize(evoPdfTx("Cierre visual del informe de evolución física.", "Visual closure of the physical evolution report."), 44),
     x + width - 49,
     y + height - 12.5
   );
@@ -1209,16 +1259,16 @@ const addBiometricVisualizationSection = async (
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13.2);
   doc.setTextColor(15, 23, 42);
-  doc.text("Informe biométrico", PAGE_MARGIN, y);
+  doc.text(evoPdfTx("Informe biométrico", "Biometric report"), PAGE_MARGIN, y);
 
-  const titleIconX = PAGE_MARGIN + doc.getTextWidth("Informe biométrico") + 5;
+  const titleIconX = PAGE_MARGIN + doc.getTextWidth(evoPdfTx("Informe biométrico", "Biometric report")) + 5;
   addPdfIcon(doc, "activity", titleIconX, y - 5.2, 7);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.setTextColor(100, 116, 139);
   doc.text(
-    "Comparativa de métricas de composición corporal basada en registros reales del socio.",
+    evoPdfTx("Comparativa de métricas de composición corporal basada en registros reales del socio.", "Comparison of body composition metrics based on real member records."),
     PAGE_MARGIN,
     y + 6,
     { maxWidth: CONTENT_WIDTH }
@@ -1234,8 +1284,8 @@ const addBiometricVisualizationSection = async (
   addBiometricCard(
     doc,
     initial,
-    "Antes",
-    "Registro inicial",
+    evoPdfTx("Antes", "Before"),
+    evoPdfTx("Registro inicial", "Initial record"),
     PAGE_MARGIN,
     y,
     cardWidth,
@@ -1245,8 +1295,8 @@ const addBiometricVisualizationSection = async (
   addBiometricCard(
     doc,
     current,
-    "Ahora",
-    "Última medición",
+    evoPdfTx("Ahora", "Now"),
+    evoPdfTx("Última medición", "Latest measurement"),
     PAGE_MARGIN + cardWidth + gap,
     y,
     cardWidth,
@@ -1275,9 +1325,11 @@ export const descargarEvolucionFisicaPdf = async ({
   logoUrl = "/gm_logo.svg",
   dashboardCharts = [],
   beforeAfterVisuals = [],
+  locale = "es",
 }: DescargarEvolucionFisicaPdfParams): Promise<void> => {
+  activeEvolucionFisicaPdfLocale = normalizeEvolucionFisicaPdfLocale(locale);
   if (!rows.length) {
-    throw new Error("No hay registros de evolución física para exportar");
+    throw new Error(evoPdfTx("No hay registros de evolución física para exportar", "There are no physical evolution records to export"));
   }
 
   const orderedRows = sortAscByDate(rows);
@@ -1302,21 +1354,21 @@ export const descargarEvolucionFisicaPdf = async ({
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text("Informe de evolución física", logoData ? 44 : PAGE_MARGIN, 24);
-  doc.text(`Socio: ${normalizarTexto(socioNombre, "Socio")}`, logoData ? 44 : PAGE_MARGIN, 31);
+  doc.text(evoPdfTx("Informe de evolución física", "Physical evolution report"), logoData ? 44 : PAGE_MARGIN, 24);
+  doc.text(`${evoPdfTx("Socio", "Member")}: ${normalizarTexto(socioNombre, evoPdfTx("Socio", "Member"))}`, logoData ? 44 : PAGE_MARGIN, 31);
 
   y = 52;
 
   doc.setTextColor(17, 24, 39);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(15);
-  doc.text("Resumen comparativo", PAGE_MARGIN, y);
+  doc.text(evoPdfTx("Resumen comparativo", "Comparative summary"), PAGE_MARGIN, y);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.setTextColor(90, 90, 90);
-  doc.text(`Generado: ${formatFrontendDateTime(new Date())}`, PAGE_MARGIN, y + 7);
-  doc.text(`Registros incluidos: ${orderedRows.length}`, PAGE_MARGIN + 70, y + 7);
+  doc.text(`${evoPdfTx("Generado", "Generated")}: ${formatFrontendDateTime(new Date(), evoPdfLocaleTag())}`, PAGE_MARGIN, y + 7);
+  doc.text(`${evoPdfTx("Registros incluidos", "Included records")}: ${orderedRows.length}`, PAGE_MARGIN + 70, y + 7);
 
   y += 15;
 
@@ -1324,7 +1376,7 @@ export const descargarEvolucionFisicaPdf = async ({
 
   addInfoBox(
     doc,
-    "Registro inicial",
+    evoPdfTx("Registro inicial", "Initial record"),
     formatDate(initial.fecha),
     `${formatNumber(initial.peso, " kg")} · IMC ${formatNumber(initial.imc)}`,
     PAGE_MARGIN,
@@ -1334,7 +1386,7 @@ export const descargarEvolucionFisicaPdf = async ({
 
   addInfoBox(
     doc,
-    "Último registro",
+    evoPdfTx("Último registro", "Latest record"),
     formatDate(current.fecha),
     `${formatNumber(current.peso, " kg")} · IMC ${formatNumber(current.imc)}`,
     PAGE_MARGIN + boxWidth + 2,
@@ -1344,8 +1396,8 @@ export const descargarEvolucionFisicaPdf = async ({
 
   addInfoBox(
     doc,
-    "Peso / cintura",
-    `${formatDelta(current.peso, initial.peso, " kg")} / ${formatDelta(current.cintura, initial.cintura, " cm")}`,    "Último vs. inicial",
+    evoPdfTx("Peso / cintura", "Weight / waist"),
+    `${formatDelta(current.peso, initial.peso, " kg")} / ${formatDelta(current.cintura, initial.cintura, " cm")}`,    evoPdfTx("Último vs. inicial", "Latest vs. initial"),
     PAGE_MARGIN + boxWidth * 2 + 4,
     y,
     boxWidth
@@ -1353,9 +1405,9 @@ export const descargarEvolucionFisicaPdf = async ({
 
   addInfoBox(
     doc,
-    "Grasa / masa",
+    evoPdfTx("Grasa / masa", "Fat / mass"),
     `${formatDelta(current.porcentaje_grasa, initial.porcentaje_grasa, "%")} / ${formatDelta(current.masa_muscular, initial.masa_muscular, " kg")}`,
-    "Último vs. inicial",
+    evoPdfTx("Último vs. inicial", "Latest vs. initial"),
     PAGE_MARGIN + boxWidth * 3 + 6,
     y,
     boxWidth
@@ -1366,7 +1418,7 @@ export const descargarEvolucionFisicaPdf = async ({
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
   doc.setTextColor(17, 24, 39);
-  doc.text("Última medición", PAGE_MARGIN, y);
+  doc.text(evoPdfTx("Última medición", "Latest measurement"), PAGE_MARGIN, y);
 
   y += 6;
 
@@ -1374,14 +1426,14 @@ export const descargarEvolucionFisicaPdf = async ({
 
   addMeasureBlock(
     doc,
-    "Datos principales",
+    evoPdfTx("Datos principales", "Main data"),
     [
-      ["Fecha", formatDate(current.fecha)],
-      ["Peso", formatNumber(current.peso, " kg")],
-      ["Altura", formatNumber(current.altura, " cm")],
-      ["IMC", formatNumber(current.imc)],
-      ["Tipo", normalizarTexto(current.tipo_corporal)],
-      ["Sexo ref.", normalizarTexto(current.sexo_referencia)],
+      [evoPdfTx("Fecha", "Date"), formatDate(current.fecha)],
+      [evoPdfTx("Peso", "Weight"), formatNumber(current.peso, " kg")],
+      [evoPdfTx("Altura", "Height"), formatNumber(current.altura, " cm")],
+      [evoPdfTx("IMC", "BMI"), formatNumber(current.imc)],
+      [evoPdfTx("Tipo", "Type"), translateBodyTypeForPdf(current.tipo_corporal)],
+      [evoPdfTx("Sexo ref.", "Sex ref."), translateSexReferenceForPdf(current.sexo_referencia)],
     ],
     PAGE_MARGIN,
     y,
@@ -1390,14 +1442,14 @@ export const descargarEvolucionFisicaPdf = async ({
 
   addMeasureBlock(
     doc,
-    "Medidas corporales",
+    evoPdfTx("Medidas corporales", "Body measurements"),
     [
-      ["Pecho", formatNumber(current.pecho, " cm")],
-      ["Cintura", formatNumber(current.cintura, " cm")],
-      ["Cadera", formatNumber(current.cadera, " cm")],
-      ["Abdomen", formatNumber(current.abdomen, " cm")],
-      ["% grasa", formatNumber(current.porcentaje_grasa, "%")],
-      ["Masa", formatNumber(current.masa_muscular, " kg")],
+      [evoPdfTx("Pecho", "Chest"), formatNumber(current.pecho, " cm")],
+      [evoPdfTx("Cintura", "Waist"), formatNumber(current.cintura, " cm")],
+      [evoPdfTx("Cadera", "Hip"), formatNumber(current.cadera, " cm")],
+      [evoPdfTx("Abdomen", "Abdomen"), formatNumber(current.abdomen, " cm")],
+      [evoPdfTx("% grasa", "Fat %"), formatNumber(current.porcentaje_grasa, "%")],
+      [evoPdfTx("Masa", "Mass"), formatNumber(current.masa_muscular, " kg")],
     ],
     PAGE_MARGIN + blockWidth + 6,
     y,
@@ -1412,7 +1464,7 @@ export const descargarEvolucionFisicaPdf = async ({
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
     doc.setTextColor(17, 24, 39);
-    doc.text("Observaciones de la última medición", PAGE_MARGIN, y);
+    doc.text(evoPdfTx("Observaciones de la última medición", "Latest measurement notes"), PAGE_MARGIN, y);
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8.5);
@@ -1425,7 +1477,7 @@ export const descargarEvolucionFisicaPdf = async ({
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
   doc.setTextColor(17, 24, 39);
-  doc.text("Historial cronológico", PAGE_MARGIN, y);
+  doc.text(evoPdfTx("Historial cronológico", "Chronological history"), PAGE_MARGIN, y);
 
   y += 6;
 
@@ -1494,5 +1546,5 @@ export const descargarEvolucionFisicaPdf = async ({
 
   addFooter(doc);
 
-  doc.save(buildTimestampedDownloadFileName(`evolucion-fisica-${socioNombre || "socio"}`, "pdf"));
+  doc.save(buildTimestampedDownloadFileName(buildEvolucionFisicaPdfFileStem(socioNombre), "pdf"));
 };

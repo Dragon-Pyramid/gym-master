@@ -200,7 +200,7 @@ export default function HistorialPagosSocioPage() {
 
   const handleDownloadReceipt = async (pago: PagoSocio) => {
     try {
-      await descargarPagoReciboPdf(toReceiptPayload(pago));
+      await descargarPagoReciboPdf(toReceiptPayload(pago), { locale });
       toast.success(t('Recibo PDF generado correctamente', 'PDF receipt generated successfully'));
     } catch (error: any) {
       toast.error(error.message || t('No se pudo generar el recibo PDF', 'Could not generate the PDF receipt'));

@@ -317,6 +317,7 @@ export default function EvolucionFisicaPage() {
         socioNombre: selectedSocioName,
         logoUrl: "/gm_logo.svg",
         dashboardCharts,
+        locale,
       });
 
       toast.success(tx("PDF de evolución física generado", "Physical evolution PDF generated"));
