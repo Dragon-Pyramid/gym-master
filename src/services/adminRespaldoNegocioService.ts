@@ -61,6 +61,7 @@ export type RespaldoHistorialItem = {
 export type CreateRespaldoExportInput = {
   formato?: RespaldoFormato;
   modulos?: string[];
+  locale?: string;
 };
 
 export type RespaldoExportResult = {
@@ -70,6 +71,183 @@ export type RespaldoExportResult = {
 };
 
 const MAX_ROWS_PER_MODULE = 50000;
+
+
+// BUSINESS_BACKUP_EXPORTABLES_I18N_V3
+type BusinessBackupLocale = 'es' | 'en';
+
+const BUSINESS_BACKUP_MODULE_LABELS_EN: Record<RespaldoModuloKey, string> = {
+  gimnasio_parametrizacion: 'Gym data',
+  socios: 'Members',
+  usuarios: 'Internal users',
+  empleados: 'Employees',
+  empleados_sueldos: 'Salaries',
+  cuotas: 'Fees',
+  pagos: 'Payments',
+  asistencias: 'Attendances',
+  ventas: 'Sales',
+  venta_detalle: 'Sales details',
+  compras: 'Purchases',
+  compra_detalle: 'Purchase details',
+  productos: 'Products - stock',
+  proveedores: 'Suppliers',
+  servicios: 'Services',
+  gastos_egresos: 'Expenses - outflows',
+  mensajes_socios: 'Member messages',
+  tickets_soporte: 'Dragon Pyramid tickets',
+};
+
+const BUSINESS_BACKUP_COLUMN_LABELS_EN: Record<string, string> = {
+  nombre_comercial: 'Trade name',
+  razon_social: 'Legal name',
+  identificacion_fiscal: 'Tax ID',
+  condicion_fiscal: 'Tax status',
+  domicilio_legal: 'Legal address',
+  ciudad: 'City',
+  provincia: 'Province',
+  pais: 'Country',
+  telefono: 'Phone',
+  email: 'Email',
+  sitio_web: 'Website',
+  instagram_url: 'Instagram',
+  facebook_url: 'Facebook',
+  logo_url: 'Main logo',
+  logo_alternativo_url: 'Alternative logo',
+  color_primario: 'Primary color',
+  color_secundario: 'Secondary color',
+  color_acento: 'Accent color',
+  texto_legal_recibos: 'Legal receipt text',
+  texto_legal_reportes: 'Legal report text',
+  pie_pagina_documentos: 'Document footer',
+  actualizado_en: 'Updated at',
+  id_socio: 'Member ID',
+  usuario_id: 'User ID',
+  nombre_completo: 'Full name',
+  dni: 'DNI',
+  direccion: 'Address',
+  sexo: 'Gender',
+  fecnac: 'Birth date',
+  fecha_alta: 'Start date',
+  fecha_baja: 'End date',
+  activo: 'Active',
+  contacto_emergencia_nombre: 'Emergency contact',
+  contacto_emergencia_telefono: 'Emergency phone',
+  id: 'ID',
+  nombre: 'Name',
+  rol: 'Role',
+  must_change_password: 'Must change password',
+  creado_en: 'Created at',
+  ultimo_login_en: 'Last login',
+  puesto: 'Position',
+  area: 'Area',
+  tipo_contratacion: 'Contract type',
+  turno: 'Shift',
+  sueldo_base: 'Base salary',
+  fecha_inicio: 'Start date',
+  fecha_fin: 'End date',
+  empleado_id: 'Employee ID',
+  periodo: 'Period',
+  concepto: 'Concept',
+  bonos: 'Bonuses',
+  descuentos: 'Discounts',
+  monto_neto: 'Net amount',
+  estado: 'Status',
+  medio_pago: 'Payment method',
+  fecha_pago: 'Payment date',
+  descripcion: 'Description',
+  monto: 'Amount',
+  socio_id: 'Member ID',
+  cuota_id: 'Fee ID',
+  periodo_desde: 'Covers from',
+  periodo_hasta: 'Covers until',
+  meses_cubiertos: 'Months',
+  subtotal: 'Subtotal',
+  descuento_porcentaje: 'Discount %',
+  descuento_monto: 'Discount amount',
+  monto_pagado: 'Paid amount',
+  metodo_pago: 'Payment method',
+  observaciones: 'Notes',
+  fecha: 'Date',
+  hora_ingreso: 'Check-in time',
+  hora_egreso: 'Check-out time',
+  cliente_tipo: 'Customer type',
+  cliente_nombre: 'Customer',
+  cliente_documento: 'Document',
+  total: 'Total',
+  comprobante_codigo: 'Receipt',
+  venta_id: 'Sale ID',
+  producto_id: 'Product ID',
+  servicio_id: 'Service ID',
+  item_tipo: 'Item type',
+  cantidad: 'Quantity',
+  precio_unitario: 'Unit price',
+  descuento: 'Discount',
+  total_linea: 'Line total',
+  proveedor_id: 'Supplier ID',
+  numero_comprobante: 'Receipt',
+  compra_id: 'Purchase ID',
+  costo_unitario: 'Unit cost',
+  sku: 'SKU',
+  codigo_barras: 'Barcode',
+  marca: 'Brand',
+  presentacion: 'Presentation',
+  unidad_medida: 'Unit',
+  stock: 'Stock',
+  stock_minimo: 'Minimum stock',
+  costo: 'Cost',
+  precio: 'Price',
+  contacto: 'Contact',
+  whatsapp: 'WhatsApp',
+  rubro: 'Category',
+  categoria: 'Category',
+  duracion_minutos: 'Duration (min)',
+  requiere_reserva: 'Requires booking',
+  cupo_maximo: 'Max capacity',
+  modalidad: 'Modality',
+  disponible_online: 'Online available',
+  proveedor_nombre: 'Supplier',
+  entidad: 'Entity',
+  fecha_vencimiento: 'Due date',
+  asunto: 'Subject',
+  mensaje: 'Message',
+  respuesta: 'Reply',
+  respondido_en: 'Replied at',
+  cerrado_en: 'Closed at',
+  codigo: 'Code',
+  prioridad: 'Priority',
+  usuario_email: 'User email',
+};
+
+function normalizeBusinessBackupLocale(value?: string | null): BusinessBackupLocale {
+  return value === 'en' ? 'en' : 'es';
+}
+
+function businessBackupText(locale: BusinessBackupLocale, es: string, en: string): string {
+  return locale === 'en' ? en : es;
+}
+
+function businessBackupFileStem(locale: BusinessBackupLocale): string {
+  return locale === 'en' ? 'gym-master-business-backup' : 'gym-master-respaldo-negocio';
+}
+
+function businessBackupModuleLabel(module: ExportModuleDefinition, locale: BusinessBackupLocale): string {
+  return locale === 'en' ? BUSINESS_BACKUP_MODULE_LABELS_EN[module.key] ?? module.label : module.label;
+}
+
+function businessBackupColumnLabel(column: ExportColumn, locale: BusinessBackupLocale): string {
+  return locale === 'en' ? BUSINESS_BACKUP_COLUMN_LABELS_EN[column.key] ?? column.label : column.label;
+}
+
+function safeBusinessBackupWorksheetName(name: string): string {
+  const safeName = String(name || 'Sheet')
+    .replace(/[\/*?:[]]/g, ' - ')
+    .replace(/s+-s+/g, ' - ')
+    .replace(/s{2,}/g, ' ')
+    .trim()
+    .slice(0, 31);
+
+  return safeName || 'Sheet';
+}
 
 export const RESPLADO_NEGOCIO_MODULES: ExportModuleDefinition[] = [
   {
@@ -533,37 +711,54 @@ async function finishAudit(id: string, estado: 'completado' | 'error', registros
     .eq('id', id);
 }
 
-function buildFileName(format: RespaldoFormato) {
+function buildFileName(format: RespaldoFormato, locale: BusinessBackupLocale = 'es') {
   const now = new Date();
   const stamp = now.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
-  return `gym-master-respaldo-negocio-${stamp}.${format === 'xlsx' ? 'xlsx' : 'json'}`;
+  return businessBackupFileStem(locale) + '-' + stamp + '.' + (format === 'xlsx' ? 'xlsx' : 'json');
 }
 
-async function buildXlsx(moduleRows: Array<{ module: ExportModuleDefinition; rows: Array<Record<string, unknown>> }>) {
+
+async function buildXlsx(
+  moduleRows: Array<{ module: ExportModuleDefinition; rows: Array<Record<string, unknown>> }>,
+  locale: BusinessBackupLocale = 'es'
+) {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Gym Master';
   workbook.created = new Date();
 
-  const resumen = workbook.addWorksheet('Resumen');
+  const resumen = workbook.addWorksheet(safeBusinessBackupWorksheetName(businessBackupText(locale, 'Resumen', 'Summary')));
   resumen.columns = [
-    { header: 'Módulo', key: 'modulo', width: 34 },
-    { header: 'Tabla origen', key: 'tabla', width: 28 },
-    { header: 'Registros', key: 'registros', width: 16 },
+    { header: businessBackupText(locale, 'Módulo', 'Module'), key: 'modulo', width: 34 },
+    { header: businessBackupText(locale, 'Tabla origen', 'Source table'), key: 'tabla', width: 28 },
+    { header: businessBackupText(locale, 'Registros', 'Records'), key: 'registros', width: 16 },
   ];
 
   moduleRows.forEach(({ module, rows }) => {
-    resumen.addRow({ modulo: module.label, tabla: module.table, registros: rows.length });
+    resumen.addRow({ modulo: businessBackupModuleLabel(module, locale), tabla: module.table, registros: rows.length });
   });
 
   resumen.addRow({});
-  resumen.addRow({ modulo: 'Alcance', tabla: 'Exportación operativa del negocio del gimnasio' });
-  resumen.addRow({ modulo: 'Excluye', tabla: 'Contraseñas, secretos, tokens, migraciones privadas y know-how interno Dragon Pyramid' });
+  resumen.addRow({
+    modulo: businessBackupText(locale, 'Alcance', 'Scope'),
+    tabla: businessBackupText(locale, 'Exportación operativa del negocio del gimnasio', 'Operational export of the gym business data'),
+  });
+  resumen.addRow({
+    modulo: businessBackupText(locale, 'Excluye', 'Excludes'),
+    tabla: businessBackupText(
+      locale,
+      'Contraseñas, secretos, tokens, migraciones privadas y know-how interno Dragon Pyramid',
+      'Passwords, secrets, tokens, private migrations, and Dragon Pyramid internal know-how'
+    ),
+  });
+
+  resumen.getRow(1).font = { bold: true };
+  resumen.views = [{ state: 'frozen', ySplit: 1 }];
 
   moduleRows.forEach(({ module, rows }) => {
-    const worksheetName = module.label.slice(0, 31).replace(/[\\/*?:\[\]]/g, ' ');
+    const worksheetName = safeBusinessBackupWorksheetName(businessBackupModuleLabel(module, locale));
     const worksheet = workbook.addWorksheet(worksheetName);
     worksheet.columns = module.columns.map((column) => ({
-      header: column.label,
+      header: businessBackupColumnLabel(column, locale),
       key: column.key,
       width: column.width ?? 22,
     }));
@@ -584,7 +779,11 @@ async function buildXlsx(moduleRows: Array<{ module: ExportModuleDefinition; row
   return Buffer.from(buffer);
 }
 
-function buildJson(moduleRows: Array<{ module: ExportModuleDefinition; rows: Array<Record<string, unknown>> }>) {
+
+function buildJson(
+  moduleRows: Array<{ module: ExportModuleDefinition; rows: Array<Record<string, unknown>> }>,
+  locale: BusinessBackupLocale = 'es'
+) {
   const payload = {
     generado_en: new Date().toISOString(),
     sistema: 'Gym Master',
@@ -592,7 +791,7 @@ function buildJson(moduleRows: Array<{ module: ExportModuleDefinition; rows: Arr
     excluye: ['password_hash', 'tokens', 'secrets', 'migraciones_privadas', 'datasets_propietarios'],
     modulos: moduleRows.map(({ module, rows }) => ({
       key: module.key,
-      label: module.label,
+      label: businessBackupModuleLabel(module, locale),
       table: module.table,
       registros: rows.length,
       rows: rows.map((row) => {
@@ -607,6 +806,7 @@ function buildJson(moduleRows: Array<{ module: ExportModuleDefinition; rows: Arr
 
   return Buffer.from(JSON.stringify(payload, null, 2), 'utf-8');
 }
+
 
 export function getRespaldoNegocioModules(user: JwtUser): RespaldoModuloPublico[] {
   requireAdmin(user);
@@ -637,8 +837,9 @@ export async function getRespaldoNegocioHistory(user: JwtUser): Promise<Respaldo
 export async function exportRespaldoNegocio(user: JwtUser, input: CreateRespaldoExportInput): Promise<RespaldoExportResult> {
   requireAdmin(user);
   const formato = normalizeFormat(input.formato);
+  const locale = normalizeBusinessBackupLocale(input.locale);
   const modules = normalizeModules(input.modulos);
-  const fileName = buildFileName(formato);
+  const fileName = buildFileName(formato, locale);
   const auditId = await createAudit(user, formato, modules, fileName);
 
   try {
@@ -651,7 +852,7 @@ export async function exportRespaldoNegocio(user: JwtUser, input: CreateRespaldo
       moduleRows.push({ module, rows });
     }
 
-    const buffer = formato === 'xlsx' ? await buildXlsx(moduleRows) : buildJson(moduleRows);
+    const buffer = formato === 'xlsx' ? await buildXlsx(moduleRows, locale) : buildJson(moduleRows, locale);
     await finishAudit(auditId, 'completado', registrosTotales);
 
     return {

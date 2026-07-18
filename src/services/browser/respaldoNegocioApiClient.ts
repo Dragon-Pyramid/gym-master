@@ -42,14 +42,14 @@ export async function fetchRespaldoNegocioMeta(): Promise<{
   return payload.data;
 }
 
-export async function downloadRespaldoNegocio(formato: RespaldoFormato, modulos: string[]) {
+export async function downloadRespaldoNegocio(formato: RespaldoFormato, modulos: string[], locale: string = 'es') {
   const res = await fetch('/api/admin/respaldo-negocio/exportar', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       ...authHeader(),
     },
-    body: JSON.stringify({ formato, modulos }),
+    body: JSON.stringify({ formato, modulos, locale }),
   });
 
   if (!res.ok) {
@@ -60,7 +60,8 @@ export async function downloadRespaldoNegocio(formato: RespaldoFormato, modulos:
   const blob = await res.blob();
   const disposition = res.headers.get('content-disposition') || '';
   const match = disposition.match(/filename="?([^";]+)"?/i);
-  const fileName = match?.[1] || `gym-master-respaldo-negocio.${formato === 'xlsx' ? 'xlsx' : 'json'}`;
+  const fallbackStem = locale === 'en' ? 'gym-master-business-backup' : 'gym-master-respaldo-negocio';
+  const fileName = match?.[1] || fallbackStem + '.' + (formato === 'xlsx' ? 'xlsx' : 'json');
 
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement('a');

@@ -444,6 +444,12 @@ export default function SociosRankingBonificacionPage() {
 
   const handleExportExcel = async () => {
     if (!data) return;
+
+    const exportFileBaseName =
+      locale === "en"
+        ? "monthly-member-ranking-bonus"
+        : "ranking-bonificacion-socios";
+
     const workbook = new ExcelJS.Workbook();
     const resumen = workbook.addWorksheet(rbTx(locale, "Resumen", "Summary"));
     resumen.columns = [
@@ -535,10 +541,7 @@ export default function SociosRankingBonificacionPage() {
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = buildTimestampedDownloadFileName(
-      "ranking-bonificacion-socios",
-      "xlsx",
-    );
+    link.download = buildTimestampedDownloadFileName(exportFileBaseName, "xlsx");
     link.click();
     window.URL.revokeObjectURL(url);
   };
@@ -546,18 +549,38 @@ export default function SociosRankingBonificacionPage() {
   const handleDownloadPdf = async () => {
     if (!data) return;
 
+    const exportFileBaseName =
+      locale === "en"
+        ? "monthly-member-ranking-bonus"
+        : "ranking-bonificacion-socios";
+
     await downloadCommercialReportPdf({
+      locale,
       title: rbTx(
         locale,
         "Ranking mensual de socios",
         "Monthly member ranking",
       ),
       subtitle: monthName(anio, mes, locale),
-      fileName: buildTimestampedDownloadFileName(
-        "ranking-bonificacion-socios",
-        "pdf",
-      ),
+      fileName: buildTimestampedDownloadFileName(exportFileBaseName, "pdf"),
       pageOrientation: "landscape",
+      footerText: rbTx(
+        locale,
+        "Gym Master · Ranking y bonificación mensual de socios",
+        "Gym Master · Monthly member ranking and bonus",
+      ),
+      labels: {
+        generated: rbTx(locale, "Generado", "Generated"),
+        page: rbTx(locale, "Página", "Page"),
+        of: rbTx(locale, "de", "of"),
+        detail: rbTx(locale, "Detalle", "Details"),
+        records: rbTx(locale, "registros", "records"),
+        empty: rbTx(
+          locale,
+          "Sin datos para el período seleccionado.",
+          "No data for the selected period.",
+        ),
+      },
       metrics: [
         {
           label: rbTx(locale, "Socios activos", "Active members"),
@@ -654,11 +677,6 @@ export default function SociosRankingBonificacionPage() {
           getValue: (row) => translateBonusReason(locale, row.motivo) || "-",
         },
       ],
-      footerText: rbTx(
-        locale,
-        "Gym Master · Ranking y bonificación mensual de socios",
-        "Gym Master · Monthly member ranking and bonus",
-      ),
     });
   };
 
