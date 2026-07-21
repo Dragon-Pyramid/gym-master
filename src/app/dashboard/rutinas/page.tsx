@@ -14,6 +14,7 @@ import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 import { useI18n } from "@/i18n/I18nProvider";
+import { translateCoreLevel, translateCoreObjective } from "@/utils/coreSeedI18n";
 import RutinaModal from "@/components/modal/RutinaModal";
 import {
   Popover,
@@ -37,29 +38,14 @@ interface RutinaDisplayData {
   creado_en: string;
 }
 
-const ROUTINE_FILTER_LABEL_EN: Record<string, string> = {
-  inicial: "Beginner",
-  intermedio: "Intermediate",
-  avanzado: "Advanced",
-  definicion: "Definition",
-  volumen: "Volume",
-  fuerza: "Strength",
-  resistencia: "Endurance",
-  bajar_de_peso: "Lose weight",
-  perder_peso: "Lose weight",
-};
-
-const normalizeRoutineFilterLabel = (value: string): string =>
-  value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-
 const translateRoutineFilterLabel = (value: string, isEnglish: boolean): string => {
-  if (!isEnglish) return value;
-  return ROUTINE_FILTER_LABEL_EN[normalizeRoutineFilterLabel(value)] ?? value;
+  const translatedLevel = translateCoreLevel(value, isEnglish);
+  if (translatedLevel !== value) return translatedLevel;
+
+  const translatedObjective = translateCoreObjective(value, isEnglish);
+  if (translatedObjective !== value) return translatedObjective;
+
+  return value;
 };
 
 export default function RutinasPage() {
