@@ -16,6 +16,7 @@ import { Nivel } from "@/interfaces/niveles.interface";
 import { toast } from "sonner";
 import { generarNuevaRutina } from "@/services/apiClient";
 import { useI18n } from "@/i18n/I18nProvider";
+import { translateCoreLevel, translateCoreObjective } from "@/utils/coreSeedI18n";
 
 export interface RutinaFormValues {
   objetivo: string;
@@ -44,48 +45,9 @@ export default function RutinasForm({
   const isEnglish = locale === "en";
   const tx = (es: string, en: string) => (isEnglish ? en : es);
 
-  const translateObjective = (value?: string | null) => {
-    const label = String(value ?? "").trim();
-    const normalized = label.toLowerCase();
-    const map: Record<string, string> = {
-      fuerza: "Strength",
-      hipertrofia: "Hypertrophy",
-      resistencia: "Endurance",
-      tonificacion: "Toning",
-      tonificación: "Toning",
-      adelgazar: "Weight loss",
-      "perder peso": "Weight loss",
-      "ganar masa muscular": "Muscle gain",
-      mantenimiento: "Maintenance",
-      rehabilitacion: "Rehabilitation",
-      rehabilitación: "Rehabilitation",
-      "rehabilitación física": "Physical rehabilitation",
-      "rehabilitacion fisica": "Physical rehabilitation",
-      "salud general": "General health",
-      "preparación para competencia": "Competition preparation",
-      "preparacion para competencia": "Competition preparation",
-      "condición física postparto": "Postpartum physical conditioning",
-      "condicion fisica postparto": "Postpartum physical conditioning",
-      "condición physical postpartum": "Postpartum physical conditioning",
-      "condicion physical postpartum": "Postpartum physical conditioning",
-      "control del estrés": "Stress management",
-      "control del estres": "Stress management",
-    };
-    return isEnglish ? map[normalized] ?? label : label;
-  };
+  const translateObjective = (value?: string | null) => translateCoreObjective(value, isEnglish);
 
-  const translateLevel = (value?: string | null) => {
-    const label = String(value ?? "").trim();
-    const normalized = label.toLowerCase();
-    const map: Record<string, string> = {
-      principiante: "Beginner",
-      inicial: "Beginner",
-      intermedio: "Intermediate",
-      avanzado: "Advanced",
-      experto: "Expert",
-    };
-    return isEnglish ? map[normalized] ?? label : label;
-  };
+  const translateLevel = (value?: string | null) => translateCoreLevel(value, isEnglish);
 
   const [values, setValues] = useState<RutinaFormValues>(
     initialValues || {

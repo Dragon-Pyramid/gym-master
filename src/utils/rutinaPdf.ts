@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import { buildTimestampedDownloadFileName } from "@/utils/downloadFileName";
 import { formatFrontendDate } from '@/utils/dateFormat';
+import { translateCoreDayLabel, translateCoreMuscleGroup, translateCoreWorkoutPlanName } from "@/utils/coreSeedI18n";
 import { Rutina } from "@/interfaces/rutina.interface";
 
 type EjerciciosPorDia = Record<string, any[]>;
@@ -35,65 +36,16 @@ const capitalizar = (value: string): string => {
 const rutinaPdfTx = (locale: RutinaPdfLocale = "es", es: string, en: string): string =>
   locale === "en" ? en : es;
 
-const RUTINA_PDF_DAY_EN: Record<string, string> = {
-  lunes: "Monday",
-  martes: "Tuesday",
-  miercoles: "Wednesday",
-  miércoles: "Wednesday",
-  jueves: "Thursday",
-  viernes: "Friday",
-  sabado: "Saturday",
-  sábado: "Saturday",
-  domingo: "Sunday",
-};
-
-const RUTINA_PDF_MUSCLE_GROUP_EN: Record<string, string> = {
-  pecho: "Chest",
-  espalda: "Back",
-  piernas: "Legs",
-  pierna: "Legs",
-  biceps: "Biceps",
-  bíceps: "Biceps",
-  triceps: "Triceps",
-  tríceps: "Triceps",
-  hombros: "Shoulders",
-  hombro: "Shoulders",
-  abdomen: "Core",
-  abdominales: "Core",
-  core: "Core",
-  gluteos: "Glutes",
-  glúteos: "Glutes",
-  gemelos: "Calves",
-  pantorrillas: "Calves",
-  cardio: "Cardio",
-};
-
-const normalizeRutinaPdfKey = (value: string): string =>
-  String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
-
 const traducirDiaRutinaPdf = (dia: string, locale: RutinaPdfLocale = "es"): string => {
-  if (locale !== "en") return capitalizar(dia);
-  const normalized = normalizeRutinaPdfKey(dia);
-  return RUTINA_PDF_DAY_EN[normalized] || RUTINA_PDF_DAY_EN[String(dia || "").toLowerCase()] || capitalizar(dia);
+  const translated = translateCoreDayLabel(dia, locale);
+  return locale === "en" ? translated : capitalizar(translated);
 };
 
-const traducirGrupoRutinaPdf = (grupo: string, locale: RutinaPdfLocale = "es"): string => {
-  if (locale !== "en") return grupo;
-  const normalized = normalizeRutinaPdfKey(grupo);
-  return RUTINA_PDF_MUSCLE_GROUP_EN[normalized] || RUTINA_PDF_MUSCLE_GROUP_EN[String(grupo || "").toLowerCase()] || grupo;
-};
+const traducirGrupoRutinaPdf = (grupo: string, locale: RutinaPdfLocale = "es"): string =>
+  translateCoreMuscleGroup(grupo, locale);
 
-const traducirTituloRutinaPdf = (titulo: string, locale: RutinaPdfLocale = "es"): string => {
-  if (locale !== "en") return titulo;
-  if (titulo.startsWith("Rutina auto ")) return titulo.replace("Rutina auto ", "Auto routine ");
-  if (titulo.startsWith("Rutina semana ")) return titulo.replace("Rutina semana ", "Routine week ");
-  if (titulo.startsWith("Rutina #")) return titulo.replace("Rutina #", "Routine #");
-  return titulo;
-};
+const traducirTituloRutinaPdf = (titulo: string, locale: RutinaPdfLocale = "es"): string =>
+  translateCoreWorkoutPlanName(titulo, locale);
 
 const buildRutinaPdfFileTitle = (titulo: string, socioNombre: string, locale: RutinaPdfLocale = "es"): string => {
   const translatedTitle = traducirTituloRutinaPdf(titulo, locale);
