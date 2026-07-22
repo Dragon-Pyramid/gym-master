@@ -7,16 +7,18 @@ import type {
 import { getRagConfig } from '@/lib/rag/ragConfig';
 import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 import { createSingleRagEmbedding } from './ragEmbeddingProviderService';
+import {
+  aiGeneratedContentTx,
+  buildAiDietBaseDisclaimers,
+  normalizeAiGeneratedContentLocale,
+  translateAiGeneratedTechnicalList,
+  translateAiGeneratedTechnicalText,
+} from '@/utils/aiGeneratedContentI18n';
 
 const DEFAULT_DIET_MATCH_THRESHOLD = 0.3;
 const DEFAULT_DIET_MATCH_COUNT = 8;
 const MAX_QUERY_LENGTH = 1800;
 
-const BASE_DIET_DISCLAIMERS = [
-  'La dieta generada es orientativa y no reemplaza la evaluación de un nutricionista matriculado.',
-  'Ante enfermedades, embarazo, medicación, diabetes, hipertensión, trastornos alimentarios o condiciones clínicas, consultar con un profesional de salud antes de aplicar cambios alimentarios.',
-  'No se deben prometer resultados físicos o médicos garantizados desde el sistema.',
-];
 
 function cleanText(value: unknown, maxLength = MAX_QUERY_LENGTH) {
   if (typeof value !== 'string') return '';
@@ -81,13 +83,14 @@ function detectHighRiskWarnings(payload: RagDietasAssistantRequest) {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
 
+  const locale = normalizeAiGeneratedContentLocale(payload.idioma);
   const warnings: string[] = [];
   const risks: Array<[RegExp, string]> = [
-    [/\b(diabetes|glucemia|insulina)\b/, 'Condición relacionada con diabetes/glucemia informada. Requiere revisión profesional.'],
-    [/\b(hipertension|presion alta|cardiopatia|corazon)\b/, 'Condición cardiovascular o presión alta informada. Requiere revisión profesional.'],
-    [/\b(embarazo|embarazada|lactancia)\b/, 'Embarazo o lactancia informado. Requiere indicación profesional específica.'],
-    [/\b(renal|rinon|riñon|hepatica|higado)\b/, 'Condición renal/hepática informada. Requiere revisión profesional.'],
-    [/\b(anorexia|bulimia|trastorno alimentario|tca)\b/, 'Posible trastorno de la conducta alimentaria informado. No generar indicaciones restrictivas sin profesional.'],
+    [/\b(diabetes|glucemia|insulina)\b/, aiGeneratedContentTx(locale, 'Condición relacionada con diabetes/glucemia informada. Requiere revisión profesional.', 'Diabetes/glucose-related condition reported. Professional review is required.')],
+    [/\b(hipertension|presion alta|cardiopatia|corazon)\b/, aiGeneratedContentTx(locale, 'Condición cardiovascular o presión alta informada. Requiere revisión profesional.', 'Cardiovascular condition or high blood pressure reported. Professional review is required.')],
+    [/\b(embarazo|embarazada|lactancia)\b/, aiGeneratedContentTx(locale, 'Embarazo o lactancia informado. Requiere indicación profesional específica.', 'Pregnancy or breastfeeding reported. Specific professional guidance is required.')],
+    [/\b(renal|rinon|riñon|hepatica|higado)\b/, aiGeneratedContentTx(locale, 'Condición renal/hepática informada. Requiere revisión profesional.', 'Kidney/liver condition reported. Professional review is required.')],
+    [/\b(anorexia|bulimia|trastorno alimentario|tca)\b/, aiGeneratedContentTx(locale, 'Posible trastorno de la conducta alimentaria informado. No generar indicaciones restrictivas sin profesional.', 'Possible eating disorder reported. Do not generate restrictive guidance without a professional.')],
   ];
 
   for (const [pattern, warning] of risks) {
@@ -123,9 +126,9 @@ function buildQuery(params: {
     .slice(0, MAX_QUERY_LENGTH);
 }
 
-function buildSummary(results: RagDietasContextResult[]) {
+function buildSummary(results: RagDietasContextResult[], locale: ReturnType<typeof normalizeAiGeneratedContentLocale>) {
   if (results.length === 0) {
-    return 'No se recuperaron reglas nutricionales desde el RAG. Se usó el generador formal de Gym Master con fallback seguro.';
+    return aiGeneratedContentTx(locale, 'No se recuperaron reglas nutricionales desde el RAG. Se usó el generador formal de Gym Master con fallback seguro.', "No nutrition rules were retrieved from RAG. Gym Master's formal generator was used with a safe fallback.");
   }
 
   const titles = results
@@ -134,13 +137,18 @@ function buildSummary(results: RagDietasContextResult[]) {
     .filter(Boolean)
     .join(', ');
 
-  return `El RAG Coach recuperó ${results.length} referencias nutricionales reales para orientar la dieta. Principales coincidencias: ${titles}.`;
+  return aiGeneratedContentTx(
+    locale,
+    `El RAG Coach recuperó ${results.length} referencias nutricionales reales para orientar la dieta. Principales coincidencias: ${titles}.`,
+    `The RAG Coach retrieved ${results.length} real nutrition references to guide the diet. Main matches: ${titles}.`,
+  );
 }
 
 export async function buildDietasRagContext(
   _user: JwtUser,
   payload: RagDietasAssistantRequest,
 ): Promise<RagDietasContextSummary> {
+  const locale = normalizeAiGeneratedContentLocale(payload.idioma);
   const warnings: string[] = [];
   const config = getRagConfig();
 
@@ -150,14 +158,14 @@ export async function buildDietasRagContext(
       used: false,
       query: '',
       results: [],
-      summary: 'RAG desactivado. Se usa generación local segura.',
-      disclaimers: BASE_DIET_DISCLAIMERS,
-      warnings: ['RAG_ENABLED=false.'],
+      summary: aiGeneratedContentTx(locale, 'RAG desactivado. Se usa generación local segura.', 'RAG is disabled. Safe local generation is used.'),
+      disclaimers: buildAiDietBaseDisclaimers(locale),
+      warnings: [translateAiGeneratedTechnicalText('RAG_ENABLED=false.', locale)],
     };
   }
 
-  if (config.provider === 'github' && !config.githubToken) warnings.push('Falta GITHUB_TOKEN.');
-  if (config.provider === 'openai' && !config.openaiApiKey) warnings.push('Falta OPENAI_API_KEY.');
+  if (config.provider === 'github' && !config.githubToken) warnings.push(translateAiGeneratedTechnicalText('Falta GITHUB_TOKEN.', locale));
+  if (config.provider === 'openai' && !config.openaiApiKey) warnings.push(translateAiGeneratedTechnicalText('Falta OPENAI_API_KEY.', locale));
 
   if (warnings.length > 0) {
     return {
@@ -165,8 +173,8 @@ export async function buildDietasRagContext(
       used: false,
       query: '',
       results: [],
-      summary: 'RAG configurado parcialmente. Se usa generación local segura.',
-      disclaimers: BASE_DIET_DISCLAIMERS,
+      summary: aiGeneratedContentTx(locale, 'RAG configurado parcialmente. Se usa generación local segura.', 'RAG is partially configured. Safe local generation is used.'),
+      disclaimers: buildAiDietBaseDisclaimers(locale),
       warnings,
     };
   }
@@ -201,9 +209,9 @@ export async function buildDietasRagContext(
       used: false,
       query,
       results: [],
-      summary: 'No se pudo consultar el RAG de dietas. Se usa generación local segura.',
-      disclaimers: BASE_DIET_DISCLAIMERS,
-      warnings: [`match_rag_chunks falló: ${error.message}`, ...highRiskWarnings],
+      summary: aiGeneratedContentTx(locale, 'No se pudo consultar el RAG de dietas. Se usa generación local segura.', 'The diet RAG service could not be queried. Safe local generation is used.'),
+      disclaimers: buildAiDietBaseDisclaimers(locale),
+      warnings: [translateAiGeneratedTechnicalText(`match_rag_chunks falló: ${error.message}`, locale), ...highRiskWarnings],
     };
   }
 
@@ -218,8 +226,8 @@ export async function buildDietasRagContext(
     matchThreshold,
     matchCount,
     results,
-    summary: buildSummary(results),
-    disclaimers: BASE_DIET_DISCLAIMERS,
-    warnings: [...warnings, ...highRiskWarnings],
+    summary: buildSummary(results, locale),
+    disclaimers: buildAiDietBaseDisclaimers(locale),
+    warnings: translateAiGeneratedTechnicalList([...warnings, ...highRiskWarnings], locale),
   };
 }

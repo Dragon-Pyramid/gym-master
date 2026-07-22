@@ -5,6 +5,7 @@ import type {
   RagEvolucionFisicaIdioma,
 } from '@/interfaces/ragEvolucionFisicaAssistant.interface';
 import { analyzeEvolucionFisicaWithRag } from '@/services/server/ragEvolucionFisicaCoachService';
+import { aiGeneratedContentTx, normalizeAiGeneratedContentLocale, translateAiGeneratedTechnicalText } from '@/utils/aiGeneratedContentI18n';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +17,7 @@ function cleanText(value: unknown): string {
 }
 
 function normalizeIdioma(value: unknown): RagEvolucionFisicaIdioma {
-  return value === 'en' ? 'en' : 'es';
+  return normalizeAiGeneratedContentLocale(value) as RagEvolucionFisicaIdioma;
 }
 
 function validatePayload(body: Partial<RagEvolucionFisicaAssistantRequest>) {
@@ -33,7 +34,7 @@ function getStatusFromError(message: string) {
   const normalized = message.toLowerCase();
   if (normalized.includes('token') || normalized.includes('unauthorized')) return 401;
   if (normalized.includes('no autorizado')) return 403;
-  if (normalized.includes('debe indicar') || normalized.includes('socio')) return 400;
+  if (normalized.includes('debe indicar') || normalized.includes('must provide') || normalized.includes('socio')) return 400;
   return 500;
 }
 
@@ -52,7 +53,7 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         ok: true,
-        message: 'Análisis de evolución física generado correctamente desde RAG Coach.',
+        message: aiGeneratedContentTx(payload.idioma, 'Análisis de evolución física generado correctamente desde RAG Coach.', 'Physical evolution analysis generated successfully from RAG Coach.'),
         data: {
           ...data,
           parametros: {
@@ -64,7 +65,7 @@ export async function POST(req: Request) {
       { status: 200 },
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Error inesperado';
+    const message = error instanceof Error ? error.message : translateAiGeneratedTechnicalText('Error inesperado', 'es');
 
     console.error('Error en RAG Coach evolución física:', error);
 

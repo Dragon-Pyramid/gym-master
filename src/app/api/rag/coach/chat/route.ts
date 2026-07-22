@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { authMiddleware } from '@/middlewares/auth.middleware';
 import type { RagCoachChatRequest } from '@/interfaces/ragCoachChat.interface';
 import { handleUnifiedRagCoachChat } from '@/services/server/ragCoachUnifiedChatService';
+import { aiGeneratedContentTx, normalizeAiGeneratedContentLocale } from '@/utils/aiGeneratedContentI18n';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,17 +23,20 @@ export async function POST(req: Request) {
 
     const body = (await req.json().catch(() => ({}))) as Partial<RagCoachChatRequest>;
     const message = typeof body.message === 'string' ? body.message : '';
+    const rawBody = body as Partial<RagCoachChatRequest> & { idioma?: unknown };
+    const locale = normalizeAiGeneratedContentLocale(rawBody.locale ?? rawBody.idioma);
 
     const data = await handleUnifiedRagCoachChat(user, {
       message,
       socio_id: typeof body.socio_id === 'string' ? body.socio_id : undefined,
+      locale,
       conversationContext: body.conversationContext,
     });
 
     return NextResponse.json(
       {
         ok: true,
-        message: 'Respuesta generada correctamente por Coach IA.',
+        message: aiGeneratedContentTx(locale, 'Respuesta generada correctamente por Coach IA.', 'Response generated successfully by AI Coach.'),
         data,
       },
       { status: 200 },

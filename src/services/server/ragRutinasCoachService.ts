@@ -7,6 +7,11 @@ import type {
 import { getRagConfig } from '@/lib/rag/ragConfig';
 import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 import { createSingleRagEmbedding } from './ragEmbeddingProviderService';
+import {
+  aiGeneratedContentTx,
+  normalizeAiGeneratedContentLocale,
+  translateAiGeneratedTechnicalText,
+} from '@/utils/aiGeneratedContentI18n';
 
 const DEFAULT_ROUTINE_MATCH_THRESHOLD = 0.3;
 const DEFAULT_ROUTINE_MATCH_COUNT = 8;
@@ -107,9 +112,9 @@ function buildQuery(params: {
     .slice(0, MAX_QUERY_LENGTH);
 }
 
-function buildSummary(results: RagRutinasContextResult[]) {
+function buildSummary(results: RagRutinasContextResult[], locale: ReturnType<typeof normalizeAiGeneratedContentLocale>) {
   if (results.length === 0) {
-    return 'No se recuperaron ejercicios desde el RAG. Se usó el generador formal de Gym Master con fallback seguro.';
+    return aiGeneratedContentTx(locale, 'No se recuperaron ejercicios desde el RAG. Se usó el generador formal de Gym Master con fallback seguro.', "No exercises were retrieved from RAG. Gym Master's formal generator was used with a safe fallback.");
   }
 
   const titles = results
@@ -118,13 +123,18 @@ function buildSummary(results: RagRutinasContextResult[]) {
     .filter(Boolean)
     .join(', ');
 
-  return `El RAG Coach recuperó ${results.length} referencias de ejercicios reales para orientar la rutina. Principales coincidencias: ${titles}.`;
+  return aiGeneratedContentTx(
+    locale,
+    `El RAG Coach recuperó ${results.length} referencias de ejercicios reales para orientar la rutina. Principales coincidencias: ${titles}.`,
+    `The RAG Coach retrieved ${results.length} real exercise references to guide the routine. Main matches: ${titles}.`,
+  );
 }
 
 export async function buildRutinasRagContext(
   _user: JwtUser,
   payload: RagRutinasAssistantRequest,
 ): Promise<RagRutinasContextSummary> {
+  const locale = normalizeAiGeneratedContentLocale(payload.idioma);
   const warnings: string[] = [];
   const config = getRagConfig();
 
@@ -134,13 +144,13 @@ export async function buildRutinasRagContext(
       used: false,
       query: '',
       results: [],
-      summary: 'RAG desactivado. Se usa generación local segura.',
-      warnings: ['RAG_ENABLED=false.'],
+      summary: aiGeneratedContentTx(locale, 'RAG desactivado. Se usa generación local segura.', 'RAG is disabled. Safe local generation is used.'),
+      warnings: [translateAiGeneratedTechnicalText('RAG_ENABLED=false.', locale)],
     };
   }
 
-  if (config.provider === 'github' && !config.githubToken) warnings.push('Falta GITHUB_TOKEN.');
-  if (config.provider === 'openai' && !config.openaiApiKey) warnings.push('Falta OPENAI_API_KEY.');
+  if (config.provider === 'github' && !config.githubToken) warnings.push(translateAiGeneratedTechnicalText('Falta GITHUB_TOKEN.', locale));
+  if (config.provider === 'openai' && !config.openaiApiKey) warnings.push(translateAiGeneratedTechnicalText('Falta OPENAI_API_KEY.', locale));
 
   if (warnings.length > 0) {
     return {
@@ -148,7 +158,7 @@ export async function buildRutinasRagContext(
       used: false,
       query: '',
       results: [],
-      summary: 'RAG configurado parcialmente. Se usa generación local segura.',
+      summary: aiGeneratedContentTx(locale, 'RAG configurado parcialmente. Se usa generación local segura.', 'RAG is partially configured. Safe local generation is used.'),
       warnings,
     };
   }
@@ -186,8 +196,8 @@ export async function buildRutinasRagContext(
       used: false,
       query,
       results: [],
-      summary: 'No se pudo consultar el RAG. Se usa generación local segura.',
-      warnings: [`match_rag_chunks falló: ${error.message}`],
+      summary: aiGeneratedContentTx(locale, 'No se pudo consultar el RAG. Se usa generación local segura.', 'The RAG service could not be queried. Safe local generation is used.'),
+      warnings: [translateAiGeneratedTechnicalText(`match_rag_chunks falló: ${error.message}`, locale)],
     };
   }
 
@@ -202,7 +212,7 @@ export async function buildRutinasRagContext(
     matchThreshold,
     matchCount,
     results,
-    summary: buildSummary(results),
+    summary: buildSummary(results, locale),
     warnings,
   };
 }

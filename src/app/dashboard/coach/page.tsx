@@ -66,13 +66,6 @@ type ChatMessage = {
   contextConfidence?: 'alta' | 'media' | 'baja';
 };
 
-const quickPrompts = [
-  'Quiero una rutina para ganar masa muscular 3 días por semana',
-  'Quiero una dieta para bajar grasa sin perder músculo',
-  'Estoy estancado, analizá mi evolución física',
-  'No sé por dónde empezar, quiero mejorar mi físico',
-];
-
 const coachCapabilities = [
   {
     title: 'Rutinas',
@@ -392,6 +385,15 @@ export default function CoachIaPage() {
     () => socios.find((socio) => socio.id_socio === selectedSocioId) ?? null,
     [selectedSocioId, socios],
   );
+  const localizedQuickPrompts = useMemo(
+    () => [
+      c('Quiero una rutina para ganar masa muscular 3 días por semana', 'I want a routine to gain muscle mass 3 days per week'),
+      c('Quiero una dieta para bajar grasa sin perder músculo', 'I want a diet to lose fat without losing muscle'),
+      c('Estoy estancado, analizá mi evolución física', 'I am stuck, analyze my physical evolution'),
+      c('No sé por dónde empezar, quiero mejorar mi físico', 'I do not know where to start, I want to improve my physique'),
+    ],
+    [locale],
+  );
 
   useEffect(() => {
     initializeAuth();
@@ -435,12 +437,15 @@ export default function CoachIaPage() {
       {
         id: createId(),
         role: 'assistant',
-        content: `Hola, ${displayName}. Soy tu Coach IA de Gym Master. Puedo ayudarte con rutinas, dietas y evolución física usando el contexto del socio cuando esté disponible.`,
-        suggestedReplies: quickPrompts,
-        nextBestStep: 'Contame tu objetivo, disponibilidad semanal, nivel y restricciones.',
+        content: c(
+          `Hola, ${displayName}. Soy tu Coach IA de Gym Master. Puedo ayudarte con rutinas, dietas y evolución física usando el contexto del socio cuando esté disponible.`,
+          `Hello, ${displayName}. I am your Gym Master AI Coach. I can help you with routines, diets, and physical evolution using the member context when available.`,
+        ),
+        suggestedReplies: localizedQuickPrompts,
+        nextBestStep: c('Contame tu objetivo, disponibilidad semanal, nivel y restricciones.', 'Tell me your goal, weekly availability, level, and restrictions.'),
       },
     ]);
-  }, [displayName, isAuthenticated, isInitialized, messages.length]);
+  }, [displayName, isAuthenticated, isInitialized, localizedQuickPrompts, messages.length, locale]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -450,7 +455,7 @@ export default function CoachIaPage() {
     return (
       <div className="flex min-h-[100dvh] items-center justify-center bg-slate-50 text-sm text-slate-600 dark:bg-slate-950 dark:text-slate-300">
         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        Cargando Coach IA...
+        {c('Cargando Coach IA...', 'Loading AI Coach...')}
       </div>
     );
   }
@@ -482,11 +487,12 @@ export default function CoachIaPage() {
       const res = await enviarMensajeCoachIa({
         message,
         socio_id: effectiveSocioId,
+        locale: locale === 'en' ? 'en' : 'es',
         conversationContext: buildConversationMemory(messages, userMessage),
       });
 
       if (!res.ok || !res.data) {
-        throw new Error(res.error || 'No se pudo obtener respuesta del Coach IA.');
+        throw new Error(res.error || c('No se pudo obtener respuesta del Coach IA.', 'A response could not be obtained from the AI Coach.'));
       }
 
       const assistantMessage: ChatMessage = {
@@ -518,8 +524,8 @@ export default function CoachIaPage() {
           role: 'assistant',
           content: error instanceof Error
             ? error.message
-            : 'Ocurrió un error al consultar el Coach IA.',
-          nextBestStep: 'Reintentá en unos segundos o revisá los módulos de rutinas, dietas y evolución desde el menú.',
+            : c('Ocurrió un error al consultar el Coach IA.', 'An error occurred while consulting the AI Coach.'),
+          nextBestStep: c('Reintentá en unos segundos o revisá los módulos de rutinas, dietas y evolución desde el menú.', 'Try again in a few seconds or review the routines, diets, and physical evolution modules from the menu.'),
         },
       ]);
     } finally {
@@ -538,9 +544,12 @@ export default function CoachIaPage() {
       {
         id: createId(),
         role: 'assistant',
-        content: `Conversación reiniciada, ${displayName}. Contame qué objetivo querés trabajar ahora${selectedSocio ? ` para ${shortSocioLabel(selectedSocio)}` : ''}.`,
-        suggestedReplies: quickPrompts,
-        nextBestStep: 'Elegí una sugerencia o escribí tu consulta completa.',
+        content: c(
+          `Conversación reiniciada, ${displayName}. Contame qué objetivo querés trabajar ahora${selectedSocio ? ` para ${shortSocioLabel(selectedSocio)}` : ''}.`,
+          `Conversation restarted, ${displayName}. Tell me which goal you want to work on now${selectedSocio ? ` for ${shortSocioLabel(selectedSocio)}` : ''}.`,
+        ),
+        suggestedReplies: localizedQuickPrompts,
+        nextBestStep: c('Elegí una sugerencia o escribí tu consulta completa.', 'Choose a suggestion or write your full question.'),
       },
     ]);
   };
@@ -851,7 +860,7 @@ export default function CoachIaPage() {
                     </div>
 
                     <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
-                      {quickPrompts.map((prompt) => (
+                      {localizedQuickPrompts.map((prompt) => (
                         <Button
                           key={prompt}
                           type="button"
