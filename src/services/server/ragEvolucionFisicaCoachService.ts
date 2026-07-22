@@ -11,16 +11,17 @@ import { getRagConfig } from '@/lib/rag/ragConfig';
 import { findAllEvolucionesSocioByIdSocio } from '@/services/evolucionSocioService';
 import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 import { createSingleRagEmbedding } from './ragEmbeddingProviderService';
+import {
+  aiGeneratedContentTx,
+  buildAiEvolutionBaseDisclaimers,
+  normalizeAiGeneratedContentLocale,
+  translateAiGeneratedTechnicalText,
+} from '@/utils/aiGeneratedContentI18n';
 
 const DEFAULT_EVOLUTION_MATCH_THRESHOLD = 0.3;
 const DEFAULT_EVOLUTION_MATCH_COUNT = 8;
 const MAX_QUERY_LENGTH = 1800;
 
-const BASE_EVOLUTION_DISCLAIMERS = [
-  'El análisis de evolución física es orientativo y no reemplaza la evaluación de un médico, nutricionista o entrenador profesional.',
-  'Los cambios bruscos de peso, dolor, mareos, fatiga extrema o síntomas físicos deben ser evaluados por un profesional de salud.',
-  'Las sugerencias del RAG Coach deben aplicarse de forma progresiva y con supervisión cuando existan antecedentes clínicos o lesiones.',
-];
 
 function cleanText(value: unknown, maxLength = MAX_QUERY_LENGTH) {
   if (typeof value !== 'string') return '';
@@ -175,9 +176,9 @@ function mapRpcResult(row: Record<string, unknown>): RagEvolucionFisicaContextRe
   };
 }
 
-function buildRagSummary(results: RagEvolucionFisicaContextResult[]) {
+function buildRagSummary(results: RagEvolucionFisicaContextResult[], locale: ReturnType<typeof normalizeAiGeneratedContentLocale>) {
   if (!results.length) {
-    return 'No se recuperaron referencias desde el RAG. Se utilizó análisis local seguro sobre la evolución física registrada.';
+    return aiGeneratedContentTx(locale, 'No se recuperaron referencias desde el RAG. Se utilizó análisis local seguro sobre la evolución física registrada.', 'No references were retrieved from RAG. Safe local analysis was used on the recorded physical evolution.');
   }
 
   const titles = results
@@ -186,42 +187,46 @@ function buildRagSummary(results: RagEvolucionFisicaContextResult[]) {
     .filter(Boolean)
     .join(', ');
 
-  return `El RAG Coach recuperó ${results.length} referencias para orientar la interpretación de evolución física. Principales coincidencias: ${titles}.`;
+  return aiGeneratedContentTx(
+    locale,
+    `El RAG Coach recuperó ${results.length} referencias para orientar la interpretación de evolución física. Principales coincidencias: ${titles}.`,
+    `The RAG Coach retrieved ${results.length} references to guide the physical evolution interpretation. Main matches: ${titles}.`,
+  );
 }
 
-function buildRecommendations(progress: RagEvolucionFisicaProgressSummary) {
+function buildRecommendations(progress: RagEvolucionFisicaProgressSummary, locale: ReturnType<typeof normalizeAiGeneratedContentLocale>) {
   const recommendations: string[] = [];
 
   if (progress.totalRegistros < 2) {
-    recommendations.push('Registrar al menos una segunda medición en 2 a 4 semanas para poder comparar tendencia real.');
+    recommendations.push(aiGeneratedContentTx(locale, 'Registrar al menos una segunda medición en 2 a 4 semanas para poder comparar tendencia real.', 'Record at least a second measurement in 2 to 4 weeks to compare a real trend.'));
   }
 
   if ((progress.cintura.diferencia ?? 0) < 0) {
-    recommendations.push('Mantener el plan actual si el objetivo incluye recomposición o reducción de grasa, porque la cintura viene bajando.');
+    recommendations.push(aiGeneratedContentTx(locale, 'Mantener el plan actual si el objetivo incluye recomposición o reducción de grasa, porque la cintura viene bajando.', 'Keep the current plan if the goal includes recomposition or fat reduction, because waist measurements are decreasing.'));
   }
 
   if ((progress.masaMuscular.diferencia ?? 0) > 0) {
-    recommendations.push('Sostener entrenamiento de fuerza progresivo y descanso, ya que la masa muscular muestra mejora.');
+    recommendations.push(aiGeneratedContentTx(locale, 'Sostener entrenamiento de fuerza progresivo y descanso, ya que la masa muscular muestra mejora.', 'Maintain progressive strength training and recovery, since muscle mass shows improvement.'));
   }
 
   if ((progress.peso.diferencia ?? 0) > 0 && (progress.cintura.diferencia ?? 0) > 0) {
-    recommendations.push('Revisar exceso calórico, calidad de alimentos y volumen semanal de actividad, porque subieron peso y cintura.');
+    recommendations.push(aiGeneratedContentTx(locale, 'Revisar exceso calórico, calidad de alimentos y volumen semanal de actividad, porque subieron peso y cintura.', 'Review calorie surplus, food quality, and weekly activity volume, because weight and waist measurements increased.'));
   }
 
   if ((progress.peso.diferencia ?? 0) < 0 && (progress.masaMuscular.diferencia ?? 0) < 0) {
-    recommendations.push('Evitar recortes agresivos de calorías y reforzar proteína/entrenamiento de fuerza para proteger masa muscular.');
+    recommendations.push(aiGeneratedContentTx(locale, 'Evitar recortes agresivos de calorías y reforzar proteína/entrenamiento de fuerza para proteger masa muscular.', 'Avoid aggressive calorie cuts and reinforce protein intake/strength training to protect muscle mass.'));
   }
 
   if (recommendations.length === 0) {
-    recommendations.push('Continuar con mediciones periódicas, adherencia a rutina y ajustes moderados según el objetivo del socio.');
+    recommendations.push(aiGeneratedContentTx(locale, 'Continuar con mediciones periódicas, adherencia a rutina y ajustes moderados según el objetivo del socio.', "Continue with periodic measurements, routine adherence, and moderate adjustments according to the member's goal."));
   }
 
-  recommendations.push('Validar cambios importantes de dieta o entrenamiento con profesional si existen lesiones, dolor o antecedentes clínicos.');
+  recommendations.push(aiGeneratedContentTx(locale, 'Validar cambios importantes de dieta o entrenamiento con profesional si existen lesiones, dolor o antecedentes clínicos.', 'Validate major diet or training changes with a professional if there are injuries, pain, or clinical history.'));
 
   return recommendations;
 }
 
-function buildAlerts(payload: RagEvolucionFisicaAssistantRequest, progress: RagEvolucionFisicaProgressSummary) {
+function buildAlerts(payload: RagEvolucionFisicaAssistantRequest, progress: RagEvolucionFisicaProgressSummary, locale: ReturnType<typeof normalizeAiGeneratedContentLocale>) {
   const alerts: string[] = [];
   const text = cleanText(`${payload.mensajeSocio ?? ''} ${payload.restricciones ?? ''}`, 2000)
     .toLowerCase()
@@ -229,15 +234,15 @@ function buildAlerts(payload: RagEvolucionFisicaAssistantRequest, progress: RagE
     .replace(/[\u0300-\u036f]/g, '');
 
   if (/\b(dolor|lesion|lesionado|rodilla|hombro|espalda|hernia)\b/.test(text)) {
-    alerts.push('Se detectó posible lesión/dolor. Evitar progresiones agresivas y validar con profesional.');
+    alerts.push(aiGeneratedContentTx(locale, 'Se detectó posible lesión/dolor. Evitar progresiones agresivas y validar con profesional.', 'Possible injury/pain detected. Avoid aggressive progressions and validate with a professional.'));
   }
 
   if (/\b(mareo|desmayo|pecho|taquicardia|presion|hipertension)\b/.test(text)) {
-    alerts.push('Se detectó posible señal cardiovascular o síntoma sensible. Requiere evaluación profesional antes de intensificar entrenamiento.');
+    alerts.push(aiGeneratedContentTx(locale, 'Se detectó posible señal cardiovascular o síntoma sensible. Requiere evaluación profesional antes de intensificar entrenamiento.', 'Possible cardiovascular signal or sensitive symptom detected. Professional evaluation is required before intensifying training.'));
   }
 
   if (progress.diasAnalizados !== null && progress.diasAnalizados <= 7 && Math.abs(progress.peso.diferencia ?? 0) >= 3) {
-    alerts.push('Cambio de peso brusco en pocos días. Revisar medición, hidratación y salud general.');
+    alerts.push(aiGeneratedContentTx(locale, 'Cambio de peso brusco en pocos días. Revisar medición, hidratación y salud general.', 'Abrupt weight change in a few days. Review the measurement, hydration, and general health.'));
   }
 
   return alerts;
@@ -247,6 +252,7 @@ async function buildRagContext(
   payload: RagEvolucionFisicaAssistantRequest,
   progress: RagEvolucionFisicaProgressSummary,
 ): Promise<RagEvolucionFisicaContextSummary> {
+  const locale = normalizeAiGeneratedContentLocale(payload.idioma);
   const warnings: string[] = [];
   const config = getRagConfig();
 
@@ -256,13 +262,13 @@ async function buildRagContext(
       used: false,
       query: '',
       results: [],
-      summary: 'RAG desactivado. Se usa análisis local seguro.',
-      warnings: ['RAG_ENABLED=false.'],
+      summary: aiGeneratedContentTx(locale, 'RAG desactivado. Se usa análisis local seguro.', 'RAG is disabled. Safe local analysis is used.'),
+      warnings: [translateAiGeneratedTechnicalText('RAG_ENABLED=false.', locale)],
     };
   }
 
-  if (config.provider === 'github' && !config.githubToken) warnings.push('Falta GITHUB_TOKEN.');
-  if (config.provider === 'openai' && !config.openaiApiKey) warnings.push('Falta OPENAI_API_KEY.');
+  if (config.provider === 'github' && !config.githubToken) warnings.push(translateAiGeneratedTechnicalText('Falta GITHUB_TOKEN.', locale));
+  if (config.provider === 'openai' && !config.openaiApiKey) warnings.push(translateAiGeneratedTechnicalText('Falta OPENAI_API_KEY.', locale));
 
   if (warnings.length > 0) {
     return {
@@ -270,7 +276,7 @@ async function buildRagContext(
       used: false,
       query: '',
       results: [],
-      summary: 'RAG configurado parcialmente. Se usa análisis local seguro.',
+      summary: aiGeneratedContentTx(locale, 'RAG configurado parcialmente. Se usa análisis local seguro.', 'RAG is partially configured. Safe local analysis is used.'),
       warnings,
     };
   }
@@ -301,8 +307,8 @@ async function buildRagContext(
       used: false,
       query,
       results: [],
-      summary: 'No se pudo consultar el RAG de evolución física. Se usa análisis local seguro.',
-      warnings: [`match_rag_chunks falló: ${error.message}`],
+      summary: aiGeneratedContentTx(locale, 'No se pudo consultar el RAG de evolución física. Se usa análisis local seguro.', 'The physical evolution RAG service could not be queried. Safe local analysis is used.'),
+      warnings: [translateAiGeneratedTechnicalText(`match_rag_chunks falló: ${error.message}`, locale)],
     };
   }
 
@@ -317,7 +323,7 @@ async function buildRagContext(
     matchThreshold,
     matchCount,
     results,
-    summary: buildRagSummary(results),
+    summary: buildRagSummary(results, locale),
     warnings,
   };
 }
@@ -331,13 +337,18 @@ export async function analyzeEvolucionFisicaWithRag(
     : user.id_socio;
 
   if (!socioId) {
-    throw new Error('Debe indicar socio_id o usar un usuario socio autenticado.');
+    throw new Error(aiGeneratedContentTx(payload.idioma, 'Debe indicar socio_id o usar un usuario socio autenticado.', 'You must provide socio_id or use an authenticated member user.'));
   }
 
+  const locale = normalizeAiGeneratedContentLocale(payload.idioma);
   const registros = await findAllEvolucionesSocioByIdSocio(user, socioId);
   const progress = buildEvolucionFisicaProgress(registros);
-  const recomendaciones = buildRecommendations(progress);
-  const alertas = buildAlerts(payload, progress);
+  const localizedProgress = {
+    ...progress,
+    tendenciaPrincipal: translateAiGeneratedTechnicalText(progress.tendenciaPrincipal, locale),
+  };
+  const recomendaciones = buildRecommendations(progress, locale);
+  const alertas = buildAlerts(payload, progress, locale);
 
   let ragContext: RagEvolucionFisicaContextSummary | undefined;
   let ragError: string | undefined;
@@ -345,7 +356,7 @@ export async function analyzeEvolucionFisicaWithRag(
   try {
     ragContext = await buildRagContext(payload, progress);
   } catch (error) {
-    ragError = error instanceof Error ? error.message : 'Error desconocido al consultar RAG de evolución física';
+    ragError = error instanceof Error ? translateAiGeneratedTechnicalText(error.message, locale) : translateAiGeneratedTechnicalText('Error desconocido al consultar RAG de evolución física', locale);
     console.warn('RAG de evolución física no disponible. Se usa análisis local seguro:', ragError);
   }
 
@@ -355,9 +366,9 @@ export async function analyzeEvolucionFisicaWithRag(
   ];
 
   const resumen = [
-    progress.tendenciaPrincipal,
+    localizedProgress.tendenciaPrincipal,
     ragContext?.summary,
-    warnings.length ? `Advertencias técnicas: ${warnings.join(' ')}` : '',
+    warnings.length ? aiGeneratedContentTx(locale, `Advertencias técnicas: ${warnings.join(' ')}`, `Technical warnings: ${warnings.join(' ')}`) : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -367,11 +378,11 @@ export async function analyzeEvolucionFisicaWithRag(
     ragConfigurado: Boolean(ragContext?.enabled),
     socio_id: socioId,
     registrosAnalizados: sortRowsAsc(registros).slice(-8).reverse(),
-    progreso: progress,
+    progreso: localizedProgress,
     resumen,
     recomendaciones,
     alertas: [...alertas, ...warnings],
-    disclaimers: BASE_EVOLUTION_DISCLAIMERS,
+    disclaimers: buildAiEvolutionBaseDisclaimers(locale),
     ragContext,
   };
 }

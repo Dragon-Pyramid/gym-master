@@ -7,6 +7,12 @@ import type {
   RagRutinasContextSummary,
   RagRutinasIdioma,
 } from '@/interfaces/ragRutinasAssistant.interface';
+import {
+  aiGeneratedContentTx,
+  normalizeAiGeneratedContentLocale,
+  translateAiGeneratedTechnicalList,
+  translateAiGeneratedTechnicalText,
+} from '@/utils/aiGeneratedContentI18n';
 
 export const dynamic = 'force-dynamic';
 
@@ -62,7 +68,7 @@ function normalizeDias(value: unknown): number {
 }
 
 function normalizeIdioma(value: unknown): RagRutinasIdioma {
-  return value === 'en' ? 'en' : 'es';
+  return normalizeAiGeneratedContentLocale(value) as RagRutinasIdioma;
 }
 
 function getRagCoachEndpoint(): string | null {
@@ -174,7 +180,7 @@ export async function POST(req: Request) {
         id_socio: body.id_socio,
       });
     } catch (error) {
-      internalRagError = error instanceof Error ? error.message : 'Error desconocido al consultar RAG interno';
+      internalRagError = error instanceof Error ? translateAiGeneratedTechnicalText(error.message, idioma) : translateAiGeneratedTechnicalText('Error desconocido al consultar RAG interno', idioma);
       console.warn('RAG interno de rutinas no disponible. Se usa fallback local:', internalRagError);
     }
 
@@ -186,7 +192,7 @@ export async function POST(req: Request) {
       try {
         ragRespuesta = await callRagCoach(ragPayload);
       } catch (error) {
-        ragError = error instanceof Error ? error.message : 'Error desconocido del RAG Coach';
+        ragError = error instanceof Error ? translateAiGeneratedTechnicalText(error.message, idioma) : translateAiGeneratedTechnicalText('Error desconocido del RAG Coach', idioma);
         console.warn('RAG Coach no disponible. Se usa fallback local:', ragError);
       }
     }
@@ -205,27 +211,28 @@ export async function POST(req: Request) {
 
     const ragContextUsed = Boolean(internalRagContext?.used);
     const modo: 'external_rag_bridge' | 'internal_rag' | 'local_fallback' = ragRespuesta ? 'external_rag_bridge' : ragContextUsed ? 'internal_rag' : 'local_fallback';
-    const warnings = [
+    const warnings = translateAiGeneratedTechnicalList([
       ...(Array.isArray(ragRespuesta?.advertencias) ? ragRespuesta.advertencias : []),
       ...(internalRagContext?.warnings ?? []),
       ...(internalRagError ? [internalRagError] : []),
-    ];
+      ...(ragError ? [ragError] : []),
+    ], idiomaFinal);
 
     const mensajeFinal =
       ragRespuesta?.mensajeFinal ||
       (ragContextUsed
-        ? 'Tu rutina se generó usando el generador formal de Gym Master y referencias reales recuperadas por el RAG Coach.'
-        : 'Tu rutina se generó en base a los datos indicados. Dirigite al menú Rutinas y allí la encontrarás.');
+        ? aiGeneratedContentTx(idiomaFinal, 'Tu rutina se generó usando el generador formal de Gym Master y referencias reales recuperadas por el RAG Coach.', "Your routine was generated using Gym Master's formal generator and real references retrieved by the RAG Coach.")
+        : aiGeneratedContentTx(idiomaFinal, 'Tu rutina se generó en base a los datos indicados. Dirigite al menú Rutinas y allí la encontrarás.', 'Your routine was generated based on the provided data. Go to the Routines menu to find it.'));
 
     const resumen =
       ragRespuesta?.resumen ||
       internalRagContext?.summary ||
-      'Se utilizó el generador formal de Gym Master con los parámetros seleccionados por el socio.';
+      aiGeneratedContentTx(idiomaFinal, 'Se utilizó el generador formal de Gym Master con los parámetros seleccionados por el socio.', "Gym Master's formal generator was used with the parameters selected by the member.");
 
     return NextResponse.json(
       {
         ok: true,
-        message: 'Rutina generada correctamente desde el asistente.',
+        message: aiGeneratedContentTx(idiomaFinal, 'Rutina generada correctamente desde el asistente.', 'Routine generated successfully from the assistant.'),
         data: {
           modo,
           ragConfigurado: ragConfigurado || Boolean(internalRagContext?.enabled),
@@ -247,7 +254,7 @@ export async function POST(req: Request) {
       { status: 200 }
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Error inesperado';
+    const message = error instanceof Error ? error.message : translateAiGeneratedTechnicalText('Error inesperado', 'es');
     const status = message.toLowerCase().includes('token') ? 401 : 500;
 
     console.error('Error en asistente RAG de rutinas:', error);

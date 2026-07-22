@@ -2816,6 +2816,7 @@ function getRequestBody(endpoint: EndpointDefinition, method: string) {
               value: {
                 message: "Quiero una rutina para ganar masa muscular 3 días por semana y cuidar la rodilla.",
                 socio_id: "me",
+                locale: "es",
               },
             },
             dieta: {
@@ -2823,6 +2824,7 @@ function getRequestBody(endpoint: EndpointDefinition, method: string) {
               value: {
                 message: "Quiero una dieta para bajar grasa sin perder músculo.",
                 socio_id: "me",
+                locale: "es",
               },
             },
             evolucion: {
@@ -2830,6 +2832,7 @@ function getRequestBody(endpoint: EndpointDefinition, method: string) {
               value: {
                 message: "Estoy estancado, analizá mi evolución física y decime qué ajustar.",
                 socio_id: "me",
+                locale: "es",
               },
             },
           },
@@ -3785,6 +3788,12 @@ export const openApiSpec = {
             nullable: true,
             example: "me",
             description: "UUID del socio o me para socio autenticado.",
+          },
+          locale: {
+            type: "string",
+            enum: ["es", "en"],
+            example: "en",
+            description: "Idioma activo de la UI para gobernar respuestas, acciones, sugerencias, QA y mensajes de seguridad generados por el Coach IA.",
           },
           conversationContext: {
             type: "object",

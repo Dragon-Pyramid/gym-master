@@ -28,9 +28,12 @@ export interface RagCoachConversationMemory {
   lastContextSummary?: string;
 }
 
+export type RagCoachChatLocale = 'es' | 'en';
+
 export interface RagCoachChatRequest {
   message: string;
   socio_id?: string;
+  locale?: RagCoachChatLocale;
   conversationContext?: RagCoachConversationMemory;
 }
 

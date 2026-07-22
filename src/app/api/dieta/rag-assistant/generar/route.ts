@@ -7,6 +7,13 @@ import type {
   RagDietasContextSummary,
   RagDietasIdioma,
 } from '@/interfaces/ragDietasAssistant.interface';
+import {
+  aiGeneratedContentTx,
+  buildAiDietBaseDisclaimers,
+  normalizeAiGeneratedContentLocale,
+  translateAiGeneratedTechnicalList,
+  translateAiGeneratedTechnicalText,
+} from '@/utils/aiGeneratedContentI18n';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +25,7 @@ function cleanText(value: unknown): string {
 }
 
 function normalizeIdioma(value: unknown): RagDietasIdioma {
-  return value === 'en' ? 'en' : 'es';
+  return normalizeAiGeneratedContentLocale(value) as RagDietasIdioma;
 }
 
 function validateDate(value: unknown) {
@@ -33,7 +40,7 @@ function validatePayload(body: Partial<RagDietasAssistantRequest>, fallbackSocio
   const fechaFin = validateDate(body.fecha_fin);
 
   if (!socioId || !objetivo || !fechaInicio || !fechaFin) {
-    throw new Error('Debe enviar socio_id, objetivo, fecha_inicio y fecha_fin.');
+    throw new Error(aiGeneratedContentTx(body.idioma, 'Debe enviar socio_id, objetivo, fecha_inicio y fecha_fin.', 'You must send socio_id, goal, start date, and end date.'));
   }
 
   return {
@@ -65,7 +72,7 @@ export async function POST(req: Request) {
     try {
       ragContext = await buildDietasRagContext(user, payload);
     } catch (error) {
-      ragError = error instanceof Error ? error.message : 'Error desconocido al consultar RAG de dietas';
+      ragError = error instanceof Error ? translateAiGeneratedTechnicalText(error.message, payload.idioma) : translateAiGeneratedTechnicalText('Error desconocido al consultar RAG de dietas', payload.idioma);
       console.warn('RAG interno de dietas no disponible. Se usa fallback local:', ragError);
     }
 
@@ -80,18 +87,16 @@ export async function POST(req: Request) {
     );
 
     const ragContextUsed = Boolean(ragContext?.used);
-    const warnings = [
+    const warnings = translateAiGeneratedTechnicalList([
       ...(ragContext?.warnings ?? []),
       ...(ragError ? [ragError] : []),
-    ];
-    const disclaimers = ragContext?.disclaimers ?? [
-      'La dieta generada es orientativa y no reemplaza la evaluación de un nutricionista matriculado.',
-    ];
+    ], payload.idioma);
+    const disclaimers = ragContext?.disclaimers ?? buildAiDietBaseDisclaimers(payload.idioma);
 
     return NextResponse.json(
       {
         ok: true,
-        message: 'Dieta generada correctamente desde el asistente RAG.',
+        message: aiGeneratedContentTx(payload.idioma, 'Dieta generada correctamente desde el asistente RAG.', 'Diet generated successfully from the RAG assistant.'),
         data: {
           modo: ragContextUsed ? 'internal_rag' : 'local_fallback',
           ragConfigurado: Boolean(ragContext?.enabled),
@@ -104,9 +109,9 @@ export async function POST(req: Request) {
             idioma: payload.idioma,
           },
           mensajeFinal: ragContextUsed
-            ? 'La dieta se generó con el generador formal de Gym Master y referencias nutricionales recuperadas por el RAG Coach.'
-            : 'La dieta se generó con el generador formal de Gym Master y fallback seguro.',
-          resumen: ragContext?.summary ?? 'Se utilizó el generador formal de Gym Master con los parámetros indicados.',
+            ? aiGeneratedContentTx(payload.idioma, 'La dieta se generó con el generador formal de Gym Master y referencias nutricionales recuperadas por el RAG Coach.', "The diet was generated with Gym Master's formal generator and nutrition references retrieved by the RAG Coach.")
+            : aiGeneratedContentTx(payload.idioma, 'La dieta se generó con el generador formal de Gym Master y fallback seguro.', "The diet was generated with Gym Master's formal generator and a safe fallback."),
+          resumen: ragContext?.summary ?? aiGeneratedContentTx(payload.idioma, 'Se utilizó el generador formal de Gym Master con los parámetros indicados.', "Gym Master's formal generator was used with the selected parameters."),
           advertencias: warnings,
           disclaimers,
           ragContext,
@@ -115,8 +120,8 @@ export async function POST(req: Request) {
       { status: 201 },
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Error inesperado';
-    const status = message.toLowerCase().includes('token') ? 401 : message.includes('Debe enviar') ? 400 : 500;
+    const message = error instanceof Error ? error.message : translateAiGeneratedTechnicalText('Error inesperado', 'es');
+    const status = message.toLowerCase().includes('token') ? 401 : (message.includes('Debe enviar') || message.toLowerCase().includes('must send')) ? 400 : 500;
 
     console.error('Error en asistente RAG de dietas:', error);
 
