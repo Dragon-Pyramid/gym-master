@@ -57,7 +57,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     tag: "Dragon Pyramid",
     summary: "Aviso de vencimiento y gracia Dragon Pyramid",
     description:
-      "Devuelve un resumen seguro para administradores del gimnasio con advertencias de licencia, pago vencido, próximo vencimiento o período de gracia. No bloquea el sistema; solo informa antes de la futura suspensión por falta de pago.",
+      "Devuelve un resumen seguro para administradores del gimnasio con advertencias de licencia, pago vencido, próximo vencimiento o período de gracia. Localiza títulos, mensajes y detalles según el header estándar Accept-Language (es/en); si no se envía o no es compatible, usa español. El bloqueo operativo depende del estado vigente de licencia suspendida o cancelada.",
     auth: true,
     admin: true,
     notImplemented: false,

@@ -32,8 +32,12 @@ const emptyDashboard: ComercialCodigosLabelsDashboard = {
   },
 };
 
-function formatCurrency(value?: number | null) {
-  return `$ ${Math.round(Number(value ?? 0)).toLocaleString('es-AR')}`;
+function formatCurrency(value: number | null | undefined, locale: GymMasterLocale) {
+  return new Intl.NumberFormat(locale === 'en' ? 'en-US' : 'es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    maximumFractionDigits: 0,
+  }).format(Number(value ?? 0));
 }
 
 function buildQrImageUrl(value?: string | null, size = 210) {
@@ -95,7 +99,7 @@ function printLabels(items: ComercialCodigoLabelItem[], columns: number, locale:
           <div class="brand">Gym Master</div>
           <div class="type">${escapeHtml(commercialLabelTypeForPrint(locale, item.target_type))}</div>
           <div class="title">${escapeHtml(item.nombre)}</div>
-          <div class="price">${escapeHtml(formatCurrency(item.precio))}</div>
+          <div class="price">${escapeHtml(formatCurrency(item.precio, locale))}</div>
           ${qrUrl ? `<img class="qr" src="${escapeHtml(qrUrl)}" alt="QR ${escapeHtml(code)}" />` : '<div class="no-code">' + escapeHtml(commercialLabelsPrintTx(locale, 'Sin código', 'No code')) + '</div>'}
           <div class="code">${escapeHtml(code || commercialLabelsPrintTx(locale, 'SIN CÓDIGO', 'NO CODE'))}</div>
           ${item.sku ? `<div class="small">SKU: ${escapeHtml(item.sku)}</div>` : ''}

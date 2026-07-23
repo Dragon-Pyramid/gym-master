@@ -7,6 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface RankingItem {
   nombre: string;
@@ -14,6 +15,8 @@ interface RankingItem {
 }
 
 export default function RankingAsistenciaTable() {
+  const { locale, t } = useI18n();
+  const currentYear = new Date().getFullYear();
   const [data, setData] = useState<RankingItem[]>([]);
   const [mes, setMes] = useState(new Date().getMonth() + 1);
   const [anio, setAnio] = useState(new Date().getFullYear());
@@ -30,22 +33,26 @@ export default function RankingAsistenciaTable() {
         <select
           value={mes}
           onChange={(e) => setMes(parseInt(e.target.value))}
+          aria-label={t('publicPages.attendanceRanking.month')}
           className='flex items-center justify-between w-32 h-10 px-3 py-2 text-sm border rounded-md border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
         >
           {Array.from({ length: 12 }, (_, i) => (
             <option key={i + 1} value={i + 1}>
-              {new Date(0, i).toLocaleString('es', { month: 'long' })}
+              {new Date(0, i).toLocaleString(locale === 'en' ? 'en-US' : 'es-AR', {
+                month: 'long',
+              })}
             </option>
           ))}
         </select>
         <select
           value={anio}
           onChange={(e) => setAnio(parseInt(e.target.value))}
+          aria-label={t('publicPages.attendanceRanking.year')}
           className='flex items-center justify-between w-32 h-10 px-3 py-2 text-sm border rounded-md border-input bg-background ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50'
         >
-          {Array.from({ length: 3 }, (_, i) => (
-            <option key={2023 + i} value={2023 + i}>
-              {2023 + i}
+          {Array.from({ length: 3 }, (_, i) => currentYear - 2 + i).map((year) => (
+            <option key={year} value={year}>
+              {year}
             </option>
           ))}
         </select>
@@ -53,9 +60,9 @@ export default function RankingAsistenciaTable() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Posición</TableHead>
-            <TableHead>Nombre</TableHead>
-            <TableHead>Días Asistidos</TableHead>
+            <TableHead>{t('publicPages.attendanceRanking.position')}</TableHead>
+            <TableHead>{t('publicPages.attendanceRanking.name')}</TableHead>
+            <TableHead>{t('publicPages.attendanceRanking.attendedDays')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

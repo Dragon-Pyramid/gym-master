@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -45,6 +45,7 @@ import { enviarMensajeCoachIa } from '@/services/ragCoachChatClient';
 import { fetchSociosApi } from '@/services/browser/socioApiClient';
 import { useAuthStore } from '@/stores/authStore';
 import { useI18n } from '@/i18n/I18nProvider';
+import { translateCoreLevel, translateCoreObjective } from '@/utils/coreSeedI18n';
 
 type ChatMessage = {
   id: string;
@@ -68,18 +69,24 @@ type ChatMessage = {
 
 const coachCapabilities = [
   {
-    title: 'Rutinas',
-    description: 'Genera planes usando objetivo, nivel, días y restricciones.',
+    titleEs: 'Rutinas',
+    titleEn: 'Routines',
+    descriptionEs: 'Genera planes usando objetivo, nivel, días y restricciones.',
+    descriptionEn: 'Generate plans using goals, level, days, and restrictions.',
     icon: Dumbbell,
   },
   {
-    title: 'Dietas',
-    description: 'Crea orientación nutricional con disclaimers de seguridad.',
+    titleEs: 'Dietas',
+    titleEn: 'Diets',
+    descriptionEs: 'Crea orientación nutricional con avisos de seguridad.',
+    descriptionEn: 'Create nutrition guidance with safety notices.',
     icon: Apple,
   },
   {
-    title: 'Evolución',
-    description: 'Analiza progreso físico y sugiere próximos ajustes.',
+    titleEs: 'Evolución',
+    titleEn: 'Evolution',
+    descriptionEs: 'Analiza progreso físico y sugiere próximos ajustes.',
+    descriptionEn: 'Analyze physical progress and suggest next adjustments.',
     icon: Activity,
   },
 ];
@@ -88,8 +95,11 @@ function createId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-function getDisplayName(user?: { nombre?: string | null; email?: string | null } | null) {
-  return user?.nombre?.trim() || user?.email?.trim() || 'socio';
+function getDisplayName(
+  user: { nombre?: string | null; email?: string | null } | null | undefined,
+  locale: string,
+) {
+  return user?.nombre?.trim() || user?.email?.trim() || coachTx(locale, 'socio', 'member');
 }
 
 function normalizeRole(value?: string | null) {
@@ -116,11 +126,11 @@ function normalizeSearchText(value?: string | null) {
     .trim();
 }
 
-function socioOptionLabel(socio: Socio) {
-  const name = socio.nombre_completo?.trim() || 'Socio sin nombre';
+function socioOptionLabel(socio: Socio, locale: string) {
+  const name = socio.nombre_completo?.trim() || coachTx(locale, 'Socio sin nombre', 'Unnamed member');
   const dni = socio.dni?.trim();
   const email = socio.email?.trim();
-  return [name, dni ? `DNI ${dni}` : null, email].filter(Boolean).join(' · ');
+  return [name, dni ? `${coachTx(locale, 'DNI', 'ID')} ${dni}` : null, email].filter(Boolean).join(' · ');
 }
 
 function shortSocioLabel(socio?: Socio | null) {
@@ -128,29 +138,29 @@ function shortSocioLabel(socio?: Socio | null) {
   return socio.nombre_completo?.trim() || socio.email?.trim() || socio.id_socio;
 }
 
-function actionLinkLabel(action: RagCoachChatActionResult) {
+function actionLinkLabel(action: RagCoachChatActionResult, locale: string) {
   if (action.viewLabel) return action.viewLabel;
-  if (action.type === 'routine_generated') return 'Ir a rutinas';
-  if (action.type === 'diet_generated') return 'Ir a dietas';
-  if (action.type === 'evolution_analyzed') return 'Ir a evolución física';
-  return 'Abrir';
+  if (action.type === 'routine_generated') return coachTx(locale, 'Ir a rutinas', 'Go to routines');
+  if (action.type === 'diet_generated') return coachTx(locale, 'Ir a dietas', 'Go to diets');
+  if (action.type === 'evolution_analyzed') return coachTx(locale, 'Ir a evolución física', 'Go to physical evolution');
+  return coachTx(locale, 'Abrir', 'Open');
 }
 
-function actionVisual(action: RagCoachChatActionResult) {
-  if (!action.ok) return { icon: AlertTriangle, label: 'Revisar', className: 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100' };
-  if (action.type === 'routine_generated') return { icon: Dumbbell, label: 'Rutina', className: 'border-cyan-200 bg-cyan-50 text-cyan-900 dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-100' };
-  if (action.type === 'diet_generated') return { icon: Apple, label: 'Dieta', className: 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100' };
-  if (action.type === 'evolution_analyzed') return { icon: Activity, label: 'Evolución', className: 'border-violet-200 bg-violet-50 text-violet-900 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-100' };
-  return { icon: MessageSquareText, label: 'Guía', className: 'border-slate-200 bg-slate-50 text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100' };
+function actionVisual(action: RagCoachChatActionResult, locale: string) {
+  if (!action.ok) return { icon: AlertTriangle, label: coachTx(locale, 'Revisar', 'Review'), className: 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100' };
+  if (action.type === 'routine_generated') return { icon: Dumbbell, label: coachTx(locale, 'Rutina', 'Routine'), className: 'border-cyan-200 bg-cyan-50 text-cyan-900 dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-100' };
+  if (action.type === 'diet_generated') return { icon: Apple, label: coachTx(locale, 'Dieta', 'Diet'), className: 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100' };
+  if (action.type === 'evolution_analyzed') return { icon: Activity, label: coachTx(locale, 'Evolución', 'Evolution'), className: 'border-violet-200 bg-violet-50 text-violet-900 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-100' };
+  return { icon: MessageSquareText, label: coachTx(locale, 'Guía', 'Guidance'), className: 'border-slate-200 bg-slate-50 text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100' };
 }
 
-function intentLabel(intent?: RagCoachChatIntent) {
-  if (intent === 'routine_request') return 'Rutina detectada';
-  if (intent === 'diet_request') return 'Dieta detectada';
-  if (intent === 'routine_and_diet_request') return 'Rutina + dieta';
-  if (intent === 'evolution_analysis_request') return 'Evolución detectada';
-  if (intent === 'general_guidance') return 'Orientación general';
-  if (intent === 'unknown') return 'Necesita más datos';
+function intentLabel(intent: RagCoachChatIntent | undefined, locale: string) {
+  if (intent === 'routine_request') return coachTx(locale, 'Rutina detectada', 'Routine detected');
+  if (intent === 'diet_request') return coachTx(locale, 'Dieta detectada', 'Diet detected');
+  if (intent === 'routine_and_diet_request') return coachTx(locale, 'Rutina + dieta', 'Routine + diet');
+  if (intent === 'evolution_analysis_request') return coachTx(locale, 'Evolución detectada', 'Evolution detected');
+  if (intent === 'general_guidance') return coachTx(locale, 'Orientación general', 'General guidance');
+  if (intent === 'unknown') return coachTx(locale, 'Necesita más datos', 'More data needed');
   return null;
 }
 
@@ -194,11 +204,11 @@ function getLatestContextMessage(messages: ChatMessage[]) {
   return [...messages].reverse().find((message) => message.role === 'assistant' && (message.contextSnapshot || message.contextSummary));
 }
 
-function contextConfidenceLabel(value?: 'alta' | 'media' | 'baja') {
-  if (value === 'alta') return 'Alta';
-  if (value === 'media') return 'Media';
-  if (value === 'baja') return 'Baja';
-  return 'Pendiente';
+function contextConfidenceLabel(value: 'alta' | 'media' | 'baja' | undefined, locale: string) {
+  if (value === 'alta') return coachTx(locale, 'Alta', 'High');
+  if (value === 'media') return coachTx(locale, 'Media', 'Medium');
+  if (value === 'baja') return coachTx(locale, 'Baja', 'Low');
+  return coachTx(locale, 'Pendiente', 'Pending');
 }
 
 function contextConfidenceClass(value?: 'alta' | 'media' | 'baja') {
@@ -208,19 +218,15 @@ function contextConfidenceClass(value?: 'alta' | 'media' | 'baja') {
   return 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-200';
 }
 
-function formatContextValue(value?: string | number | null) {
-  if (value === null || value === undefined || value === '') return '—';
-  return String(value);
-}
 
-function renderSources(sources: RagCoachChatSource[]) {
+function renderSources(sources: RagCoachChatSource[], locale: string) {
   if (!sources.length) return null;
 
   return (
     <div className="mt-3 rounded-xl border border-slate-200 bg-white/90 p-3 text-xs text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-950/70 dark:text-slate-200">
       <div className="mb-2 flex items-center gap-2 font-semibold text-slate-900 dark:text-white">
         <BookOpenCheck className="h-3.5 w-3.5 text-[#02a8e1]" />
-        Fuentes recuperadas
+        {coachTx(locale, 'Fuentes recuperadas', 'Retrieved sources')}
       </div>
       <div className="space-y-2">
         {sources.map((source, index) => {
@@ -231,7 +237,7 @@ function renderSources(sources: RagCoachChatSource[]) {
                 <span className="font-semibold text-slate-900 dark:text-white">{source.title}</span>
                 {similarity && (
                   <span className="rounded-full bg-cyan-100 px-2 py-0.5 text-[10px] font-semibold text-cyan-800 dark:bg-cyan-500/15 dark:text-cyan-100">
-                    similitud {similarity}
+                    {coachTx(locale, 'similitud', 'similarity')} {similarity}
                   </span>
                 )}
               </div>
@@ -250,8 +256,8 @@ function renderSources(sources: RagCoachChatSource[]) {
   );
 }
 
-function renderAction(action: RagCoachChatActionResult) {
-  const visual = actionVisual(action);
+function renderAction(action: RagCoachChatActionResult, locale: string) {
+  const visual = actionVisual(action, locale);
   const Icon = visual.icon;
   const qualityAudit = action.qualityAudit;
 
@@ -269,7 +275,7 @@ function renderAction(action: RagCoachChatActionResult) {
         {action.viewPath && (
           <Button size="sm" variant="outline" asChild className="h-9 shrink-0 bg-white/80 text-xs dark:bg-slate-950/50">
             <Link href={action.viewPath}>
-              {actionLinkLabel(action)}
+              {actionLinkLabel(action, locale)}
               <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
             </Link>
           </Button>
@@ -278,18 +284,18 @@ function renderAction(action: RagCoachChatActionResult) {
 
       {action.ragSummary && (
         <div className="mt-3 rounded-lg bg-white/70 p-2 text-xs leading-relaxed dark:bg-slate-950/40">
-          <strong>Resumen RAG:</strong> {action.ragSummary}
+          <strong>{coachTx(locale, 'Resumen RAG:', 'RAG summary:')}</strong> {action.ragSummary}
         </div>
       )}
 
-      {renderSources(action.sources ?? [])}
+      {renderSources(action.sources ?? [], locale)}
 
       {qualityAudit && (
         <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-950 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100">
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 font-semibold">
               <CheckCircle2 className="h-3.5 w-3.5" />
-              QA calidad {qualityAudit.domain}
+              {coachTx(locale, 'QA de calidad', 'Quality QA')} {qualityAudit.domain}
             </div>
             <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-bold text-emerald-900 dark:bg-slate-950/50 dark:text-emerald-100">
               {qualityAudit.score}% · {qualityAudit.statusLabel}
@@ -300,7 +306,7 @@ function renderAction(action: RagCoachChatActionResult) {
             {qualityAudit.checks.slice(0, 6).map((check) => (
               <div key={`${qualityAudit.domain}-${check.label}`} className="rounded-md bg-white/70 p-2 dark:bg-slate-950/40">
                 <div className="font-semibold">
-                  {check.status === 'blocked' ? 'Bloqueado' : check.status === 'warning' ? 'Advertencia' : 'OK'} · {check.label}
+                  {check.status === 'blocked' ? coachTx(locale, 'Bloqueado', 'Blocked') : check.status === 'warning' ? coachTx(locale, 'Advertencia', 'Warning') : 'OK'} · {check.label}
                 </div>
                 <div className="mt-0.5 opacity-90">{check.detail}</div>
               </div>
@@ -313,7 +319,7 @@ function renderAction(action: RagCoachChatActionResult) {
         <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
           <div className="mb-1 flex items-center gap-1.5 font-semibold">
             <ShieldCheck className="h-3.5 w-3.5" />
-            Seguridad aplicada
+            {coachTx(locale, 'Seguridad aplicada', 'Applied safety')}
           </div>
           <ul className="list-disc space-y-1 pl-4">
             {action.safetyNotes?.slice(0, 3).map((note) => <li key={note}>{note}</li>)}
@@ -325,7 +331,7 @@ function renderAction(action: RagCoachChatActionResult) {
         <div className="mt-3 rounded-lg border border-slate-200 bg-white/70 p-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-200">
           <div className="mb-1 flex items-center gap-1.5 font-semibold">
             <Info className="h-3.5 w-3.5" />
-            Observaciones
+            {coachTx(locale, 'Observaciones', 'Notes')}
           </div>
           <ul className="list-disc space-y-1 pl-4">
             {action.warnings?.slice(0, 3).map((warning) => <li key={warning}>{warning}</li>)}
@@ -340,8 +346,8 @@ export default function CoachIaPage() {
   const router = useRouter();
   const { user, isAuthenticated, initializeAuth, isInitialized } = useAuthStore();
   const { locale } = useI18n();
-  const c = (es: string, en: string) => coachTx(locale, es, en);
-  const displayName = useMemo(() => getDisplayName(user), [user]);
+  const c = useCallback((es: string, en: string) => coachTx(locale, es, en), [locale]);
+  const displayName = useMemo(() => getDisplayName(user, locale), [locale, user]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -364,7 +370,7 @@ export default function CoachIaPage() {
     const search = normalizeSearchText(socioSearch);
     const ordered = [...socios].sort((a, b) => {
       if (a.activo !== b.activo) return a.activo ? -1 : 1;
-      return (a.nombre_completo ?? '').localeCompare(b.nombre_completo ?? '', 'es');
+      return (a.nombre_completo ?? '').localeCompare(b.nombre_completo ?? '', locale === 'en' ? 'en' : 'es');
     });
 
     if (!search) return ordered.slice(0, 80);
@@ -380,7 +386,7 @@ export default function CoachIaPage() {
         return haystack.includes(search);
       })
       .slice(0, 80);
-  }, [socioSearch, socios]);
+  }, [locale, socioSearch, socios]);
   const selectedSocio = useMemo(
     () => socios.find((socio) => socio.id_socio === selectedSocioId) ?? null,
     [selectedSocioId, socios],
@@ -392,7 +398,7 @@ export default function CoachIaPage() {
       c('Estoy estancado, analizá mi evolución física', 'I am stuck, analyze my physical evolution'),
       c('No sé por dónde empezar, quiero mejorar mi físico', 'I do not know where to start, I want to improve my physique'),
     ],
-    [locale],
+    [c],
   );
 
   useEffect(() => {
@@ -419,7 +425,7 @@ export default function CoachIaPage() {
       })
       .catch((error) => {
         if (!isMounted) return;
-        setSociosError(error instanceof Error ? error.message : 'No se pudo cargar el listado de socios.');
+        setSociosError(error instanceof Error ? error.message : c('No se pudo cargar el listado de socios.', 'The member list could not be loaded.'));
       })
       .finally(() => {
         if (isMounted) setSociosLoading(false);
@@ -428,7 +434,7 @@ export default function CoachIaPage() {
     return () => {
       isMounted = false;
     };
-  }, [isAdminSession, isAuthenticated, isInitialized]);
+  }, [c, isAdminSession, isAuthenticated, isInitialized]);
 
   useEffect(() => {
     if (!isInitialized || !isAuthenticated || messages.length > 0) return;
@@ -445,7 +451,7 @@ export default function CoachIaPage() {
         nextBestStep: c('Contame tu objetivo, disponibilidad semanal, nivel y restricciones.', 'Tell me your goal, weekly availability, level, and restrictions.'),
       },
     ]);
-  }, [displayName, isAuthenticated, isInitialized, localizedQuickPrompts, messages.length, locale]);
+  }, [c, displayName, isAuthenticated, isInitialized, localizedQuickPrompts, messages.length]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -624,7 +630,7 @@ export default function CoachIaPage() {
                             </option>
                             {filteredSocios.map((socio) => (
                               <option key={socio.id_socio} value={socio.id_socio}>
-                                {socioOptionLabel(socio)}{socio.activo ? '' : c(' · Inactivo', ' · Inactive')}
+                                {socioOptionLabel(socio, locale)}{socio.activo ? '' : c(' · Inactivo', ' · Inactive')}
                               </option>
                             ))}
                           </select>
@@ -673,8 +679,8 @@ export default function CoachIaPage() {
                             <Bot className="h-5 w-5" />
                           </div>
                           <div>
-                            <h2 className="text-xl font-black text-slate-950 dark:text-white">Coach IA Gym Master</h2>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">Chat unificado · Rutinas · Dietas · Evolución</p>
+                            <h2 className="text-xl font-black text-slate-950 dark:text-white">{c('Coach IA Gym Master', 'Gym Master AI Coach')}</h2>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">{c('Chat unificado · Rutinas · Dietas · Evolución', 'Unified chat · Routines · Diets · Evolution')}</p>
                           </div>
                         </div>
                       </div>
@@ -682,11 +688,11 @@ export default function CoachIaPage() {
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100">
                           <ShieldCheck className="h-3.5 w-3.5" />
-                          Safety fallback
+                          {c('Fallback de seguridad', 'Safety fallback')}
                         </span>
                         <Button type="button" size="sm" variant="outline" onClick={resetConversation} disabled={loading}>
                           <RefreshCcw className="mr-1.5 h-3.5 w-3.5" />
-                          Reiniciar
+                          {c('Reiniciar', 'Reset')}
                         </Button>
                       </div>
                     </div>
@@ -697,15 +703,15 @@ export default function CoachIaPage() {
                       {messages.length === 0 && !loading && (
                         <div className="flex h-full min-h-[360px] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center dark:border-slate-700 dark:bg-slate-900/60">
                           <Bot className="h-10 w-10 text-[#02a8e1]" />
-                          <h3 className="mt-3 text-lg font-bold text-slate-950 dark:text-white">El Coach está listo</h3>
+                          <h3 className="mt-3 text-lg font-bold text-slate-950 dark:text-white">{c('El Coach está listo', 'The Coach is ready')}</h3>
                           <p className="mt-1 max-w-md text-sm text-slate-500 dark:text-slate-400">
-                            Escribí una consulta o elegí una sugerencia para generar una respuesta contextual.
+                            {c('Escribí una consulta o elegí una sugerencia para generar una respuesta contextual.', 'Write a question or choose a suggestion to generate a contextual response.')}
                           </p>
                         </div>
                       )}
 
                       {messages.map((message) => {
-                        const label = intentLabel(message.intent);
+                        const label = intentLabel(message.intent, locale);
                         return (
                           <div
                             key={message.id}
@@ -735,7 +741,7 @@ export default function CoachIaPage() {
 
                               {message.contextSummary && message.role === 'assistant' && (
                                 <div className="mt-3 rounded-xl border border-cyan-100 bg-cyan-50 px-3 py-2 text-xs text-cyan-950 dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-100">
-                                  <strong>Contexto aplicado:</strong> {message.contextSummary}
+                                  <strong>{c('Contexto aplicado:', 'Applied context:')}</strong> {message.contextSummary}
                                 </div>
                               )}
 
@@ -743,16 +749,16 @@ export default function CoachIaPage() {
                                 <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-emerald-950 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100">
                                   <div className="mb-2 flex items-center gap-1.5 font-semibold">
                                     <Target className="h-3.5 w-3.5" />
-                                    Memoria contextual
+                                    {c('Memoria contextual', 'Contextual memory')}
                                   </div>
                                   <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-                                    <span>Objetivo: {formatContextValue(message.contextSnapshot.objetivoLabel)}</span>
-                                    <span>Nivel: {formatContextValue(message.contextSnapshot.nivelLabel)}</span>
-                                    <span>Rutinas: {message.contextSnapshot.rutinasTotal}</span>
-                                    <span>Dietas: {message.contextSnapshot.dietasTotal}</span>
-                                    <span>Evolución: {message.contextSnapshot.evolucionTotal}</span>
-                                    <span>Asistencia 7d: {message.contextSnapshot.asistencia7Dias}</span>
-                                    <span>Score: {message.contextSnapshot.readinessScore}%</span>
+                                    <span>{c('Objetivo:', 'Goal:')} {translateCoreObjective(message.contextSnapshot.objetivoLabel, locale)}</span>
+                                    <span>{c('Nivel:', 'Level:')} {translateCoreLevel(message.contextSnapshot.nivelLabel, locale)}</span>
+                                    <span>{c('Rutinas:', 'Routines:')} {message.contextSnapshot.rutinasTotal}</span>
+                                    <span>{c('Dietas:', 'Diets:')} {message.contextSnapshot.dietasTotal}</span>
+                                    <span>{c('Evolución:', 'Evolution:')} {message.contextSnapshot.evolucionTotal}</span>
+                                    <span>{c('Asistencia 7d:', '7d attendance:')} {message.contextSnapshot.asistencia7Dias}</span>
+                                    <span>{c('Puntaje:', 'Score:')} {message.contextSnapshot.readinessScore}%</span>
                                     <span>{message.contextSnapshot.readinessLabel}</span>
                                   </div>
                                 </div>
@@ -760,25 +766,25 @@ export default function CoachIaPage() {
 
                               {message.safetySummary && message.role === 'assistant' && (
                                 <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
-                                  <strong>Seguridad:</strong> {message.safetySummary}
+                                  <strong>{c('Seguridad:', 'Safety:')}</strong> {message.safetySummary}
                                 </div>
                               )}
 
                               {message.qaSummary && message.role === 'assistant' && (
                                 <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-emerald-950 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100">
-                                  <strong>QA IA/RAG:</strong> {message.qaSummary}
+                                  <strong>{c('QA IA/RAG:', 'AI/RAG QA:')}</strong> {message.qaSummary}
                                 </div>
                               )}
 
                               {(message.actions?.length ?? 0) > 0 && (
                                 <div className="mt-3 space-y-3">
-                                  {message.actions?.map(renderAction)}
+                                  {message.actions?.map((action) => renderAction(action, locale))}
                                 </div>
                               )}
 
                               {(message.contextHints?.length ?? 0) > 0 && message.role === 'assistant' && (
                                 <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-950/70 dark:text-slate-200">
-                                  <div className="mb-1 font-semibold">Pistas del contexto</div>
+                                  <div className="mb-1 font-semibold">{c('Pistas del contexto', 'Context hints')}</div>
                                   <ul className="list-disc space-y-1 pl-4">
                                     {message.contextHints?.slice(0, 3).map((hint) => <li key={hint}>{hint}</li>)}
                                   </ul>
@@ -787,7 +793,7 @@ export default function CoachIaPage() {
 
                               {(message.memoryHighlights?.length ?? 0) > 0 && message.role === 'assistant' && (
                                 <div className="mt-3 rounded-xl border border-violet-100 bg-violet-50 px-3 py-2 text-xs text-violet-950 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-100">
-                                  <div className="mb-1 font-semibold">Memoria recordada</div>
+                                  <div className="mb-1 font-semibold">{c('Memoria recordada', 'Remembered context')}</div>
                                   <ul className="list-disc space-y-1 pl-4">
                                     {message.memoryHighlights?.slice(0, 3).map((item) => <li key={item}>{item}</li>)}
                                   </ul>
@@ -796,7 +802,7 @@ export default function CoachIaPage() {
 
                               {(message.memoryTrace?.length ?? 0) > 0 && message.role === 'assistant' && (
                                 <details className="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-300">
-                                  <summary className="cursor-pointer font-semibold">Trazabilidad contextual</summary>
+                                  <summary className="cursor-pointer font-semibold">{c('Trazabilidad contextual', 'Context trace')}</summary>
                                   <ul className="mt-2 list-disc space-y-1 pl-4">
                                     {message.memoryTrace?.slice(0, 5).map((item) => <li key={item}>{item}</li>)}
                                   </ul>
@@ -807,7 +813,7 @@ export default function CoachIaPage() {
                                 <div className="mt-3 flex flex-wrap gap-1.5">
                                   {message.missingParams?.map((param) => (
                                     <span key={param} className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                                      falta: {param}
+                                      {c('falta:', 'missing:')} {param}
                                     </span>
                                   ))}
                                 </div>
@@ -815,7 +821,7 @@ export default function CoachIaPage() {
 
                               {message.nextBestStep && message.role === 'assistant' && (
                                 <div className="mt-3 rounded-xl border border-violet-100 bg-violet-50 px-3 py-2 text-xs text-violet-950 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-100">
-                                  <strong>Próximo paso:</strong> {message.nextBestStep}
+                                  <strong>{c('Próximo paso:', 'Next step:')}</strong> {message.nextBestStep}
                                 </div>
                               )}
 
@@ -851,8 +857,8 @@ export default function CoachIaPage() {
                             <Loader2 className="h-4 w-4 animate-spin" />
                           </div>
                           <div>
-                            <div className="font-semibold text-slate-900 dark:text-white">Analizando contexto del socio</div>
-                            <div className="text-xs text-slate-500 dark:text-slate-400">Buscando rutinas, dietas, evolución y referencias RAG disponibles...</div>
+                            <div className="font-semibold text-slate-900 dark:text-white">{c('Analizando contexto del socio', 'Analyzing member context')}</div>
+                            <div className="text-xs text-slate-500 dark:text-slate-400">{c('Buscando rutinas, dietas, evolución y referencias RAG disponibles...', 'Searching available routines, diets, evolution data, and RAG references...')}</div>
                           </div>
                         </div>
                       )}
@@ -879,7 +885,7 @@ export default function CoachIaPage() {
                       <textarea
                         value={input}
                         onChange={(event) => setInput(event.target.value)}
-                        placeholder="Escribí tu consulta: quiero rutina, dieta, revisar progreso..."
+                        placeholder={c('Escribí tu consulta: quiero rutina, dieta, revisar progreso...', 'Write your question: I want a routine, diet, or progress review...')}
                         className="min-h-14 flex-1 resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#02a8e1] focus:ring-2 focus:ring-cyan-100 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-cyan-500/20"
                         maxLength={1600}
                         onKeyDown={(event) => {
@@ -891,7 +897,7 @@ export default function CoachIaPage() {
                       />
                       <Button type="submit" disabled={loading || !input.trim()} className="h-14 rounded-2xl bg-[#02a8e1] px-5 font-semibold hover:bg-[#0288b1]">
                         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                        <span className="ml-2 sm:hidden md:inline">Enviar</span>
+                        <span className="ml-2 sm:hidden md:inline">{c('Enviar', 'Send')}</span>
                       </Button>
                     </form>
                   </CardContent>
@@ -902,40 +908,40 @@ export default function CoachIaPage() {
                     <CardHeader className="pb-2">
                       <div className="flex items-center gap-2">
                         <History className="h-5 w-5 text-[#02a8e1]" />
-                        <h2 className="text-base font-bold text-slate-950 dark:text-white">Memoria contextual</h2>
+                        <h2 className="text-base font-bold text-slate-950 dark:text-white">{c('Memoria contextual', 'Contextual memory')}</h2>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
                       <div className={`rounded-2xl border px-3 py-2 text-xs font-semibold ${contextConfidenceClass(latestContextMessage?.contextConfidence)}`}>
-                        Confianza: {contextConfidenceLabel(latestContextMessage?.contextConfidence)}
+                        {c('Confianza:', 'Confidence:')} {contextConfidenceLabel(latestContextMessage?.contextConfidence, locale)}
                       </div>
                       {latestContextSnapshot ? (
                         <div className="space-y-2 rounded-2xl bg-slate-50 p-3 text-xs dark:bg-slate-950/60">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-slate-500 dark:text-slate-400">Objetivo</span>
-                            <strong className="text-right text-slate-900 dark:text-white">{formatContextValue(latestContextSnapshot.objetivoLabel)}</strong>
+                            <span className="text-slate-500 dark:text-slate-400">{c('Objetivo', 'Goal')}</span>
+                            <strong className="text-right text-slate-900 dark:text-white">{translateCoreObjective(latestContextSnapshot.objetivoLabel, locale)}</strong>
                           </div>
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-slate-500 dark:text-slate-400">Nivel</span>
-                            <strong className="text-right text-slate-900 dark:text-white">{formatContextValue(latestContextSnapshot.nivelLabel)}</strong>
+                            <span className="text-slate-500 dark:text-slate-400">{c('Nivel', 'Level')}</span>
+                            <strong className="text-right text-slate-900 dark:text-white">{translateCoreLevel(latestContextSnapshot.nivelLabel, locale)}</strong>
                           </div>
                           <div className="grid grid-cols-3 gap-2 pt-2 text-center">
                             <div className="rounded-xl bg-white p-2 dark:bg-slate-900">
                               <div className="font-black text-slate-950 dark:text-white">{latestContextSnapshot.rutinasTotal}</div>
-                              <div className="text-[10px]">rutinas</div>
+                              <div className="text-[10px]">{c('rutinas', 'routines')}</div>
                             </div>
                             <div className="rounded-xl bg-white p-2 dark:bg-slate-900">
                               <div className="font-black text-slate-950 dark:text-white">{latestContextSnapshot.dietasTotal}</div>
-                              <div className="text-[10px]">dietas</div>
+                              <div className="text-[10px]">{c('dietas', 'diets')}</div>
                             </div>
                             <div className="rounded-xl bg-white p-2 dark:bg-slate-900">
                               <div className="font-black text-slate-950 dark:text-white">{latestContextSnapshot.evolucionTotal}</div>
-                              <div className="text-[10px]">evolución</div>
+                              <div className="text-[10px]">{c('evolución', 'evolution')}</div>
                             </div>
                           </div>
                           <div className="rounded-xl border border-slate-200 bg-white p-2 dark:border-slate-800 dark:bg-slate-900">
                             <div className="mb-1 flex items-center justify-between text-[11px]">
-                              <span>Score contextual</span>
+                              <span>{c('Puntaje contextual', 'Context score')}</span>
                               <strong>{latestContextSnapshot.readinessScore}%</strong>
                             </div>
                             <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
@@ -945,12 +951,12 @@ export default function CoachIaPage() {
                         </div>
                       ) : (
                         <p className="rounded-2xl bg-slate-50 p-3 text-xs dark:bg-slate-950/60">
-                          Todavía no hay memoria contextual calculada. Enviá una consulta para que el Coach lea el contexto del socio.
+                          {c('Todavía no hay memoria contextual calculada. Enviá una consulta para que el Coach lea el contexto del socio.', 'There is no calculated contextual memory yet. Send a question so the Coach can read the member context.')}
                         </p>
                       )}
                       {(latestContextMessage?.memoryHighlights?.length ?? 0) > 0 && (
                         <div className="space-y-1 rounded-2xl border border-slate-200 p-3 text-xs dark:border-slate-700">
-                          <div className="font-semibold text-slate-950 dark:text-white">Recordado</div>
+                          <div className="font-semibold text-slate-950 dark:text-white">{c('Recordado', 'Remembered')}</div>
                           {latestContextMessage?.memoryHighlights?.slice(0, 3).map((item) => (
                             <p key={item}>• {item}</p>
                           ))}
@@ -963,16 +969,16 @@ export default function CoachIaPage() {
                     <CardHeader className="pb-2">
                       <div className="flex items-center gap-2">
                         <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                        <h2 className="text-base font-bold text-slate-950 dark:text-white">Checklist de calidad</h2>
+                        <h2 className="text-base font-bold text-slate-950 dark:text-white">{c('Checklist de calidad', 'Quality checklist')}</h2>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
                       {[
-                        'Memoria conversacional visible.',
-                        'Contexto operativo del socio resumido.',
-                        'Fallback seguro para señales sensibles.',
-                        'Acciones claras para ver rutina, dieta o evolución.',
-                        'Diseño responsive sin scroll horizontal.',
+                        c('Memoria conversacional visible.', 'Visible conversational memory.'),
+                        c('Contexto operativo del socio resumido.', 'Summarized operational member context.'),
+                        c('Fallback seguro para señales sensibles.', 'Safe fallback for sensitive signals.'),
+                        c('Acciones claras para ver rutina, dieta o evolución.', 'Clear actions to view routines, diets, or evolution.'),
+                        c('Diseño responsive sin scroll horizontal.', 'Responsive design without horizontal scrolling.'),
                       ].map((item) => (
                         <div key={item} className="flex items-start gap-2 rounded-xl bg-slate-50 p-2 dark:bg-slate-950/60">
                           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
@@ -986,19 +992,19 @@ export default function CoachIaPage() {
                     <CardHeader className="pb-2">
                       <div className="flex items-center gap-2">
                         <Sparkles className="h-5 w-5 text-[#02a8e1]" />
-                        <h2 className="text-base font-bold text-slate-950 dark:text-white">Qué puede hacer</h2>
+                        <h2 className="text-base font-bold text-slate-950 dark:text-white">{c('Qué puede hacer', 'What it can do')}</h2>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
                       {coachCapabilities.map((capability) => {
                         const Icon = capability.icon;
                         return (
-                          <div key={capability.title} className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-950/60">
+                          <div key={capability.titleEs} className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-950/60">
                             <div className="flex items-center gap-2 text-sm font-bold text-slate-950 dark:text-white">
                               <Icon className="h-4 w-4 text-[#02a8e1]" />
-                              {capability.title}
+                              {c(capability.titleEs, capability.titleEn)}
                             </div>
-                            <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">{capability.description}</p>
+                            <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">{c(capability.descriptionEs, capability.descriptionEn)}</p>
                           </div>
                         );
                       })}
@@ -1009,9 +1015,9 @@ export default function CoachIaPage() {
                     <CardContent className="p-4 text-xs leading-relaxed text-amber-950 dark:text-amber-100">
                       <div className="mb-2 flex items-center gap-2 font-bold">
                         <AlertTriangle className="h-4 w-4" />
-                        Nota importante
+                        {c('Nota importante', 'Important note')}
                       </div>
-                      El Coach IA orienta y ayuda a organizar información del gimnasio. No reemplaza evaluación médica, nutricional ni profesional cuando hay lesiones, síntomas o condiciones clínicas.
+                      {c('El Coach IA orienta y ayuda a organizar información del gimnasio. No reemplaza evaluación médica, nutricional ni profesional cuando hay lesiones, síntomas o condiciones clínicas.', 'The AI Coach provides guidance and helps organize gym information. It does not replace medical, nutritional, or professional evaluation for injuries, symptoms, or clinical conditions.')}
                     </CardContent>
                   </Card>
                 </aside>

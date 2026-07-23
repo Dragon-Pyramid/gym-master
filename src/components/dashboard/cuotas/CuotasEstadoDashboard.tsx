@@ -13,21 +13,21 @@ import { useI18n } from '@/i18n/I18nProvider';
 
 type TranslationFn = (key: string, params?: Record<string, string | number | boolean | null | undefined>) => string;
 
-function formatDate(value: string | null): string {
+function formatDate(value: string | null, locale: string): string {
   if (!value) return '-';
 
   const date = new Date(`${value}T00:00:00`);
   if (Number.isNaN(date.getTime())) return value;
 
-  return new Intl.DateTimeFormat('es-AR', {
+  return new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'es-AR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
   }).format(date);
 }
 
-function formatMoney(value: number): string {
-  return new Intl.NumberFormat('es-AR', {
+function formatMoney(value: number, locale: string): string {
+  return new Intl.NumberFormat(locale === 'en' ? 'en-US' : 'es-AR', {
     style: 'currency',
     currency: 'ARS',
     maximumFractionDigits: 0,
@@ -87,9 +87,11 @@ function EstadoBadge({
 function SociosCriticosTable({
   socios,
   t,
+  locale,
 }: {
   socios: EstadoCuotaSocio[];
   t: TranslationFn;
+  locale: string;
 }) {
   if (socios.length === 0) {
     return (
@@ -119,8 +121,8 @@ function SociosCriticosTable({
               <td className='px-4 py-3'>
                 <EstadoBadge estado={socio.estado_cuota} t={t} />
               </td>
-              <td className='px-4 py-3'>{formatDate(socio.ultimo_pago)}</td>
-              <td className='px-4 py-3'>{formatDate(socio.periodo_hasta)}</td>
+              <td className='px-4 py-3'>{formatDate(socio.ultimo_pago, locale)}</td>
+              <td className='px-4 py-3'>{formatDate(socio.periodo_hasta, locale)}</td>
               <td className='px-4 py-3'>{socio.dias_vencido}</td>
               <td className='px-4 py-3 capitalize'>{paymentMethodLabel(socio.metodo_pago, t)}</td>
             </tr>
@@ -132,7 +134,7 @@ function SociosCriticosTable({
 }
 
 export default function CuotasEstadoDashboard() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [data, setData] = useState<AdminCuotasEstadoResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -154,7 +156,7 @@ export default function CuotasEstadoDashboard() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [locale]);
 
   const sociosCriticos = useMemo(() => {
     if (!data) return [];
@@ -278,7 +280,7 @@ export default function CuotasEstadoDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className='text-2xl font-bold'>{formatMoney(totalCobrado)}</div>
+            <div className='text-2xl font-bold'>{formatMoney(totalCobrado, locale)}</div>
           </CardContent>
         </Card>
       </div>
@@ -289,7 +291,7 @@ export default function CuotasEstadoDashboard() {
             <CardTitle>{t('adminDashboard.quotas.criticalMembers')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <SociosCriticosTable socios={sociosCriticos} t={t} />
+            <SociosCriticosTable socios={sociosCriticos} t={t} locale={locale} />
           </CardContent>
         </Card>
 
@@ -318,7 +320,7 @@ export default function CuotasEstadoDashboard() {
                       })}
                     </p>
                   </div>
-                  <p className='font-bold'>{formatMoney(item.total_pagado)}</p>
+                  <p className='font-bold'>{formatMoney(item.total_pagado, locale)}</p>
                 </div>
               ))
             )}

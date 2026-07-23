@@ -135,7 +135,7 @@ export default function VentaTable({
             <TableCell className='capitalize'>
               {c((venta.metodo_pago ?? 'efectivo').replace('_', ' '))}
             </TableCell>
-            <TableCell className='font-semibold'>{formatCurrencyARS(venta.total)}</TableCell>
+            <TableCell className='font-semibold'>{formatCurrencyARS(venta.total, locale)}</TableCell>
             <TableCell>{venta.fecha}</TableCell>
             <TableCell>
               <EstadoBadge venta={venta} />

@@ -26,8 +26,12 @@ import {
 import { descargarEvolucionFisicaPdf } from "@/utils/evolucionFisicaPdf";
 import { formatFrontendDate } from '@/utils/dateFormat';
 import { useI18n } from "@/i18n/I18nProvider";
+import type { GymMasterLocale } from "@/i18n/config";
 
-const formatSocioName = (socio: SocioBasico) => {
+const evolutionTx = (locale: GymMasterLocale, es: string, en: string) =>
+  locale === "en" ? en : es;
+
+const formatSocioName = (socio: SocioBasico, locale: GymMasterLocale) => {
   const nombreCompleto = socio.nombre_completo;
 
   if (nombreCompleto?.trim()) {
@@ -48,16 +52,18 @@ const formatSocioName = (socio: SocioBasico) => {
     .replace(/\s+/g, " ")
     .trim();
 
-  return fullName || email || socio.id_socio || socio.id || "Socio";
+  return fullName || email || socio.id_socio || socio.id || evolutionTx(locale, "Socio", "Member");
 };
 
 const getSocioId = (socio: SocioBasico) => socio.id_socio || socio.id || "";
 
-const formatDate = (value?: string | Date | null) => {
+const formatDate = (value: string | Date | null | undefined, locale: GymMasterLocale) => {
   if (!value) return "";
 
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "" : formatFrontendDate(value, 'es-AR', "");
+  return Number.isNaN(date.getTime())
+    ? ""
+    : formatFrontendDate(value, locale === "en" ? "en-US" : "es-AR", "");
 };
 
 
@@ -75,28 +81,35 @@ interface DashboardChartSnapshot {
   legends?: DashboardChartLegendItem[];
 }
 
-const getChartLegends = (title: string): DashboardChartLegendItem[] => {
-  const normalizedTitle = title.trim().toLowerCase();
+const getChartLegends = (
+  title: string,
+  locale: GymMasterLocale,
+): DashboardChartLegendItem[] => {
+  const normalizedTitle = title
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
 
-  if (normalizedTitle.includes("peso")) {
+  if (normalizedTitle.includes("peso") || normalizedTitle.includes("weight")) {
     return [
-      { label: "Peso", color: "#02a8e1" },
-      { label: "IMC", color: "#6d28d9" },
+      { label: evolutionTx(locale, "Peso", "Weight"), color: "#02a8e1" },
+      { label: evolutionTx(locale, "IMC", "BMI"), color: "#6d28d9" },
     ];
   }
 
-  if (normalizedTitle.includes("composición") || normalizedTitle.includes("composicion")) {
+  if (normalizedTitle.includes("composicion") || normalizedTitle.includes("composition")) {
     return [
-      { label: "% grasa", color: "#f97316" },
-      { label: "Masa muscular", color: "#16a34a" },
+      { label: evolutionTx(locale, "% grasa", "Body fat %"), color: "#f97316" },
+      { label: evolutionTx(locale, "Masa muscular", "Muscle mass"), color: "#16a34a" },
     ];
   }
 
-  if (normalizedTitle.includes("medidas")) {
+  if (normalizedTitle.includes("medidas") || normalizedTitle.includes("measurements")) {
     return [
-      { label: "Cintura", color: "#0f172a" },
-      { label: "Pecho", color: "#0284c7" },
-      { label: "Cadera", color: "#db2777" },
+      { label: evolutionTx(locale, "Cintura", "Waist"), color: "#0f172a" },
+      { label: evolutionTx(locale, "Pecho", "Chest"), color: "#0284c7" },
+      { label: evolutionTx(locale, "Cadera", "Hips"), color: "#db2777" },
     ];
   }
 
@@ -112,6 +125,7 @@ const waitForChartPaint = () =>
 
 const svgToPngDataUrl = async (
   svgElement: SVGSVGElement,
+  locale: GymMasterLocale,
   scale = 2
 ): Promise<{ dataUrl: string; width: number; height: number } | null> => {
   const rect = svgElement.getBoundingClientRect();
@@ -158,7 +172,16 @@ const svgToPngDataUrl = async (
     const image = await new Promise<HTMLImageElement>((resolve, reject) => {
       const img = new Image();
       img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error("No se pudo capturar el gráfico"));
+      img.onerror = () =>
+        reject(
+          new Error(
+            evolutionTx(
+              locale,
+              "No se pudo capturar el gráfico",
+              "The chart could not be captured"
+            )
+          )
+        );
       img.src = url;
     });
 
@@ -183,7 +206,7 @@ const svgToPngDataUrl = async (
   }
 };
 
-const captureDashboardChartSnapshots = async (): Promise<DashboardChartSnapshot[]> => {
+const captureDashboardChartSnapshots = async (locale: GymMasterLocale): Promise<DashboardChartSnapshot[]> => {
   if (typeof document === "undefined") return [];
 
   await waitForChartPaint();
@@ -201,10 +224,10 @@ const captureDashboardChartSnapshots = async (): Promise<DashboardChartSnapshot[
     if (!svg) continue;
 
     try {
-      const png = await svgToPngDataUrl(svg);
+      const png = await svgToPngDataUrl(svg, locale);
       if (!png) continue;
 
-      const title = card.dataset.chartTitle || "Gráfico de evolución";
+      const title = card.dataset.chartTitle || evolutionTx(locale, "Gráfico de evolución", "Evolution chart");
 
       snapshots.push({
         title,
@@ -212,10 +235,10 @@ const captureDashboardChartSnapshots = async (): Promise<DashboardChartSnapshot[
         dataUrl: png.dataUrl,
         width: png.width,
         height: png.height,
-        legends: getChartLegends(title),
+        legends: getChartLegends(title, locale),
       });
     } catch (error) {
-      console.warn("No se pudo capturar un gráfico para el PDF:", error);
+      console.warn("Unable to capture a chart for the PDF:", error);
     }
   }
 
@@ -296,8 +319,8 @@ export default function EvolucionFisicaPage() {
 
     const selectedSocio = socios.find((socio) => getSocioId(socio) === effectiveSocioId);
 
-    return selectedSocio ? formatSocioName(selectedSocio) : tx("Socio", "Member");
-  }, [effectiveSocioId, isAdmin, socios, tx, user?.email, user?.nombre]);
+    return selectedSocio ? formatSocioName(selectedSocio, locale) : tx("Socio", "Member");
+  }, [effectiveSocioId, isAdmin, locale, socios, tx, user?.email, user?.nombre]);
 
   const canRenderEvolutionData = !isAdmin || effectiveSocioId !== "me";
 
@@ -310,7 +333,7 @@ export default function EvolucionFisicaPage() {
     setGeneratingPdf(true);
 
     try {
-      const dashboardCharts = await captureDashboardChartSnapshots();
+      const dashboardCharts = await captureDashboardChartSnapshots(locale);
 
       await descargarEvolucionFisicaPdf({
         rows: exportRows,
@@ -337,38 +360,38 @@ export default function EvolucionFisicaPage() {
     if (!exportRows.length) return;
 
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Evolucion Fisica");
+    const worksheet = workbook.addWorksheet(tx("Evolución Física", "Physical Evolution"));
 
     worksheet.columns = [
-      { header: "Fecha", key: "fecha", width: 15 },
-      { header: "Peso", key: "peso", width: 12 },
-      { header: "Altura", key: "altura", width: 12 },
-      { header: "IMC", key: "imc", width: 10 },
-      { header: "Pecho", key: "pecho", width: 12 },
-      { header: "Cintura", key: "cintura", width: 12 },
-      { header: "Cadera", key: "cadera", width: 12 },
-      { header: "Abdomen", key: "abdomen", width: 12 },
-      { header: "Cuello", key: "cuello", width: 12 },
-      { header: "Hombros", key: "hombros", width: 12 },
-      { header: "Bíceps Izq.", key: "biceps_izquierdo", width: 14 },
-      { header: "Bíceps Der.", key: "biceps_derecho", width: 14 },
-      { header: "Tríceps Izq.", key: "triceps_izquierdo", width: 14 },
-      { header: "Tríceps Der.", key: "triceps_derecho", width: 14 },
-      { header: "Muslo Izq.", key: "muslo_izquierdo", width: 14 },
-      { header: "Muslo Der.", key: "muslo_derecho", width: 14 },
-      { header: "Pantorrilla Izq.", key: "pantorrilla_izquierda", width: 18 },
-      { header: "Pantorrilla Der.", key: "pantorrilla_derecha", width: 18 },
-      { header: "% Grasa", key: "porcentaje_grasa", width: 12 },
-      { header: "Masa muscular", key: "masa_muscular", width: 16 },
-      { header: "Tipo corporal", key: "tipo_corporal", width: 16 },
-      { header: "Sexo referencia", key: "sexo_referencia", width: 18 },
-      { header: "Registro inicial", key: "es_registro_inicial", width: 18 },
-      { header: "Observaciones", key: "observaciones", width: 50 },
+      { header: tx("Fecha", "Date"), key: "fecha", width: 15 },
+      { header: tx("Peso", "Weight"), key: "peso", width: 12 },
+      { header: tx("Altura", "Height"), key: "altura", width: 12 },
+      { header: tx("IMC", "BMI"), key: "imc", width: 10 },
+      { header: tx("Pecho", "Chest"), key: "pecho", width: 12 },
+      { header: tx("Cintura", "Waist"), key: "cintura", width: 12 },
+      { header: tx("Cadera", "Hips"), key: "cadera", width: 12 },
+      { header: tx("Abdomen", "Abdomen"), key: "abdomen", width: 12 },
+      { header: tx("Cuello", "Neck"), key: "cuello", width: 12 },
+      { header: tx("Hombros", "Shoulders"), key: "hombros", width: 12 },
+      { header: tx("Bíceps Izq.", "Left biceps"), key: "biceps_izquierdo", width: 14 },
+      { header: tx("Bíceps Der.", "Right biceps"), key: "biceps_derecho", width: 14 },
+      { header: tx("Tríceps Izq.", "Left triceps"), key: "triceps_izquierdo", width: 14 },
+      { header: tx("Tríceps Der.", "Right triceps"), key: "triceps_derecho", width: 14 },
+      { header: tx("Muslo Izq.", "Left thigh"), key: "muslo_izquierdo", width: 14 },
+      { header: tx("Muslo Der.", "Right thigh"), key: "muslo_derecho", width: 14 },
+      { header: tx("Pantorrilla Izq.", "Left calf"), key: "pantorrilla_izquierda", width: 18 },
+      { header: tx("Pantorrilla Der.", "Right calf"), key: "pantorrilla_derecha", width: 18 },
+      { header: tx("% Grasa", "Body fat %"), key: "porcentaje_grasa", width: 12 },
+      { header: tx("Masa muscular", "Muscle mass"), key: "masa_muscular", width: 16 },
+      { header: tx("Tipo corporal", "Body type"), key: "tipo_corporal", width: 16 },
+      { header: tx("Sexo referencia", "Reference sex"), key: "sexo_referencia", width: 18 },
+      { header: tx("Registro inicial", "Initial record"), key: "es_registro_inicial", width: 18 },
+      { header: tx("Observaciones", "Notes"), key: "observaciones", width: 50 },
     ];
 
     exportRows.forEach((e) => {
       worksheet.addRow({
-        fecha: formatDate(e.fecha),
+        fecha: formatDate(e.fecha, locale),
         peso: e.peso ?? "",
         altura: e.altura ?? "",
         imc: e.imc ?? "",
@@ -390,7 +413,7 @@ export default function EvolucionFisicaPage() {
         masa_muscular: e.masa_muscular ?? "",
         tipo_corporal: e.tipo_corporal ?? "",
         sexo_referencia: e.sexo_referencia ?? "",
-        es_registro_inicial: e.es_registro_inicial ? "Sí" : "No",
+        es_registro_inicial: e.es_registro_inicial ? tx("Sí", "Yes") : tx("No", "No"),
         observaciones: e.observaciones ?? "",
       });
     });
@@ -403,7 +426,7 @@ export default function EvolucionFisicaPage() {
     const a = document.createElement("a");
 
     a.href = url;
-    a.download = buildTimestampedDownloadFileName("listado-evolucion-fisica", "xlsx");
+    a.download = buildTimestampedDownloadFileName(tx("listado-evolucion-fisica", "physical-evolution-list"), "xlsx");
     a.click();
 
     window.URL.revokeObjectURL(url);
@@ -464,7 +487,7 @@ export default function EvolucionFisicaPage() {
 
                         return (
                           <option key={id} value={id}>
-                            {formatSocioName(socio)}
+                            {formatSocioName(socio, locale)}
                           </option>
                         );
                       })}

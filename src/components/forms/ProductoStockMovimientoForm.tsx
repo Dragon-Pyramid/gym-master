@@ -122,11 +122,11 @@ export default function ProductoStockMovimientoForm({
       };
 
       await createProductoStockMovimiento(payload);
-      toast.success("Movimiento de stock registrado");
+      toast.success(c("Movimiento de stock registrado"));
       setForm(emptyForm);
       await onSaved();
     } catch (error: any) {
-      toast.error(error.message || "No se pudo registrar el movimiento de stock");
+      toast.error(error.message || c("No se pudo registrar el movimiento de stock"));
     } finally {
       setLoading(false);
     }
@@ -138,28 +138,28 @@ export default function ProductoStockMovimientoForm({
 
       <div className="grid grid-cols-1 gap-4 rounded-lg border bg-muted/30 p-4 md:grid-cols-4">
         <div>
-          <p className="text-xs text-muted-foreground">Producto</p>
+          <p className="text-xs text-muted-foreground">{c("Producto")}</p>
           <p className="font-semibold">{producto.nombre}</p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">Stock actual</p>
+          <p className="text-xs text-muted-foreground">{c("Stock actual")}</p>
           <p className="font-semibold">{producto.stock ?? 0}</p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">Estado</p>
+          <p className="text-xs text-muted-foreground">{c("Estado")}</p>
           <p className="font-semibold">{getProductoStockEstadoLabel(producto)}</p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">Valor estimado</p>
+          <p className="text-xs text-muted-foreground">{c("Valor estimado")}</p>
           <p className="font-semibold">
-            {formatCurrencyARS(Number(producto.precio ?? 0) * Number(producto.stock ?? 0))}
+            {formatCurrencyARS(Number(producto.precio ?? 0) * Number(producto.stock ?? 0), locale)}
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="tipo_operacion">Tipo de movimiento</Label>
+          <Label htmlFor="tipo_operacion">{c("Tipo de movimiento")}</Label>
           <select
             id="tipo_operacion"
             name="tipo_operacion"
@@ -176,16 +176,16 @@ export default function ProductoStockMovimientoForm({
           >
             {operacionOptions.map((option) => (
               <option key={option.value} value={option.value}>
-                {option.label}
+                {c(option.label)}
               </option>
             ))}
           </select>
-          <p className="text-xs text-muted-foreground">{selectedOperation?.help}</p>
+          <p className="text-xs text-muted-foreground">{selectedOperation ? c(selectedOperation.help) : ""}</p>
         </div>
 
         {isRecuento ? (
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="stock_real">Stock real contado</Label>
+            <Label htmlFor="stock_real">{c("Stock real contado")}</Label>
             <Input
               id="stock_real"
               name="stock_real"
@@ -202,7 +202,7 @@ export default function ProductoStockMovimientoForm({
           </div>
         ) : (
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="cantidad">Cantidad</Label>
+            <Label htmlFor="cantidad">{c("Cantidad")}</Label>
             <Input
               id="cantidad"
               name="cantidad"
@@ -222,21 +222,21 @@ export default function ProductoStockMovimientoForm({
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="venta_id">ID de venta relacionada (opcional)</Label>
+          <Label htmlFor="venta_id">{c("ID de venta relacionada (opcional)")}</Label>
           <Input
             id="venta_id"
             name="venta_id"
-            placeholder="UUID de venta si aplica"
+            placeholder={c("UUID de venta si aplica")}
             value={form.venta_id}
             onChange={(event) => setForm((prev) => ({ ...prev, venta_id: event.target.value }))}
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="venta_detalle_id">ID de detalle de venta (opcional)</Label>
+          <Label htmlFor="venta_detalle_id">{c("ID de detalle de venta (opcional)")}</Label>
           <Input
             id="venta_detalle_id"
             name="venta_detalle_id"
-            placeholder="UUID de detalle si aplica"
+            placeholder={c("UUID de detalle si aplica")}
             value={form.venta_detalle_id}
             onChange={(event) =>
               setForm((prev) => ({ ...prev, venta_detalle_id: event.target.value }))
@@ -258,24 +258,24 @@ export default function ProductoStockMovimientoForm({
       </div>
 
       <div className="rounded-lg border bg-muted/30 p-4 text-sm">
-        <p className="font-semibold">Vista previa del movimiento</p>
+        <p className="font-semibold">{c("Vista previa del movimiento")}</p>
         <p className="mt-1 text-muted-foreground">
-          Stock anterior: <strong>{preview.stockAnterior}</strong> · Cambio:{" "}
+          {c('Stock anterior')}: <strong>{preview.stockAnterior}</strong> · {c("Cambio")}:{" "}
           <strong className={preview.delta < 0 ? "text-red-700" : "text-emerald-700"}>
             {preview.delta > 0 ? `+${preview.delta}` : preview.delta}
           </strong>{" "}
-          · Stock nuevo: <strong>{preview.stockNuevo}</strong>
+          · {c('Stock nuevo')}: <strong>{preview.stockNuevo}</strong>
         </p>
         {preview.stockNuevo < 0 && (
           <p className="mt-2 text-xs font-semibold text-red-700">
-            La operación no se podrá registrar porque dejaría stock negativo.
+            {c('La operación no se podrá registrar porque dejaría stock negativo.')}
           </p>
         )}
       </div>
 
       <div className="flex justify-end gap-2">
         <Button type="submit" disabled={loading || preview.stockNuevo < 0}>
-          {loading ? "Registrando..." : "Registrar movimiento"}
+          {loading ? c("Registrando...") : c("Registrar movimiento")}
         </Button>
       </div>
     </form>

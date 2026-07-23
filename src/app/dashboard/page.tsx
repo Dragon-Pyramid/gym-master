@@ -167,7 +167,7 @@ interface MetricaHistogramaPagos {
 }
 
 export default function DashboardPage() {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const { user, isAuthenticated, initializeAuth, isInitialized } =
     useAuthStore();
   const router = useRouter();
@@ -464,7 +464,7 @@ export default function DashboardPage() {
     async function fetchDragonPyramidLicenseWarning() {
       try {
         setLoadingDragonPyramidWarning(true);
-        const response = await getDragonPyramidLicenseWarning();
+        const response = await getDragonPyramidLicenseWarning(locale);
         if (!cancelled) {
           setDragonPyramidLicenseWarning(response.ok ? response.data ?? null : null);
         }
@@ -484,7 +484,7 @@ export default function DashboardPage() {
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [user?.rol]);
+  }, [locale, user?.rol]);
 
   const equiposTotales = equipos.length;
   const equiposEnRevision = equipos.filter(

@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { createSocioApi, updateSocioApi } from "@/services/browser/socioApiClient";
 import { Socio } from "@/interfaces/socio.interface";
 import { toast } from "sonner";
+import { useI18n } from "@/i18n/I18nProvider";
 
 export interface SocioFormProps {
   socio?: Socio | null;
@@ -31,6 +32,8 @@ const emptyForm = {
 };
 
 export default function SocioForm({ socio, onCreated }: SocioFormProps) {
+  const { locale } = useI18n();
+  const tx = (es: string, en: string) => (locale === "en" ? en : es);
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
 
@@ -83,22 +86,27 @@ export default function SocioForm({ socio, onCreated }: SocioFormProps) {
     try {
       if (socio && socio.id_socio) {
         await updateSocioApi(socio.id_socio, buildPayload());
-        toast.success("Socio actualizado");
+        toast.success(tx("Socio actualizado", "Member updated"));
       } else {
         await createSocioApi({
           usuario_id: "",
           ...buildPayload(),
         });
-        toast.success("Socio creado");
+        toast.success(tx("Socio creado", "Member created"));
       }
       setForm(emptyForm);
       onCreated();
     } catch (error: any) {
-      let msg = error.message || "Error al guardar socio";
-      if (msg.includes("value too long")) {
-        msg = "Uno de los campos excede la cantidad máxima de caracteres permitidos.";
-      }
-      toast.error(msg);
+      const rawMessage = String(error?.message ?? "");
+      const message = rawMessage.includes("value too long")
+        ? tx(
+            "Uno de los campos excede la cantidad máxima de caracteres permitidos.",
+            "One of the fields exceeds the maximum allowed length."
+          )
+        : locale === "es" && rawMessage
+          ? rawMessage
+          : tx("Error al guardar socio", "Could not save the member");
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -108,169 +116,92 @@ export default function SocioForm({ socio, onCreated }: SocioFormProps) {
     <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
       <QaFileNameBadge file="src/components/forms/SocioForm.tsx" />
       <div className="col-span-full">
-        <h3 className="text-sm font-semibold text-muted-foreground">Datos personales</h3>
+        <h3 className="text-sm font-semibold text-muted-foreground">{tx("Datos personales", "Personal details")}</h3>
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="nombre_completo">Nombre completo</Label>
-        <Input
-          id="nombre_completo"
-          name="nombre_completo"
-          placeholder="Ingrese nombre completo"
-          value={form.nombre_completo}
-          onChange={handleChange}
-          required
-        />
+        <Label htmlFor="nombre_completo">{tx("Nombre completo", "Full name")}</Label>
+        <Input id="nombre_completo" name="nombre_completo" placeholder={tx("Ingrese nombre completo", "Enter full name")} value={form.nombre_completo} onChange={handleChange} required />
       </div>
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="dni">DNI</Label>
-        <Input
-          id="dni"
-          name="dni"
-          placeholder="Ingrese DNI"
-          value={form.dni}
-          onChange={handleChange}
-          required
-        />
+        <Input id="dni" name="dni" placeholder={tx("Ingrese DNI", "Enter DNI")} value={form.dni} onChange={handleChange} required />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="sexo">Sexo</Label>
-        <select
-          id="sexo"
-          name="sexo"
-          value={form.sexo}
-          onChange={handleChange}
-          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        >
-          <option value="">Seleccionar</option>
-          <option value="M">Masculino</option>
-          <option value="F">Femenino</option>
+        <Label htmlFor="sexo">{tx("Sexo", "Sex")}</Label>
+        <select id="sexo" name="sexo" value={form.sexo} onChange={handleChange} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+          <option value="">{tx("Seleccionar", "Select")}</option>
+          <option value="M">{tx("Masculino", "Male")}</option>
+          <option value="F">{tx("Femenino", "Female")}</option>
         </select>
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="fecnac">Fecha de nacimiento</Label>
-        <Input
-          id="fecnac"
-          name="fecnac"
-          type="date"
-          value={form.fecnac}
-          onChange={handleChange}
-        />
+        <Label htmlFor="fecnac">{tx("Fecha de nacimiento", "Birth date")}</Label>
+        <Input id="fecnac" name="fecnac" type="date" value={form.fecnac} onChange={handleChange} />
       </div>
 
       <div className="col-span-full">
-        <h3 className="text-sm font-semibold text-muted-foreground">Contacto y ubicación</h3>
+        <h3 className="text-sm font-semibold text-muted-foreground">{tx("Contacto y ubicación", "Contact and location")}</h3>
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="telefono">Teléfono</Label>
-        <Input
-          id="telefono"
-          name="telefono"
-          placeholder="Ingrese teléfono"
-          value={form.telefono}
-          onChange={handleChange}
-        />
+        <Label htmlFor="telefono">{tx("Teléfono", "Phone")}</Label>
+        <Input id="telefono" name="telefono" placeholder={tx("Ingrese teléfono", "Enter phone number")} value={form.telefono} onChange={handleChange} />
       </div>
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="email">Email</Label>
-        <Input
-          id="email"
-          name="email"
-          type="email"
-          placeholder="Ingrese correo electrónico"
-          value={form.email}
-          onChange={handleChange}
-        />
+        <Input id="email" name="email" type="email" placeholder={tx("Ingrese correo electrónico", "Enter email address")} value={form.email} onChange={handleChange} />
       </div>
 
       <div className="flex flex-col gap-1.5 md:col-span-2">
-        <Label htmlFor="direccion">Dirección</Label>
-        <Input
-          id="direccion"
-          name="direccion"
-          placeholder="Ingrese dirección"
-          value={form.direccion}
-          onChange={handleChange}
-        />
+        <Label htmlFor="direccion">{tx("Dirección", "Address")}</Label>
+        <Input id="direccion" name="direccion" placeholder={tx("Ingrese dirección", "Enter address")} value={form.direccion} onChange={handleChange} />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="ciudad">Ciudad</Label>
-        <Input
-          id="ciudad"
-          name="ciudad"
-          placeholder="Ingrese ciudad"
-          value={form.ciudad}
-          onChange={handleChange}
-        />
+        <Label htmlFor="ciudad">{tx("Ciudad", "City")}</Label>
+        <Input id="ciudad" name="ciudad" placeholder={tx("Ingrese ciudad", "Enter city")} value={form.ciudad} onChange={handleChange} />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="provincia">Provincia</Label>
-        <Input
-          id="provincia"
-          name="provincia"
-          placeholder="Ingrese provincia"
-          value={form.provincia}
-          onChange={handleChange}
-        />
+        <Label htmlFor="provincia">{tx("Provincia", "Province")}</Label>
+        <Input id="provincia" name="provincia" placeholder={tx("Ingrese provincia", "Enter province")} value={form.provincia} onChange={handleChange} />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="pais">País</Label>
-        <Input
-          id="pais"
-          name="pais"
-          placeholder="Ingrese país"
-          value={form.pais}
-          onChange={handleChange}
-        />
+        <Label htmlFor="pais">{tx("País", "Country")}</Label>
+        <Input id="pais" name="pais" placeholder={tx("Ingrese país", "Enter country")} value={form.pais} onChange={handleChange} />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="fecha_alta">Fecha de alta</Label>
-        <Input
-          id="fecha_alta"
-          name="fecha_alta"
-          type="date"
-          value={form.fecha_alta}
-          onChange={handleChange}
-        />
+        <Label htmlFor="fecha_alta">{tx("Fecha de alta", "Registration date")}</Label>
+        <Input id="fecha_alta" name="fecha_alta" type="date" value={form.fecha_alta} onChange={handleChange} />
       </div>
 
       <div className="col-span-full">
-        <h3 className="text-sm font-semibold text-muted-foreground">Contacto de emergencia</h3>
+        <h3 className="text-sm font-semibold text-muted-foreground">{tx("Contacto de emergencia", "Emergency contact")}</h3>
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="contacto_emergencia_nombre">Nombre del contacto</Label>
-        <Input
-          id="contacto_emergencia_nombre"
-          name="contacto_emergencia_nombre"
-          placeholder="Ej: familiar o responsable"
-          value={form.contacto_emergencia_nombre}
-          onChange={handleChange}
-        />
+        <Label htmlFor="contacto_emergencia_nombre">{tx("Nombre del contacto", "Contact name")}</Label>
+        <Input id="contacto_emergencia_nombre" name="contacto_emergencia_nombre" placeholder={tx("Ej.: familiar o responsable", "E.g. relative or guardian")} value={form.contacto_emergencia_nombre} onChange={handleChange} />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="contacto_emergencia_telefono">Teléfono de emergencia</Label>
-        <Input
-          id="contacto_emergencia_telefono"
-          name="contacto_emergencia_telefono"
-          placeholder="Teléfono para urgencias"
-          value={form.contacto_emergencia_telefono}
-          onChange={handleChange}
-        />
+        <Label htmlFor="contacto_emergencia_telefono">{tx("Teléfono de emergencia", "Emergency phone")}</Label>
+        <Input id="contacto_emergencia_telefono" name="contacto_emergencia_telefono" placeholder={tx("Teléfono para urgencias", "Phone number for emergencies")} value={form.contacto_emergencia_telefono} onChange={handleChange} />
       </div>
 
       <Button type="submit" className="col-span-full justify-self-end" disabled={loading}>
-        {loading ? "Guardando..." : socio ? "Actualizar Socio" : "Crear Socio"}
+        {loading
+          ? tx("Guardando...", "Saving...")
+          : socio
+            ? tx("Actualizar socio", "Update member")
+            : tx("Crear socio", "Create member")}
       </Button>
     </form>
   );

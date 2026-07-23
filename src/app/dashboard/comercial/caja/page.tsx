@@ -28,7 +28,7 @@ import { Label } from '@/components/ui/label';
 import { useAuthStore } from '@/stores/authStore';
 import { useI18n } from '@/i18n/I18nProvider';
 import { translateCommercialUi } from '@/i18n/commercialUi';
-import type { ComercialCajaDashboard, ComercialCajaSesion } from '@/interfaces/comercialCaja.interface';
+import type { ComercialCajaDashboard, ComercialCajaMovimiento, ComercialCajaSesion } from '@/interfaces/comercialCaja.interface';
 import { ejecutarComercialCajaAction, getComercialCajaDashboard } from '@/services/comercialCajaService';
 import { formatCurrencyARS } from '@/lib/comercial/productos';
 import { toast } from 'sonner';
@@ -58,31 +58,94 @@ function getDifferenceClass(value?: number | null) {
   return 'text-red-700';
 }
 
-function buildCajaReportHtml(session: ComercialCajaSesion, dashboard: ComercialCajaDashboard) {
+function formatCajaDateTime(value: string | null | undefined, locale: string) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'es-AR', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(date);
+}
+
+function formatCajaStatus(value: string, c: (text: string) => string) {
+  if (value === 'abierta') return c('Abierta');
+  if (value === 'cerrada') return c('Cerrada');
+  return c(value);
+}
+
+function formatCajaMovementType(value: ComercialCajaMovimiento['tipo'], c: (text: string) => string) {
+  if (value === 'apertura') return c('Apertura de caja');
+  if (value === 'ingreso') return c('Ingreso');
+  if (value === 'retiro') return c('Retiro');
+  if (value === 'cierre') return c('Cierre de caja');
+  if (value === 'ajuste') return c('Ajuste');
+  return c(value);
+}
+
+function formatCajaMovementConcept(
+  movement: ComercialCajaMovimiento,
+  locale: string,
+  c: (text: string) => string
+) {
+  const concept = String(movement.concepto ?? '').trim();
+
+  if (movement.tipo === 'apertura' && concept === 'Apertura de caja') {
+    return c('Apertura de caja');
+  }
+
+  if (movement.tipo === 'cierre') {
+    const match = /^Cierre de caja\. Diferencia:\s*(-?\d+(?:[.,]\d+)?)$/i.exec(concept);
+    if (match) {
+      const difference = Number(match[1].replace(',', '.'));
+      if (Number.isFinite(difference)) {
+        return `${c('Cierre de caja. Diferencia:')} ${formatCurrencyARS(difference, locale)}`;
+      }
+    }
+
+    if (concept === 'Cierre de caja') return c('Cierre de caja');
+  }
+
+  // Los conceptos manuales pertenecen al gimnasio y se conservan en su idioma original.
+  return concept;
+}
+
+function buildCajaReportHtml(
+  session: ComercialCajaSesion,
+  dashboard: ComercialCajaDashboard,
+  locale: string,
+  c: (text: string) => string
+) {
   const ventasRows = dashboard.ventasTurno
-    .map((venta) => `<tr><td>${venta.comprobante_codigo || venta.id}</td><td>${venta.metodo_pago}</td><td style="text-align:right">${formatCurrencyARS(venta.total)}</td></tr>`)
+    .map(
+      (venta) =>
+        `<tr><td>${venta.comprobante_codigo || venta.id}</td><td>${c(venta.metodo_pago)}</td><td style="text-align:right">${formatCurrencyARS(venta.total, locale)}</td></tr>`
+    )
     .join('');
   const movimientoRows = dashboard.movimientos
-    .map((mov) => `<tr><td>${mov.tipo}</td><td>${mov.concepto}</td><td style="text-align:right">${formatCurrencyARS(mov.monto)}</td></tr>`)
+    .map(
+      (mov) =>
+        `<tr><td>${formatCajaMovementType(mov.tipo, c)}</td><td>${formatCajaMovementConcept(mov, locale, c)}</td><td style="text-align:right">${formatCurrencyARS(mov.monto, locale)}</td></tr>`
+    )
     .join('');
 
   return `<!doctype html><html><head><meta charset="utf-8" />
-  <title>Reporte Caja ${session.codigo}</title>
+  <title>${c('Reporte Caja')} ${session.codigo}</title>
   <style>
     body{font-family:Arial,sans-serif;margin:24px;color:#111} h1{margin:0 0 4px}.muted{color:#666;font-size:12px}
     table{width:100%;border-collapse:collapse;margin-top:12px;font-size:12px} th,td{border-bottom:1px solid #ddd;padding:6px;text-align:left}
     .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}.box{border:1px solid #ddd;padding:10px;border-radius:8px}.box b{display:block;font-size:14px}
   </style></head><body>
-  <h1>Gym Master - Reporte X/Z de Caja</h1>
-  <div class="muted">${session.codigo} · Estado: ${session.estado} · Apertura: ${session.fecha_apertura || ''} · Cierre: ${session.fecha_cierre || 'Caja abierta'}</div>
+  <h1>${c('Gym Master - Reporte X/Z de Caja')}</h1>
+  <div class="muted">${session.codigo} · ${c('Estado')}: ${formatCajaStatus(session.estado, c)} · ${c('Apertura')}: ${formatCajaDateTime(session.fecha_apertura, locale)} · ${c('Cierre')}: ${session.fecha_cierre ? formatCajaDateTime(session.fecha_cierre, locale) : c('Pendiente')}</div>
   <div class="grid">
-    <div class="box">{c('Inicial')}<b>${formatCurrencyARS(session.monto_inicial)}</b></div>
-    <div class="box">{c('Ventas')}<b>${formatCurrencyARS(dashboard.metricas.totalVentasTurno)}</b></div>
-    <div class="box">{c('Esperado')}<b>${formatCurrencyARS(dashboard.metricas.totalEsperado)}</b></div>
-    <div class="box">Diferencia<b>${formatCurrencyARS(session.diferencia ?? 0)}</b></div>
+    <div class="box">${c('Inicial')}<b>${formatCurrencyARS(session.monto_inicial, locale)}</b></div>
+    <div class="box">${c('Ventas')}<b>${formatCurrencyARS(dashboard.metricas.totalVentasTurno, locale)}</b></div>
+    <div class="box">${c('Esperado')}<b>${formatCurrencyARS(dashboard.metricas.totalEsperado, locale)}</b></div>
+    <div class="box">${c('Diferencia')}<b>${formatCurrencyARS(session.diferencia ?? 0, locale)}</b></div>
   </div>
-  <h2>Ventas del turno</h2><table><thead><tr><th>Comprobante</th><th>Pago</th><th>Total</th></tr></thead><tbody>${ventasRows || '<tr><td colspan="3">Sin ventas</td></tr>'}</tbody></table>
-  <h2>Movimientos de caja</h2><table><thead><tr><th>Tipo</th><th>{c('Concepto')}</th><th>Monto</th></tr></thead><tbody>${movimientoRows || '<tr><td colspan="3">Sin movimientos</td></tr>'}</tbody></table>
+  <h2>${c('Ventas del turno')}</h2><table><thead><tr><th>${c('Comprobante')}</th><th>${c('Pago')}</th><th>${c('Total')}</th></tr></thead><tbody>${ventasRows || `<tr><td colspan="3">${c('Sin ventas')}</td></tr>`}</tbody></table>
+  <h2>${c('Movimientos de caja')}</h2><table><thead><tr><th>${c('Tipo')}</th><th>${c('Concepto')}</th><th>${c('Monto')}</th></tr></thead><tbody>${movimientoRows || `<tr><td colspan="3">${c('Sin movimientos')}</td></tr>`}</tbody></table>
   <script>window.print();</script>
   </body></html>`;
 }
@@ -113,7 +176,7 @@ export default function ComercialCajaPage() {
       setDashboard(data ?? initialDashboard);
       if (data?.cajaAbierta) setMontoContado(String(data.cajaAbierta.total_esperado ?? 0));
     } catch (error: any) {
-      toast.error(error?.message || 'No se pudo cargar caja comercial');
+      toast.error(error?.message || c('No se pudo cargar caja comercial'));
     } finally {
       setLoading(false);
     }
@@ -132,7 +195,7 @@ export default function ComercialCajaPage() {
       setObservacionesApertura('');
       toast.success(c('Caja abierta correctamente'));
     } catch (error: any) {
-      toast.error(error?.message || 'No se pudo abrir caja');
+      toast.error(error?.message || c('No se pudo abrir caja'));
     } finally { setSaving(false); }
   }
 
@@ -146,7 +209,7 @@ export default function ComercialCajaPage() {
       setMovimientoConcepto('');
       toast.success(c('Movimiento registrado'));
     } catch (error: any) {
-      toast.error(error?.message || 'No se pudo registrar movimiento');
+      toast.error(error?.message || c('No se pudo registrar movimiento'));
     } finally { setSaving(false); }
   }
 
@@ -159,7 +222,7 @@ export default function ComercialCajaPage() {
       setObservacionesCierre('');
       toast.success(c('Caja cerrada correctamente'));
     } catch (error: any) {
-      toast.error(error?.message || 'No se pudo cerrar caja');
+      toast.error(error?.message || c('No se pudo cerrar caja'));
     } finally { setSaving(false); }
   }
 
@@ -168,7 +231,7 @@ export default function ComercialCajaPage() {
     if (!target) return;
     const popup = window.open('', '_blank', 'width=920,height=720');
     if (!popup) { toast.error(c('El navegador bloqueó la impresión')); return; }
-    popup.document.write(buildCajaReportHtml(target, dashboard));
+    popup.document.write(buildCajaReportHtml(target, dashboard, locale, c));
     popup.document.close();
   }
 
@@ -201,10 +264,10 @@ export default function ComercialCajaPage() {
 
             <section className='grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5'>
               <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>{c('Estado')}</p><p className='text-xl font-bold'>{caja ? c('Abierta') : c('Sin caja')}</p></div>{caja ? <Unlock className='h-6 w-6 text-emerald-600' /> : <Lock className='h-6 w-6 text-slate-500' />}</CardContent></Card>
-              <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>{c('Ventas turno')}</p><p className='text-xl font-bold'>{formatCurrencyARS(dashboard.metricas.totalVentasTurno)}</p></div><CreditCard className='h-6 w-6 text-sky-600' /></CardContent></Card>
-              <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>{c('Ingresos')}</p><p className='text-xl font-bold'>{formatCurrencyARS(dashboard.metricas.totalIngresos)}</p></div><TrendingUp className='h-6 w-6 text-emerald-600' /></CardContent></Card>
-              <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>{c('Retiros')}</p><p className='text-xl font-bold'>{formatCurrencyARS(dashboard.metricas.totalRetiros)}</p></div><TrendingDown className='h-6 w-6 text-red-600' /></CardContent></Card>
-              <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>{c('Esperado')}</p><p className='text-xl font-bold'>{formatCurrencyARS(dashboard.metricas.totalEsperado)}</p></div><Calculator className='h-6 w-6 text-violet-600' /></CardContent></Card>
+              <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>{c('Ventas turno')}</p><p className='text-xl font-bold'>{formatCurrencyARS(dashboard.metricas.totalVentasTurno, locale)}</p></div><CreditCard className='h-6 w-6 text-sky-600' /></CardContent></Card>
+              <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>{c('Ingresos')}</p><p className='text-xl font-bold'>{formatCurrencyARS(dashboard.metricas.totalIngresos, locale)}</p></div><TrendingUp className='h-6 w-6 text-emerald-600' /></CardContent></Card>
+              <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>{c('Retiros')}</p><p className='text-xl font-bold'>{formatCurrencyARS(dashboard.metricas.totalRetiros, locale)}</p></div><TrendingDown className='h-6 w-6 text-red-600' /></CardContent></Card>
+              <Card><CardContent className='flex items-center justify-between p-5'><div><p className='text-sm text-muted-foreground'>{c('Esperado')}</p><p className='text-xl font-bold'>{formatCurrencyARS(dashboard.metricas.totalEsperado, locale)}</p></div><Calculator className='h-6 w-6 text-violet-600' /></CardContent></Card>
             </section>
 
             {!caja ? (
@@ -224,10 +287,10 @@ export default function ComercialCajaPage() {
                   <Card>
                     <CardHeader><CardTitle>{c('Caja abierta')}: {caja.codigo}</CardTitle></CardHeader>
                     <CardContent className='grid grid-cols-1 gap-4 md:grid-cols-4'>
-                      <div><p className='text-sm text-muted-foreground'>{c('Inicial')}</p><p className='font-bold'>{formatCurrencyARS(caja.monto_inicial)}</p></div>
-                      <div><p className='text-sm text-muted-foreground'>{c('Ventas')}</p><p className='font-bold'>{formatCurrencyARS(caja.total_ventas)}</p></div>
-                      <div><p className='text-sm text-muted-foreground'>{c('Esperado')}</p><p className='font-bold'>{formatCurrencyARS(caja.total_esperado)}</p></div>
-                      <div><p className='text-sm text-muted-foreground'>{c('Apertura')}</p><p className='text-sm'>{new Date(caja.fecha_apertura).toLocaleString()}</p></div>
+                      <div><p className='text-sm text-muted-foreground'>{c('Inicial')}</p><p className='font-bold'>{formatCurrencyARS(caja.monto_inicial, locale)}</p></div>
+                      <div><p className='text-sm text-muted-foreground'>{c('Ventas')}</p><p className='font-bold'>{formatCurrencyARS(caja.total_ventas, locale)}</p></div>
+                      <div><p className='text-sm text-muted-foreground'>{c('Esperado')}</p><p className='font-bold'>{formatCurrencyARS(caja.total_esperado, locale)}</p></div>
+                      <div><p className='text-sm text-muted-foreground'>{c('Apertura')}</p><p className='text-sm'>{formatCajaDateTime(caja.fecha_apertura, locale)}</p></div>
                     </CardContent>
                   </Card>
 
@@ -235,7 +298,7 @@ export default function ComercialCajaPage() {
                     <CardHeader><CardTitle>{c('Ventas del turno')}</CardTitle></CardHeader>
                     <CardContent>
                       <div className='space-y-3'>
-                        {dashboard.ventasTurno.map((venta) => <div key={venta.id} className='flex items-center justify-between rounded-lg border p-3 text-sm'><div><p className='font-medium'>{venta.comprobante_codigo || venta.id}</p><p className='text-xs text-muted-foreground'>{venta.cliente_nombre || c('Consumidor Final')} · {venta.metodo_pago}</p></div><p className='font-bold'>{formatCurrencyARS(venta.total)}</p></div>)}
+                        {dashboard.ventasTurno.map((venta) => <div key={venta.id} className='flex items-center justify-between rounded-lg border p-3 text-sm'><div><p className='font-medium'>{venta.comprobante_codigo || venta.id}</p><p className='text-xs text-muted-foreground'>{venta.cliente_nombre || c('Consumidor Final')} · {c(venta.metodo_pago)}</p></div><p className='font-bold'>{formatCurrencyARS(venta.total, locale)}</p></div>)}
                         {dashboard.ventasTurno.length === 0 && <p className='text-sm text-muted-foreground'>{c('Aún no hay ventas asociadas a la caja abierta.')}</p>}
                       </div>
                     </CardContent>
@@ -245,7 +308,7 @@ export default function ComercialCajaPage() {
                     <CardHeader><CardTitle>{c('Historial de cierres')}</CardTitle></CardHeader>
                     <CardContent>
                       <div className='space-y-3'>
-                        {dashboard.sesionesRecientes.map((sesion) => <div key={sesion.id} className='flex items-center justify-between rounded-lg border p-3 text-sm'><div><p className='font-medium'>{sesion.codigo}</p><p className='text-xs text-muted-foreground'>{sesion.estado} · {new Date(sesion.fecha_apertura).toLocaleString()}</p></div><div className='text-right'><p className='font-bold'>{formatCurrencyARS(sesion.total_esperado)}</p><p className={`text-xs ${getDifferenceClass(sesion.diferencia)}`}>Dif. {formatCurrencyARS(sesion.diferencia ?? 0)}</p></div></div>)}
+                        {dashboard.sesionesRecientes.map((sesion) => <div key={sesion.id} className='flex items-center justify-between rounded-lg border p-3 text-sm'><div><p className='font-medium'>{sesion.codigo}</p><p className='text-xs text-muted-foreground'>{formatCajaStatus(sesion.estado, c)} · {formatCajaDateTime(sesion.fecha_apertura, locale)}</p></div><div className='text-right'><p className='font-bold'>{formatCurrencyARS(sesion.total_esperado, locale)}</p><p className={`text-xs ${getDifferenceClass(sesion.diferencia)}`}>{c('Dif.')} {formatCurrencyARS(sesion.diferencia ?? 0, locale)}</p></div></div>)}
                       </div>
                     </CardContent>
                   </Card>
@@ -268,7 +331,7 @@ export default function ComercialCajaPage() {
                     <CardHeader><CardTitle>{c('Cerrar caja')}</CardTitle></CardHeader>
                     <CardContent>
                       <form className='space-y-3' onSubmit={handleCerrarCaja}>
-                        <div className='rounded-lg bg-slate-50 p-3 text-sm dark:bg-slate-900/60'><div className='flex justify-between'><span>{c('Esperado')}</span><b>{formatCurrencyARS(caja.total_esperado)}</b></div><div className={`mt-1 flex justify-between ${getDifferenceClass(diferenciaPreview)}`}><span>{c('Diferencia previa')}</span><b>{formatCurrencyARS(diferenciaPreview)}</b></div></div>
+                        <div className='rounded-lg bg-slate-50 p-3 text-sm dark:bg-slate-900/60'><div className='flex justify-between'><span>{c('Esperado')}</span><b>{formatCurrencyARS(caja.total_esperado, locale)}</b></div><div className={`mt-1 flex justify-between ${getDifferenceClass(diferenciaPreview)}`}><span>{c('Diferencia previa')}</span><b>{formatCurrencyARS(diferenciaPreview, locale)}</b></div></div>
                         <div className='space-y-2'><Label>{c('Monto contado')}</Label><Input type='number' min={0} value={montoContado} onChange={(e) => setMontoContado(e.target.value)} /></div>
                         <div className='space-y-2'><Label>{c('Observaciones cierre')}</Label><Input value={observacionesCierre} onChange={(e) => setObservacionesCierre(e.target.value)} placeholder={c('Ej: sin diferencias')} /></div>
                         <Button className='w-full bg-[#02a8e1] hover:bg-[#0288b1]' disabled={saving}>{saving ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <Lock className='mr-2 h-4 w-4' />}{c('Cerrar caja')}</Button>

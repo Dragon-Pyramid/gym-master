@@ -57,6 +57,14 @@ function translateFeeDescription(value: string | null | undefined, isEnglish: bo
   );
 }
 
+function formatFeeMoney(value: number, locale: string) {
+  return new Intl.NumberFormat(locale === "en" ? "en-US" : "es-AR", {
+    style: "currency",
+    currency: "ARS",
+    maximumFractionDigits: 0,
+  }).format(Number(value ?? 0));
+}
+
 export default function CuotasPage() {
   const { user, isAuthenticated, initializeAuth, isInitialized } =
     useAuthStore();
@@ -141,19 +149,19 @@ export default function CuotasPage() {
           {
             header: tx("Monto", "Amount"),
             width: 26,
-            getValue: (c) => `$${Number(c.monto || 0).toLocaleString("es-AR")}`,
+            getValue: (c) => formatFeeMoney(Number(c.monto || 0), locale),
             align: "right",
           },
           { header: tx("Período", "Period"), width: 30, getValue: (c) => c.periodo || "-" },
           {
             header: tx("Fecha inicio", "Start date"),
             width: 30,
-            getValue: (c) => formatFrontendDate(c.fecha_inicio),
+            getValue: (c) => formatFrontendDate(c.fecha_inicio, isEnglish ? "en-US" : "es-AR"),
           },
           {
             header: tx("Fecha fin", "End date"),
             width: 30,
-            getValue: (c) => formatFrontendDate(c.fecha_fin),
+            getValue: (c) => formatFrontendDate(c.fecha_fin, isEnglish ? "en-US" : "es-AR"),
           },
           {
             header: tx("Estado", "Status"),
@@ -185,8 +193,8 @@ export default function CuotasPage() {
         descripcion: translateFeeDescription(c.descripcion, isEnglish),
         monto: c.monto,
         periodo: c.periodo,
-        fecha_inicio: formatFrontendDate(c.fecha_inicio),
-        fecha_fin: formatFrontendDate(c.fecha_fin),
+        fecha_inicio: formatFrontendDate(c.fecha_inicio, isEnglish ? "en-US" : "es-AR"),
+        fecha_fin: formatFrontendDate(c.fecha_fin, isEnglish ? "en-US" : "es-AR"),
         estado: c.activo ? tx("Activa", "Active") : tx("Inactiva", "Inactive"),
       });
     });

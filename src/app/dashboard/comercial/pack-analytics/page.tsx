@@ -235,7 +235,7 @@ export default function ComercialPackAnalyticsPage() {
                 value={
                   loading
                     ? "..."
-                    : formatCurrencyARS(dashboard.metricas.ingresoPacks)
+                    : formatCurrencyARS(dashboard.metricas.ingresoPacks, locale)
                 }
                 description={c('Ingreso atribuido a packs activos')}
                 icon={TrendingUp}
@@ -245,7 +245,7 @@ export default function ComercialPackAnalyticsPage() {
                 value={
                   loading ? "..." : String(dashboard.metricas.cuponesUsados)
                 }
-                description={`${c('Descuento estimado:')} ${formatCurrencyARS(dashboard.metricas.descuentoCuponEstimado)}`}
+                description={`${c('Descuento estimado:')} ${formatCurrencyARS(dashboard.metricas.descuentoCuponEstimado, locale)}`}
                 icon={Gift}
               />
             </section>
@@ -272,6 +272,7 @@ export default function ComercialPackAnalyticsPage() {
                       <p className="text-lg font-bold">
                         {formatCurrencyARS(
                           dashboard.metricas.ticketPromedioPack,
+                          locale,
                         )}
                       </p>
                     </div>
@@ -287,7 +288,7 @@ export default function ComercialPackAnalyticsPage() {
                       </p>
                       <p className="mt-1 text-xs text-cyan-50/70">
                         {topPack
-                          ? `${topPack.cantidad_vendida} ${c('unidades')} · ${formatCurrencyARS(topPack.ingreso_total)}`
+                          ? `${topPack.cantidad_vendida} ${c('unidades')} · ${formatCurrencyARS(topPack.ingreso_total, locale)}`
                           : c('Esperando ventas del período.')}
                       </p>
                     </div>
@@ -296,7 +297,7 @@ export default function ComercialPackAnalyticsPage() {
                         {c('Uso de cupones')}
                       </p>
                       <p className="mt-2 font-semibold">
-                        {promoShare}% de ventas con pack
+                        {promoShare}% {c('de ventas con pack')}
                       </p>
                       <p className="mt-1 text-xs text-cyan-50/70">
                         {topCoupon?.cupon_codigo
@@ -373,14 +374,14 @@ export default function ComercialPackAnalyticsPage() {
                           </p>
                         </div>
                         <p className="font-bold">
-                          {formatCurrencyARS(pack.ingreso_total)}
+                          {formatCurrencyARS(pack.ingreso_total, locale)}
                         </p>
                       </div>
                       <div className="mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
                         <span>{pack.cantidad_vendida} {c('unidades')}</span>
                         <span>{pack.ventas} {c('registros')}</span>
                         <span>
-                          {formatCurrencyARS(pack.descuento_cupon_estimado)}{" "}
+                          {formatCurrencyARS(pack.descuento_cupon_estimado, locale)}{" "}
                           {c('desc.')}
                         </span>
                       </div>
@@ -414,12 +415,12 @@ export default function ComercialPackAnalyticsPage() {
                           </p>
                         </div>
                         <p className="font-bold text-emerald-600">
-                          -{formatCurrencyARS(cupon.descuento_estimado)}
+                          -{formatCurrencyARS(cupon.descuento_estimado, locale)}
                         </p>
                       </div>
                       <p className="mt-2 text-sm text-muted-foreground">
                         {cupon.usos} {c('usos')} · {cupon.packs_vendidos} {c('Packs')} ·{' '}
-                        {formatCurrencyARS(cupon.ingreso_asociado)} {c('asociado')}
+                        {formatCurrencyARS(cupon.ingreso_asociado, locale)} {c('asociado')}
                       </p>
                     </div>
                   ))}
@@ -452,10 +453,10 @@ export default function ComercialPackAnalyticsPage() {
                         <td className="p-3">{row.packs_vendidos}</td>
                         <td className="p-3">{row.ventas}</td>
                         <td className="p-3">
-                          {formatCurrencyARS(row.ingreso_total)}
+                          {formatCurrencyARS(row.ingreso_total, locale)}
                         </td>
                         <td className="p-3">
-                          {formatCurrencyARS(row.descuento_cupon_estimado)}
+                          {formatCurrencyARS(row.descuento_cupon_estimado, locale)}
                         </td>
                       </tr>
                     ))}
@@ -508,11 +509,11 @@ export default function ComercialPackAnalyticsPage() {
                         </td>
                         <td className="p-3">{row.cantidad}</td>
                         <td className="p-3">
-                          {formatCurrencyARS(row.total_pack)}
+                          {formatCurrencyARS(row.total_pack, locale)}
                         </td>
                         <td className="p-3">
                           {row.cupon_codigo
-                            ? `${row.cupon_codigo} · -${formatCurrencyARS(row.descuento_cupon_estimado)}`
+                            ? `${row.cupon_codigo} · -${formatCurrencyARS(row.descuento_cupon_estimado, locale)}`
                             : "-"}
                         </td>
                         <td className="p-3">

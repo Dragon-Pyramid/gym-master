@@ -360,21 +360,21 @@ export default function ComercialKioscoPage() {
             <section className='grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4'>
               <DashboardMetric
                 title={c('Total vendido')}
-                value={loading ? '...' : formatCurrencyARS(metrics.ventasTotal)}
+                value={loading ? '...' : formatCurrencyARS(metrics.ventasTotal, locale)}
                 description={c('Ventas activas sin operaciones anuladas.')}
                 icon={TrendingUp}
                 tone='emerald'
               />
               <DashboardMetric
                 title={c('Ticket promedio')}
-                value={loading ? '...' : formatCurrencyARS(metrics.ticketPromedio)}
+                value={loading ? '...' : formatCurrencyARS(metrics.ticketPromedio, locale)}
                 description={`${metrics.ventasActivas} ${c('ventas activas registradas.')}`}
                 icon={ReceiptText}
                 tone='sky'
               />
               <DashboardMetric
                 title={c('Inventario estimado')}
-                value={loading ? '...' : formatCurrencyARS(metrics.valorInventario)}
+                value={loading ? '...' : formatCurrencyARS(metrics.valorInventario, locale)}
                 description={`${metrics.productosActivos} ${c('productos activos en catálogo.')}`}
                 icon={Boxes}
                 tone='violet'
@@ -595,7 +595,7 @@ export default function ComercialKioscoPage() {
                     <p className='mt-1 text-muted-foreground'>
                       {loading
                         ? c('Calculando...')
-                        : `${metrics.ventasActivas} ventas activas por ${formatCurrencyARS(metrics.ventasTotal)}.`}
+                        : `${metrics.ventasActivas} ${c('ventas activas por')} ${formatCurrencyARS(metrics.ventasTotal, locale)}.`}
                     </p>
                   </div>
                   <div className='rounded-xl border bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/70'>

@@ -118,9 +118,9 @@ export default function ProductoTable({
                 <p><span className="text-muted-foreground">{c("Barra")}:</span> {p.codigo_barras || "-"}</p>
               </div>
             </TableCell>
-            <TableCell>{formatCurrencyARS(p.precio)}</TableCell>
-            <TableCell>{formatCurrencyARS(p.costo ?? 0)}</TableCell>
-            <TableCell>{formatCurrencyARS((p.precio ?? 0) - (p.costo ?? 0))}</TableCell>
+            <TableCell>{formatCurrencyARS(p.precio, locale)}</TableCell>
+            <TableCell>{formatCurrencyARS(p.costo ?? 0, locale)}</TableCell>
+            <TableCell>{formatCurrencyARS((p.precio ?? 0) - (p.costo ?? 0), locale)}</TableCell>
             <TableCell>
               <div className="space-y-1">
                 <p className="font-semibold">{p.stock}</p>

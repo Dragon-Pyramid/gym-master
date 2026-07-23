@@ -103,7 +103,7 @@ export default function TabHistorial({
   const formatDate = (v: unknown) => {
     if (!v) return '—';
     try {
-      return formatFrontendDate(String(v));
+      return formatFrontendDate(String(v), locale === 'en' ? 'en-US' : 'es-AR');
     } catch {
       return String(v);
     }
@@ -152,7 +152,7 @@ export default function TabHistorial({
                       }}
                       className='rounded-xl border bg-background px-3 py-2 text-sm font-semibold hover:bg-muted dark:border-slate-700 dark:bg-slate-950'
                     >
-                      Ver
+                      {tx('Ver', 'View')}
                     </button>
                   </div>
                 </div>

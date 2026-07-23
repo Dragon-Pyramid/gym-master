@@ -18,6 +18,8 @@ import {
 import { getProductoHistorialPreciosCostos } from "@/services/productoService";
 import { getProductoStockMovimientos } from "@/services/productoStockMovimientoService";
 import { formatFrontendDateTime, formatFrontendDate } from '@/utils/dateFormat';
+import { useI18n } from '@/i18n/I18nProvider';
+import { translateCommercialUi } from '@/i18n/commercialUi';
 
 export default function ProductoViewModal({
   open,
@@ -32,6 +34,9 @@ export default function ProductoViewModal({
   getProveedorNombre?: (proveedorId?: string | null) => string;
   getCategoriaNombre?: (categoriaId?: string | null) => string;
 }) {
+  const { locale } = useI18n();
+  const c = (text: string) => translateCommercialUi(locale, text);
+  const dateLocale = locale === "en" ? "en-US" : "es-AR";
   const [historial, setHistorial] = useState<ProductoPrecioCostoHistorial[]>([]);
   const [movimientosStock, setMovimientosStock] = useState<ProductoStockMovimiento[]>([]);
 
@@ -77,106 +82,106 @@ export default function ProductoViewModal({
         <QaFileNameBadge file="src/components/modal/ProductoViewModal.tsx" />
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-foreground">
-            Detalle de producto
+            {c("Detalle de producto")}
           </DialogTitle>
           <div className="text-sm text-right text-muted-foreground">
-            {formatFrontendDateTime(new Date())}
+            {formatFrontendDateTime(new Date(), dateLocale)}
           </div>
         </DialogHeader>
         <div className="grid grid-cols-1 gap-6 mt-4 md:grid-cols-2">
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Nombre</label>
+              <label className="text-sm font-medium">{c("Nombre")}</label>
               <div className="p-2 border rounded-md bg-muted text-foreground">
                 {producto.nombre || "-"}
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Descripción</label>
+              <label className="text-sm font-medium">{c("Descripción")}</label>
               <div className="p-2 border rounded-md bg-muted text-foreground">
                 {producto.descripcion || "-"}
               </div>
             </div>
             <div className="grid grid-cols-1 gap-3 rounded-lg border bg-muted/30 p-3 text-sm md:grid-cols-2">
               <div>
-                <p className="text-xs text-muted-foreground">SKU / código interno</p>
+                <p className="text-xs text-muted-foreground">{c("SKU / código interno")}</p>
                 <p className="font-mono font-semibold">{producto.sku || "-"}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Código de barras</p>
+                <p className="text-xs text-muted-foreground">{c("Código de barras")}</p>
                 <p className="font-mono font-semibold">{producto.codigo_barras || "-"}</p>
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Precio de venta</label>
+              <label className="text-sm font-medium">{c("Precio de venta")}</label>
               <div className="p-2 border rounded-md bg-muted text-foreground">
-                {formatCurrencyARS(producto.precio)}
+                {formatCurrencyARS(producto.precio, locale)}
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Categoría</label>
+              <label className="text-sm font-medium">{c("Categoría")}</label>
               <div className="p-2 border rounded-md bg-muted text-foreground">
-                {getCategoriaNombre?.(producto.id_categoria_producto) ?? producto.id_categoria_producto ?? "Sin categoría"}
+                {getCategoriaNombre?.(producto.id_categoria_producto) ?? producto.id_categoria_producto ?? c("Sin categoría")}
               </div>
             </div>
           </div>
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Stock actual</label>
+              <label className="text-sm font-medium">{c("Stock actual")}</label>
               <div className="p-2 border rounded-md bg-muted text-foreground">
                 {producto.stock}
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Costo de compra</label>
+              <label className="text-sm font-medium">{c("Costo de compra")}</label>
               <div className="p-2 border rounded-md bg-muted text-foreground">
-                {formatCurrencyARS(producto.costo ?? 0)}
+                {formatCurrencyARS(producto.costo ?? 0, locale)}
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Margen estimado</label>
+              <label className="text-sm font-medium">{c("Margen estimado")}</label>
               <div className="p-2 border rounded-md bg-muted text-foreground">
-                {formatCurrencyARS((producto.precio ?? 0) - (producto.costo ?? 0))}
+                {formatCurrencyARS((producto.precio ?? 0) - (producto.costo ?? 0), locale)}
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Stock mínimo operativo</label>
+              <label className="text-sm font-medium">{c("Stock mínimo operativo")}</label>
               <div className="p-2 border rounded-md bg-muted text-foreground">
                 {getProductoStockMinimo(producto)}
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Estado comercial</label>
+              <label className="text-sm font-medium">{c("Estado comercial")}</label>
               <div className="p-2 border rounded-md bg-muted text-foreground">
-                {getProductoStockEstadoLabel(producto)}
+                {c(getProductoStockEstadoLabel(producto))}
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Proveedor</label>
+              <label className="text-sm font-medium">{c("Proveedor")}</label>
               <div className="p-2 border rounded-md bg-muted text-foreground">
-                {getProveedorNombre?.(producto.proveedor_id) ?? producto.proveedor_id ?? "Sin proveedor asignado"}
+                {getProveedorNombre?.(producto.proveedor_id) ?? producto.proveedor_id ?? c("Sin proveedor asignado")}
               </div>
             </div>
           </div>
         </div>
         <div className="mt-6 rounded-lg border bg-muted/20 p-4">
           <div className="mb-3 flex items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold">Historial de precios y costos</h3>
-            <span className="text-xs text-muted-foreground">{historial.length} registros</span>
+            <h3 className="text-sm font-semibold">{c("Historial de precios y costos")}</h3>
+            <span className="text-xs text-muted-foreground">{historial.length} {c("registros")}</span>
           </div>
           {historial.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No hay historial registrado todavía.</p>
+            <p className="text-sm text-muted-foreground">{c("No hay historial registrado todavía.")}</p>
           ) : (
             <div className="max-h-64 overflow-auto rounded-md border bg-background">
               <table className="w-full text-xs">
                 <thead className="bg-muted text-muted-foreground">
                   <tr>
-                    <th className="px-3 py-2 text-left">Fecha</th>
-                    <th className="px-3 py-2 text-right">Precio anterior</th>
-                    <th className="px-3 py-2 text-right">Precio nuevo</th>
-                    <th className="px-3 py-2 text-right">Costo anterior</th>
-                    <th className="px-3 py-2 text-right">Costo nuevo</th>
-                    <th className="px-3 py-2 text-right">Margen</th>
+                    <th className="px-3 py-2 text-left">{c("Fecha")}</th>
+                    <th className="px-3 py-2 text-right">{c("Precio anterior")}</th>
+                    <th className="px-3 py-2 text-right">{c("Precio nuevo")}</th>
+                    <th className="px-3 py-2 text-right">{c("Costo anterior")}</th>
+                    <th className="px-3 py-2 text-right">{c("Costo nuevo")}</th>
+                    <th className="px-3 py-2 text-right">{c("Margen")}</th>
                     <th className="px-3 py-2 text-left">Motivo</th>
                   </tr>
                 </thead>
@@ -184,22 +189,22 @@ export default function ProductoViewModal({
                   {historial.map((item) => (
                     <tr key={item.id} className="border-t">
                       <td className="px-3 py-2">
-                        {formatFrontendDate(item.fecha_vigencia ?? item.creado_en)}
+                        {formatFrontendDate(item.fecha_vigencia ?? item.creado_en, dateLocale)}
                       </td>
                       <td className="px-3 py-2 text-right">
-                        {item.precio_anterior == null ? "-" : formatCurrencyARS(item.precio_anterior)}
+                        {item.precio_anterior == null ? "-" : formatCurrencyARS(item.precio_anterior, locale)}
                       </td>
                       <td className="px-3 py-2 text-right font-medium">
-                        {formatCurrencyARS(item.precio_nuevo)}
+                        {formatCurrencyARS(item.precio_nuevo, locale)}
                       </td>
                       <td className="px-3 py-2 text-right">
-                        {item.costo_anterior == null ? "-" : formatCurrencyARS(item.costo_anterior)}
+                        {item.costo_anterior == null ? "-" : formatCurrencyARS(item.costo_anterior, locale)}
                       </td>
                       <td className="px-3 py-2 text-right font-medium">
-                        {formatCurrencyARS(item.costo_nuevo)}
+                        {formatCurrencyARS(item.costo_nuevo, locale)}
                       </td>
                       <td className="px-3 py-2 text-right">
-                        {formatCurrencyARS(item.margen_nuevo ?? 0)}
+                        {formatCurrencyARS(item.margen_nuevo ?? 0, locale)}
                         {item.margen_porcentaje_nuevo != null
                           ? ` (${Number(item.margen_porcentaje_nuevo).toFixed(1)}%)`
                           : ""}
@@ -217,28 +222,28 @@ export default function ProductoViewModal({
 
         <div className="mt-6 rounded-lg border bg-muted/20 p-4">
           <div className="mb-3 flex items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold">Movimientos de stock</h3>
-            <span className="text-xs text-muted-foreground">{movimientosStock.length} registros recientes</span>
+            <h3 className="text-sm font-semibold">{c("Movimientos de stock")}</h3>
+            <span className="text-xs text-muted-foreground">{movimientosStock.length} {c("registros recientes")}</span>
           </div>
           {movimientosStock.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No hay movimientos de stock registrados todavía.</p>
+            <p className="text-sm text-muted-foreground">{c("No hay movimientos de stock registrados todavía.")}</p>
           ) : (
             <div className="max-h-64 overflow-auto rounded-md border bg-background">
               <table className="w-full text-xs">
                 <thead className="bg-muted text-muted-foreground">
                   <tr>
-                    <th className="px-3 py-2 text-left">Fecha</th>
+                    <th className="px-3 py-2 text-left">{c("Fecha")}</th>
                     <th className="px-3 py-2 text-left">Tipo</th>
-                    <th className="px-3 py-2 text-right">Cantidad</th>
-                    <th className="px-3 py-2 text-right">Stock anterior</th>
-                    <th className="px-3 py-2 text-right">Stock nuevo</th>
+                    <th className="px-3 py-2 text-right">{c("Cantidad")}</th>
+                    <th className="px-3 py-2 text-right">{c("Stock anterior")}</th>
+                    <th className="px-3 py-2 text-right">{c("Stock nuevo")}</th>
                     <th className="px-3 py-2 text-left">Motivo</th>
                   </tr>
                 </thead>
                 <tbody>
                   {movimientosStock.map((item) => (
                     <tr key={item.id} className="border-t">
-                      <td className="px-3 py-2">{formatFrontendDate(item.creado_en)}</td>
+                      <td className="px-3 py-2">{formatFrontendDate(item.creado_en, dateLocale)}</td>
                       <td className="px-3 py-2 capitalize">{item.tipo.replace(/_/g, " ")}</td>
                       <td className="px-3 py-2 text-right font-medium">{item.cantidad}</td>
                       <td className="px-3 py-2 text-right">{item.stock_anterior}</td>

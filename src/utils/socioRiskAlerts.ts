@@ -1,5 +1,6 @@
 import { Socio } from '@/interfaces/socio.interface';
 import { Socio360Perfil } from '@/interfaces/socio360.interface';
+import type { GymMasterLocale } from '@/i18n/config';
 
 export type SocioRiskLevel = 'alto' | 'medio' | 'bajo' | 'ok';
 
@@ -29,6 +30,10 @@ const levelWeight: Record<Exclude<SocioRiskLevel, 'ok'>, number> = {
   bajo: 1,
 };
 
+function riskTx(locale: GymMasterLocale, es: string, en: string) {
+  return locale === 'en' ? en : es;
+}
+
 function hasValue(value?: string | null) {
   return Boolean(value && value.trim().length > 0);
 }
@@ -46,21 +51,24 @@ function isOverdueCuota(perfil?: Socio360Perfil | null) {
     Number(cuota?.dias_vencido ?? 0) > 0 ||
     estado.includes('venc') ||
     estado.includes('mor') ||
-    estado.includes('deuda')
+    estado.includes('deuda') ||
+    estado.includes('overdue') ||
+    estado.includes('late') ||
+    estado.includes('debt')
   );
 }
 
-function summarize(alerts: SocioRiskAlert[]): SocioRiskSummary {
+function summarize(alerts: SocioRiskAlert[], locale: GymMasterLocale): SocioRiskSummary {
   const highCount = alerts.filter((alert) => alert.level === 'alto').length;
   const mediumCount = alerts.filter((alert) => alert.level === 'medio').length;
   const lowCount = alerts.filter((alert) => alert.level === 'bajo').length;
   const score = alerts.reduce((total, alert) => total + levelWeight[alert.level], 0);
   const level: SocioRiskLevel = highCount > 0 ? 'alto' : mediumCount > 0 ? 'medio' : lowCount > 0 ? 'bajo' : 'ok';
   const label = {
-    alto: 'Riesgo alto',
-    medio: 'Riesgo medio',
-    bajo: 'Seguimiento leve',
-    ok: 'Sin alertas críticas',
+    alto: riskTx(locale, 'Riesgo alto', 'High risk'),
+    medio: riskTx(locale, 'Riesgo medio', 'Medium risk'),
+    bajo: riskTx(locale, 'Seguimiento leve', 'Light follow-up'),
+    ok: riskTx(locale, 'Sin alertas críticas', 'No critical alerts'),
   }[level];
 
   return {
@@ -83,15 +91,19 @@ export function getSocioRiskToneClasses(level: SocioRiskLevel) {
   }[level];
 }
 
-export function buildSocioBaseRiskSummary(socio: Socio): SocioRiskSummary {
+export function buildSocioBaseRiskSummary(socio: Socio, locale: GymMasterLocale = 'es'): SocioRiskSummary {
   const alerts: SocioRiskAlert[] = [];
 
   if (!socio.activo) {
     alerts.push({
       id: 'inactive-member',
       level: 'alto',
-      title: 'Socio inactivo',
-      description: 'El socio figura inactivo. Revisar el motivo antes de asignar servicios o tomar contacto comercial.',
+      title: riskTx(locale, 'Socio inactivo', 'Inactive member'),
+      description: riskTx(
+        locale,
+        'El socio figura inactivo. Revisar el motivo antes de asignar servicios o tomar contacto comercial.',
+        'The member is inactive. Review the reason before assigning services or initiating commercial contact.'
+      ),
       source: 'operativo',
     });
   }
@@ -100,8 +112,12 @@ export function buildSocioBaseRiskSummary(socio: Socio): SocioRiskSummary {
     alerts.push({
       id: 'missing-contact',
       level: 'medio',
-      title: 'Sin canal de contacto',
-      description: 'No hay teléfono ni email disponibles para seguimiento administrativo.',
+      title: riskTx(locale, 'Sin canal de contacto', 'No contact channel'),
+      description: riskTx(
+        locale,
+        'No hay teléfono ni email disponibles para seguimiento administrativo.',
+        'No phone number or email is available for administrative follow-up.'
+      ),
       source: 'contacto',
     });
   }
@@ -110,8 +126,12 @@ export function buildSocioBaseRiskSummary(socio: Socio): SocioRiskSummary {
     alerts.push({
       id: 'missing-emergency-contact',
       level: 'bajo',
-      title: 'Contacto de emergencia pendiente',
-      description: 'Conviene completar contacto de emergencia para respaldo operativo y de salud.',
+      title: riskTx(locale, 'Contacto de emergencia pendiente', 'Emergency contact pending'),
+      description: riskTx(
+        locale,
+        'Conviene completar contacto de emergencia para respaldo operativo y de salud.',
+        'Add an emergency contact for operational and health support.'
+      ),
       source: 'salud',
     });
   }
@@ -120,42 +140,63 @@ export function buildSocioBaseRiskSummary(socio: Socio): SocioRiskSummary {
     alerts.push({
       id: 'missing-photo',
       level: 'bajo',
-      title: 'Foto de perfil pendiente',
-      description: 'La foto ayuda a validar identidad en recepción, asistencia y atención administrativa.',
+      title: riskTx(locale, 'Foto de perfil pendiente', 'Profile photo pending'),
+      description: riskTx(
+        locale,
+        'La foto ayuda a validar identidad en recepción, asistencia y atención administrativa.',
+        'A photo helps verify identity at reception, attendance check-in, and administrative support.'
+      ),
       source: 'operativo',
     });
   }
 
-  return summarize(alerts);
+  return summarize(alerts, locale);
 }
 
-export function buildSocio360RiskSummary(socio: Socio, perfil?: Socio360Perfil | null): SocioRiskSummary {
-  const baseAlerts = buildSocioBaseRiskSummary(socio).alerts;
+export function buildSocio360RiskSummary(
+  socio: Socio,
+  perfil?: Socio360Perfil | null,
+  locale: GymMasterLocale = 'es'
+): SocioRiskSummary {
+  const baseAlerts = buildSocioBaseRiskSummary(socio, locale).alerts;
   const alerts: SocioRiskAlert[] = [...baseAlerts];
 
-  if (!perfil) return summarize(alerts);
+  if (!perfil) return summarize(alerts, locale);
 
   if (isOverdueCuota(perfil)) {
     alerts.push({
       id: 'overdue-fee',
       level: 'alto',
-      title: 'Cuota vencida o con deuda',
-      description: 'El resumen de cuota indica vencimiento, mora o pago no regularizado. Priorizar contacto administrativo.',
+      title: riskTx(locale, 'Cuota vencida o con deuda', 'Overdue fee or outstanding debt'),
+      description: riskTx(
+        locale,
+        'El resumen de cuota indica vencimiento, mora o pago no regularizado. Priorizar contacto administrativo.',
+        'The fee summary indicates an overdue, late, or unsettled payment. Prioritize administrative contact.'
+      ),
       source: 'cuota',
       href: '/dashboard/cuotas',
-      actionLabel: 'Ver cuotas',
+      actionLabel: riskTx(locale, 'Ver cuotas', 'View fees'),
     });
   }
 
-  if (!perfil.fichaMedica.activo || normalize(perfil.fichaMedica.ultimoEstado).includes('pendiente')) {
+  const medicalStatus = normalize(perfil.fichaMedica.ultimoEstado);
+  if (
+    !perfil.fichaMedica.activo ||
+    medicalStatus.includes('pendiente') ||
+    medicalStatus.includes('pending')
+  ) {
     alerts.push({
       id: 'medical-record-pending',
       level: 'medio',
-      title: 'Ficha médica pendiente de revisión',
-      description: 'Solicitar o revisar ficha médica antes de sostener actividades de mayor exigencia.',
+      title: riskTx(locale, 'Ficha médica pendiente de revisión', 'Medical record pending review'),
+      description: riskTx(
+        locale,
+        'Solicitar o revisar ficha médica antes de sostener actividades de mayor exigencia.',
+        'Request or review the medical record before maintaining higher-intensity activities.'
+      ),
       source: 'salud',
       href: '/dashboard/ficha-medica',
-      actionLabel: 'Ver ficha',
+      actionLabel: riskTx(locale, 'Ver ficha', 'View record'),
     });
   }
 
@@ -163,11 +204,15 @@ export function buildSocio360RiskSummary(socio: Socio, perfil?: Socio360Perfil |
     alerts.push({
       id: 'no-routine',
       level: 'medio',
-      title: 'Sin rutina asignada',
-      description: 'El socio no tiene rutina detectada. Puede requerir atención del entrenador para mejorar adherencia.',
+      title: riskTx(locale, 'Sin rutina asignada', 'No routine assigned'),
+      description: riskTx(
+        locale,
+        'El socio no tiene rutina detectada. Puede requerir atención del entrenador para mejorar adherencia.',
+        'No routine was detected. Trainer follow-up may help improve adherence.'
+      ),
       source: 'retencion',
       href: '/dashboard/gestor-rutinas',
-      actionLabel: 'Gestionar rutina',
+      actionLabel: riskTx(locale, 'Gestionar rutina', 'Manage routine'),
     });
   }
 
@@ -175,11 +220,15 @@ export function buildSocio360RiskSummary(socio: Socio, perfil?: Socio360Perfil |
     alerts.push({
       id: 'no-diet',
       level: 'bajo',
-      title: 'Sin dieta o plan nutricional',
-      description: 'No se detecta dieta asociada. Puede ser oportunidad de seguimiento o servicio complementario.',
+      title: riskTx(locale, 'Sin dieta o plan nutricional', 'No diet or nutrition plan'),
+      description: riskTx(
+        locale,
+        'No se detecta dieta asociada. Puede ser oportunidad de seguimiento o servicio complementario.',
+        'No associated diet was detected. This may be an opportunity for follow-up or a complementary service.'
+      ),
       source: 'retencion',
       href: '/dashboard/gestor-dietas',
-      actionLabel: 'Gestionar dieta',
+      actionLabel: riskTx(locale, 'Gestionar dieta', 'Manage diet'),
     });
   }
 
@@ -187,37 +236,51 @@ export function buildSocio360RiskSummary(socio: Socio, perfil?: Socio360Perfil |
     alerts.push({
       id: 'no-evolution',
       level: 'bajo',
-      title: 'Sin controles de evolución',
-      description: 'No hay registros de evolución física. Conviene invitar al socio a cargar una medición inicial.',
+      title: riskTx(locale, 'Sin controles de evolución', 'No progress assessments'),
+      description: riskTx(
+        locale,
+        'No hay registros de evolución física. Conviene invitar al socio a cargar una medición inicial.',
+        'There are no physical-progress records. Invite the member to complete an initial assessment.'
+      ),
       source: 'retencion',
       href: '/dashboard/gestor-evolucion-fisica',
-      actionLabel: 'Ver evolución',
+      actionLabel: riskTx(locale, 'Ver evolución', 'View progress'),
     });
   }
 
   if ((perfil.mensajes.pendientes ?? 0) > 0) {
+    const pending = perfil.mensajes.pendientes;
     alerts.push({
       id: 'pending-messages',
       level: 'medio',
-      title: 'Mensajes pendientes',
-      description: `Hay ${perfil.mensajes.pendientes} mensaje(s) pendientes de respuesta administrativa.`,
+      title: riskTx(locale, 'Mensajes pendientes', 'Pending messages'),
+      description: riskTx(
+        locale,
+        `Hay ${pending} mensaje(s) pendientes de respuesta administrativa.`,
+        `There ${pending === 1 ? 'is' : 'are'} ${pending} message${pending === 1 ? '' : 's'} awaiting an administrative response.`
+      ),
       source: 'operativo',
       href: '/dashboard/mensajes-admin',
-      actionLabel: 'Responder mensajes',
+      actionLabel: riskTx(locale, 'Responder mensajes', 'Reply to messages'),
     });
   }
 
   if ((perfil.actividades.pendientes ?? 0) > 0) {
+    const pending = perfil.actividades.pendientes;
     alerts.push({
       id: 'pending-activities',
       level: 'bajo',
-      title: 'Solicitudes de actividad pendientes',
-      description: `Hay ${perfil.actividades.pendientes} solicitud(es) en lista de espera o pendiente(s) de revisión.`,
+      title: riskTx(locale, 'Solicitudes de actividad pendientes', 'Pending activity requests'),
+      description: riskTx(
+        locale,
+        `Hay ${pending} solicitud(es) en lista de espera o pendiente(s) de revisión.`,
+        `There ${pending === 1 ? 'is' : 'are'} ${pending} request${pending === 1 ? '' : 's'} on the waitlist or pending review.`
+      ),
       source: 'actividad',
       href: '/dashboard/actividades',
-      actionLabel: 'Ver actividades',
+      actionLabel: riskTx(locale, 'Ver actividades', 'View activities'),
     });
   }
 
-  return summarize(Array.from(new Map(alerts.map((alert) => [alert.id, alert])).values()));
+  return summarize(Array.from(new Map(alerts.map((alert) => [alert.id, alert])).values()), locale);
 }

@@ -14,11 +14,13 @@ import SociosDietasGrid from '@/components/gestion-dietas/SociosDietasGrid';
 import { fetchSocios } from '@/services/socioService';
 import { Socio } from '@/interfaces/socio.interface';
 import { JwtUser } from '@/interfaces/jwtUser.interface';
+import { useI18n } from '@/i18n/I18nProvider';
 
 export default function GestionDietasPage() {
-  const { isAuthenticated, initializeAuth, isInitialized, user } =
-    useAuthStore();
+  const { isAuthenticated, initializeAuth, isInitialized, user } = useAuthStore();
   const router = useRouter();
+  const { locale } = useI18n();
+  const tx = (es: string, en: string) => (locale === 'en' ? en : es);
   const [socios, setSocios] = useState<Socio[]>([]);
   const [filteredSocios, setFilteredSocios] = useState<Socio[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -41,7 +43,7 @@ export default function GestionDietasPage() {
       setSocios(data ?? []);
       setFilteredSocios(data ?? []);
     } catch (error) {
-      console.error('Error al cargar socios:', error);
+      console.error('Error loading members:', error);
     } finally {
       setLoading(false);
     }
@@ -70,30 +72,28 @@ export default function GestionDietasPage() {
   if (loading || !isInitialized) {
     return (
       <div className='flex items-center justify-center h-screen'>
-        Cargando datos de socios...
+        {tx('Cargando datos de socios...', 'Loading member data...')}
       </div>
     );
   }
 
-  if (!isAuthenticated) {
-    return null;
-  }
+  if (!isAuthenticated) return null;
 
   return (
     <SidebarProvider>
       <div className='flex w-full min-h-screen'>
         <AppSidebar />
         <SidebarInset>
-          <AppHeader title='Gestión de Dietas' />
+          <AppHeader title={tx('Gestión de dietas', 'Diet management')} />
           <main className='flex-1 p-6 space-y-6'>
             <Card className='w-full'>
               <CardHeader className='flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap'>
-                <h2 className='text-xl font-bold'>Dietas de Socios</h2>
+                <h2 className='text-xl font-bold'>{tx('Dietas de socios', 'Member diets')}</h2>
                 <div className='relative flex-grow md:flex-grow-0'>
                   <Search className='absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground' />
                   <Input
                     type='search'
-                    placeholder='Buscar por nombre o DNI...'
+                    placeholder={tx('Buscar por nombre o DNI...', 'Search by name or DNI...')}
                     className='pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] w-full'
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}

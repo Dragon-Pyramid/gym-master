@@ -153,7 +153,7 @@ function ResetPasswordContent() {
         <div className='relative mx-auto h-40 w-40 md:h-52 md:w-52'>
           <Image
             src='/gm_logo.svg'
-            alt='Gym Master Logo'
+            alt={t('common.logoAlt')}
             fill
             className='object-contain dark:invert'
             priority

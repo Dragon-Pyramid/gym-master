@@ -10,10 +10,12 @@ import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { getToken } from '@/services/storageService';
+import { useI18n } from '@/i18n/I18nProvider';
 
 function PagoExitosoContent() {
   const { user, isAuthenticated, initializeAuth, isInitialized } = useAuthStore();
   const router = useRouter();
+  const { t } = useI18n();
   const searchParams = useSearchParams();
   const sessionId = searchParams?.get('session_id');
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>(
@@ -51,26 +53,28 @@ function PagoExitosoContent() {
         const json = await res.json();
 
         if (!res.ok) {
-          throw new Error(json.error || 'No se pudo sincronizar el pago');
+          console.error('Payment confirmation failed', json.error);
+          throw new Error(t('publicPages.paymentSuccess.syncFailed'));
         }
 
         setSyncStatus('synced');
         setSyncMessage(
           json.status === 'already_registered'
-            ? 'El pago ya estaba registrado en tu historial.'
-            : 'El pago fue sincronizado correctamente con tu historial.'
+            ? t('publicPages.paymentSuccess.alreadyRegistered')
+            : t('publicPages.paymentSuccess.synced')
         );
       } catch (error: any) {
         setSyncStatus('error');
         setSyncMessage(
-          error.message ||
-            'El pago fue aprobado en Stripe, pero no se pudo sincronizar automáticamente. Avisá a administración.'
+          error?.message === t('publicPages.paymentSuccess.syncFailed')
+            ? error.message
+            : t('publicPages.paymentSuccess.syncFallbackError')
         );
       }
     };
 
     confirmarPago();
-  }, [isAuthenticated, isInitialized, sessionId, syncStatus]);
+  }, [isAuthenticated, isInitialized, sessionId, syncStatus, t]);
 
   const redirectTarget = useMemo(() => {
     if (user?.rol === 'socio') return '/dashboard/mi-cuenta/historial-pagos';
@@ -79,15 +83,17 @@ function PagoExitosoContent() {
   }, [user?.rol]);
 
   const redirectLabel = useMemo(() => {
-    if (user?.rol === 'socio') return 'Ver historial de pagos';
-    if (user?.rol === 'admin' || user?.rol === 'usuario') return 'Ir a pagos';
-    return 'Ir al dashboard';
-  }, [user?.rol]);
+    if (user?.rol === 'socio') return t('publicPages.paymentSuccess.viewHistory');
+    if (user?.rol === 'admin' || user?.rol === 'usuario') {
+      return t('publicPages.paymentSuccess.goToPayments');
+    }
+    return t('publicPages.paymentSuccess.goToDashboard');
+  }, [t, user?.rol]);
 
   if (!isInitialized) {
     return (
       <div className='flex items-center justify-center h-screen'>
-        Procesando pago...
+        {t('publicPages.payment.processing')}
       </div>
     );
   }
@@ -101,27 +107,27 @@ function PagoExitosoContent() {
       <div className='flex w-full min-h-screen bg-background text-foreground'>
         <AppSidebar />
         <SidebarInset>
-          <AppHeader title='Pago Exitoso' />
+          <AppHeader title={t('publicPages.paymentSuccess.headerTitle')} />
           <main className='flex items-center justify-center flex-1 p-6'>
             <Card className='w-full max-w-md mx-auto shadow-lg bg-card text-card-foreground'>
               <CardHeader className='flex flex-col items-center gap-2 p-6'>
                 <CheckCircle className='w-16 h-16 text-green-500 dark:text-green-400' />
                 <h2 className='text-2xl font-bold text-center text-green-600 dark:text-green-400'>
-                  ¡Pago realizado con éxito!
+                  {t('publicPages.paymentSuccess.title')}
                 </h2>
               </CardHeader>
               <CardContent className='flex flex-col items-center gap-4 p-6'>
                 <p className='text-lg text-center text-gray-700 dark:text-gray-200'>
-                  Tu pago de cuota fue procesado correctamente por Stripe.
+                  {t('publicPages.paymentSuccess.description')}
                 </p>
                 <p className='text-sm text-center text-gray-500 dark:text-gray-400'>
-                  Estamos sincronizando el registro para que puedas verlo en tu historial.
+                  {t('publicPages.paymentSuccess.syncDescription')}
                 </p>
 
                 {syncStatus === 'syncing' && (
                   <div className='flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700'>
                     <Loader2 className='h-4 w-4 animate-spin' />
-                    Sincronizando pago con Gym Master...
+                    {t('publicPages.paymentSuccess.syncing')}
                   </div>
                 )}
 
@@ -140,7 +146,7 @@ function PagoExitosoContent() {
 
                 {sessionId && (
                   <div className='w-full p-2 mt-2 text-xs text-center text-gray-700 bg-gray-100 rounded break-all'>
-                    <strong>ID de sesión Stripe:</strong> {sessionId}
+                    <strong>{t('publicPages.payment.stripeSessionId')}</strong> {sessionId}
                   </div>
                 )}
                 <button
@@ -161,11 +167,13 @@ function PagoExitosoContent() {
 }
 
 export default function PagoExitosoPage() {
+  const { t } = useI18n();
+
   return (
     <Suspense
       fallback={
         <div className='flex items-center justify-center h-screen'>
-          Procesando pago...
+          {t('publicPages.payment.processing')}
         </div>
       }
     >

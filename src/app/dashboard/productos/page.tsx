@@ -36,6 +36,7 @@ import {
 } from "@/lib/comercial/productos";
 import { useI18n } from '@/i18n/I18nProvider';
 import { translateCommercialUi } from '@/i18n/commercialUi';
+import { translateCoreCatalogName } from '@/utils/coreSeedI18n';
 
 const PRODUCTOS_PAGE_SIZE = 10;
 
@@ -231,7 +232,14 @@ export default function ProductoPage() {
     if (!categoriaId) return c("Sin categoría");
 
     const categoria = categoriaById.get(categoriaId);
-    return categoria?.nombre || c("Categoría no encontrada");
+    if (!categoria) return c("Categoría no encontrada");
+
+    return translateCoreCatalogName(
+      'categoria_producto',
+      categoria,
+      categoria.nombre,
+      locale,
+    );
   };
 
   const metrics = useMemo(() => {
@@ -333,7 +341,7 @@ export default function ProductoPage() {
           { label: productoExportTx(locale, 'Productos activos', 'Active products'), value: metrics.activos },
           { label: productoExportTx(locale, 'Stock crítico', 'Critical stock'), value: metrics.criticos },
           { label: productoExportTx(locale, 'Sin stock', 'Out of stock'), value: metrics.sinStock },
-          { label: productoExportTx(locale, 'Inventario estimado', 'Estimated inventory'), value: formatCurrencyARS(metrics.valorInventario) },
+          { label: productoExportTx(locale, 'Inventario estimado', 'Estimated inventory'), value: formatCurrencyARS(metrics.valorInventario, locale) },
         ],
         filtersLabel: getProductoExportFiltersLabel(locale, stockFilter, searchTerm),
         columns: [
@@ -341,9 +349,9 @@ export default function ProductoPage() {
           { header: productoExportTx(locale, 'Descripción', 'Description'), width: 34, getValue: (p) => p.descripcion ? translateProductoExportText(locale, p.descripcion) : '-' },
           { header: productoExportTx(locale, 'Categoría', 'Category'), width: 25, getValue: (p) => translateProductoExportText(locale, getCategoriaNombre(p.id_categoria_producto)) },
           { header: productoExportTx(locale, 'Proveedor', 'Supplier'), width: 30, getValue: (p) => translateProductoExportText(locale, getProveedorNombre(p.proveedor_id)) },
-          { header: productoExportTx(locale, 'Precio', 'Price'), width: 18, getValue: (p) => formatCurrencyARS(p.precio), align: 'right' },
-          { header: productoExportTx(locale, 'Costo', 'Cost'), width: 18, getValue: (p) => formatCurrencyARS(p.costo ?? 0), align: 'right' },
-          { header: productoExportTx(locale, 'Margen', 'Margin'), width: 18, getValue: (p) => formatCurrencyARS((p.precio ?? 0) - (p.costo ?? 0)), align: 'right' },
+          { header: productoExportTx(locale, 'Precio', 'Price'), width: 18, getValue: (p) => formatCurrencyARS(p.precio, locale), align: 'right' },
+          { header: productoExportTx(locale, 'Costo', 'Cost'), width: 18, getValue: (p) => formatCurrencyARS(p.costo ?? 0, locale), align: 'right' },
+          { header: productoExportTx(locale, 'Margen', 'Margin'), width: 18, getValue: (p) => formatCurrencyARS((p.precio ?? 0) - (p.costo ?? 0), locale), align: 'right' },
           { header: 'Stock', width: 14, getValue: (p) => p.stock, align: 'right' },
           { header: productoExportTx(locale, 'Stock mínimo', 'Minimum stock'), width: 20, getValue: (p) => p.stock_minimo ?? 5, align: 'right' },
           { header: productoExportTx(locale, 'Estado', 'Status'), width: 22, getValue: (p) => translateProductoExportText(locale, getProductoStockEstado(p).replace(/_/g, ' ')) },
@@ -439,7 +447,7 @@ export default function ProductoPage() {
               <Card>
                 <CardContent className="p-5">
                   <p className="text-sm text-muted-foreground">{c("Inventario estimado")}</p>
-                  <p className="text-2xl font-bold">{formatCurrencyARS(metrics.valorInventario)}</p>
+                  <p className="text-2xl font-bold">{formatCurrencyARS(metrics.valorInventario, locale)}</p>
                 </CardContent>
               </Card>
             </section>

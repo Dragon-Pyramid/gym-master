@@ -18,7 +18,6 @@ import {
   ShieldAlert,
   ShieldCheck,
   Sparkles,
-  TrendingUp,
   Utensils,
 } from "lucide-react";
 import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
@@ -32,21 +31,35 @@ import { Button } from "@/components/ui/button";
 import { Socio } from "@/interfaces/socio.interface";
 import { Socio360Perfil } from "@/interfaces/socio360.interface";
 import { fetchSocio360Api } from "@/services/browser/socio360ApiClient";
-import { formatFrontendDateTime } from '@/utils/dateFormat';
+import { formatFrontendDate, formatFrontendDateTime } from '@/utils/dateFormat';
+import { useI18n } from '@/i18n/I18nProvider';
+import type { GymMasterLocale } from '@/i18n/config';
 import { getProfilePhotoOrDefault, isDefaultProfilePhoto } from '@/utils/profilePhoto';
 import { buildSocio360RiskSummary, getSocioRiskToneClasses, SocioRiskAlert } from '@/utils/socioRiskAlerts';
 
-const sexoLabel = (value?: string | null) => {
-  if (value === "M") return "Masculino";
-  if (value === "F") return "Femenino";
-  return "-";
+function socio360Tx(locale: GymMasterLocale, es: string, en: string) {
+  return locale === 'en' ? en : es;
+}
+
+const sexoLabel = (value: string | null | undefined, locale: GymMasterLocale) => {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (['m', 'masculino', 'male'].includes(normalized)) return socio360Tx(locale, 'Masculino', 'Male');
+  if (['f', 'femenino', 'female'].includes(normalized)) return socio360Tx(locale, 'Femenino', 'Female');
+  return '-';
 };
 
-const cuotaEstadoLabel = (estado?: string | null) => {
-  if (!estado) return "Sin estado";
-  return estado
-    .replaceAll("_", " ")
-    .replace(/^\w/, (letter) => letter.toUpperCase());
+const cuotaEstadoLabel = (estado: string | null | undefined, locale: GymMasterLocale) => {
+  if (!estado) return socio360Tx(locale, 'Sin estado', 'No status');
+  const normalized = estado.toLowerCase().replaceAll('_', ' ').trim();
+  const knownLabels: Array<[string[], string, string]> = [
+    [['venc', 'mor', 'deuda', 'overdue', 'late', 'debt'], 'Vencida', 'Overdue'],
+    [['al día', 'al dia', 'activa', 'activo', 'active', 'current', 'paid'], 'Al día', 'Current'],
+    [['pendiente', 'pending'], 'Pendiente', 'Pending'],
+    [['inactiva', 'inactivo', 'inactive'], 'Inactiva', 'Inactive'],
+  ];
+  const match = knownLabels.find(([tokens]) => tokens.some((token) => normalized.includes(token)));
+  if (match) return socio360Tx(locale, match[1], match[2]);
+  return estado.replaceAll('_', ' ').replace(/^\w/, (letter) => letter.toUpperCase());
 };
 
 function DetailField({ label, value }: { label: string; value?: string | number | null }) {
@@ -104,6 +117,8 @@ function ModuleCard({
   status,
   detail,
   href,
+  emptyStatus,
+  openLabel,
 }: {
   icon: typeof ShieldCheck;
   title: string;
@@ -111,6 +126,8 @@ function ModuleCard({
   status?: string;
   detail?: string;
   href: string;
+  emptyStatus: string;
+  openLabel: string;
 }) {
   return (
     <div className="rounded-2xl border bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
@@ -121,7 +138,7 @@ function ModuleCard({
           </div>
           <div>
             <h4 className="font-bold text-foreground">{title}</h4>
-            <p className="text-xs text-muted-foreground">{status || 'Sin novedades'}</p>
+            <p className="text-xs text-muted-foreground">{status || emptyStatus}</p>
           </div>
         </div>
         <span className="rounded-full border px-2 py-1 text-xs font-bold dark:border-slate-700">
@@ -130,13 +147,18 @@ function ModuleCard({
       </div>
       {detail ? <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">{detail}</p> : null}
       <Button asChild variant="outline" size="sm" className="mt-4 w-full">
-        <Link href={href}>Abrir módulo</Link>
+        <Link href={href}>{openLabel}</Link>
       </Button>
     </div>
   );
 }
 
-function RiskAlertCard({ alert }: { alert: SocioRiskAlert }) {
+function RiskAlertCard({ alert, locale }: { alert: SocioRiskAlert; locale: GymMasterLocale }) {
+  const levelLabel = {
+    alto: socio360Tx(locale, 'Alto', 'High'),
+    medio: socio360Tx(locale, 'Medio', 'Medium'),
+    bajo: socio360Tx(locale, 'Leve', 'Low'),
+  }[alert.level];
   return (
     <div className={`rounded-2xl border p-3 text-sm shadow-sm ${getSocioRiskToneClasses(alert.level)}`}>
       <div className="flex items-start gap-3">
@@ -147,7 +169,7 @@ function RiskAlertCard({ alert }: { alert: SocioRiskAlert }) {
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-black">{alert.title}</p>
             <span className="rounded-full bg-black/5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide dark:bg-white/10">
-              {alert.level}
+              {levelLabel}
             </span>
           </div>
           <p className="mt-1 opacity-85">{alert.description}</p>
@@ -171,6 +193,9 @@ export default function SocioViewModal({
   onClose: () => void;
   socio?: Socio | null;
 }) {
+  const { locale } = useI18n();
+  const tx = (es: string, en: string) => socio360Tx(locale, es, en);
+  const dateLocale = locale === 'en' ? 'en-US' : 'es-AR';
   const [perfil360, setPerfil360] = useState<Socio360Perfil | null>(null);
   const [loading360, setLoading360] = useState(false);
 
@@ -184,7 +209,7 @@ export default function SocioViewModal({
     }
 
     setLoading360(true);
-    fetchSocio360Api(socio)
+    fetchSocio360Api(socio, locale)
       .then((data) => {
         if (mounted) setPerfil360(data);
       })
@@ -198,7 +223,7 @@ export default function SocioViewModal({
     return () => {
       mounted = false;
     };
-  }, [open, socio]);
+  }, [open, socio, locale]);
 
   const edad = useMemo(() => {
     if (!socio?.fecnac) return null;
@@ -211,17 +236,17 @@ export default function SocioViewModal({
   const riskSummary = useMemo(
     () =>
       socio
-        ? buildSocio360RiskSummary(socio, perfil360)
+        ? buildSocio360RiskSummary(socio, perfil360, locale)
         : {
             level: 'ok' as const,
-            label: 'Sin alertas críticas',
+            label: socio360Tx(locale, 'Sin alertas críticas', 'No critical alerts'),
             score: 0,
             alerts: [],
             highCount: 0,
             mediumCount: 0,
             lowCount: 0,
           },
-    [socio, perfil360]
+    [socio, perfil360, locale]
   );
 
   if (!socio) return null;
@@ -231,12 +256,17 @@ export default function SocioViewModal({
   const cuotaRawEstado =
     (perfil360?.cuota?.estado_cuota as string | undefined) ||
     (perfil360?.cuota?.estado as string | undefined);
-  const cuotaEstado = cuotaEstadoLabel(cuotaRawEstado);
-  const cuotaTone = cuotaEstado.toLowerCase().includes('venc') || cuotaEstado.toLowerCase().includes('mor')
-    ? 'danger'
-    : cuotaEstado.toLowerCase().includes('día') || cuotaEstado.toLowerCase().includes('act')
-      ? 'success'
-      : 'warning';
+  const cuotaEstado = cuotaEstadoLabel(cuotaRawEstado, locale);
+  const cuotaRawNormalized = String(cuotaRawEstado ?? '').toLowerCase();
+  const cuotaTone =
+    perfil360?.cuota?.cuota_al_dia === false ||
+    Number(perfil360?.cuota?.dias_vencido ?? 0) > 0 ||
+    ['venc', 'mor', 'deuda', 'overdue', 'late', 'debt'].some((token) => cuotaRawNormalized.includes(token))
+      ? 'danger'
+      : perfil360?.cuota?.cuota_al_dia === true ||
+          ['día', 'dia', 'act', 'current', 'paid'].some((token) => cuotaRawNormalized.includes(token))
+        ? 'success'
+        : 'warning';
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="!left-1/2 !top-1/2 !flex !h-[min(92dvh,860px)] !max-h-[92dvh] !w-[min(96vw,1120px)] !max-w-[1120px] !-translate-x-1/2 !-translate-y-1/2 flex-col overflow-hidden bg-background p-0 text-foreground sm:rounded-2xl">
@@ -246,24 +276,24 @@ export default function SocioViewModal({
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.25em] text-sky-300">
-                  Vista 360 administrador
+                  {tx('Vista 360 administrador', 'Administrator 360 view')}
                 </p>
                 <DialogTitle className="text-2xl font-black text-white">
                   {socio.nombre_completo}
                 </DialogTitle>
                 <p className="mt-1 text-sm text-slate-300">
-                  Consolidado operativo del socio · {formatFrontendDateTime(new Date())}
+                  {tx('Consolidado operativo del socio', 'Member operational overview')} · {formatFrontendDateTime(new Date(), dateLocale)}
                 </p>
               </div>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 md:flex md:flex-wrap">
                 <Button asChild variant="secondary" size="sm" className="w-full md:w-auto">
-                  <Link href="/dashboard/cuotas">Cuotas</Link>
+                  <Link href="/dashboard/cuotas">{tx('Cuotas', 'Fees')}</Link>
                 </Button>
                 <Button asChild variant="secondary" size="sm" className="w-full md:w-auto">
-                  <Link href="/dashboard/ficha-medica">Ficha médica</Link>
+                  <Link href="/dashboard/ficha-medica">{tx('Ficha médica', 'Medical record')}</Link>
                 </Button>
                 <Button asChild variant="secondary" size="sm" className="w-full md:w-auto">
-                  <Link href="/dashboard/mensajes-admin">Mensajes</Link>
+                  <Link href="/dashboard/mensajes-admin">{tx('Mensajes', 'Messages')}</Link>
                 </Button>
               </div>
             </div>
@@ -276,7 +306,7 @@ export default function SocioViewModal({
                   <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-full border bg-white p-1 shadow-sm dark:border-slate-700 dark:bg-slate-950">
                     <img
                       src={fotoPerfil}
-                      alt={`Foto de ${socio.nombre_completo}`}
+                      alt={`${tx('Foto de', 'Photo of')} ${socio.nombre_completo}`}
                       className="h-full w-full rounded-full object-cover"
                       onError={(event) => {
                         event.currentTarget.src = '/gm_logo.svg';
@@ -293,7 +323,7 @@ export default function SocioViewModal({
                             : 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200'
                         }`}
                       >
-                        {socio.activo ? 'Socio activo' : 'Socio inactivo'}
+                        {socio.activo ? tx('Socio activo', 'Active member') : tx('Socio inactivo', 'Inactive member')}
                       </span>
                       <span
                         className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-bold ${
@@ -302,7 +332,7 @@ export default function SocioViewModal({
                             : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200'
                         }`}
                       >
-                        {tieneFotoPropia ? 'Foto cargada' : 'Foto pendiente'}
+                        {tieneFotoPropia ? tx('Foto cargada', 'Photo uploaded') : tx('Foto pendiente', 'Photo pending')}
                       </span>
                       <span className={`inline-flex w-fit rounded-full border px-3 py-1 text-xs font-bold ${getSocioRiskToneClasses(riskSummary.level)}`}>
                         {riskSummary.label}
@@ -320,15 +350,15 @@ export default function SocioViewModal({
 
               {loading360 ? (
                 <div className="rounded-2xl border bg-muted/40 p-4 text-sm text-muted-foreground">
-                  Cargando módulos 360 del socio...
+                  {tx('Cargando módulos 360 del socio...', 'Loading member 360 modules...')}
                 </div>
               ) : null}
 
               <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <MetricCard icon={CreditCard} label="Estado de cuota" value={cuotaEstado} tone={cuotaTone} detail={perfil360?.cuota?.proximo_vencimiento ? `Próximo vencimiento: ${String(perfil360.cuota.proximo_vencimiento)}` : undefined} />
-                <MetricCard icon={HeartPulse} label="Ficha médica" value={perfil360?.fichaMedica.ultimoEstado || 'Sin datos'} tone={perfil360?.fichaMedica.activo ? 'success' : 'warning'} detail={perfil360?.fichaMedica.ultimaFecha ? `Última revisión: ${perfil360.fichaMedica.ultimaFecha}` : undefined} />
-                <MetricCard icon={Activity} label="Actividad física" value={`${perfil360?.rutinas.total ?? 0} rutinas`} tone={(perfil360?.rutinas.total ?? 0) > 0 ? 'success' : 'warning'} detail={`${perfil360?.evolucion.total ?? 0} controles de evolución`} />
-                <MetricCard icon={MessageSquare} label="Mensajes" value={perfil360?.mensajes.total ?? 0} tone={(perfil360?.mensajes.pendientes ?? 0) > 0 ? 'warning' : 'info'} detail={(perfil360?.mensajes.pendientes ?? 0) > 0 ? `${perfil360?.mensajes.pendientes} pendientes` : 'Sin pendientes detectados'} />
+                <MetricCard icon={CreditCard} label={tx('Estado de cuota', 'Fee status')} value={cuotaEstado} tone={cuotaTone} detail={perfil360?.cuota?.proximo_vencimiento ? `${tx('Próximo vencimiento', 'Next due date')}: ${formatFrontendDate(String(perfil360.cuota.proximo_vencimiento), dateLocale)}` : undefined} />
+                <MetricCard icon={HeartPulse} label={tx('Ficha médica', 'Medical record')} value={perfil360?.fichaMedica.ultimoEstado || tx('Sin datos', 'No data')} tone={perfil360?.fichaMedica.activo ? 'success' : 'warning'} detail={perfil360?.fichaMedica.ultimaFecha ? `${tx('Última revisión', 'Last review')}: ${perfil360.fichaMedica.ultimaFecha}` : undefined} />
+                <MetricCard icon={Activity} label={tx('Actividad física', 'Physical activity')} value={`${perfil360?.rutinas.total ?? 0} ${tx('rutinas', 'routines')}`} tone={(perfil360?.rutinas.total ?? 0) > 0 ? 'success' : 'warning'} detail={`${perfil360?.evolucion.total ?? 0} ${tx('controles de evolución', 'progress assessments')}`} />
+                <MetricCard icon={MessageSquare} label={tx('Mensajes', 'Messages')} value={perfil360?.mensajes.total ?? 0} tone={(perfil360?.mensajes.pendientes ?? 0) > 0 ? 'warning' : 'info'} detail={(perfil360?.mensajes.pendientes ?? 0) > 0 ? `${perfil360?.mensajes.pendientes} ${tx('pendientes', 'pending')}` : tx('Sin pendientes detectados', 'No pending items detected')} />
               </section>
 
               <section className={`rounded-3xl border p-4 shadow-sm ${getSocioRiskToneClasses(riskSummary.level)}`}>
@@ -338,25 +368,25 @@ export default function SocioViewModal({
                       <ShieldAlert className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className="text-xs font-bold uppercase tracking-[0.2em] opacity-75">Alertas de riesgo 360</p>
+                      <p className="text-xs font-bold uppercase tracking-[0.2em] opacity-75">{tx('Alertas de riesgo 360', '360 risk alerts')}</p>
                       <h3 className="mt-1 text-xl font-black">{riskSummary.label}</h3>
                       <p className="mt-1 text-sm opacity-85">
                         {riskSummary.alerts.length > 0
-                          ? `${riskSummary.alerts.length} señal(es) para priorizar atención administrativa.`
-                          : 'No se detectan alertas relevantes con los datos consultados.'}
+                          ? tx(`${riskSummary.alerts.length} señal(es) para priorizar atención administrativa.`, `${riskSummary.alerts.length} signal(s) requiring administrative attention.`)
+                          : tx('No se detectan alertas relevantes con los datos consultados.', 'No relevant alerts were detected in the available data.')}
                       </p>
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-center text-xs font-bold md:min-w-[220px]">
-                    <div className="rounded-2xl bg-black/5 p-3 dark:bg-white/10"><p className="text-lg">{riskSummary.highCount}</p><p>Altas</p></div>
-                    <div className="rounded-2xl bg-black/5 p-3 dark:bg-white/10"><p className="text-lg">{riskSummary.mediumCount}</p><p>Medias</p></div>
-                    <div className="rounded-2xl bg-black/5 p-3 dark:bg-white/10"><p className="text-lg">{riskSummary.lowCount}</p><p>Leves</p></div>
+                    <div className="rounded-2xl bg-black/5 p-3 dark:bg-white/10"><p className="text-lg">{riskSummary.highCount}</p><p>{tx('Altas', 'High')}</p></div>
+                    <div className="rounded-2xl bg-black/5 p-3 dark:bg-white/10"><p className="text-lg">{riskSummary.mediumCount}</p><p>{tx('Medias', 'Medium')}</p></div>
+                    <div className="rounded-2xl bg-black/5 p-3 dark:bg-white/10"><p className="text-lg">{riskSummary.lowCount}</p><p>{tx('Leves', 'Low')}</p></div>
                   </div>
                 </div>
                 {riskSummary.alerts.length > 0 ? (
                   <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                     {riskSummary.alerts.slice(0, 6).map((alert) => (
-                      <RiskAlertCard key={alert.id} alert={alert} />
+                      <RiskAlertCard key={alert.id} alert={alert} locale={locale} />
                     ))}
                   </div>
                 ) : null}
@@ -365,16 +395,16 @@ export default function SocioViewModal({
               <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
                 <div className="space-y-4 rounded-3xl border bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/70">
                   <div>
-                    <h3 className="text-lg font-black">Módulos del socio</h3>
+                    <h3 className="text-lg font-black">{tx('Módulos del socio', 'Member modules')}</h3>
                     <p className="text-sm text-muted-foreground">
-                      Resumen transversal para evitar saltar entre pantallas durante soporte o atención administrativa.
+                      {tx('Resumen transversal para evitar saltar entre pantallas durante soporte o atención administrativa.', 'Cross-module summary that avoids switching between screens during support or administrative service.')}
                     </p>
                   </div>
                   <div className="grid gap-3 md:grid-cols-2">
-                    <ModuleCard icon={Dumbbell} title="Rutinas" total={perfil360?.rutinas.total ?? 0} status={perfil360?.rutinas.ultimoTitulo || perfil360?.rutinas.ultimoEstado} detail={perfil360?.rutinas.ultimaFecha ? `Última actualización: ${perfil360.rutinas.ultimaFecha}` : undefined} href="/dashboard/gestor-rutinas" />
-                    <ModuleCard icon={Utensils} title="Dietas" total={perfil360?.dietas.total ?? 0} status={perfil360?.dietas.ultimoTitulo || perfil360?.dietas.ultimoEstado} detail={perfil360?.dietas.ultimaFecha ? `Última actualización: ${perfil360.dietas.ultimaFecha}` : undefined} href="/dashboard/gestor-dietas" />
-                    <ModuleCard icon={Scale} title="Evolución física" total={perfil360?.evolucion.total ?? 0} status={perfil360?.evolucion.ultimoTitulo || 'Seguimiento corporal'} detail={perfil360?.evolucion.ultimaFecha ? `Último control: ${perfil360.evolucion.ultimaFecha}` : undefined} href="/dashboard/gestor-evolucion-fisica" />
-                    <ModuleCard icon={CalendarDays} title="Actividades" total={perfil360?.actividades.total ?? 0} status={perfil360?.actividades.ultimoEstado || 'Sin inscripciones activas'} detail={`${perfil360?.actividades.pendientes ?? 0} pendientes · ${perfil360?.actividades.inscriptas ?? 0} inscriptas`} href="/dashboard/actividades" />
+                    <ModuleCard icon={Dumbbell} title={tx('Rutinas', 'Routines')} total={perfil360?.rutinas.total ?? 0} status={perfil360?.rutinas.ultimoTitulo || perfil360?.rutinas.ultimoEstado} detail={perfil360?.rutinas.ultimaFecha ? `${tx('Última actualización', 'Last update')}: ${perfil360.rutinas.ultimaFecha}` : undefined} href="/dashboard/gestor-rutinas" emptyStatus={tx('Sin novedades', 'No updates')} openLabel={tx('Abrir módulo', 'Open module')} />
+                    <ModuleCard icon={Utensils} title={tx('Dietas', 'Diets')} total={perfil360?.dietas.total ?? 0} status={perfil360?.dietas.ultimoTitulo || perfil360?.dietas.ultimoEstado} detail={perfil360?.dietas.ultimaFecha ? `${tx('Última actualización', 'Last update')}: ${perfil360.dietas.ultimaFecha}` : undefined} href="/dashboard/gestor-dietas" emptyStatus={tx('Sin novedades', 'No updates')} openLabel={tx('Abrir módulo', 'Open module')} />
+                    <ModuleCard icon={Scale} title={tx('Evolución física', 'Physical progress')} total={perfil360?.evolucion.total ?? 0} status={perfil360?.evolucion.ultimoTitulo || tx('Seguimiento corporal', 'Body tracking')} detail={perfil360?.evolucion.ultimaFecha ? `${tx('Último control', 'Last assessment')}: ${perfil360.evolucion.ultimaFecha}` : undefined} href="/dashboard/gestor-evolucion-fisica" emptyStatus={tx('Sin novedades', 'No updates')} openLabel={tx('Abrir módulo', 'Open module')} />
+                    <ModuleCard icon={CalendarDays} title={tx('Actividades', 'Activities')} total={perfil360?.actividades.total ?? 0} status={perfil360?.actividades.ultimoEstado || tx('Sin inscripciones activas', 'No active registrations')} detail={`${perfil360?.actividades.pendientes ?? 0} ${tx('pendientes', 'pending')} · ${perfil360?.actividades.inscriptas ?? 0} ${tx('inscriptas', 'registered')}`} href="/dashboard/actividades" emptyStatus={tx('Sin novedades', 'No updates')} openLabel={tx('Abrir módulo', 'Open module')} />
                   </div>
                 </div>
 
@@ -382,33 +412,33 @@ export default function SocioViewModal({
                   <div className="flex items-start gap-3">
                     <Sparkles className="mt-1 h-5 w-5 text-sky-300" />
                     <div>
-                      <h3 className="text-lg font-black">Lectura rápida 360</h3>
+                      <h3 className="text-lg font-black">{tx('Lectura rápida 360', 'Quick 360 overview')}</h3>
                       <p className="text-sm text-slate-300">
-                        Señales útiles para atención, retención y seguimiento administrativo.
+                        {tx('Señales útiles para atención, retención y seguimiento administrativo.', 'Useful signals for service, retention, and administrative follow-up.')}
                       </p>
                     </div>
                   </div>
                   <div className="space-y-3 text-sm">
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                      <p className="font-bold">Estado general</p>
+                      <p className="font-bold">{tx('Estado general', 'General status')}</p>
                       <p className="mt-1 text-slate-300">
-                        {socio.activo ? 'Puede operar normalmente como socio activo.' : 'Socio inactivo: revisar antes de asignar servicios nuevos.'}
+                        {socio.activo ? tx('Puede operar normalmente como socio activo.', 'The member can operate normally as active.') : tx('Socio inactivo: revisar antes de asignar servicios nuevos.', 'Inactive member: review before assigning new services.')}
                       </p>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                      <p className="font-bold">Riesgo administrativo</p>
+                      <p className="font-bold">{tx('Riesgo administrativo', 'Administrative risk')}</p>
                       <p className="mt-1 text-slate-300">
                         {riskSummary.alerts.length > 0
-                          ? `${riskSummary.label}: revisar las alertas 360 antes de cerrar la atención.`
-                          : 'No se detectan mensajes ni señales críticas en el resumen consultado.'}
+                          ? `${riskSummary.label}: ${tx('revisar las alertas 360 antes de cerrar la atención.', 'review the 360 alerts before closing the service interaction.')}`
+                          : tx('No se detectan mensajes ni señales críticas en el resumen consultado.', 'No critical messages or signals were detected in the available summary.')}
                       </p>
                     </div>
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                      <p className="font-bold">Seguimiento saludable</p>
+                      <p className="font-bold">{tx('Seguimiento saludable', 'Health follow-up')}</p>
                       <p className="mt-1 text-slate-300">
                         {perfil360?.fichaMedica.activo
-                          ? 'Tiene ficha médica registrada para revisión administrativa.'
-                          : 'Conviene solicitar o revisar ficha médica vigente.'}
+                          ? tx('Tiene ficha médica registrada para revisión administrativa.', 'A medical record is available for administrative review.')
+                          : tx('Conviene solicitar o revisar ficha médica vigente.', 'Request or review a current medical record.')}
                       </p>
                     </div>
                   </div>
@@ -420,9 +450,9 @@ export default function SocioViewModal({
                   <div className="flex gap-3">
                     <AlertTriangle className="mt-1 h-5 w-5" />
                     <div>
-                      <h3 className="font-bold">Resumen parcial</h3>
+                      <h3 className="font-bold">{tx('Resumen parcial', 'Partial summary')}</h3>
                       <p className="text-sm">
-                        Algunos módulos no respondieron durante la consulta 360. El perfil base sigue disponible.
+                        {tx('Algunos módulos no respondieron durante la consulta 360. El perfil base sigue disponible.', 'Some modules did not respond during the 360 request. The base profile remains available.')}
                       </p>
                       <ul className="mt-2 list-disc pl-5 text-xs">
                         {perfil360.errores.map((error) => (
@@ -435,29 +465,29 @@ export default function SocioViewModal({
               ) : null}
 
               <section>
-                <h3 className="mb-3 text-sm font-semibold text-muted-foreground">Datos personales</h3>
+                <h3 className="mb-3 text-sm font-semibold text-muted-foreground">{tx('Datos personales', 'Personal details')}</h3>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                  <DetailField label="Nombre completo" value={socio.nombre_completo} />
+                  <DetailField label={tx('Nombre completo', 'Full name')} value={socio.nombre_completo} />
                   <DetailField label="DNI" value={socio.dni} />
-                  <DetailField label="Sexo" value={sexoLabel(socio.sexo)} />
-                  <DetailField label="Edad" value={edad ? `${edad} años` : '-'} />
-                  <DetailField label="Fecha de nacimiento" value={socio.fecnac} />
-                  <DetailField label="Fecha alta" value={socio.fecha_alta} />
+                  <DetailField label={tx('Sexo', 'Sex')} value={sexoLabel(socio.sexo, locale)} />
+                  <DetailField label={tx('Edad', 'Age')} value={edad ? `${edad} ${tx('años', 'years')}` : '-'} />
+                  <DetailField label={tx('Fecha de nacimiento', 'Birth date')} value={formatFrontendDate(socio.fecnac, dateLocale)} />
+                  <DetailField label={tx('Fecha alta', 'Registration date')} value={formatFrontendDate(socio.fecha_alta, dateLocale)} />
                 </div>
               </section>
 
               <section>
-                <h3 className="mb-3 text-sm font-semibold text-muted-foreground">Contacto, ubicación y emergencia</h3>
+                <h3 className="mb-3 text-sm font-semibold text-muted-foreground">{tx('Contacto, ubicación y emergencia', 'Contact, location, and emergency')}</h3>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                  <DetailField label="Teléfono" value={socio.telefono} />
+                  <DetailField label={tx('Teléfono', 'Phone')} value={socio.telefono} />
                   <DetailField label="Email" value={socio.email} />
-                  <DetailField label="Dirección" value={socio.direccion} />
-                  <DetailField label="Ciudad" value={socio.ciudad} />
-                  <DetailField label="Provincia" value={socio.provincia} />
-                  <DetailField label="País" value={socio.pais} />
-                  <DetailField label="Contacto emergencia" value={socio.contacto_emergencia_nombre} />
-                  <DetailField label="Teléfono emergencia" value={socio.contacto_emergencia_telefono} />
-                  <DetailField label="Descuento activo" value={socio.descuento_activo ? 'Sí' : 'No'} />
+                  <DetailField label={tx('Dirección', 'Address')} value={socio.direccion} />
+                  <DetailField label={tx('Ciudad', 'City')} value={socio.ciudad} />
+                  <DetailField label={tx('Provincia', 'Province')} value={socio.provincia} />
+                  <DetailField label={tx('País', 'Country')} value={socio.pais} />
+                  <DetailField label={tx('Contacto emergencia', 'Emergency contact')} value={socio.contacto_emergencia_nombre} />
+                  <DetailField label={tx('Teléfono emergencia', 'Emergency phone')} value={socio.contacto_emergencia_telefono} />
+                  <DetailField label={tx('Descuento activo', 'Active discount')} value={socio.descuento_activo ? tx('Sí', 'Yes') : tx('No', 'No')} />
                 </div>
               </section>
             </div>
