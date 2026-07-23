@@ -103,17 +103,17 @@ export default function CompraForm({
     event.preventDefault();
     setLoading(true);
     try {
-      if (!proveedorId) throw new Error('Debe seleccionar un proveedor');
+      if (!proveedorId) throw new Error(c('Debe seleccionar un proveedor'));
 
       const detalles = items.map((item, index) => {
-        if (!item.producto_id) throw new Error(`Debe seleccionar producto en el ítem ${index + 1}`);
+        if (!item.producto_id) throw new Error(`${c('Debe seleccionar producto en el ítem')} ${index + 1}`);
         const cantidad = Number(item.cantidad);
         const costoUnitario = Number(item.costo_unitario);
         if (!Number.isInteger(cantidad) || cantidad <= 0) {
-          throw new Error(`La cantidad del ítem ${index + 1} debe ser entera y mayor a 0`);
+          throw new Error(`${c('La cantidad del ítem')} ${index + 1} ${c('debe ser entera y mayor a 0')}`);
         }
         if (!Number.isFinite(costoUnitario) || costoUnitario <= 0) {
-          throw new Error(`El costo unitario del ítem ${index + 1} debe ser mayor a 0`);
+          throw new Error(`${c('El costo unitario del ítem')} ${index + 1} ${c('debe ser mayor a 0')}`);
         }
         return {
           producto_id: item.producto_id,
@@ -133,10 +133,10 @@ export default function CompraForm({
       };
 
       await createCompra(payload);
-      toast.success('Compra registrada y stock actualizado');
+      toast.success(c('Compra registrada y stock actualizado'));
       onCreated();
     } catch (error: any) {
-      toast.error(error.message || 'No se pudo registrar la compra');
+      toast.error(error.message || c('No se pudo registrar la compra'));
     } finally {
       setLoading(false);
     }
@@ -146,7 +146,7 @@ export default function CompraForm({
     <form onSubmit={handleSubmit} className="space-y-5">
       <QaFileNameBadge file="src/components/forms/CompraForm.tsx" />
       <div className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
-        Registrá compras de productos a proveedores. Al guardar, se actualiza stock, costo vigente, movimientos de stock e historial de costo cuando corresponda.
+        {c('Registrá compras de productos a proveedores. Al guardar, se actualiza stock, costo vigente, movimientos de stock e historial de costo cuando corresponda.')}
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -159,7 +159,7 @@ export default function CompraForm({
             onChange={(event) => setProveedorId(event.target.value)}
             required
           >
-            <option value="">Seleccionar proveedor</option>
+            <option value="">{c("Seleccionar proveedor")}</option>
             {proveedoresActivos.map((proveedor) => (
               <option key={proveedor.id} value={proveedor.id}>
                 {proveedor.nombre}{proveedor.razon_social ? ` · ${proveedor.razon_social}` : ''}
@@ -169,12 +169,12 @@ export default function CompraForm({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="fecha">Fecha</Label>
+          <Label htmlFor="fecha">{c("Fecha")}</Label>
           <Input id="fecha" type="date" value={fecha} onChange={(event) => setFecha(event.target.value)} required />
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="estado">Estado</Label>
+          <Label htmlFor="estado">{c("Estado")}</Label>
           <select
             id="estado"
             className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -182,13 +182,13 @@ export default function CompraForm({
             onChange={(event) => setEstado(event.target.value as CompraEstado)}
           >
             {ESTADOS.map((item) => (
-              <option key={item.value} value={item.value}>{item.label}</option>
+              <option key={item.value} value={item.value}>{c(item.label)}</option>
             ))}
           </select>
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="medio_pago">Medio de pago</Label>
+          <Label htmlFor="medio_pago">{c("Medio de pago")}</Label>
           <select
             id="medio_pago"
             className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -196,7 +196,7 @@ export default function CompraForm({
             onChange={(event) => setMedioPago(event.target.value as CompraMedioPago)}
           >
             {MEDIOS_PAGO.map((item) => (
-              <option key={item.value} value={item.value}>{item.label}</option>
+              <option key={item.value} value={item.value}>{c(item.label)}</option>
             ))}
           </select>
         </div>
@@ -205,16 +205,16 @@ export default function CompraForm({
           <Label htmlFor="numero_comprobante">{c("Número de comprobante")}</Label>
           <Input
             id="numero_comprobante"
-            placeholder="Factura / remito / ticket"
+            placeholder={c("Factura / remito / ticket")}
             value={numeroComprobante}
             onChange={(event) => setNumeroComprobante(event.target.value)}
           />
         </div>
 
         <div className="space-y-1.5">
-          <Label>Total estimado</Label>
+          <Label>{c("Total estimado")}</Label>
           <div className="flex h-10 items-center rounded-md border bg-muted px-3 text-sm font-semibold">
-            {formatCurrencyARS(total)}
+            {formatCurrencyARS(total, locale)}
           </div>
         </div>
       </div>
@@ -222,11 +222,11 @@ export default function CompraForm({
       <div className="space-y-3 rounded-xl border p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h3 className="font-semibold">Productos comprados</h3>
-            <p className="text-sm text-muted-foreground">Cada ítem suma stock y actualiza el costo de compra vigente.</p>
+            <h3 className="font-semibold">{c("Productos comprados")}</h3>
+            <p className="text-sm text-muted-foreground">{c('Cada ítem suma stock y actualiza el costo de compra vigente.')}</p>
           </div>
           <Button type="button" variant="outline" onClick={addItem}>
-            <Plus className="mr-2 h-4 w-4" /> Agregar ítem
+            <Plus className="mr-2 h-4 w-4" /> {c("Agregar ítem")}
           </Button>
         </div>
 
@@ -237,28 +237,28 @@ export default function CompraForm({
             return (
               <div key={index} className="grid grid-cols-1 gap-3 rounded-lg border bg-muted/20 p-3 lg:grid-cols-[1.4fr_0.5fr_0.7fr_0.7fr_auto]">
                 <div className="space-y-1.5">
-                  <Label>Producto</Label>
+                  <Label>{c("Producto")}</Label>
                   <select
                     className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     value={item.producto_id}
                     onChange={(event) => updateItem(index, { producto_id: event.target.value })}
                     required
                   >
-                    <option value="">Seleccionar producto</option>
+                    <option value="">{c("Seleccionar producto")}</option>
                     {productosActivos.map((productoItem) => (
                       <option key={productoItem.id} value={productoItem.id}>
-                        {productoItem.nombre} · stock {productoItem.stock ?? 0}
+                        {productoItem.nombre} · {c('Stock').toLowerCase()} {productoItem.stock ?? 0}
                       </option>
                     ))}
                   </select>
                   {producto && (
                     <p className="text-xs text-muted-foreground">
-                      Stock actual: {producto.stock ?? 0} · costo vigente: {formatCurrencyARS(producto.costo ?? 0)}
+                      {c('Stock actual')}: {producto.stock ?? 0} · {c('Costo vigente')}: {formatCurrencyARS(producto.costo ?? 0, locale)}
                     </p>
                   )}
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Cantidad</Label>
+                  <Label>{c("Cantidad")}</Label>
                   <Input
                     type="number"
                     min={1}
@@ -269,7 +269,7 @@ export default function CompraForm({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Costo unitario</Label>
+                  <Label>{c("Costo unitario")}</Label>
                   <Input
                     type="number"
                     min={1}
@@ -282,7 +282,7 @@ export default function CompraForm({
                 <div className="space-y-1.5">
                   <Label>Subtotal</Label>
                   <div className="flex h-10 items-center rounded-md border bg-background px-3 text-sm font-semibold">
-                    {formatCurrencyARS(subtotal)}
+                    {formatCurrencyARS(subtotal, locale)}
                   </div>
                 </div>
                 <div className="flex items-end">
@@ -292,7 +292,7 @@ export default function CompraForm({
                     size="icon"
                     disabled={items.length === 1}
                     onClick={() => removeItem(index)}
-                    title="Quitar ítem"
+                    title={c("Quitar ítem")}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -304,7 +304,7 @@ export default function CompraForm({
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="observaciones">Observaciones</Label>
+        <Label htmlFor="observaciones">{c("Observaciones")}</Label>
         <textarea
           id="observaciones"
           className="min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -315,9 +315,9 @@ export default function CompraForm({
       </div>
 
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>Cancelar</Button>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>{c("Cancelar")}</Button>
         <Button type="submit" className="bg-[#02a8e1] hover:bg-[#0288b1]" disabled={loading}>
-          {loading ? 'Registrando...' : 'Registrar compra'}
+          {loading ? c('Registrando...') : c('Registrar compra')}
         </Button>
       </div>
     </form>

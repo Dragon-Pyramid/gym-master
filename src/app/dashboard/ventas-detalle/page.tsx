@@ -22,8 +22,12 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 import ExcelJS from "exceljs";
 import { buildTimestampedDownloadFileName } from '@/utils/downloadFileName';
+import { useI18n } from '@/i18n/I18nProvider';
+import { translateCommercialUi } from '@/i18n/commercialUi';
 
 export default function VentaDetallePage() {
+  const { locale } = useI18n();
+  const c = (text: string) => translateCommercialUi(locale, text);
   const { user, isAuthenticated, initializeAuth, isInitialized } =
     useAuthStore();
   const router = useRouter();
@@ -62,22 +66,22 @@ export default function VentaDetallePage() {
 
   const handleExportExcel = async () => {
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Detalles de Venta");
+    const worksheet = workbook.addWorksheet(c("Detalles de Venta"));
 
     worksheet.columns = [
-      { header: "Venta", key: "venta_id", width: 20 },
-      { header: "Tipo", key: "item_tipo", width: 14 },
-      { header: "Producto", key: "producto_id", width: 20 },
-      { header: "Servicio", key: "servicio_id", width: 20 },
-      { header: "Cantidad", key: "cantidad", width: 10 },
-      { header: "Precio Unitario", key: "precio_unitario", width: 15 },
-      { header: "Subtotal", key: "subtotal", width: 15 },
+      { header: c("Venta"), key: "venta_id", width: 20 },
+      { header: c("Tipo"), key: "item_tipo", width: 14 },
+      { header: c("Producto"), key: "producto_id", width: 20 },
+      { header: c("Servicio"), key: "servicio_id", width: 20 },
+      { header: c("Cantidad"), key: "cantidad", width: 10 },
+      { header: c("Precio Unitario"), key: "precio_unitario", width: 15 },
+      { header: c("Subtotal"), key: "subtotal", width: 15 },
     ];
 
     filteredDetalles.forEach((d) => {
       worksheet.addRow({
         venta_id: d.venta_id,
-        item_tipo: d.item_tipo,
+        item_tipo: c(d.item_tipo),
         producto_id: d.producto?.nombre ?? d.producto_id ?? "",
         servicio_id: d.servicio?.nombre ?? d.servicio_id ?? "",
         cantidad: d.cantidad,
@@ -93,7 +97,7 @@ export default function VentaDetallePage() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = buildTimestampedDownloadFileName("listado-detalles-venta", "xlsx");
+    a.download = buildTimestampedDownloadFileName(locale === 'en' ? 'sales-detail-list' : 'listado-detalles-venta', 'xlsx');
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -124,7 +128,7 @@ export default function VentaDetallePage() {
   }, [searchTerm, detalles]);
 
   if (!isInitialized) {
-    return <div>Cargando...</div>;
+    return <div>{c("Cargando...")}</div>;
   }
 
   if (!isAuthenticated) {
@@ -136,19 +140,19 @@ export default function VentaDetallePage() {
       <div className="flex w-full min-h-screen">
         <AppSidebar />
         <SidebarInset>
-          <AppHeader title="Detalles de Venta" />
+          <AppHeader title={c("Detalles de Venta")} />
           <main className="flex-1 p-6 space-y-6">
             <Card className="w-full">
               <CardHeader className="flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap">
                 <h2 className="text-xl font-bold">
-                  Listado de Detalles de Venta
+                  {c("Listado de Detalles de Venta")}
                 </h2>
                 <div className="flex flex-wrap items-center w-full gap-2 md:w-auto">
                   <div className="relative flex-grow md:flex-grow-0">
                     <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                       type="search"
-                      placeholder="Buscar por venta, producto..."
+                      placeholder={c("Buscar por venta, producto...")}
                       className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] w-full"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
@@ -160,7 +164,7 @@ export default function VentaDetallePage() {
                     className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
                   >
                     <Printer className="w-4 h-4" />
-                    <span className="hidden sm:inline">Imprimir</span>
+                    <span className="hidden sm:inline">{c("Imprimir")}</span>
                   </Button>
                   <Button
                     variant="outline"
@@ -168,14 +172,14 @@ export default function VentaDetallePage() {
                     className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"
                   >
                     <FileSpreadsheet className="w-4 h-4" />
-                    <span className="hidden sm:inline">Exportar</span>
+                    <span className="hidden sm:inline">{c("Exportar")}</span>
                   </Button>
                   <Button
                     onClick={() => setOpenModal(true)}
                     className="bg-[#02a8e1] hover:bg-[#0288b1]"
                   >
-                    <span className="hidden sm:inline">Añadir Detalle</span>
-                    <span className="sm:hidden">Añadir</span>
+                    <span className="hidden sm:inline">{c("Añadir Detalle")}</span>
+                    <span className="sm:hidden">{c("Añadir")}</span>
                   </Button>
                 </div>
               </CardHeader>
@@ -194,16 +198,16 @@ export default function VentaDetallePage() {
                     }}
                     onDelete={async (detalle) => {
                       const confirmar = window.confirm(
-                        "¿Está seguro de eliminar el detalle?"
+                        c("¿Está seguro de eliminar el detalle?")
                       );
                       if (!confirmar) return;
 
                       try {
                         await deleteVentaDetalle(user as any, detalle.id);
-                        toast.success("Detalle eliminado correctamente");
+                        toast.success(c("Detalle eliminado correctamente"));
                         await loadDetalles();
                       } catch (err) {
-                        toast.error("Error al eliminar detalle");
+                        toast.error(c("Error al eliminar detalle"));
                       }
                     }}
                   />

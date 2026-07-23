@@ -293,7 +293,7 @@ export default function ComercialServiciosPromocionesPage() {
                       ))}
                     </div>
                     <div className='flex flex-col justify-between gap-3 rounded-lg border bg-sky-50 p-3 md:flex-row md:items-center dark:border-sky-900/60 dark:bg-sky-950/20'>
-                      <p className='text-sm'>{c('Valor referencia:')} <b>{formatCurrencyARS(packTotalReferencia)}</b></p>
+                      <p className='text-sm'>{c('Valor referencia:')} <b>{formatCurrencyARS(packTotalReferencia, locale)}</b></p>
                       <div className='flex gap-2'><Button type='button' variant='outline' onClick={() => setPackItems((prev) => [...prev, emptyPackItem()])}><Plus className='mr-2 h-4 w-4' />{c('Ítem')}</Button><Button type='submit' disabled={savingPack}>{savingPack ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <Save className='mr-2 h-4 w-4' />}{c('Crear pack')}</Button></div>
                     </div>
                   </form>
@@ -330,9 +330,9 @@ export default function ComercialServiciosPromocionesPage() {
             </section>
 
             <section className='grid grid-cols-1 gap-6 xl:grid-cols-3'>
-              <Card><CardHeader><CardTitle>{c('Packs recientes')}</CardTitle></CardHeader><CardContent className='space-y-2'>{dashboard.packs.slice(0, 8).map((pack) => <div key={pack.id} className='rounded-lg border p-3'><p className='font-semibold'>{pack.nombre}</p><p className='text-sm text-muted-foreground'>{pack.codigo} · {formatCurrencyARS(pack.precio)} · {pack.items?.length ?? 0} {c('ítems')}</p></div>)}</CardContent></Card>
+              <Card><CardHeader><CardTitle>{c('Packs recientes')}</CardTitle></CardHeader><CardContent className='space-y-2'>{dashboard.packs.slice(0, 8).map((pack) => <div key={pack.id} className='rounded-lg border p-3'><p className='font-semibold'>{pack.nombre}</p><p className='text-sm text-muted-foreground'>{pack.codigo} · {formatCurrencyARS(pack.precio, locale)} · {pack.items?.length ?? 0} {c('ítems')}</p></div>)}</CardContent></Card>
               <Card><CardHeader><CardTitle>{c('Promociones')}</CardTitle></CardHeader><CardContent className='space-y-2'>{dashboard.promociones.slice(0, 8).map((promo) => <div key={promo.id} className='rounded-lg border p-3'><p className='font-semibold'>{promo.nombre}</p><p className='text-sm text-muted-foreground'>{promo.codigo} · {promo.tipo} · {promo.valor}</p></div>)}</CardContent></Card>
-              <Card><CardHeader><CardTitle>{c('Items vendibles')}</CardTitle></CardHeader><CardContent className='space-y-2'>{dashboard.items.slice(0, 10).map((item) => <div key={`${c(item.item_tipo === "servicio" ? "Servicio" : "Producto")}-${item.source_id}`} className='flex justify-between gap-3 rounded-lg border p-3 text-sm'><span>{item.nombre}<br/><span className='text-xs text-muted-foreground'>{c(item.item_tipo === "servicio" ? "Servicio" : "Producto")}</span></span><b>{formatCurrencyARS(item.precio)}</b></div>)}</CardContent></Card>
+              <Card><CardHeader><CardTitle>{c('Items vendibles')}</CardTitle></CardHeader><CardContent className='space-y-2'>{dashboard.items.slice(0, 10).map((item) => <div key={`${c(item.item_tipo === "servicio" ? "Servicio" : "Producto")}-${item.source_id}`} className='flex justify-between gap-3 rounded-lg border p-3 text-sm'><span>{item.nombre}<br/><span className='text-xs text-muted-foreground'>{c(item.item_tipo === "servicio" ? "Servicio" : "Producto")}</span></span><b>{formatCurrencyARS(item.precio, locale)}</b></div>)}</CardContent></Card>
             </section>
           </main>
         </SidebarInset>

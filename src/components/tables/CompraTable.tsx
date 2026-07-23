@@ -87,7 +87,7 @@ export default function CompraTable({
             <TableCell>{compra.numero_comprobante || '-'}</TableCell>
             <TableCell className="max-w-[360px] truncate">{getItemsLabel(compra, c)}</TableCell>
             <TableCell>{c(estadoLabel(compra.estado))}</TableCell>
-            <TableCell className="text-right font-semibold">{formatCurrencyARS(compra.total)}</TableCell>
+            <TableCell className="text-right font-semibold">{formatCurrencyARS(compra.total, locale)}</TableCell>
             <TableCell className="flex gap-2">
               <Button size="sm" variant="outline" onClick={() => onView(compra)}>{c("Ver")}</Button>
               {compra.estado !== 'anulada' && compra.activo !== false && (

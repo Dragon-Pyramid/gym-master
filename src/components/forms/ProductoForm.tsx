@@ -13,6 +13,7 @@ import { useCatalogoParametrizable } from "@/hooks/useCatalogosParametrizables";
 import { toast } from "sonner";
 import { useI18n } from '@/i18n/I18nProvider';
 import { translateCommercialUi } from '@/i18n/commercialUi';
+import { translateCoreCatalogName } from '@/utils/coreSeedI18n';
 
 export interface ProductoFormProps {
   producto?: {
@@ -65,6 +66,7 @@ export default function ProductoForm({
 }: ProductoFormProps) {
   const { locale } = useI18n();
   const c = (text: string) => translateCommercialUi(locale, text);
+  const examplePrefix = locale === 'en' ? 'Ex' : 'Ej';
 
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
@@ -269,7 +271,12 @@ export default function ProductoForm({
           <option value="">{c("Sin categoría")}</option>
           {categoriasProducto.map((categoria) => (
             <option key={categoria.id} value={categoria.id}>
-              {categoria.nombre}
+              {translateCoreCatalogName(
+                'categoria_producto',
+                categoria,
+                categoria.nombre,
+                locale,
+              )}
             </option>
           ))}
         </select>
@@ -305,7 +312,7 @@ export default function ProductoForm({
           <Input
             id="proveedor_id"
             name="proveedor_id"
-            placeholder="ID del proveedor"
+            placeholder={c("ID del proveedor")}
             value={form.proveedor_id}
             onChange={handleChange}
             required
@@ -316,65 +323,65 @@ export default function ProductoForm({
         <div className="flex items-center justify-between gap-2">
           <Label htmlFor="sku">{c("SKU / código interno")}</Label>
           <Button type="button" size="sm" variant="outline" onClick={generarSku}>
-            Generar
+            {c('Generar')}
           </Button>
         </div>
         <Input
           id="sku"
           name="sku"
-          placeholder="Ej: PROT-WHEY-001"
+          placeholder={`${examplePrefix}: PROT-WHEY-001`}
           value={form.sku}
           onChange={handleChange}
         />
-        <p className="text-xs text-muted-foreground">El POS y el scanner móvil pueden resolver productos por SKU.</p>
+        <p className="text-xs text-muted-foreground">{c('El POS y el scanner móvil pueden resolver productos por SKU.')}</p>
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="codigo_barras">{c("Código de barras / QR externo")}</Label>
         <Input
           id="codigo_barras"
           name="codigo_barras"
-          placeholder="Ej: 7791234567890"
+          placeholder={`${examplePrefix}: 7791234567890`}
           value={form.codigo_barras}
           onChange={handleChange}
         />
-        <p className="text-xs text-muted-foreground">Puede cargarse manualmente o escaneando el envase con el móvil.</p>
+        <p className="text-xs text-muted-foreground">{c('Puede cargarse manualmente o escaneando el envase con el móvil.')}</p>
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="precio">Precio de venta</Label>
+        <Label htmlFor="precio">{c("Precio de venta")}</Label>
         <Input
           id="precio"
           name="precio"
           type="text"
           inputMode="numeric"
           pattern="[0-9]*"
-          placeholder="Ej: 15000"
+          placeholder={`${examplePrefix}: 15000`}
           value={form.precio}
           onChange={handleChange}
           required
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="costo">Costo de compra</Label>
+        <Label htmlFor="costo">{c("Costo de compra")}</Label>
         <Input
           id="costo"
           name="costo"
           type="text"
           inputMode="numeric"
           pattern="[0-9]*"
-          placeholder="Ej: 10000"
+          placeholder={`${examplePrefix}: 10000`}
           value={form.costo}
           onChange={handleChange}
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="stock">Stock actual</Label>
+        <Label htmlFor="stock">{c("Stock actual")}</Label>
         <Input
           id="stock"
           name="stock"
           type="text"
           inputMode="numeric"
           pattern="[0-9]*"
-          placeholder="Ej: 25"
+          placeholder={`${examplePrefix}: 25`}
           value={form.stock}
           onChange={handleChange}
           required
@@ -388,19 +395,19 @@ export default function ProductoForm({
           type="text"
           inputMode="numeric"
           pattern="[0-9]*"
-          placeholder="Ej: 5"
+          placeholder={`${examplePrefix}: 5`}
           value={form.stock_minimo}
           onChange={handleChange}
         />
       </div>
       <div className="rounded-lg border bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground">
-        <p className="font-semibold text-foreground">Margen estimado</p>
-        <p>Margen: ${margenEstimado.toLocaleString("es-AR")} · {margenPorcentaje.toFixed(1)}%</p>
+        <p className="font-semibold text-foreground">{c('Margen estimado')}</p>
+        <p>{c('Margen')}: ${margenEstimado.toLocaleString(locale === "en" ? "en-US" : "es-AR")} · {margenPorcentaje.toFixed(1)}%</p>
       </div>
       {cambioPrecioCosto && (
         <div className="col-span-full grid grid-cols-1 gap-4 rounded-lg border border-amber-200 bg-amber-50 p-4 md:grid-cols-4">
           <div className="flex flex-col gap-1.5 md:col-span-2">
-            <Label htmlFor="motivo_cambio_precio">Motivo del cambio de precio/costo</Label>
+            <Label htmlFor="motivo_cambio_precio">{c('Motivo del cambio de precio/costo')}</Label>
             <Input
               id="motivo_cambio_precio"
               name="motivo_cambio_precio"
@@ -410,7 +417,7 @@ export default function ProductoForm({
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="moneda_historial">Moneda</Label>
+            <Label htmlFor="moneda_historial">{c('Moneda')}</Label>
             <select
               id="moneda_historial"
               name="moneda_historial"
@@ -423,7 +430,7 @@ export default function ProductoForm({
             </select>
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="fecha_vigencia">Fecha de vigencia</Label>
+            <Label htmlFor="fecha_vigencia">{c('Fecha de vigencia')}</Label>
             <Input
               id="fecha_vigencia"
               name="fecha_vigencia"
@@ -439,7 +446,7 @@ export default function ProductoForm({
               name="cotizacion_usada"
               type="text"
               inputMode="decimal"
-              placeholder="Ej: 1200"
+              placeholder={`${examplePrefix}: 1200`}
               value={form.cotizacion_usada}
               onChange={(e) =>
                 setForm((prev) => ({
@@ -450,12 +457,12 @@ export default function ProductoForm({
             />
           </div>
           <div className="md:col-span-2 rounded-md bg-white/80 p-3 text-xs text-amber-900">
-            Este bloque se registra en el historial solo si cambia el precio de venta o el costo de compra.
+            {c('Este bloque se registra en el historial solo si cambia el precio de venta o el costo de compra.')}
           </div>
         </div>
       )}
       <div className="col-span-full rounded-lg border bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground">
-        Los precios, costos y stock se cargan como enteros para evitar ceros iniciales, decimales accidentales o formatos incómodos. Los cambios de precio/costo quedan auditados para BI comercial.
+        {c('Los precios, costos y stock se cargan como enteros para evitar ceros iniciales, decimales accidentales o formatos incómodos. Los cambios de precio/costo quedan auditados para BI comercial.')}
       </div>
       <Button
         type="submit"

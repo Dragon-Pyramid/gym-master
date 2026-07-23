@@ -325,7 +325,7 @@ export default function ComprasPage() {
           { label: compraExportTx(locale, 'Compras activas', 'Active purchases'), value: metrics.activas },
           { label: compraExportTx(locale, 'Pendientes', 'Pending'), value: metrics.pendientes },
           { label: compraExportTx(locale, 'Anuladas', 'Canceled'), value: metrics.anuladas },
-          { label: compraExportTx(locale, 'Total comprado', 'Total purchased'), value: formatCurrencyARS(metrics.totalComprado) },
+          { label: compraExportTx(locale, 'Total comprado', 'Total purchased'), value: formatCurrencyARS(metrics.totalComprado, locale) },
         ],
         filtersLabel: getComprasExportFiltersLabel(locale, filter, dateFrom, dateTo, searchTerm),
         columns: [
@@ -334,7 +334,7 @@ export default function ComprasPage() {
           { header: compraExportTx(locale, 'Comprobante', 'Receipt'), width: 24, getValue: (compra) => compra.numero_comprobante ?? '-' },
           { header: compraExportTx(locale, 'Estado', 'Status'), width: 18, getValue: (compra) => translateCompraExportText(locale, compra.estado) },
           { header: compraExportTx(locale, 'Productos', 'Products'), width: 70, getValue: (compra) => getCompraItemsExportLabel(locale, compra) },
-          { header: 'Total', width: 22, getValue: (compra) => formatCurrencyARS(compra.total), align: 'right' },
+          { header: 'Total', width: 22, getValue: (compra) => formatCurrencyARS(compra.total, locale), align: 'right' },
         ],
       });
     } catch {
@@ -356,7 +356,7 @@ export default function ComprasPage() {
               <Card><CardContent className="p-5"><p className="text-sm text-muted-foreground">{c("Compras activas")}</p><p className="text-2xl font-bold">{metrics.activas}</p></CardContent></Card>
               <Card><CardContent className="p-5"><p className="text-sm text-muted-foreground">{c("Pendientes")}</p><p className="text-2xl font-bold text-amber-700">{metrics.pendientes}</p></CardContent></Card>
               <Card><CardContent className="p-5"><p className="text-sm text-muted-foreground">{c("Anuladas")}</p><p className="text-2xl font-bold text-red-700">{metrics.anuladas}</p></CardContent></Card>
-              <Card><CardContent className="p-5"><p className="text-sm text-muted-foreground">{c("Total comprado")}</p><p className="text-2xl font-bold">{formatCurrencyARS(metrics.totalComprado)}</p></CardContent></Card>
+              <Card><CardContent className="p-5"><p className="text-sm text-muted-foreground">{c("Total comprado")}</p><p className="text-2xl font-bold">{formatCurrencyARS(metrics.totalComprado, locale)}</p></CardContent></Card>
             </section>
 
             <Card className="w-full">

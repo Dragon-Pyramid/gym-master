@@ -533,7 +533,7 @@ export default function NotificacionesPage() {
                   <CardContent className='flex items-center gap-3 p-4'>
                     <SquareTerminal className='h-8 w-8 text-violet-600' />
                     <div>
-                      <p className='text-sm text-muted-foreground'>Terminal</p>
+                      <p className='text-sm text-muted-foreground'>{c('Terminal', 'Terminal')}</p>
                       <p className='text-2xl font-bold'>{totals.terminal}</p>
                     </div>
                   </CardContent>

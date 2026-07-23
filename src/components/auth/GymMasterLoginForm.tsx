@@ -266,7 +266,7 @@ export default function GymMasterLoginForm({
         <div className='relative mx-auto h-52 w-52 md:h-64 md:w-64'>
           <Image
             src='/gm_logo.svg'
-            alt='Gym Master Logo'
+            alt={t('common.logoAlt')}
             fill
             className='object-contain dark:invert'
             priority

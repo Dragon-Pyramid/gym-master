@@ -16,6 +16,7 @@ import {
 import { Servicio } from "@/interfaces/servicio.interface";
 import { useI18n } from '@/i18n/I18nProvider';
 import { translateCommercialUi } from '@/i18n/commercialUi';
+import { formatCurrencyARS } from '@/lib/comercial/productos';
 
 const CATEGORIA_LABELS: Record<string, string> = {
   personal_trainer: "Personal trainer",
@@ -83,14 +84,14 @@ export default function ServicioTable({
             className="odd:bg-muted/40 hover:bg-[#a8d9f9] transition-colors"
           >
             <TableCell className="font-medium">
-              <div>{c(s.nombre)}</div>
+              <div>{s.nombre}</div>
               <div className="max-w-sm truncate text-xs text-muted-foreground">
-                {s.descripcion ? c(s.descripcion) : c("Sin descripción")}
+                {s.descripcion || c("Sin descripción")}
               </div>
             </TableCell>
             <TableCell><span className="font-mono text-xs">{s.codigo || "-"}</span></TableCell>
             <TableCell>{c(CATEGORIA_LABELS[String(s.categoria ?? "otro")] ?? "Otro")}</TableCell>
-            <TableCell>${Number(s.precio || 0).toLocaleString("es-AR")}</TableCell>
+            <TableCell>{formatCurrencyARS(s.precio || 0, locale)}</TableCell>
             <TableCell>{s.duracion_minutos ? `${s.duracion_minutos} min` : "-"}</TableCell>
             <TableCell>{s.requiere_reserva ? c("Sí") : c("No")}</TableCell>
             <TableCell>{s.activo ? `✅ ${c("Activo")}` : `❌ ${c("Inactivo")}`}</TableCell>

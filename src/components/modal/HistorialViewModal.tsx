@@ -47,7 +47,7 @@ export default function HistorialViewModal({
     try {
       const d = new Date(String(v));
       return (
-        formatFrontendDateTime(d)
+        formatFrontendDateTime(d, locale === 'en' ? 'en-US' : 'es-AR')
       );
     } catch {
       return String(v);

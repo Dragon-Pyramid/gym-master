@@ -348,7 +348,7 @@ export default function VentasPage() {
         rows: filteredVentas,
         metrics: [
           { label: ventaExportTx(locale, "Ventas activas", "Active sales"), value: metrics.activas },
-          { label: ventaExportTx(locale, "Total vendido", "Total sold"), value: formatCurrencyARS(metrics.totalVendido) },
+          { label: ventaExportTx(locale, "Total vendido", "Total sold"), value: formatCurrencyARS(metrics.totalVendido, locale) },
           { label: ventaExportTx(locale, "Ítems vendidos", "Items sold"), value: metrics.itemsVendidos },
           { label: ventaExportTx(locale, "Anuladas", "Cancelled"), value: metrics.anuladas },
         ],
@@ -358,7 +358,7 @@ export default function VentasPage() {
           { header: ventaExportTx(locale, "Tipo", "Type"), width: 20, getValue: (venta) => translateVentaExportText(locale, venta.cliente_tipo ?? "consumidor_final") },
           { header: ventaExportTx(locale, "Detalle", "Detail"), width: 72, getValue: (venta) => getVentaItemsExportLabel(locale, venta) },
           { header: ventaExportTx(locale, "Método", "Method"), width: 20, getValue: (venta) => translateVentaExportText(locale, venta.metodo_pago ?? "efectivo") },
-          { header: "Total", width: 22, getValue: (venta) => formatCurrencyARS(venta.total), align: "right" },
+          { header: "Total", width: 22, getValue: (venta) => formatCurrencyARS(venta.total, locale), align: "right" },
           { header: ventaExportTx(locale, "Fecha", "Date"), width: 18, getValue: (venta) => formatVentaExportDate(locale, venta.fecha) },
           { header: ventaExportTx(locale, "Estado", "Status"), width: 18, getValue: (venta) => translateVentaExportText(locale, venta.estado ?? (venta.activo === false ? "anulada" : "pagada")) },
         ],
@@ -421,7 +421,7 @@ export default function VentasPage() {
   }, [currentPage, totalPages]);
 
   if (!isInitialized) {
-    return <div>Cargando...</div>;
+    return <div>{c("Cargando...")}</div>;
   }
 
   if (!isAuthenticated) {
@@ -445,7 +445,7 @@ export default function VentasPage() {
               <Card>
                 <CardContent className='p-5'>
                   <p className='text-sm text-muted-foreground'>{c('Total vendido')}</p>
-                  <p className='text-2xl font-bold'>{formatCurrencyARS(metrics.totalVendido)}</p>
+                  <p className='text-2xl font-bold'>{formatCurrencyARS(metrics.totalVendido, locale)}</p>
                 </CardContent>
               </Card>
               <Card>

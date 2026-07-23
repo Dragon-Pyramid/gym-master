@@ -9,6 +9,9 @@ import {
 } from "@/components/ui/dialog";
 import { Servicio } from "@/interfaces/servicio.interface";
 import { formatFrontendDateTime } from '@/utils/dateFormat';
+import { formatCurrencyARS } from '@/lib/comercial/productos';
+import { useI18n } from '@/i18n/I18nProvider';
+import { translateCommercialUi } from '@/i18n/commercialUi';
 
 const CATEGORIA_LABELS: Record<string, string> = {
   personal_trainer: "Personal trainer",
@@ -36,6 +39,10 @@ export default function ServicioViewModal({
   onClose: () => void;
   servicio?: Servicio | null;
 }) {
+  const { locale } = useI18n();
+  const c = (text: string) => translateCommercialUi(locale, text);
+  const dateLocale = locale === 'en' ? 'en-US' : 'es-AR';
+
   if (!servicio) return null;
 
   return (
@@ -44,34 +51,34 @@ export default function ServicioViewModal({
         <QaFileNameBadge file="src/components/modal/ServicioViewModal.tsx" />
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-foreground">
-            Detalle Servicio
+            {c("Detalle Servicio")}
           </DialogTitle>
           <div className="text-sm text-right text-muted-foreground">
-            {formatFrontendDateTime(new Date())}
+            {formatFrontendDateTime(new Date(), dateLocale)}
           </div>
         </DialogHeader>
         <div className="grid grid-cols-1 gap-6 mt-4 md:grid-cols-2">
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Nombre</label>
+              <label className="text-sm font-medium">{c("Nombre")}</label>
               <div className="p-2 border rounded-md bg-muted text-foreground">
                 {servicio.nombre || "-"}
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Descripción</label>
+              <label className="text-sm font-medium">{c("Descripción")}</label>
               <div className="p-2 border rounded-md bg-muted text-foreground whitespace-pre-line">
                 {servicio.descripcion || "-"}
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Código comercial / QR</label>
+              <label className="text-sm font-medium">{c("Código comercial / QR")}</label>
               <div className="p-2 border rounded-md bg-muted font-mono text-foreground">
                 {servicio.codigo || "-"}
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Observaciones internas</label>
+              <label className="text-sm font-medium">{c("Observaciones internas")}</label>
               <div className="p-2 border rounded-md bg-muted text-foreground whitespace-pre-line">
                 {servicio.observaciones || "-"}
               </div>
@@ -80,51 +87,51 @@ export default function ServicioViewModal({
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Precio</label>
+                <label className="text-sm font-medium">{c("Precio")}</label>
                 <div className="p-2 border rounded-md bg-muted text-foreground">
-                  ${Number(servicio.precio || 0).toLocaleString("es-AR")}
+                  {formatCurrencyARS(servicio.precio || 0, locale)}
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Activo</label>
+                <label className="text-sm font-medium">{c("Activo")}</label>
                 <div className="p-2 border rounded-md bg-muted text-foreground">
-                  {servicio.activo ? "Sí" : "No"}
+                  {servicio.activo ? c("Sí") : c("No")}
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Categoría</label>
+                <label className="text-sm font-medium">{c("Categoría")}</label>
                 <div className="p-2 border rounded-md bg-muted text-foreground">
-                  {CATEGORIA_LABELS[String(servicio.categoria ?? "otro")] ?? "Otro"}
+                  {c(CATEGORIA_LABELS[String(servicio.categoria ?? "otro")] ?? "Otro")}
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Modalidad</label>
+                <label className="text-sm font-medium">{c("Modalidad")}</label>
                 <div className="p-2 border rounded-md bg-muted text-foreground">
-                  {MODALIDAD_LABELS[String(servicio.modalidad ?? "presencial")] ?? "Presencial"}
+                  {c(MODALIDAD_LABELS[String(servicio.modalidad ?? "presencial")] ?? "Presencial")}
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Duración</label>
+                <label className="text-sm font-medium">{c("Duración")}</label>
                 <div className="p-2 border rounded-md bg-muted text-foreground">
-                  {servicio.duracion_minutos ? `${servicio.duracion_minutos} minutos` : "-"}
+                  {servicio.duracion_minutos ? `${servicio.duracion_minutos} ${c("minutos")}` : "-"}
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Cupo máximo</label>
+                <label className="text-sm font-medium">{c("Cupo máximo")}</label>
                 <div className="p-2 border rounded-md bg-muted text-foreground">
                   {servicio.cupo_maximo ?? "-"}
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Requiere reserva</label>
+                <label className="text-sm font-medium">{c("Requiere reserva")}</label>
                 <div className="p-2 border rounded-md bg-muted text-foreground">
-                  {servicio.requiere_reserva ? "Sí" : "No"}
+                  {servicio.requiere_reserva ? c("Sí") : c("No")}
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Venta online futura</label>
+                <label className="text-sm font-medium">{c("Venta online futura")}</label>
                 <div className="p-2 border rounded-md bg-muted text-foreground">
-                  {servicio.disponible_online ? "Sí" : "No"}
+                  {servicio.disponible_online ? c("Sí") : c("No")}
                 </div>
               </div>
             </div>

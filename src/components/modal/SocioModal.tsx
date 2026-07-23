@@ -4,6 +4,7 @@ import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import SocioForm from "../forms/SocioForm";
 import FechaHora from "@/components/ui/FechaHora";
+import { useI18n } from "@/i18n/I18nProvider";
 
 export default function SocioModal({
   open,
@@ -16,6 +17,9 @@ export default function SocioModal({
   onCreated: () => void;
   socio?: any | null;
 }) {
+  const { locale } = useI18n();
+  const tx = (es: string, en: string) => (locale === "en" ? en : es);
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="w-full max-w-5xl sm:max-w-4xl">
@@ -23,7 +27,7 @@ export default function SocioModal({
         <DialogHeader>
           <div className="flex gap-4 justify-between items-center w-full">
             <DialogTitle>
-              {socio ? "Editar Socio" : "Nuevo Socio"}
+              {socio ? tx("Editar socio", "Edit member") : tx("Nuevo socio", "New member")}
             </DialogTitle>
             <FechaHora />
           </div>

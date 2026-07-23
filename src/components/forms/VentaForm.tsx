@@ -233,7 +233,7 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
         const stock = getItemStock(detalle);
 
         if (!detalle.item_id) {
-          throw new Error('Cada línea debe tener un producto o servicio seleccionado');
+          throw new Error(c('Cada línea debe tener un producto o servicio seleccionado'));
         }
 
         if (!Number.isInteger(cantidad) || cantidad <= 0) {
@@ -241,11 +241,11 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
         }
 
         if (detalle.item_tipo === 'producto' && stock !== null && cantidad > stock) {
-          throw new Error(`Stock insuficiente. Stock disponible: ${stock}`);
+          throw new Error(`Stock insuficiente. {c('Stock disponible')}: ${stock}`);
         }
 
         if (descuento < 0 || descuento > cantidad * precioUnitario) {
-          throw new Error('El descuento no puede superar el subtotal de la línea');
+          throw new Error(c('El descuento no puede superar el subtotal de la línea'));
         }
 
         return {
@@ -279,17 +279,17 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
 
       if (venta?.id) {
         await updateVenta(undefined as any, venta.id, payload.venta);
-        toast.success('Cabecera de venta actualizada');
+        toast.success(c('Cabecera de venta actualizada'));
       } else {
         await createVenta(undefined as any, payload);
-        toast.success('Venta registrada');
+        toast.success(c('Venta registrada'));
       }
 
       setForm({ ...emptyForm, fecha: today() });
       setDetalles([emptyDetalle()]);
       onCreated();
     } catch (error: any) {
-      toast.error(error.message || 'Error al guardar venta');
+      toast.error(error.message || c('Error al guardar venta'));
     } finally {
       setLoading(false);
     }
@@ -300,7 +300,7 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
       <QaFileNameBadge file="src/components/forms/VentaForm.tsx" />
       <section className='grid grid-cols-1 gap-4 md:grid-cols-3'>
         <div className='flex flex-col gap-1.5'>
-          <Label htmlFor='cliente_tipo'>Tipo de cliente</Label>
+          <Label htmlFor='cliente_tipo'>{c('Tipo de cliente')}</Label>
           <select
             id='cliente_tipo'
             name='cliente_tipo'
@@ -308,15 +308,15 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
             onChange={handleFormChange}
             className='h-10 rounded-md border border-input bg-background px-3 py-2 text-sm'
           >
-            <option value='consumidor_final'>Consumidor final</option>
-            <option value='socio'>Socio</option>
-            <option value='visitante'>Visitante</option>
+            <option value='consumidor_final'>{c('Consumidor final')}</option>
+            <option value='socio'>{c('Socio')}</option>
+            <option value='visitante'>{c('Visitante')}</option>
           </select>
         </div>
 
         {form.cliente_tipo === 'socio' ? (
           <div className='flex flex-col gap-1.5 md:col-span-2'>
-            <Label htmlFor='socio_id'>Socio</Label>
+            <Label htmlFor='socio_id'>{c('Socio')}</Label>
             <select
               id='socio_id'
               name='socio_id'
@@ -325,7 +325,7 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
               className='h-10 rounded-md border border-input bg-background px-3 py-2 text-sm'
               required
             >
-              <option value=''>Seleccionar socio</option>
+              <option value=''>{c('Seleccionar socio')}</option>
               {socios.map((socio) => (
                 <option key={socio.id_socio} value={socio.id_socio}>
                   {socio.nombre_completo} {socio.dni ? `- DNI ${socio.dni}` : ''}
@@ -336,17 +336,17 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
         ) : (
           <>
             <div className='flex flex-col gap-1.5'>
-              <Label htmlFor='cliente_nombre'>Nombre del cliente</Label>
+              <Label htmlFor='cliente_nombre'>{c('Nombre del cliente')}</Label>
               <Input
                 id='cliente_nombre'
                 name='cliente_nombre'
-                placeholder='Consumidor Final'
+                placeholder={c('Consumidor Final')}
                 value={form.cliente_nombre}
                 onChange={handleFormChange}
               />
             </div>
             <div className='flex flex-col gap-1.5'>
-              <Label htmlFor='cliente_documento'>DNI/CUIT opcional</Label>
+              <Label htmlFor='cliente_documento'>{c('DNI/CUIT opcional')}</Label>
               <Input
                 id='cliente_documento'
                 name='cliente_documento'
@@ -359,7 +359,7 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
         )}
 
         <div className='flex flex-col gap-1.5'>
-          <Label htmlFor='fecha'>Fecha</Label>
+          <Label htmlFor='fecha'>{c('Fecha')}</Label>
           <Input
             id='fecha'
             name='fecha'
@@ -378,19 +378,19 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
             onChange={handleFormChange}
             className='h-10 rounded-md border border-input bg-background px-3 py-2 text-sm'
           >
-            <option value='efectivo'>Efectivo</option>
-            <option value='transferencia'>Transferencia</option>
-            <option value='debito'>Débito</option>
-            <option value='credito'>Crédito</option>
-            <option value='mercado_pago'>Mercado Pago</option>
+            <option value='efectivo'>{c('Efectivo')}</option>
+            <option value='transferencia'>{c('Transferencia')}</option>
+            <option value='debito'>{c('Débito')}</option>
+            <option value='credito'>{c('Crédito')}</option>
+            <option value='mercado_pago'>{c('Mercado Pago')}</option>
             <option value='stripe'>Stripe</option>
-            <option value='otro'>Otro</option>
+            <option value='otro'>{c('Otro')}</option>
           </select>
         </div>
         <div className='flex flex-col gap-1.5'>
-          <Label>Total calculado</Label>
+          <Label>{c('Total calculado')}</Label>
           <div className='flex h-10 items-center rounded-md border bg-muted px-3 text-sm font-semibold'>
-            {formatCurrencyARS(totalVenta)}
+            {formatCurrencyARS(totalVenta, locale)}
           </div>
         </div>
       </section>
@@ -400,13 +400,13 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
           <div>
             <h3 className='font-semibold'>{c("Ítems de la venta")}</h3>
             <p className='text-sm text-muted-foreground'>
-              Agregá productos o servicios. Los productos descuentan stock al registrar la venta.
+              {c('Agregá productos o servicios. Los productos descuentan stock al registrar la venta.')}
             </p>
           </div>
           {!venta?.id && (
             <Button type='button' variant='outline' onClick={addDetalle}>
               <Plus className='mr-2 h-4 w-4' />
-              Agregar ítem
+              {c("Agregar ítem")}
             </Button>
           )}
         </div>
@@ -424,7 +424,7 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
                 className='grid grid-cols-1 gap-3 rounded-lg border bg-muted/30 p-3 md:grid-cols-12'
               >
                 <div className='md:col-span-2'>
-                  <Label>Tipo</Label>
+                  <Label>{c("Tipo")}</Label>
                   <select
                     value={detalle.item_tipo}
                     onChange={(e) =>
@@ -433,12 +433,12 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
                     disabled={!!venta?.id}
                     className='mt-1 h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm'
                   >
-                    <option value='producto'>Producto</option>
-                    <option value='servicio'>Servicio</option>
+                    <option value='producto'>{c('Producto')}</option>
+                    <option value='servicio'>{c('Servicio')}</option>
                   </select>
                 </div>
                 <div className='md:col-span-4'>
-                  <Label>{detalle.item_tipo === 'producto' ? 'Producto' : 'Servicio'}</Label>
+                  <Label>{c(detalle.item_tipo === 'producto' ? 'Producto' : 'Servicio')}</Label>
                   <select
                     value={detalle.item_id}
                     onChange={(e) =>
@@ -448,7 +448,7 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
                     className='mt-1 h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm'
                     required
                   >
-                    <option value=''>Seleccionar</option>
+                    <option value=''>{c('Seleccionar')}</option>
                     {opciones.map((item) => (
                       <option key={item.id} value={item.id}>
                         {item.nombre}
@@ -456,11 +456,11 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
                     ))}
                   </select>
                   {stock !== null && (
-                    <p className='mt-1 text-xs text-muted-foreground'>Stock disponible: {stock}</p>
+                    <p className='mt-1 text-xs text-muted-foreground'>{c('Stock disponible')}: {stock}</p>
                   )}
                 </div>
                 <div className='md:col-span-2'>
-                  <Label>Cantidad</Label>
+                  <Label>{c('Cantidad')}</Label>
                   <Input
                     value={detalle.cantidad}
                     onChange={(e) =>
@@ -474,7 +474,7 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
                   />
                 </div>
                 <div className='md:col-span-1'>
-                  <Label>Desc.</Label>
+                  <Label>{c("Desc.")}</Label>
                   <Input
                     value={detalle.descuento}
                     onChange={(e) =>
@@ -488,12 +488,12 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
                   />
                 </div>
                 <div className='md:col-span-2'>
-                  <Label>Subtotal</Label>
+                  <Label>{c("Subtotal")}</Label>
                   <div className='mt-1 flex h-10 items-center rounded-md border bg-background px-3 text-sm font-medium'>
-                    {formatCurrencyARS(subtotal)}
+                    {formatCurrencyARS(subtotal, locale)}
                   </div>
                   <p className='mt-1 text-xs text-muted-foreground'>
-                    Unitario: {formatCurrencyARS(precio)}
+                    {c("Unitario")}: {formatCurrencyARS(precio, locale)}
                   </p>
                 </div>
                 <div className='flex items-end justify-end md:col-span-1'>
@@ -504,7 +504,7 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
                       variant='outline'
                       onClick={() => removeDetalle(detalle.id)}
                       disabled={detalles.length === 1}
-                      title={`Eliminar ítem ${index + 1}`}
+                      title={`${c("Eliminar ítem")} ${index + 1}`}
                     >
                       <Trash2 className='h-4 w-4' />
                     </Button>
@@ -517,11 +517,11 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
       </section>
 
       <div className='flex flex-col gap-1.5'>
-        <Label htmlFor='observaciones'>Observaciones</Label>
+        <Label htmlFor='observaciones'>{c('Observaciones')}</Label>
         <Input
           id='observaciones'
           name='observaciones'
-          placeholder='Observaciones internas opcionales'
+          placeholder={c('Observaciones internas opcionales')}
           value={form.observaciones}
           onChange={handleFormChange}
         />
@@ -529,13 +529,13 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
 
       {venta?.id && (
         <div className='rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900'>
-          En esta etapa se permite editar la cabecera de la venta. La edición de ítems, devoluciones y reposición de stock queda para la feature de anulaciones/devoluciones.
+          {c('En esta etapa se permite editar la cabecera de la venta. La edición de ítems, devoluciones y reposición de stock queda para la feature de anulaciones/devoluciones.')}
         </div>
       )}
 
       <div className='flex justify-end'>
         <Button type='submit' disabled={loading}>
-          {loading ? 'Guardando...' : venta ? 'Actualizar Venta' : 'Registrar Venta'}
+          {loading ? c('Guardando...') : venta ? c('Actualizar Venta') : c('Registrar Venta')}
         </Button>
       </div>
     </form>

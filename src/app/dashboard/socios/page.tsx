@@ -121,6 +121,7 @@ export default function SociosPage() {
     useAuthStore();
   const router = useRouter();
   const { locale } = useI18n();
+  const tx = (es: string, en: string) => sociosExportTx(locale, es, en);
   const [socios, setSocios] = useState<Socio[]>([]);
   const [filteredSocios, setFilteredSocios] = useState<Socio[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -178,7 +179,7 @@ export default function SociosPage() {
         ],
       });
     } catch {
-      toast.error('No se pudo generar el PDF de socios');
+      toast.error(tx('No se pudo generar el PDF de socios', 'Could not generate the members PDF'));
     }
   };
 
@@ -231,11 +232,11 @@ export default function SociosPage() {
     } else if (filtroActivo === 'inactivos') {
       sociosFiltrados = sociosFiltrados.filter((s) => !s.activo);
     } else if (filtroActivo === 'riesgo_alto') {
-      sociosFiltrados = sociosFiltrados.filter((s) => buildSocioBaseRiskSummary(s).level === 'alto');
+      sociosFiltrados = sociosFiltrados.filter((s) => buildSocioBaseRiskSummary(s, locale).level === 'alto');
     } else if (filtroActivo === 'riesgo_medio') {
-      sociosFiltrados = sociosFiltrados.filter((s) => buildSocioBaseRiskSummary(s).level === 'medio');
+      sociosFiltrados = sociosFiltrados.filter((s) => buildSocioBaseRiskSummary(s, locale).level === 'medio');
     } else if (filtroActivo === 'seguimiento') {
-      sociosFiltrados = sociosFiltrados.filter((s) => ['alto', 'medio', 'bajo'].includes(buildSocioBaseRiskSummary(s).level));
+      sociosFiltrados = sociosFiltrados.filter((s) => ['alto', 'medio', 'bajo'].includes(buildSocioBaseRiskSummary(s, locale).level));
     }
     if (searchTerm.trim() !== '') {
       const lowercaseSearch = searchTerm.toLowerCase();
@@ -248,7 +249,7 @@ export default function SociosPage() {
       );
     }
     setFilteredSocios(sociosFiltrados);
-  }, [searchTerm, socios, filtroActivo]);
+  }, [searchTerm, socios, filtroActivo, locale]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -268,18 +269,7 @@ export default function SociosPage() {
     }
   }, [currentPage, totalPages]);
 
-  const filtroLabel =
-    filtroActivo === 'todos'
-      ? 'Todos'
-      : filtroActivo === 'activos'
-      ? 'Activos'
-      : filtroActivo === 'inactivos'
-      ? 'Inactivos'
-      : filtroActivo === 'riesgo_alto'
-      ? 'Riesgo alto'
-      : filtroActivo === 'riesgo_medio'
-      ? 'Riesgo medio'
-      : 'Con alertas';
+  const filtroLabel = sociosFilterExportLabel(locale, filtroActivo);
 
   const totalRegistrados = socios.length;
   const totalActivos = socios.filter((s) => s.activo).length;
@@ -288,7 +278,10 @@ export default function SociosPage() {
     (s) => s.contacto_emergencia_nombre || s.contacto_emergencia_telefono
   ).length;
 
-  const riskSummaries = useMemo(() => socios.map((socio) => buildSocioBaseRiskSummary(socio)), [socios]);
+  const riskSummaries = useMemo(
+    () => socios.map((socio) => buildSocioBaseRiskSummary(socio, locale)),
+    [socios, locale]
+  );
   const totalRiesgoAlto = riskSummaries.filter((summary) => summary.level === 'alto').length;
   const totalRiesgoMedio = riskSummaries.filter((summary) => summary.level === 'medio').length;
   const totalSeguimiento = riskSummaries.filter((summary) => summary.level !== 'ok').length;
@@ -296,7 +289,7 @@ export default function SociosPage() {
   if (loading || !isInitialized) {
     return (
       <div className='flex items-center justify-center h-screen'>
-        Cargando datos de socios...
+        {tx('Cargando datos de socios...', 'Loading member data...')}
       </div>
     );
   }
@@ -310,43 +303,46 @@ export default function SociosPage() {
       <div className='flex h-[100dvh] max-h-[100dvh] min-h-0 w-full overflow-hidden'>
         <AppSidebar />
         <SidebarInset className='!grid h-[100dvh] max-h-[100dvh] min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden'>
-          <AppHeader title='Socios' />
+          <AppHeader title={tx('Socios', 'Members')} />
           <section className='min-h-0 space-y-6 overflow-y-auto overflow-x-hidden p-4 pb-8 md:p-6 md:pb-10'>
             <div className='rounded-3xl border bg-gradient-to-br from-slate-950 via-sky-950 to-slate-950 p-5 text-white shadow-sm'>
               <div className='flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between'>
                 <div>
-                  <p className='text-xs font-bold uppercase tracking-[0.25em] text-sky-300'>Socios · vista administrativa</p>
-                  <h1 className='mt-2 text-3xl font-black'>Socios 360</h1>
+                  <p className='text-xs font-bold uppercase tracking-[0.25em] text-sky-300'>{tx('Socios · vista administrativa', 'Members · administrative view')}</p>
+                  <h1 className='mt-2 text-3xl font-black'>{tx('Socios 360', 'Members 360')}</h1>
                   <p className='mt-2 max-w-3xl text-sm text-slate-300'>
-                    Listado operativo con acceso rápido al perfil 360° del socio: cuota, ficha médica, rutinas, dietas, evolución, mensajes y actividades.
+                    {tx(
+                      'Listado operativo con acceso rápido al perfil 360° del socio: cuota, ficha médica, rutinas, dietas, evolución, mensajes y actividades.',
+                      'Operational list with quick access to each member’s 360° profile: fees, medical record, routines, diets, progress, messages, and activities.'
+                    )}
                   </p>
                 </div>
                 <div className='rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-200'>
                   <div className='flex items-center gap-2 font-bold text-white'>
                     <Radar className='h-4 w-4 text-sky-300' />
-                    Atención integral
+                    {tx('Atención integral', 'Integrated support')}
                   </div>
-                  <p className='mt-1'>Usá el botón 360 para revisar el estado completo antes de contactar o gestionar al socio.</p>
+                  <p className='mt-1'>{tx('Usá el botón 360 para revisar el estado completo antes de contactar o gestionar al socio.', 'Use the 360 button to review the complete status before contacting or managing a member.')}</p>
                 </div>
               </div>
             </div>
 
             <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
-              <SocioSummaryCard icon={Users} label='Registrados' value={totalRegistrados} detail='Base total de socios' />
-              <SocioSummaryCard icon={UserCheck} label='Activos' value={totalActivos} detail='Pueden operar normalmente' />
-              <SocioSummaryCard icon={UserX} label='Inactivos' value={totalInactivos} detail='Requieren revisión administrativa' />
-              <SocioSummaryCard icon={Radar} label='Con emergencia' value={perfilesConEmergencia} detail='Perfiles con contacto de respaldo' />
+              <SocioSummaryCard icon={Users} label={tx('Registrados', 'Registered')} value={totalRegistrados} detail={tx('Base total de socios', 'Total member base')} />
+              <SocioSummaryCard icon={UserCheck} label={tx('Activos', 'Active')} value={totalActivos} detail={tx('Pueden operar normalmente', 'Can operate normally')} />
+              <SocioSummaryCard icon={UserX} label={tx('Inactivos', 'Inactive')} value={totalInactivos} detail={tx('Requieren revisión administrativa', 'Require administrative review')} />
+              <SocioSummaryCard icon={Radar} label={tx('Con emergencia', 'Emergency contact')} value={perfilesConEmergencia} detail={tx('Perfiles con contacto de respaldo', 'Profiles with a backup contact')} />
             </div>
 
             <div className='grid gap-4 md:grid-cols-3'>
-              <SocioRiskQuickCard label='Riesgo alto' value={totalRiesgoAlto} detail='Socios inactivos o con señales operativas críticas.' level='alto' />
-              <SocioRiskQuickCard label='Riesgo medio' value={totalRiesgoMedio} detail='Requieren contacto o normalización administrativa.' level='medio' />
-              <SocioRiskQuickCard label='Con alertas' value={totalSeguimiento} detail='Socios con alguna señal de seguimiento detectada.' level={totalSeguimiento > 0 ? 'bajo' : 'ok'} />
+              <SocioRiskQuickCard label={tx('Riesgo alto', 'High risk')} value={totalRiesgoAlto} detail={tx('Socios inactivos o con señales operativas críticas.', 'Inactive members or members with critical operational signals.')} level='alto' />
+              <SocioRiskQuickCard label={tx('Riesgo medio', 'Medium risk')} value={totalRiesgoMedio} detail={tx('Requieren contacto o normalización administrativa.', 'Require contact or administrative normalization.')} level='medio' />
+              <SocioRiskQuickCard label={tx('Con alertas', 'With alerts')} value={totalSeguimiento} detail={tx('Socios con alguna señal de seguimiento detectada.', 'Members with at least one follow-up signal.')} level={totalSeguimiento > 0 ? 'bajo' : 'ok'} />
             </div>
 
             <Card className='w-full overflow-hidden rounded-3xl border shadow-sm'>
               <CardHeader className='flex flex-wrap items-center justify-between gap-4 p-4 border-b md:flex-nowrap'>
-                <div><h2 className='text-xl font-bold'>Listado de socios</h2><p className='text-sm text-muted-foreground'>Filtrá, exportá y abrí el perfil 360° desde la acción de cada fila.</p></div>
+                <div><h2 className='text-xl font-bold'>{tx('Listado de socios', 'Member list')}</h2><p className='text-sm text-muted-foreground'>{tx('Filtrá, exportá y abrí el perfil 360° desde la acción de cada fila.', 'Filter, export, and open the 360° profile from each row action.')}</p></div>
                 <div className='flex flex-wrap items-center w-full gap-2 md:w-auto'>
                   <div className='flex items-center flex-grow gap-2 md:flex-grow-0'>
                     <DropdownMenu>
@@ -362,7 +358,7 @@ export default function SociosPage() {
                             filtroActivo === 'todos' ? 'font-bold' : ''
                           }
                         >
-                          Todos
+                          {tx('Todos', 'All')}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onSelect={() => setFiltroActivo('activos')}
@@ -370,7 +366,7 @@ export default function SociosPage() {
                             filtroActivo === 'activos' ? 'font-bold' : ''
                           }
                         >
-                          Activos
+                          {tx('Activos', 'Active')}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onSelect={() => setFiltroActivo('inactivos')}
@@ -378,25 +374,25 @@ export default function SociosPage() {
                             filtroActivo === 'inactivos' ? 'font-bold' : ''
                           }
                         >
-                          Inactivos
+                          {tx('Inactivos', 'Inactive')}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onSelect={() => setFiltroActivo('riesgo_alto')}
                           className={filtroActivo === 'riesgo_alto' ? 'font-bold' : ''}
                         >
-                          Riesgo alto
+                          {tx('Riesgo alto', 'High risk')}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onSelect={() => setFiltroActivo('riesgo_medio')}
                           className={filtroActivo === 'riesgo_medio' ? 'font-bold' : ''}
                         >
-                          Riesgo medio
+                          {tx('Riesgo medio', 'Medium risk')}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onSelect={() => setFiltroActivo('seguimiento')}
                           className={filtroActivo === 'seguimiento' ? 'font-bold' : ''}
                         >
-                          Con alertas
+                          {tx('Con alertas', 'With alerts')}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -404,7 +400,7 @@ export default function SociosPage() {
                       <Search className='absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground' />
                       <Input
                         type='search'
-                        placeholder='Buscar por nombre, DNI...'
+                        placeholder={tx('Buscar por nombre, DNI...', 'Search by name, DNI...')}
                         className='pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] w-full'
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -417,7 +413,7 @@ export default function SociosPage() {
                     className='flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]'
                   >
                     <FileText className='w-4 h-4' />
-                    <span className='hidden sm:inline'>Descargar PDF</span>
+                    <span className='hidden sm:inline'>{tx('Descargar PDF', 'Download PDF')}</span>
                   </Button>
                   <Button
                     variant='outline'
@@ -425,10 +421,10 @@ export default function SociosPage() {
                     className='flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]'
                   >
                     <FileSpreadsheet className='w-4 h-4' />
-                    <span className='hidden sm:inline'>Exportar</span>
+                    <span className='hidden sm:inline'>{tx('Exportar', 'Export')}</span>
                   </Button>
                   <div className='rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-100'>
-                    Alta de socios desde Usuarios → rol Socio
+                    {tx('Alta de socios desde Usuarios → rol Socio', 'Create members from Users → Member role')}
                   </div>
                 </div>
               </CardHeader>
@@ -448,21 +444,21 @@ export default function SociosPage() {
                     onDelete={async (socio) => {
                       const confirmar = window.confirm(
                         socio.activo
-                          ? '¿Está seguro de desactivar al socio?'
-                          : '¿Está seguro de activar al socio?'
+                          ? tx('¿Está seguro de desactivar al socio?', 'Are you sure you want to deactivate this member?')
+                          : tx('¿Está seguro de activar al socio?', 'Are you sure you want to activate this member?')
                       );
                       if (!confirmar) return;
 
                       try {
                         await setSocioActivoApi(socio.id_socio, !socio.activo);
                         toast.success(
-                          `Socio ${
-                            socio.activo ? 'desactivado' : 'activado'
-                          } correctamente`
+                          socio.activo
+                            ? tx('Socio desactivado correctamente', 'Member deactivated successfully')
+                            : tx('Socio activado correctamente', 'Member activated successfully')
                         );
                         await loadSocios();
                       } catch (err) {
-                        toast.error('Error al actualizar estado del socio');
+                        toast.error(tx('Error al actualizar estado del socio', 'Could not update the member status'));
                       }
                     }}
                   />
@@ -472,7 +468,7 @@ export default function SociosPage() {
                   totalItems={totalSocios}
                   pageSize={SOCIOS_PAGE_SIZE}
                   onPageChange={setCurrentPage}
-                  itemLabel="socios"
+                  itemLabel={tx('socios', 'members')}
                 />
               </CardContent>
             </Card>

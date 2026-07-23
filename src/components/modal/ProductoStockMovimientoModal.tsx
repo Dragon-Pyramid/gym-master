@@ -9,6 +9,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Producto } from "@/interfaces/producto.interface";
+import { useI18n } from '@/i18n/I18nProvider';
+import { translateCommercialUi } from '@/i18n/commercialUi';
 
 export default function ProductoStockMovimientoModal({
   open,
@@ -21,6 +23,9 @@ export default function ProductoStockMovimientoModal({
   producto?: Producto | null;
   onSaved: () => void | Promise<void>;
 }) {
+  const { locale } = useI18n();
+  const c = (text: string) => translateCommercialUi(locale, text);
+
   if (!producto) return null;
 
   return (
@@ -29,10 +34,10 @@ export default function ProductoStockMovimientoModal({
         <QaFileNameBadge file="src/components/modal/ProductoStockMovimientoModal.tsx" />
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-foreground">
-            Movimiento de stock
+            {c("Movimiento de stock")}
           </DialogTitle>
           <p className="text-sm text-muted-foreground">
-            Registrá ajustes, recuentos, devoluciones vendibles, mermas o reposiciones con trazabilidad.
+            {c('Registrá ajustes, recuentos, devoluciones vendibles, mermas o reposiciones con trazabilidad.')}
           </p>
         </DialogHeader>
         <ProductoStockMovimientoForm

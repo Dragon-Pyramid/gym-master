@@ -5,6 +5,7 @@ import type {
   SocioMensajeEstado,
   UpdateSocioMensajeAdminDto,
 } from '@/interfaces/socioMensaje.interface';
+import type { GymMasterLocale } from '@/i18n/config';
 import type {
   CreateSoporteTicketDto,
   SoporteTicket,
@@ -1208,11 +1209,14 @@ export async function reactivateDragonPyramidLicenseControl(payload: unknown) {
   return { ok: res.ok, ...data };
 }
 
-export async function getDragonPyramidLicenseWarning() {
+export async function getDragonPyramidLicenseWarning(locale: GymMasterLocale = 'es') {
   const token = getToken();
   const res = await fetch('/api/dragon-pyramid/license/warning', {
     method: 'GET',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: {
+      'Accept-Language': locale,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     cache: 'no-store',
   });
   const data = await res.json();

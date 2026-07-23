@@ -191,8 +191,24 @@ function getYoutubeAutoCandidateKey(row: any) {
   return `${row.id_ejercicio}-${row.idioma}-${row.youtube_video_id ?? row.youtube_url ?? "sin-video"}`;
 }
 
-function buildYoutubeAutoReviewNotes(row: any) {
-  return `Candidato automático ${String(row.idioma).toUpperCase()} por YouTube Data API. Título: ${row.title ?? "sin título"} · Canal: ${row.channelTitle ?? "sin canal"} · Vistas: ${row.viewCount ?? 0}. Requiere revisión administrativa.`;
+
+function localizedMediaApiError(
+  rawError: unknown,
+  isEnglish: boolean,
+  spanishFallback: string,
+  englishFallback: string,
+) {
+  if (!isEnglish && typeof rawError === "string" && rawError.trim()) {
+    return rawError;
+  }
+
+  return isEnglish ? englishFallback : spanishFallback;
+}
+
+function buildYoutubeAutoReviewNotes(row: any, isEnglish: boolean) {
+  return isEnglish
+    ? `Automatic ${String(row.idioma).toUpperCase()} candidate from YouTube Data API. Title: ${row.title ?? "untitled"} · Channel: ${row.channelTitle ?? "unknown channel"} · Views: ${row.viewCount ?? 0}. Administrative review required.`
+    : `Candidato automático ${String(row.idioma).toUpperCase()} por YouTube Data API. Título: ${row.title ?? "sin título"} · Canal: ${row.channelTitle ?? "sin canal"} · Vistas: ${row.viewCount ?? 0}. Requiere revisión administrativa.`;
 }
 
 export default function RutinasExerciseMediaCatalogPage() {
@@ -324,7 +340,7 @@ export default function RutinasExerciseMediaCatalogPage() {
 
       if (!response.ok) {
         throw new Error(
-          response.error || "No se pudo cargar el catálogo de media.",
+          localizedMediaApiError(response.error, isEnglish, "No se pudo cargar el catálogo de media.", "The media catalog could not be loaded."),
         );
       }
 
@@ -345,7 +361,7 @@ export default function RutinasExerciseMediaCatalogPage() {
         );
       });
     } catch (loadError: any) {
-      setError(loadError?.message ?? "No se pudo cargar el catálogo de media.");
+      setError(loadError?.message ?? tx("No se pudo cargar el catálogo de media.", "The media catalog could not be loaded."));
       setItems([]);
       setSelectedExercise(null);
     } finally {
@@ -353,12 +369,14 @@ export default function RutinasExerciseMediaCatalogPage() {
     }
   }, [
     isAuthenticated,
+    isEnglish,
     isInitialized,
     mediaStatus,
     nivelFilter,
     objetivoFilter,
     page,
     searchTerm,
+    tx,
     user?.rol,
   ]);
 
@@ -408,7 +426,7 @@ export default function RutinasExerciseMediaCatalogPage() {
 
       if (!uploadResponse.ok || !uploadResponse.url) {
         throw new Error(
-          uploadResponse.error || "No se pudo subir la media a Cloudinary.",
+          localizedMediaApiError(uploadResponse.error, isEnglish, "No se pudo subir la media a Cloudinary.", "The media could not be uploaded to Cloudinary."),
         );
       }
 
@@ -418,22 +436,23 @@ export default function RutinasExerciseMediaCatalogPage() {
         imagen_origen: "cloudinary",
         cloudinary_public_id: uploadResponse.public_id,
         titulo: selectedExercise.nombre_ejercicio,
-        descripcion_media:
+        descripcion_media: tx(
           "Media principal subida a Cloudinary desde el catálogo administrativo.",
+          "Primary media uploaded to Cloudinary from the administrative catalog."
+        ),
       });
 
       if (!updateResponse.ok) {
         throw new Error(
-          updateResponse.error ||
-            "La imagen se subió, pero no se pudo asociar al ejercicio.",
+          localizedMediaApiError(updateResponse.error, isEnglish, "La imagen se subió, pero no se pudo asociar al ejercicio.", "The image was uploaded but could not be linked to the exercise."),
         );
       }
 
-      setSuccess("Imagen/GIF subida a Cloudinary y asociada al ejercicio.");
+      setSuccess(tx("Imagen/GIF subida a Cloudinary y asociada al ejercicio.", "Image/GIF uploaded to Cloudinary and linked to the exercise."));
       await loadCatalog();
     } catch (uploadError: any) {
       setError(
-        uploadError?.message ?? "No se pudo subir la media del ejercicio.",
+        uploadError?.message ?? tx("No se pudo subir la media del ejercicio.", "The exercise media could not be uploaded."),
       );
     } finally {
       setUploading(false);
@@ -457,19 +476,19 @@ export default function RutinasExerciseMediaCatalogPage() {
           : "externa",
         cloudinary_public_id: selectedExercise.cloudinary_public_id ?? null,
         titulo: selectedExercise.nombre_ejercicio,
-        descripcion_media: "Media principal actualizada manualmente desde URL.",
+        descripcion_media: tx("Media principal actualizada manualmente desde URL.", "Primary media updated manually from a URL."),
       });
 
       if (!response.ok) {
         throw new Error(
-          response.error || "No se pudo guardar la URL de imagen.",
+          localizedMediaApiError(response.error, isEnglish, "No se pudo guardar la URL de imagen.", "The image URL could not be saved."),
         );
       }
 
-      setSuccess("URL de imagen actualizada correctamente.");
+      setSuccess(tx("URL de imagen actualizada correctamente.", "Image URL updated successfully."));
       await loadCatalog();
     } catch (saveError: any) {
-      setError(saveError?.message ?? "No se pudo guardar la URL de imagen.");
+      setError(saveError?.message ?? tx("No se pudo guardar la URL de imagen.", "The image URL could not be saved."));
     } finally {
       setSaving(false);
     }
@@ -483,7 +502,7 @@ export default function RutinasExerciseMediaCatalogPage() {
 
     if (!sourceUrl) {
       setError(
-        "Debe indicar una URL externa o usar la imagen actual del ejercicio.",
+        tx("Debe indicar una URL externa o usar la imagen actual del ejercicio.", "Enter an external URL or use the exercise’s current image."),
       );
       return;
     }
@@ -497,20 +516,22 @@ export default function RutinasExerciseMediaCatalogPage() {
         id_ejercicio: selectedExercise.id_ejercicio,
         url: sourceUrl,
         titulo: selectedExercise.nombre_ejercicio,
-        descripcion_media:
+        descripcion_media: tx(
           "Media principal importada automáticamente a Cloudinary desde el catálogo administrativo.",
+          "Primary media automatically imported to Cloudinary from the administrative catalog."
+        ),
       });
 
       if (!response.ok) {
         throw new Error(
-          response.error || "No se pudo importar la imagen/GIF a Cloudinary.",
+          localizedMediaApiError(response.error, isEnglish, "No se pudo importar la imagen/GIF a Cloudinary.", "The image/GIF could not be imported to Cloudinary."),
         );
       }
 
-      setSuccess("Imagen/GIF importada a Cloudinary y asociada al ejercicio.");
+      setSuccess(tx("Imagen/GIF importada a Cloudinary y asociada al ejercicio.", "Image/GIF imported to Cloudinary and linked to the exercise."));
       await loadCatalog();
     } catch (importError: any) {
-      setError(importError?.message ?? "No se pudo importar la media remota.");
+      setError(importError?.message ?? tx("No se pudo importar la media remota.", "The remote media could not be imported."));
     } finally {
       setImporting(false);
     }
@@ -533,24 +554,26 @@ export default function RutinasExerciseMediaCatalogPage() {
         youtube_review_status: youtubeReviewStatus,
         youtube_review_notes: youtubeReviewNotes.trim(),
         titulo: selectedExercise.nombre_ejercicio,
-        descripcion_media:
+        descripcion_media: tx(
           "Video recomendado para explicar la técnica del ejercicio.",
+          "Recommended video explaining the exercise technique."
+        ),
       });
 
       if (!response.ok) {
         throw new Error(
-          response.error || "No se pudo guardar el video de YouTube.",
+          localizedMediaApiError(response.error, isEnglish, "No se pudo guardar el video de YouTube.", "The YouTube video could not be saved."),
         );
       }
 
       setSuccess(
         youtubeUrl.trim() || youtubeUrlEn.trim()
-          ? "Videos de YouTube asociados al ejercicio."
-          : "Videos de YouTube quitados del ejercicio.",
+          ? tx("Videos de YouTube asociados al ejercicio.", "YouTube videos linked to the exercise.")
+          : tx("Videos de YouTube quitados del ejercicio.", "YouTube videos removed from the exercise."),
       );
       await loadCatalog();
     } catch (saveError: any) {
-      setError(saveError?.message ?? "No se pudo guardar el video de YouTube.");
+      setError(saveError?.message ?? tx("No se pudo guardar el video de YouTube.", "The YouTube video could not be saved."));
     } finally {
       setSaving(false);
     }
@@ -591,7 +614,7 @@ export default function RutinasExerciseMediaCatalogPage() {
 
     if (itemsToImport.length === 0) {
       setError(
-        "Pegá un CSV con encabezado para previsualizar o importar videos de YouTube.",
+        tx("Pegá un CSV con encabezado para previsualizar o importar videos de YouTube.", "Paste a CSV with headers to preview or import YouTube videos."),
       );
       return;
     }
@@ -608,16 +631,15 @@ export default function RutinasExerciseMediaCatalogPage() {
 
       if (!response.ok) {
         throw new Error(
-          response.error ||
-            "No se pudo procesar la importación masiva de YouTube.",
+          localizedMediaApiError(response.error, isEnglish, "No se pudo procesar la importación masiva de YouTube.", "The bulk YouTube import could not be processed."),
         );
       }
 
       setYoutubeImportReport(response);
       setSuccess(
         youtubeImportApply
-          ? `Importación aplicada: ${response.applied ?? 0} ejercicios actualizados.`
-          : `Previsualización lista: ${response.matched ?? 0} ejercicios encontrados.`,
+          ? tx(`Importación aplicada: ${response.applied ?? 0} ejercicios actualizados.`, `Import applied: ${response.applied ?? 0} exercises updated.`)
+          : tx(`Previsualización lista: ${response.matched ?? 0} ejercicios encontrados.`, `Preview ready: ${response.matched ?? 0} exercises matched.`),
       );
 
       if (youtubeImportApply) {
@@ -626,7 +648,7 @@ export default function RutinasExerciseMediaCatalogPage() {
     } catch (importError: any) {
       setError(
         importError?.message ??
-          "No se pudo procesar la importación masiva de YouTube.",
+          tx("No se pudo procesar la importación masiva de YouTube.", "The bulk YouTube import could not be processed."),
       );
     } finally {
       setYoutubeImporting(false);
@@ -639,7 +661,7 @@ export default function RutinasExerciseMediaCatalogPage() {
     if (youtubeAutoIncludeEn) idiomas.push("en");
 
     if (idiomas.length === 0) {
-      setError("Seleccioná al menos un idioma para buscar videos en YouTube.");
+      setError(tx("Seleccioná al menos un idioma para buscar videos en YouTube.", "Select at least one language to search for YouTube videos."));
       return;
     }
 
@@ -657,8 +679,7 @@ export default function RutinasExerciseMediaCatalogPage() {
 
       if (!response.ok) {
         throw new Error(
-          response.error ||
-            "No se pudo ejecutar el descubrimiento automático de YouTube.",
+          localizedMediaApiError(response.error, isEnglish, "No se pudo ejecutar el descubrimiento automático de YouTube.", "Automatic YouTube discovery could not be completed."),
         );
       }
 
@@ -673,8 +694,8 @@ export default function RutinasExerciseMediaCatalogPage() {
       setYoutubeAutoSelectedKeys(selectableKeys);
       setSuccess(
         youtubeAutoApply
-          ? `Descubrimiento aplicado: ${response.applied ?? 0} videos sugeridos guardados sin pisar URLs existentes.`
-          : `Previsualización lista: ${response.candidates?.length ?? 0} resultados/candidatos. Desmarcá candidatos incorrectos antes de aplicar.`,
+          ? tx(`Descubrimiento aplicado: ${response.applied ?? 0} videos sugeridos guardados sin pisar URLs existentes.`, `Discovery applied: ${response.applied ?? 0} suggested videos saved without overwriting existing URLs.`)
+          : tx(`Previsualización lista: ${response.candidates?.length ?? 0} resultados/candidatos. Desmarcá candidatos incorrectos antes de aplicar.`, `Preview ready: ${response.candidates?.length ?? 0} results/candidates. Uncheck incorrect candidates before applying.`),
       );
 
       if (youtubeAutoApply) {
@@ -683,7 +704,7 @@ export default function RutinasExerciseMediaCatalogPage() {
     } catch (autoError: any) {
       setError(
         autoError?.message ??
-          "No se pudo ejecutar el descubrimiento automático de YouTube.",
+          tx("No se pudo ejecutar el descubrimiento automático de YouTube.", "Automatic YouTube discovery could not be completed."),
       );
     } finally {
       setYoutubeAutoRunning(false);
@@ -711,7 +732,10 @@ export default function RutinasExerciseMediaCatalogPage() {
 
     if (selectedCandidates.length === 0) {
       setError(
-        "No hay candidatos seleccionados para aplicar. Marcá al menos un video correcto.",
+        tx(
+          "No hay candidatos seleccionados para aplicar. Marcá al menos un video correcto.",
+          "No candidates are selected. Select at least one correct video."
+        ),
       );
       return;
     }
@@ -730,7 +754,7 @@ export default function RutinasExerciseMediaCatalogPage() {
           nombre_ejercicio: row.nombre_ejercicio,
           youtube_source: "youtube_api_auto",
           youtube_review_status: "sugerido",
-          youtube_review_notes: buildYoutubeAutoReviewNotes(row),
+          youtube_review_notes: buildYoutubeAutoReviewNotes(row, isEnglish),
         };
 
         if (row.idioma === "en") {
@@ -739,7 +763,7 @@ export default function RutinasExerciseMediaCatalogPage() {
           current.youtube_url_es = row.youtube_url;
         }
 
-        current.youtube_review_notes = buildYoutubeAutoReviewNotes(row);
+        current.youtube_review_notes = buildYoutubeAutoReviewNotes(row, isEnglish);
         itemsByExercise.set(id, current);
       }
 
@@ -750,13 +774,15 @@ export default function RutinasExerciseMediaCatalogPage() {
 
       if (!response.ok) {
         throw new Error(
-          response.error ||
-            "No se pudieron aplicar los candidatos seleccionados.",
+          localizedMediaApiError(response.error, isEnglish, "No se pudieron aplicar los candidatos seleccionados.", "The selected candidates could not be applied."),
         );
       }
 
       setSuccess(
-        `Candidatos seleccionados aplicados: ${response.applied ?? 0}. Los descartados no se guardaron.`,
+        tx(
+          `Candidatos seleccionados aplicados: ${response.applied ?? 0}. Los descartados no se guardaron.`,
+          `Selected candidates applied: ${response.applied ?? 0}. Discarded candidates were not saved.`
+        ),
       );
       setYoutubeAutoReport(null);
       setYoutubeAutoSelectedKeys(new Set());
@@ -764,7 +790,7 @@ export default function RutinasExerciseMediaCatalogPage() {
     } catch (applyError: any) {
       setError(
         applyError?.message ??
-          "No se pudieron aplicar los candidatos seleccionados.",
+          tx("No se pudieron aplicar los candidatos seleccionados.", "The selected candidates could not be applied."),
       );
     } finally {
       setYoutubeAutoRunning(false);
@@ -784,7 +810,7 @@ export default function RutinasExerciseMediaCatalogPage() {
 
       if (!response.ok) {
         throw new Error(
-          response.error || "No se pudieron detectar equivalencias de media.",
+          localizedMediaApiError(response.error, isEnglish, "No se pudieron detectar equivalencias de media.", "Media equivalences could not be detected."),
         );
       }
 
@@ -792,11 +818,11 @@ export default function RutinasExerciseMediaCatalogPage() {
         response as EjercicioMediaEquivalenceSyncResponse,
       );
       setSuccess(
-        `Se detectaron ${response.total_candidates ?? 0} equivalencias seguras para revisar.`,
+        tx(`Se detectaron ${response.total_candidates ?? 0} equivalencias seguras para revisar.`, `${response.total_candidates ?? 0} safe equivalences were detected for review.`),
       );
     } catch (syncError: any) {
       setError(
-        syncError?.message ?? "No se pudieron detectar equivalencias de media.",
+        syncError?.message ?? tx("No se pudieron detectar equivalencias de media.", "Media equivalences could not be detected."),
       );
     } finally {
       setSyncingEquivalences(false);
@@ -805,7 +831,7 @@ export default function RutinasExerciseMediaCatalogPage() {
 
   const handleApplyEquivalenceSync = async () => {
     const confirmed = window.confirm(
-      "Se copiará media desde ejercicios equivalentes hacia ejercicios con fallback o imagen vacía. ¿Querés continuar?",
+      tx("Se copiará media desde ejercicios equivalentes hacia ejercicios con fallback o imagen vacía. ¿Querés continuar?", "Media will be copied from equivalent exercises to exercises using a fallback or an empty image. Continue?"),
     );
 
     if (!confirmed) return;
@@ -822,8 +848,7 @@ export default function RutinasExerciseMediaCatalogPage() {
 
       if (!response.ok) {
         throw new Error(
-          response.error ||
-            "No se pudo aplicar la sincronización de media equivalente.",
+          localizedMediaApiError(response.error, isEnglish, "No se pudo aplicar la sincronización de media equivalente.", "Equivalent-media synchronization could not be applied."),
         );
       }
 
@@ -831,13 +856,13 @@ export default function RutinasExerciseMediaCatalogPage() {
         response as EjercicioMediaEquivalenceSyncResponse,
       );
       setSuccess(
-        `Se sincronizaron ${response.applied ?? 0} ejercicios equivalentes.`,
+        tx(`Se sincronizaron ${response.applied ?? 0} ejercicios equivalentes.`, `${response.applied ?? 0} equivalent exercises were synchronized.`),
       );
       await loadCatalog();
     } catch (syncError: any) {
       setError(
         syncError?.message ??
-          "No se pudo aplicar la sincronización de media equivalente.",
+          tx("No se pudo aplicar la sincronización de media equivalente.", "Equivalent-media synchronization could not be applied."),
       );
     } finally {
       setApplyingEquivalences(false);
@@ -1277,7 +1302,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                                           event.target.checked,
                                         )
                                       }
-                                      aria-label="Aplicar candidato"
+                                      aria-label={tx("Aplicar candidato", "Apply candidate")}
                                     />
                                   )}
                                   <div className="min-w-0 flex-1">
@@ -1285,7 +1310,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                                       #{row.id_ejercicio} ·{" "}
                                       {row.nombre_ejercicio} ·{" "}
                                       {String(row.idioma).toUpperCase()} ·{" "}
-                                      {selected ? "seleccionado" : row.action}
+                                      {selected ? tx("seleccionado", "selected") : row.action}
                                     </p>
                                     <p>{row.message}</p>
                                     {row.youtube_url && (
@@ -1296,7 +1321,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                                       >
                                         {row.title ?? row.youtube_url}{" "}
                                         {row.viewCount
-                                          ? `· ${row.viewCount.toLocaleString()} vistas`
+                                          ? `${"·"} ${row.viewCount.toLocaleString()} ${tx("vistas", "views")}`
                                           : ""}
                                       </a>
                                     )}
@@ -1304,8 +1329,10 @@ export default function RutinasExerciseMediaCatalogPage() {
                                       selectable &&
                                       !selected && (
                                         <p className="text-[11px] font-semibold text-red-700">
-                                          Descartado: no se guardará al aplicar
-                                          seleccionados.
+                                          {tx(
+                                            "Descartado: no se guardará al aplicar seleccionados.",
+                                            "Discarded: it will not be saved when applying selected candidates."
+                                          )}
                                         </p>
                                       )}
                                   </div>
@@ -1389,7 +1416,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                         : tx("importación aplicada", "import applied")}
                     </p>
                     <p>
-                      Total: {youtubeImportReport.total} · {tx("Encontrados", "Matched")}: {" "}
+                      {tx("Total", "Total")}: {youtubeImportReport.total} · {tx("Encontrados", "Matched")}: {" "}
                       {youtubeImportReport.matched} · {tx("Aplicados", "Applied")}:{" "}
                       {youtubeImportReport.applied} · {tx("Errores", "Errors")}: {" "}
                       {youtubeImportReport.errors}
@@ -1750,7 +1777,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                                     className="inline-flex items-center justify-center rounded-md border border-red-200 bg-red-50 p-2 text-red-700 hover:bg-red-100"
                                   >
                                     <Eye className="h-4 w-4" />
-                                    <span className="sr-only">Ver video ES</span>
+                                    <span className="sr-only">{tx("Ver video ES", "View ES video")}</span>
                                   </a>
                                 ) : (
                                   <span className="text-xs text-slate-400">—</span>
@@ -1766,7 +1793,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                                     className="inline-flex items-center justify-center rounded-md border border-sky-200 bg-sky-50 p-2 text-sky-700 hover:bg-sky-100"
                                   >
                                     <Eye className="h-4 w-4" />
-                                    <span className="sr-only">Ver video EN</span>
+                                    <span className="sr-only">{tx("Ver video EN", "View EN video")}</span>
                                   </a>
                                 ) : (
                                   <span className="text-xs text-slate-400">—</span>
@@ -2015,7 +2042,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                               <option value="validado">{tx("Validado", "Validated")}</option>
                               <option value="rechazado">{tx("Rechazado", "Rejected")}</option>
                               <option value="requiere_revision">
-                                Requiere revisión
+                                {tx("Requiere revisión", "Requires review")}
                               </option>
                             </select>
                           </div>

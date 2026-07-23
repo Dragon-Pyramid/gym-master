@@ -130,13 +130,28 @@ function escapeHtml(value: unknown) {
     .replace(/'/g, '&#39;');
 }
 
-function buildTicketHtml(sale: ComercialPosVentaResumen, c: (text: string) => string) {
+
+function formatTicketDate(value: string | null | undefined, locale: string) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'es-AR', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(date);
+}
+
+function buildTicketHtml(
+  sale: ComercialPosVentaResumen,
+  c: (text: string) => string,
+  locale: string
+) {
   const detalles = sale.venta_detalle ?? sale.detalles ?? [];
   const rows = detalles
     .map((detalle) => {
       const nombre = escapeHtml(detalle.producto?.nombre || detalle.servicio?.nombre || (detalle.item_tipo === 'servicio' ? c('Servicio') : c('Producto')));
       const lineTotal = Number(detalle.total_linea ?? (Number(detalle.cantidad) * Number(detalle.precio_unitario) - Number(detalle.descuento ?? 0)));
-      return `<tr><td>${detalle.cantidad} x ${nombre}</td><td style="text-align:right">${formatCurrencyARS(lineTotal)}</td></tr>`;
+      return `<tr><td>${detalle.cantidad} x ${nombre}</td><td style="text-align:right">${formatCurrencyARS(lineTotal, locale)}</td></tr>`;
     })
     .join('');
 
@@ -154,10 +169,10 @@ function buildTicketHtml(sale: ComercialPosVentaResumen, c: (text: string) => st
   </style></head>
   <body>
     <h1>Gym Master</h1>
-    <div class="sub">{c('POS / Kiosco')}<br/>${escapeHtml(sale.comprobante_codigo || '')}<br/>${escapeHtml(sale.fecha || '')}</div>
+    <div class="sub">${c('POS / Kiosco')}<br/>${escapeHtml(sale.comprobante_codigo || '')}<br/>${escapeHtml(formatTicketDate(sale.fecha, locale))}</div>
     <div style="font-size:11px;margin-bottom:8px">${c('Cliente')}: ${escapeHtml(c(getClientLabel(sale)))}<br/>${c('Pago')}: ${escapeHtml(c(sale.metodo_pago))}</div>
     <table>${rows}</table>
-    <div class="total">${c('Total')}: ${formatCurrencyARS(sale.total)}</div>
+    <div class="total">${c('Total')}: ${formatCurrencyARS(sale.total, locale)}</div>
     <div class="footer">${c('Gracias por tu compra')}</div>
     <script>window.print();</script>
   </body></html>`;
@@ -204,7 +219,7 @@ export default function ComercialKioscoPosPage() {
       setDashboard(data ?? initialDashboard);
       setUbicacionId((current) => current || data?.ubicacionDefaultId || data?.ubicaciones?.[0]?.id || '');
     } catch (error: any) {
-      toast.error(error?.message || 'No se pudo cargar POS/Kiosco');
+      toast.error(error?.message || c('No se pudo cargar POS/Kiosco'));
     } finally {
       setLoading(false);
     }
@@ -476,7 +491,7 @@ export default function ComercialKioscoPosPage() {
       toast.success(c('Venta POS/Kiosco registrada'));
       await loadDashboard();
     } catch (error: any) {
-      toast.error(error?.message || 'No se pudo registrar venta');
+      toast.error(error?.message || c('No se pudo registrar venta'));
     } finally {
       setSaving(false);
     }
@@ -489,7 +504,7 @@ export default function ComercialKioscoPosPage() {
       toast.error(c('El navegador bloqueó la ventana de impresión'));
       return;
     }
-    ticket.document.write(buildTicketHtml(sale, c));
+    ticket.document.write(buildTicketHtml(sale, c, locale));
     ticket.document.close();
   }
 
@@ -603,7 +618,7 @@ export default function ComercialKioscoPosPage() {
 
   const paymentLabel = useMemo(
     () => c(metodoPagoOptions.find((option) => option.value === metodoPago)?.label ?? metodoPago),
-    [metodoPago]
+    [locale, metodoPago]
   );
 
   const posReadiness = useMemo(() => {
@@ -615,7 +630,7 @@ export default function ComercialKioscoPosPage() {
       return { label: c('Atención stock'), tone: 'warning' as const, detail: `${dashboard.metricas.productosCriticos} ${c('productos críticos.')}` };
     }
     return { label: c('Listo para vender'), tone: 'ok' as const, detail: c('Stock, servicios y packs disponibles.') };
-  }, [dashboard.metricas.packsDisponibles, dashboard.metricas.productosCriticos, dashboard.metricas.productosDisponibles, dashboard.metricas.serviciosDisponibles, ubicacionId]);
+  }, [dashboard.metricas.packsDisponibles, dashboard.metricas.productosCriticos, dashboard.metricas.productosDisponibles, dashboard.metricas.serviciosDisponibles, locale, ubicacionId]);
 
   const posReadinessClass =
     posReadiness.tone === 'critical'
@@ -653,7 +668,7 @@ export default function ComercialKioscoPosPage() {
                     </div>
                     <div className='rounded-2xl border border-white/10 bg-white/10 p-3'>
                       <span className='text-slate-300'>{c('Total actual')}</span>
-                      <p className='mt-1 text-lg font-black'>{formatCurrencyARS(cartTotals.total)}</p>
+                      <p className='mt-1 text-lg font-black'>{formatCurrencyARS(cartTotals.total, locale)}</p>
                     </div>
                     <div className='rounded-2xl border border-white/10 bg-white/10 p-3'>
                       <span className='text-slate-300'>{c('Pago')}</span>
@@ -675,7 +690,7 @@ export default function ComercialKioscoPosPage() {
                     Scanner
                   </Button>
                   <Button asChild variant='secondary' className='w-full sm:w-auto'>
-                    <Link href='/dashboard/comercial/stock-ledger'>Stock</Link>
+                    <Link href='/dashboard/comercial/stock-ledger'>{c('Stock')}</Link>
                   </Button>
                   <Button asChild className='w-full bg-[#02a8e1] hover:bg-[#0288b1] sm:w-auto'>
                     <Link href='/dashboard/ventas'>{c('Ventas')}</Link>
@@ -720,7 +735,7 @@ export default function ComercialKioscoPosPage() {
                     <div className='grid grid-cols-1 gap-3 md:grid-cols-3'>
                       <div className='rounded-xl border p-3 text-sm'><span className='text-muted-foreground'>{c('Estado')}</span><p className='font-semibold'>{c(scannerSession.estado)}</p></div>
                       <div className='rounded-xl border p-3 text-sm'><span className='text-muted-foreground'>{c('Eventos')}</span><p className='font-semibold'>{scannerEvents.length}</p></div>
-                      <div className='rounded-xl border p-3 text-sm'><span className='text-muted-foreground'>{c('Expira')}</span><p className='font-semibold'>{new Date(scannerSession.expira_en).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</p></div>
+                      <div className='rounded-xl border p-3 text-sm'><span className='text-muted-foreground'>{c('Expira')}</span><p className='font-semibold'>{new Date(scannerSession.expira_en).toLocaleTimeString(locale === 'en' ? 'en-US' : 'es-AR', { hour: '2-digit', minute: '2-digit' })}</p></div>
                     </div>
                     {scannerEvents.length > 0 && (
                       <div className='space-y-2'>
@@ -740,7 +755,7 @@ export default function ComercialKioscoPosPage() {
 
             <section className='grid grid-cols-2 gap-3 md:grid-cols-4 2xl:grid-cols-8'>
               <Card className='bg-white/95 dark:bg-slate-900'><CardContent className='flex items-center justify-between p-4'><div><p className='text-sm text-muted-foreground'>{c('Ventas hoy')}</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.ventasHoy}</p></div><Store className='h-6 w-6 text-sky-600' /></CardContent></Card>
-              <Card className='bg-white/95 dark:bg-slate-900'><CardContent className='flex items-center justify-between p-4'><div><p className='text-sm text-muted-foreground'>{c('Total hoy')}</p><p className='text-xl font-bold'>{loading ? '...' : formatCurrencyARS(dashboard.metricas.totalHoy)}</p></div><CreditCard className='h-6 w-6 text-emerald-600' /></CardContent></Card>
+              <Card className='bg-white/95 dark:bg-slate-900'><CardContent className='flex items-center justify-between p-4'><div><p className='text-sm text-muted-foreground'>{c('Total hoy')}</p><p className='text-xl font-bold'>{loading ? '...' : formatCurrencyARS(dashboard.metricas.totalHoy, locale)}</p></div><CreditCard className='h-6 w-6 text-emerald-600' /></CardContent></Card>
               <Card className='bg-white/95 dark:bg-slate-900'><CardContent className='flex items-center justify-between p-4'><div><p className='text-sm text-muted-foreground'>{c('Ítems hoy')}</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.itemsHoy}</p></div><ShoppingCart className='h-6 w-6 text-indigo-600' /></CardContent></Card>
               <Card className='bg-white/95 dark:bg-slate-900'><CardContent className='flex items-center justify-between p-4'><div><p className='text-sm text-muted-foreground'>{c('Productos')}</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.productosDisponibles}</p></div><PackagePlus className='h-6 w-6 text-violet-600' /></CardContent></Card>
               <Card className='bg-white/95 dark:bg-slate-900'><CardContent className='flex items-center justify-between p-4'><div><p className='text-sm text-muted-foreground'>{c('Servicios')}</p><p className='text-2xl font-bold'>{loading ? '...' : dashboard.metricas.serviciosDisponibles}</p></div><Store className='h-6 w-6 text-cyan-600' /></CardContent></Card>
@@ -789,7 +804,7 @@ export default function ComercialKioscoPosPage() {
                             <span className={`rounded-full px-2 py-1 text-xs ${getProductStatusClass(product)}`}>{product.stock_ubicacion}</span>
                           </div>
                           <div className='mt-3 flex items-center justify-between'>
-                            <span className='text-lg font-bold'>{formatCurrencyARS(product.precio)}</span>
+                            <span className='text-lg font-bold'>{formatCurrencyARS(product.precio, locale)}</span>
                             <span className='text-xs text-muted-foreground'>{c('Stock total')} {product.stock_total}</span>
                           </div>
                         </button>
@@ -814,7 +829,7 @@ export default function ComercialKioscoPosPage() {
                                 <span className='rounded-full bg-cyan-100 px-2 py-1 text-xs text-cyan-700'>{c('Servicio')}</span>
                               </div>
                               <div className='mt-3 flex items-center justify-between'>
-                                <span className='text-lg font-bold'>{formatCurrencyARS(service.precio)}</span>
+                                <span className='text-lg font-bold'>{formatCurrencyARS(service.precio, locale)}</span>
                                 <span className='text-xs text-muted-foreground'>{service.duracion_minutos ? `${service.duracion_minutos} min` : 'POS'}</span>
                               </div>
                             </button>
@@ -840,7 +855,7 @@ export default function ComercialKioscoPosPage() {
                                 <span className='rounded-full bg-fuchsia-100 px-2 py-1 text-xs text-fuchsia-700'>{c('Pack')}</span>
                               </div>
                               <div className='mt-3 flex items-center justify-between'>
-                                <span className='text-lg font-bold'>{formatCurrencyARS(pack.precio)}</span>
+                                <span className='text-lg font-bold'>{formatCurrencyARS(pack.precio, locale)}</span>
                                 <span className='text-xs text-muted-foreground'>POS</span>
                               </div>
                             </button>
@@ -862,7 +877,7 @@ export default function ComercialKioscoPosPage() {
                             <p className='text-xs text-muted-foreground'>{c(getClientLabel(sale))} · {c(sale.metodo_pago)}</p>
                           </div>
                           <div className='text-right'>
-                            <p className='font-semibold'>{formatCurrencyARS(sale.total)}</p>
+                            <p className='font-semibold'>{formatCurrencyARS(sale.total, locale)}</p>
                             <Button size='sm' variant='ghost' onClick={() => handlePrintTicket(sale)}>{c('Imprimir')}</Button>
                           </div>
                         </div>
@@ -910,16 +925,16 @@ export default function ComercialKioscoPosPage() {
                           <Input type='number' min={0} value={item.precio_unitario} onChange={(event) => setCart((current) => current.map((cartItem) => cartItem.key === item.key ? { ...cartItem, precio_unitario: Number(event.target.value) } : cartItem))} />
                           <Input type='number' min={0} value={item.descuento} onChange={(event) => setCart((current) => current.map((cartItem) => cartItem.key === item.key ? { ...cartItem, descuento: Number(event.target.value) } : cartItem))} />
                         </div>
-                        <p className='mt-2 text-right text-sm font-semibold'>{formatCurrencyARS(item.cantidad * item.precio_unitario - item.descuento)}</p>
+                        <p className='mt-2 text-right text-sm font-semibold'>{formatCurrencyARS(item.cantidad * item.precio_unitario - item.descuento, locale)}</p>
                       </div>
                     ))}
                     {cart.length === 0 && <p className='rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground'>{c('Agregá productos, servicios o packs para iniciar la venta.')}</p>}
                   </div>
 
                   <div className='rounded-2xl bg-slate-50 p-4 text-sm dark:bg-slate-950'>
-                    <div className='flex justify-between'><span>{c('Subtotal')}</span><strong>{formatCurrencyARS(cartTotals.subtotal)}</strong></div>
-                    <div className='flex justify-between'><span>{c('Descuentos')}</span><strong>{formatCurrencyARS(cartTotals.descuento)}</strong></div>
-                    <div className='mt-2 flex justify-between border-t pt-2 text-lg'><span>{c('Total')}</span><strong>{formatCurrencyARS(cartTotals.total)}</strong></div>
+                    <div className='flex justify-between'><span>{c('Subtotal')}</span><strong>{formatCurrencyARS(cartTotals.subtotal, locale)}</strong></div>
+                    <div className='flex justify-between'><span>{c('Descuentos')}</span><strong>{formatCurrencyARS(cartTotals.descuento, locale)}</strong></div>
+                    <div className='mt-2 flex justify-between border-t pt-2 text-lg'><span>{c('Total')}</span><strong>{formatCurrencyARS(cartTotals.total, locale)}</strong></div>
                   </div>
 
                   <Button className='w-full bg-[#02a8e1] hover:bg-[#0288b1]' disabled={saving || cart.length === 0} onClick={handleSubmitSale}>
@@ -941,7 +956,7 @@ export default function ComercialKioscoPosPage() {
                 <div className='flex items-center justify-between gap-3'>
                   <div>
                     <p className='text-xs text-muted-foreground'>{c('Carrito')} · {cartTotals.items} {c('ítems')}</p>
-                    <p className='text-lg font-black'>{formatCurrencyARS(cartTotals.total)}</p>
+                    <p className='text-lg font-black'>{formatCurrencyARS(cartTotals.total, locale)}</p>
                   </div>
                   <Button className='bg-[#02a8e1] hover:bg-[#0288b1]' disabled={saving || cart.length === 0} onClick={handleSubmitSale}>
                     {saving ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <CreditCard className='mr-2 h-4 w-4' />}

@@ -201,7 +201,7 @@ export default function ServicioForm({
         <div className="flex items-center justify-between gap-2">
           <Label htmlFor="codigo">{c("Código comercial / QR")}</Label>
           <Button type="button" size="sm" variant="outline" onClick={generarCodigoServicio}>
-            Generar
+            {c("Generar")}
           </Button>
         </div>
         <Input
@@ -211,7 +211,9 @@ export default function ServicioForm({
           value={form.codigo}
           onChange={handleChange}
         />
-        <p className="text-xs text-muted-foreground">El scanner móvil/POS puede resolver servicios por este código.</p>
+        <p className="text-xs text-muted-foreground">
+          {c("El scanner móvil/POS puede resolver servicios por este código.")}
+        </p>
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="categoria">{c("Categoría")}</Label>
@@ -224,7 +226,7 @@ export default function ServicioForm({
         >
           {CATEGORIAS_SERVICIO.map((categoria) => (
             <option key={categoria.value} value={categoria.value}>
-              {categoria.label}
+              {c(categoria.label)}
             </option>
           ))}
         </select>
@@ -240,7 +242,7 @@ export default function ServicioForm({
         >
           {MODALIDADES_SERVICIO.map((modalidad) => (
             <option key={modalidad.value} value={modalidad.value}>
-              {modalidad.label}
+              {c(modalidad.label)}
             </option>
           ))}
         </select>
@@ -252,7 +254,7 @@ export default function ServicioForm({
           name="duracion_minutos"
           type="number"
           inputMode="numeric"
-          placeholder="Ej: 60"
+          placeholder={c("Ej: 60")}
           value={form.duracion_minutos}
           onChange={handleChange}
           min={1}
@@ -282,7 +284,7 @@ export default function ServicioForm({
           }
         />
         <Label htmlFor="requiere_reserva" className="cursor-pointer">
-          Requiere reserva o coordinación previa
+          {c("Requiere reserva o coordinación previa")}
         </Label>
       </div>
       <div className="flex items-center gap-2 rounded-md border p-3">
@@ -294,7 +296,7 @@ export default function ServicioForm({
           }
         />
         <Label htmlFor="disponible_online" className="cursor-pointer">
-          Disponible para venta online futura
+          {c("Disponible para venta online futura")}
         </Label>
       </div>
       <div className="flex flex-col gap-1.5 md:col-span-2">

@@ -90,7 +90,7 @@ export const AppHeader = ({ title }: AppHeaderProps) => {
         <div className='flex min-w-0 items-center gap-2 md:gap-3'>
           <Image
             src='/gm_logo.svg'
-            alt='Gym Master Logo'
+            alt={t('common.logoAlt')}
             width={isMobile ? 38 : 120}
             height={isMobile ? 38 : 120}
             className='shrink-0 rounded-sm dark:invert'

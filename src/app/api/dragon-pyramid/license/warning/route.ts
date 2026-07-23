@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { authMiddleware } from '@/middlewares/auth.middleware';
 import { getDragonPyramidLicense } from '@/services/server/dragonPyramidLicenseService';
 import { buildDragonPyramidGraceWarning } from '@/utils/dragonPyramidLicenseWarning';
+import { normalizeLocale } from '@/i18n/config';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,8 +23,9 @@ export async function GET(req: Request) {
     const { user } = await authMiddleware(req);
     assertCanReadLicenseWarning(user?.rol);
 
+    const locale = normalizeLocale(req.headers.get('accept-language'));
     const license = await getDragonPyramidLicense();
-    const warning = buildDragonPyramidGraceWarning(license);
+    const warning = buildDragonPyramidGraceWarning(license, locale);
 
     return NextResponse.json(
       {

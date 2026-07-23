@@ -214,7 +214,7 @@ function CategoryList({
                     {financeRecordCount(locale, item.cantidad)}
                   </p>
                 </div>
-                <p className="font-semibold">{formatCurrencyARS(item.total)}</p>
+                <p className="font-semibold">{formatCurrencyARS(item.total, locale)}</p>
               </div>
             </div>
           ))
@@ -413,19 +413,19 @@ export default function FinanzasIngresosEgresosBiPage() {
         metrics: [
           {
             label: c("Ingresos", "Income"),
-            value: formatCurrencyARS(data.metricas.ingresos_total),
+            value: formatCurrencyARS(data.metricas.ingresos_total, locale),
           },
           {
             label: c("Egresos", "Outflows"),
-            value: formatCurrencyARS(data.metricas.egresos_total),
+            value: formatCurrencyARS(data.metricas.egresos_total, locale),
           },
           {
             label: c("Resultado", "Result"),
-            value: formatCurrencyARS(data.metricas.resultado_neto),
+            value: formatCurrencyARS(data.metricas.resultado_neto, locale),
           },
           {
             label: c("Pendientes", "Pending"),
-            value: formatCurrencyARS(data.metricas.compromisos_pendientes),
+            value: formatCurrencyARS(data.metricas.compromisos_pendientes, locale),
           },
         ],
         filtersLabel:
@@ -483,43 +483,43 @@ export default function FinanzasIngresosEgresosBiPage() {
           {
             header: c("Ingresos", "Income"),
             width: 28,
-            getValue: (row) => formatCurrencyARS(row.ingresos_total),
+            getValue: (row) => formatCurrencyARS(row.ingresos_total, locale),
             align: "right",
           },
           {
             header: c("Egresos", "Outflows"),
             width: 28,
-            getValue: (row) => formatCurrencyARS(row.egresos_total),
+            getValue: (row) => formatCurrencyARS(row.egresos_total, locale),
             align: "right",
           },
           {
             header: c("Resultado", "Result"),
             width: 30,
-            getValue: (row) => formatCurrencyARS(row.resultado_neto),
+            getValue: (row) => formatCurrencyARS(row.resultado_neto, locale),
             align: "right",
           },
           {
             header: c("Cuotas", "Fees"),
             width: 26,
-            getValue: (row) => formatCurrencyARS(row.ingresos_cuotas),
+            getValue: (row) => formatCurrencyARS(row.ingresos_cuotas, locale),
             align: "right",
           },
           {
             header: c("Ventas", "Sales"),
             width: 26,
-            getValue: (row) => formatCurrencyARS(row.ingresos_ventas),
+            getValue: (row) => formatCurrencyARS(row.ingresos_ventas, locale),
             align: "right",
           },
           {
             header: c("Compras", "Purchases"),
             width: 26,
-            getValue: (row) => formatCurrencyARS(row.egresos_compras),
+            getValue: (row) => formatCurrencyARS(row.egresos_compras, locale),
             align: "right",
           },
           {
             header: c("Gastos", "Expenses"),
             width: 26,
-            getValue: (row) => formatCurrencyARS(row.egresos_gastos),
+            getValue: (row) => formatCurrencyARS(row.egresos_gastos, locale),
             align: "right",
           },
         ],
@@ -628,7 +628,7 @@ export default function FinanzasIngresosEgresosBiPage() {
                 value={
                   loading || !metricas
                     ? "..."
-                    : formatCurrencyARS(metricas.ingresos_total)
+                    : formatCurrencyARS(metricas.ingresos_total, locale)
                 }
                 description={c("Cuotas, ventas y servicios vendidos.", "Fees, sales, and services sold.")}
                 icon={ArrowUpCircle}
@@ -639,7 +639,7 @@ export default function FinanzasIngresosEgresosBiPage() {
                 value={
                   loading || !metricas
                     ? "..."
-                    : formatCurrencyARS(metricas.egresos_total)
+                    : formatCurrencyARS(metricas.egresos_total, locale)
                 }
                 description={c("Compras pagadas y gastos pagados.", "Paid purchases and paid expenses.")}
                 icon={ArrowDownCircle}
@@ -650,7 +650,7 @@ export default function FinanzasIngresosEgresosBiPage() {
                 value={
                   loading || !metricas
                     ? "..."
-                    : formatCurrencyARS(metricas.resultado_neto)
+                    : formatCurrencyARS(metricas.resultado_neto, locale)
                 }
                 description={`${c("Margen operativo", "Operating margin")}: ${metricas ? formatPercent(metricas.margen_resultado_porcentaje) : "-"}`}
                 icon={TrendingUp}
@@ -661,7 +661,7 @@ export default function FinanzasIngresosEgresosBiPage() {
                 value={
                   loading || !metricas
                     ? "..."
-                    : formatCurrencyARS(metricas.compromisos_pendientes)
+                    : formatCurrencyARS(metricas.compromisos_pendientes, locale)
                 }
                 description={c("Compras pendientes y gastos pendientes/vencidos.", "Pending purchases and pending/overdue expenses.")}
                 icon={AlertTriangle}
@@ -747,19 +747,19 @@ export default function FinanzasIngresosEgresosBiPage() {
                     <div className="rounded-xl border bg-background p-3">
                       {c("Ingresos", "Income")}:{" "}
                       {metricas
-                        ? formatCurrencyARS(metricas.ingresos_total)
+                        ? formatCurrencyARS(metricas.ingresos_total, locale)
                         : "-"}
                     </div>
                     <div className="rounded-xl border bg-background p-3">
                       {c("Egresos", "Outflows")}:{" "}
                       {metricas
-                        ? formatCurrencyARS(metricas.egresos_total)
+                        ? formatCurrencyARS(metricas.egresos_total, locale)
                         : "-"}
                     </div>
                     <div className="rounded-xl border bg-background p-3">
                       {c("Pendientes", "Pending")}:{" "}
                       {metricas
-                        ? formatCurrencyARS(metricas.compromisos_pendientes)
+                        ? formatCurrencyARS(metricas.compromisos_pendientes, locale)
                         : "-"}
                     </div>
                   </div>
@@ -790,7 +790,7 @@ export default function FinanzasIngresosEgresosBiPage() {
                         />
                         <Tooltip
                           formatter={(value) =>
-                            formatCurrencyARS(Number(value))
+                            formatCurrencyARS(Number(value), locale)
                           }
                         />
                         <Legend />
@@ -834,7 +834,7 @@ export default function FinanzasIngresosEgresosBiPage() {
                         />
                         <Tooltip
                           formatter={(value) =>
-                            formatCurrencyARS(Number(value))
+                            formatCurrencyARS(Number(value), locale)
                           }
                         />
                         <Area
@@ -910,28 +910,28 @@ export default function FinanzasIngresosEgresosBiPage() {
                             {item.periodo_label}
                           </td>
                           <td className="p-3 text-right">
-                            {formatCurrencyARS(item.ingresos_cuotas)}
+                            {formatCurrencyARS(item.ingresos_cuotas, locale)}
                           </td>
                           <td className="p-3 text-right">
-                            {formatCurrencyARS(item.ingresos_ventas)}
+                            {formatCurrencyARS(item.ingresos_ventas, locale)}
                           </td>
                           <td className="p-3 text-right">
-                            {formatCurrencyARS(item.ingresos_servicios)}
+                            {formatCurrencyARS(item.ingresos_servicios, locale)}
                           </td>
                           <td className="p-3 text-right font-semibold">
-                            {formatCurrencyARS(item.ingresos_total)}
+                            {formatCurrencyARS(item.ingresos_total, locale)}
                           </td>
                           <td className="p-3 text-right">
-                            {formatCurrencyARS(item.egresos_compras)}
+                            {formatCurrencyARS(item.egresos_compras, locale)}
                           </td>
                           <td className="p-3 text-right">
-                            {formatCurrencyARS(item.egresos_gastos)}
+                            {formatCurrencyARS(item.egresos_gastos, locale)}
                           </td>
                           <td className="p-3 text-right font-semibold">
-                            {formatCurrencyARS(item.egresos_total)}
+                            {formatCurrencyARS(item.egresos_total, locale)}
                           </td>
                           <td className="p-3 text-right font-semibold">
-                            {formatCurrencyARS(item.resultado_neto)}
+                            {formatCurrencyARS(item.resultado_neto, locale)}
                           </td>
                         </tr>
                       ))

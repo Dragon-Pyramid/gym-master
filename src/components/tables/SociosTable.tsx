@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/table";
 import { Socio } from "@/interfaces/socio.interface";
 import { buildSocioBaseRiskSummary, getSocioRiskToneClasses } from "@/utils/socioRiskAlerts";
+import { useI18n } from "@/i18n/I18nProvider";
+import { formatFrontendDate } from "@/utils/dateFormat";
 
 export default function SociosTable({
   socios,
@@ -29,9 +31,13 @@ export default function SociosTable({
   onView?: (socio: Socio) => void;
   onDelete?: (socio: Socio) => void;
 }) {
+  const { locale } = useI18n();
+  const tx = (es: string, en: string) => (locale === "en" ? en : es);
+  const dateLocale = locale === "en" ? "en-US" : "es-AR";
+
   if (loading) {
     return (
-      <div className="space-y-2">
+      <div className="space-y-2" aria-label={tx("Cargando socios", "Loading members")}>
         {[...Array(5)].map((_, i) => (
           <Skeleton key={i} className="w-full rounded-md h-9" />
         ))}
@@ -42,7 +48,7 @@ export default function SociosTable({
   if (socios.length === 0 && !loading) {
     return (
       <div className="py-10 text-center text-muted-foreground">
-        No hay socios registrados aún.
+        {tx("No hay socios registrados aún.", "No members have been registered yet.")}
       </div>
     );
   }
@@ -52,19 +58,19 @@ export default function SociosTable({
       <TableHeader>
         <TableRow className="bg-muted/50 text-muted-foreground">
           <TableHead>DNI</TableHead>
-          <TableHead>Nombre</TableHead>
-          <TableHead>Teléfono</TableHead>
+          <TableHead>{tx("Nombre", "Name")}</TableHead>
+          <TableHead>{tx("Teléfono", "Phone")}</TableHead>
           <TableHead>Email</TableHead>
-          <TableHead>Riesgo</TableHead>
-          <TableHead>Fecha Alta</TableHead>
-          <TableHead>Activo</TableHead>
-          <TableHead>Acciones</TableHead>
+          <TableHead>{tx("Riesgo", "Risk")}</TableHead>
+          <TableHead>{tx("Fecha alta", "Registration date")}</TableHead>
+          <TableHead>{tx("Activo", "Active")}</TableHead>
+          <TableHead>{tx("Acciones", "Actions")}</TableHead>
         </TableRow>
       </TableHeader>
 
       <TableBody>
         {socios.map((s, i) => {
-          const risk = buildSocioBaseRiskSummary(s);
+          const risk = buildSocioBaseRiskSummary(s, locale);
 
           return (
             <TableRow
@@ -81,7 +87,7 @@ export default function SociosTable({
                   {risk.label}
                 </span>
               </TableCell>
-              <TableCell>{s.fecha_alta}</TableCell>
+              <TableCell>{formatFrontendDate(s.fecha_alta, dateLocale)}</TableCell>
               <TableCell>{s.activo ? "✅" : "❌"}</TableCell>
               <TableCell className="flex gap-2">
                 <Button
@@ -89,7 +95,7 @@ export default function SociosTable({
                   variant="outline"
                   onClick={() => onView && onView(s)}
                   className="gap-1"
-                  title="Vista 360 del socio"
+                  title={tx("Vista 360 del socio", "Member 360 view")}
                 >
                   <Eye className="w-4 h-4" />
                   <span className="hidden xl:inline">360</span>
@@ -98,7 +104,7 @@ export default function SociosTable({
                   size="sm"
                   variant="outline"
                   onClick={() => onEdit(s)}
-                  title="Editar"
+                  title={tx("Editar", "Edit")}
                 >
                   <Pencil className="w-4 h-4" />
                 </Button>
@@ -112,7 +118,7 @@ export default function SociosTable({
                   }
                   onClick={() => onDelete && onDelete(s)}
                 >
-                  {s.activo ? "Desactivar" : "Activar"}
+                  {s.activo ? tx("Desactivar", "Deactivate") : tx("Activar", "Activate")}
                 </Button>
               </TableCell>
             </TableRow>
@@ -122,12 +128,17 @@ export default function SociosTable({
 
       <TableFooter>
         <TableRow>
-          <TableCell colSpan={7}>Total de socios</TableCell>
+          <TableCell colSpan={7}>{tx("Total de socios", "Total members")}</TableCell>
           <TableCell className="text-right">{socios.length}</TableCell>
         </TableRow>
       </TableFooter>
 
-      <TableCaption>Listado de socios registrados con lectura rápida de riesgo.</TableCaption>
+      <TableCaption>
+        {tx(
+          "Listado de socios registrados con lectura rápida de riesgo.",
+          "Registered members with a quick risk overview."
+        )}
+      </TableCaption>
     </Table>
   );
 }

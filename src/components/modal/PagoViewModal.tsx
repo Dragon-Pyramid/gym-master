@@ -13,14 +13,20 @@ import { ReceiptText } from "lucide-react";
 import { formatFrontendDateTime } from "@/utils/dateFormat";
 import { useI18n } from "@/i18n/I18nProvider";
 
-function money(value?: number | null) {
+function money(value: number | null | undefined, locale: string) {
   if (value === null || value === undefined) return "-";
-  return `$${Number(value).toLocaleString("es-AR")}`;
+  return new Intl.NumberFormat(locale === "en" ? "en-US" : "es-AR", {
+    style: "currency",
+    currency: "ARS",
+    maximumFractionDigits: 0,
+  }).format(Number(value));
 }
 
-function date(value?: string | null) {
+function date(value: string | null | undefined, locale: string) {
   if (!value) return "-";
-  return value;
+  const parsed = new Date(`${value.slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return new Intl.DateTimeFormat(locale === "en" ? "en-US" : "es-AR").format(parsed);
 }
 
 function normalizeLabel(value?: string | null) {
@@ -140,7 +146,7 @@ export default function PagoViewModal({
                 {tx("Detalle del pago", "Payment detail")}
               </DialogTitle>
               <div className="text-sm text-muted-foreground">
-                {formatFrontendDateTime(new Date())}
+                {formatFrontendDateTime(new Date(), isEnglish ? "en-US" : "es-AR")}
               </div>
             </div>
 
@@ -166,19 +172,19 @@ export default function PagoViewModal({
           <Field label={tx("Cuota", "Fee")} value={pago.cuota?.descripcion} />
           <Field
             label={tx("Fecha de pago", "Payment date")}
-            value={date(pago.fecha_pago)}
+            value={date(pago.fecha_pago, locale)}
           />
           <Field
             label={tx("Fecha de vencimiento", "Due date")}
-            value={date(pago.fecha_vencimiento)}
+            value={date(pago.fecha_vencimiento, locale)}
           />
           <Field
             label={tx("Período desde", "Period from")}
-            value={date(periodoDesde)}
+            value={date(periodoDesde, locale)}
           />
           <Field
             label={tx("Período hasta", "Period to")}
-            value={date(periodoHasta)}
+            value={date(periodoHasta, locale)}
           />
           <Field
             label={tx("Meses cubiertos", "Covered months")}
@@ -186,21 +192,21 @@ export default function PagoViewModal({
           />
           <Field
             label="Subtotal"
-            value={money(pago.subtotal ?? pago.monto_pagado)}
+            value={money(pago.subtotal ?? pago.monto_pagado, locale)}
           />
           <Field
             label={tx("Descuento", "Discount")}
             value={
               Number(pago.descuento_monto ?? 0) > 0
-                ? `${money(pago.descuento_monto)} (${pago.descuento_porcentaje ?? 0}%)`
-                : money(0)
+                ? `${money(pago.descuento_monto, locale)} (${pago.descuento_porcentaje ?? 0}%)`
+                : money(0, locale)
             }
           />
           <Field
             label={tx("Monto pagado", "Amount paid")}
-            value={money(pago.monto_pagado)}
+            value={money(pago.monto_pagado, locale)}
           />
-          <Field label="Total" value={money(pago.total ?? pago.monto_pagado)} />
+          <Field label="Total" value={money(pago.total ?? pago.monto_pagado, locale)} />
           <Field
             label={tx("Registrado por", "Registered by")}
             value={pago.registrado_por?.nombre}

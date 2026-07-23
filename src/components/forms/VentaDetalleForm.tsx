@@ -10,6 +10,8 @@ import {
   updateVentaDetalle,
 } from '@/services/ventaDetalleService';
 import { toast } from 'sonner';
+import { useI18n } from '@/i18n/I18nProvider';
+import { translateCommercialUi } from '@/i18n/commercialUi';
 
 export interface VentaDetalleFormProps {
   detalle?: {
@@ -35,6 +37,8 @@ export default function VentaDetalleForm({
   detalle,
   onCreated,
 }: VentaDetalleFormProps) {
+  const { locale } = useI18n();
+  const c = (text: string) => translateCommercialUi(locale, text);
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
 
@@ -69,18 +73,18 @@ export default function VentaDetalleForm({
     try {
       if (detalle && detalle.id) {
         await updateVentaDetalle(undefined as any, detalle.id, form);
-        toast.success('Detalle actualizado');
+        toast.success(c('Detalle actualizado'));
       } else {
         await createVentaDetalle(undefined as any, form, form.venta_id);
-        toast.success('Detalle creado');
+        toast.success(c('Detalle creado'));
       }
       setForm(emptyForm);
       onCreated();
     } catch (error: any) {
-      let msg = error.message || 'Error al guardar detalle';
+      let msg = error.message || c('Error al guardar detalle');
       if (msg.includes('value too long')) {
         msg =
-          'Uno de los campos excede la cantidad máxima de caracteres permitidos.';
+          c('Uno de los campos excede la cantidad máxima de caracteres permitidos.');
       }
       toast.error(msg);
     } finally {
@@ -95,34 +99,34 @@ export default function VentaDetalleForm({
     >
       <QaFileNameBadge file="src/components/forms/VentaDetalleForm.tsx" />
       <div className='flex flex-col gap-1.5'>
-        <Label htmlFor='venta_id'>Venta</Label>
+        <Label htmlFor='venta_id'>{c('Venta')}</Label>
         <Input
           id='venta_id'
           name='venta_id'
-          placeholder='ID de la venta'
+          placeholder={c('ID de la venta')}
           value={form.venta_id}
           onChange={handleChange}
           required
         />
       </div>
       <div className='flex flex-col gap-1.5'>
-        <Label htmlFor='producto_id'>Producto</Label>
+        <Label htmlFor='producto_id'>{c('Producto')}</Label>
         <Input
           id='producto_id'
           name='producto_id'
-          placeholder='ID del producto'
+          placeholder={c('ID del producto')}
           value={form.producto_id}
           onChange={handleChange}
           required
         />
       </div>
       <div className='flex flex-col gap-1.5'>
-        <Label htmlFor='cantidad'>Cantidad</Label>
+        <Label htmlFor='cantidad'>{c('Cantidad')}</Label>
         <Input
           id='cantidad'
           name='cantidad'
           type='number'
-          placeholder='Cantidad'
+          placeholder={c('Cantidad')}
           value={form.cantidad}
           onChange={handleChange}
           required
@@ -130,12 +134,12 @@ export default function VentaDetalleForm({
         />
       </div>
       <div className='flex flex-col gap-1.5'>
-        <Label htmlFor='precio_unitario'>Precio Unitario</Label>
+        <Label htmlFor='precio_unitario'>{c('Precio Unitario')}</Label>
         <Input
           id='precio_unitario'
           name='precio_unitario'
           type='number'
-          placeholder='Precio unitario'
+          placeholder={c('Precio unitario')}
           value={form.precio_unitario}
           onChange={handleChange}
           required
@@ -143,12 +147,12 @@ export default function VentaDetalleForm({
         />
       </div>
       <div className='flex flex-col gap-1.5 md:col-span-2'>
-        <Label htmlFor='subtotal'>Subtotal</Label>
+        <Label htmlFor='subtotal'>{c('Subtotal')}</Label>
         <Input
           id='subtotal'
           name='subtotal'
           type='number'
-          placeholder='Subtotal'
+          placeholder={c('Subtotal')}
           value={form.subtotal}
           onChange={handleChange}
           required
@@ -161,10 +165,10 @@ export default function VentaDetalleForm({
         disabled={loading}
       >
         {loading
-          ? 'Guardando...'
+          ? c('Guardando...')
           : detalle
-          ? 'Actualizar Detalle'
-          : 'Crear Detalle'}
+          ? c('Actualizar Detalle')
+          : c('Crear Detalle')}
       </Button>
     </form>
   );

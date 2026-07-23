@@ -16,9 +16,20 @@ import {
 import { ResponsePago } from "@/interfaces/pago.interface";
 import { useI18n } from "@/i18n/I18nProvider";
 
-function money(value?: number | null) {
+function money(value: number | null | undefined, locale: string) {
   if (value === null || value === undefined) return "-";
-  return `$${Number(value).toLocaleString("es-AR")}`;
+  return new Intl.NumberFormat(locale === "en" ? "en-US" : "es-AR", {
+    style: "currency",
+    currency: "ARS",
+    maximumFractionDigits: 0,
+  }).format(Number(value));
+}
+
+function date(value: string | null | undefined, locale: string) {
+  if (!value) return "-";
+  const parsed = new Date(`${value.slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return new Intl.DateTimeFormat(locale === "en" ? "en-US" : "es-AR").format(parsed);
 }
 
 function normalizeLabel(value?: string | null) {
@@ -136,12 +147,12 @@ export default function PagoTable({
               {p.socio?.nombre_completo ?? "-"}
             </TableCell>
             <TableCell>{p.cuota?.descripcion ?? "-"}</TableCell>
-            <TableCell>{p.fecha_pago}</TableCell>
+            <TableCell>{date(p.fecha_pago, locale)}</TableCell>
             <TableCell>
               <div className="flex flex-col text-xs">
-                <span>{p.periodo_desde ?? p.fecha_pago}</span>
+                <span>{date(p.periodo_desde ?? p.fecha_pago, locale)}</span>
                 <span>
-                  {tx("hasta", "to")} {p.periodo_hasta ?? p.fecha_vencimiento}
+                  {tx("hasta", "to")} {date(p.periodo_hasta ?? p.fecha_vencimiento, locale)}
                 </span>
                 <span>
                   {p.meses_cubiertos ?? 1} {tx("mes/es", "month(s)")}
@@ -154,10 +165,10 @@ export default function PagoTable({
             <TableCell>{translatePaymentStatus(p.estado, isEnglish)}</TableCell>
             <TableCell>
               <div className="flex flex-col">
-                <span>{money(p.monto_pagado)}</span>
+                <span>{money(p.monto_pagado, locale)}</span>
                 {Number(p.descuento_monto ?? 0) > 0 ? (
                   <span className="text-xs text-emerald-700 dark:text-emerald-300">
-                    {tx("Desc.", "Disc.")} {money(p.descuento_monto)} (
+                    {tx("Desc.", "Disc.")} {money(p.descuento_monto, locale)} (
                     {p.descuento_porcentaje ?? 0}%)
                   </span>
                 ) : null}

@@ -86,7 +86,7 @@ function estadoLabel(estado: string) {
   return labels[estado] ?? estado;
 }
 
-function StockStateBadge({ estado }: { estado: string }) {
+function StockStateBadge({ estado, c }: { estado: string; c: (text: string) => string }) {
   const className =
     estado === 'sin_stock'
       ? 'bg-red-100 text-red-700'
@@ -95,7 +95,7 @@ function StockStateBadge({ estado }: { estado: string }) {
         : estado === 'bajo_minimo'
           ? 'bg-yellow-100 text-yellow-700'
           : 'bg-emerald-100 text-emerald-700';
-  return <span className={`rounded-full px-2 py-1 text-xs font-semibold ${className}`}>{estado.replace('_', ' ')}</span>;
+  return <span className={`rounded-full px-2 py-1 text-xs font-semibold ${className}`}>{c(estado === 'sin_stock' ? 'Sin stock' : estado === 'critico' ? 'Crítico' : estado === 'bajo_minimo' ? 'Bajo mínimo' : estadoLabel(estado))}</span>;
 }
 
 function MetricCard({ title, value, description, icon: Icon }: any) {
@@ -337,7 +337,7 @@ export default function ComercialComprasReposicionPage() {
 
             <section className='grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5'>
               <MetricCard title={c('A reponer')} value={String(dashboard.metricas.productosAReponer)} description={c('Productos bajo mínimo u objetivo.')} icon={AlertTriangle} />
-              <MetricCard title={c('Costo sugerido')} value={formatCurrencyARS(dashboard.metricas.costoReposicionSugerida)} description={c('Estimación de reposición.')} icon={ShoppingCart} />
+              <MetricCard title={c('Costo sugerido')} value={formatCurrencyARS(dashboard.metricas.costoReposicionSugerida, locale)} description={c('Estimación de reposición.')} icon={ShoppingCart} />
               <MetricCard title={c('Órdenes abiertas')} value={String(dashboard.metricas.ordenesAbiertas)} description={c('Pedidas o parciales.')} icon={ClipboardList} />
               <MetricCard title={c('Parciales')} value={String(dashboard.metricas.ordenesParciales)} description={c('Con recepción pendiente.')} icon={PackagePlus} />
               <MetricCard title={c('Proveedores')} value={String(dashboard.metricas.proveedoresActivos)} description={c('Activos para compras.')} icon={Truck} />
@@ -357,17 +357,17 @@ export default function ComercialComprasReposicionPage() {
                           <p className='text-xs text-muted-foreground'>{c('Stock')} {item.stock_total} · {c('mínimo')} {item.stock_minimo} · {c('objetivo')} {item.stock_objetivo}</p>
                           <p className='text-xs text-muted-foreground'>{item.proveedor_sugerido_nombre ?? c('Sin proveedor sugerido')}</p>
                         </div>
-                        <div><StockStateBadge estado={item.estado_stock} /></div>
+                        <div><StockStateBadge estado={item.estado_stock} c={c} /></div>
                         <div className='text-sm'>
                           <p className='font-semibold'>{c('Comprar')} {item.cantidad_sugerida}</p>
-                          <p className='text-xs text-muted-foreground'>{formatCurrencyARS(item.costo_estimado_reposicion)}</p>
+                          <p className='text-xs text-muted-foreground'>{formatCurrencyARS(item.costo_estimado_reposicion, locale)}</p>
                         </div>
                         <Button
                           type='button'
                           variant='outline'
                           onClick={() => addSuggestedToOrder(item.producto_id, item.cantidad_sugerida, item.costo_sugerido, item.proveedor_sugerido_id)}
                         >
-                          Agregar
+                          {c('Agregar')}
                         </Button>
                       </div>
                     ))
@@ -389,7 +389,7 @@ export default function ComercialComprasReposicionPage() {
                     <div className='space-y-1.5'>
                       <Label>{c('Proveedor')}</Label>
                       <select className='h-10 w-full rounded-md border px-3 text-sm' value={relProveedorId} onChange={(e) => setRelProveedorId(e.target.value)} required>
-                        <option value=''>Seleccionar proveedor</option>
+                        <option value=''>{c('Seleccionar proveedor')}</option>
                         {proveedoresActivos.map((proveedor) => <option key={proveedor.id} value={proveedor.id}>{proveedor.nombre}</option>)}
                       </select>
                     </div>
@@ -400,7 +400,7 @@ export default function ComercialComprasReposicionPage() {
                     </div>
                     <label className='flex items-center gap-2 text-sm'>
                       <input type='checkbox' checked={relPrincipal} onChange={(e) => setRelPrincipal(e.target.checked)} />
-                      Marcar como proveedor principal
+                      {c('Marcar como proveedor principal')}
                     </label>
                     <Button type='submit' disabled={savingRelation}>
                       {savingRelation ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <Save className='mr-2 h-4 w-4' />}
@@ -419,7 +419,7 @@ export default function ComercialComprasReposicionPage() {
                     <div className='space-y-1.5'>
                       <Label>{c('Proveedor')}</Label>
                       <select className='h-10 w-full rounded-md border px-3 text-sm' value={ordenProveedorId} onChange={(e) => setOrdenProveedorId(e.target.value)} required>
-                        <option value=''>Seleccionar proveedor</option>
+                        <option value=''>{c('Seleccionar proveedor')}</option>
                         {proveedoresActivos.map((proveedor) => <option key={proveedor.id} value={proveedor.id}>{proveedor.nombre}</option>)}
                       </select>
                     </div>
@@ -440,12 +440,12 @@ export default function ComercialComprasReposicionPage() {
                           <Label>{c('Producto')}</Label>
                           <select className='h-10 w-full rounded-md border px-3 text-sm' value={item.producto_id} onChange={(e) => updateItem(index, { producto_id: e.target.value })} required>
                             <option value=''>{c('Seleccionar producto')}</option>
-                            {productosActivos.map((producto) => <option key={producto.id} value={producto.id}>{producto.nombre} · stock {producto.stock ?? 0}</option>)}
+                            {productosActivos.map((producto) => <option key={producto.id} value={producto.id}>{producto.nombre} · {c('Stock').toLowerCase()} {producto.stock ?? 0}</option>)}
                           </select>
                         </div>
                         <div className='space-y-1.5'><Label>{c('Cantidad')}</Label><Input type='number' min='1' value={item.cantidad_solicitada} onChange={(e) => updateItem(index, { cantidad_solicitada: e.target.value })} required /></div>
                         <div className='space-y-1.5'><Label>{c('Costo')}</Label><Input type='number' min='0' step='0.01' value={item.costo_unitario} onChange={(e) => updateItem(index, { costo_unitario: e.target.value })} required /></div>
-                        <div className='text-sm font-semibold'>{formatCurrencyARS(toNumber(item.cantidad_solicitada) * toNumber(item.costo_unitario))}</div>
+                        <div className='text-sm font-semibold'>{formatCurrencyARS(toNumber(item.cantidad_solicitada) * toNumber(item.costo_unitario), locale)}</div>
                         <Button type='button' variant='ghost' onClick={() => setOrdenItems((prev) => prev.filter((_, idx) => idx !== index))} disabled={ordenItems.length === 1}>{c('Quitar')}</Button>
                       </div>
                     ))}
@@ -453,7 +453,7 @@ export default function ComercialComprasReposicionPage() {
                   <div className='flex flex-col justify-between gap-3 rounded-lg border bg-sky-50 p-3 md:flex-row md:items-center dark:border-sky-900/60 dark:bg-sky-950/20'>
                     <div>
                       <p className='text-sm text-muted-foreground'>{c('Total estimado')}</p>
-                      <p className='text-xl font-bold'>{formatCurrencyARS(ordenTotal)}</p>
+                      <p className='text-xl font-bold'>{formatCurrencyARS(ordenTotal, locale)}</p>
                     </div>
                     <div className='flex gap-2'>
                       <Button type='button' variant='outline' onClick={() => setOrdenItems((prev) => [...prev, createEmptyItem()])}>{c('Agregar ítem')}</Button>
@@ -482,7 +482,7 @@ export default function ComercialComprasReposicionPage() {
                       <div className='flex flex-col justify-between gap-3 lg:flex-row lg:items-start'>
                         <div>
                           <p className='font-semibold'>{orden.numero_orden}</p>
-                          <p className='text-sm text-muted-foreground'>{orden.proveedor?.nombre ?? c('Proveedor')} · {c(estadoLabel(orden.estado))} · {formatCurrencyARS(orden.total_estimado)}</p>
+                          <p className='text-sm text-muted-foreground'>{orden.proveedor?.nombre ?? c('Proveedor')} · {c(estadoLabel(orden.estado))} · {formatCurrencyARS(orden.total_estimado, locale)}</p>
                           <p className='text-xs text-muted-foreground'>{c('Destino')}: {orden.ubicacion_destino?.nombre ? c(orden.ubicacion_destino.nombre) : c('Sin ubicación fija')}</p>
                         </div>
                         <Button onClick={() => handleReceiveOrder(orden)} disabled={receivingId === orden.id}>
@@ -499,8 +499,8 @@ export default function ComercialComprasReposicionPage() {
                                 <p className='font-medium'>{detalle.producto?.nombre ?? c('Producto')}</p>
                                 <p className='text-xs text-muted-foreground'>{c('Solicitado')} {detalle.cantidad_solicitada} · {c('recibido')} {detalle.cantidad_recibida} · {c('pendiente')} {pendiente}</p>
                               </div>
-                              <div className='text-sm'>{formatCurrencyARS(detalle.costo_unitario)}</div>
-                              <div className='text-sm'>{formatCurrencyARS(detalle.subtotal_estimado)}</div>
+                              <div className='text-sm'>{formatCurrencyARS(detalle.costo_unitario, locale)}</div>
+                              <div className='text-sm'>{formatCurrencyARS(detalle.subtotal_estimado, locale)}</div>
                               <Input
                                 type='number'
                                 min='0'
@@ -531,7 +531,7 @@ export default function ComercialComprasReposicionPage() {
                       <p className='text-sm text-muted-foreground'>{orden.proveedor?.nombre ?? c('Proveedor')} · {c(estadoLabel(orden.estado))}</p>
                     </div>
                     <div className='text-right'>
-                      <p className='font-semibold'>{formatCurrencyARS(orden.total_estimado)}</p>
+                      <p className='font-semibold'>{formatCurrencyARS(orden.total_estimado, locale)}</p>
                       <p className='text-xs text-muted-foreground'>{String(orden.fecha_orden ?? '').slice(0, 10)}</p>
                     </div>
                   </div>

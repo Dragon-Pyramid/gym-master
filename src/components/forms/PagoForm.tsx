@@ -56,8 +56,8 @@ function addMonthsIso(dateIso: string, months: number) {
   return date.toISOString().slice(0, 10);
 }
 
-function formatMoney(value: number) {
-  return new Intl.NumberFormat("es-AR", {
+function formatMoney(value: number, locale: string) {
+  return new Intl.NumberFormat(locale === "en" ? "en-US" : "es-AR", {
     style: "currency",
     currency: "ARS",
     maximumFractionDigits: 0,
@@ -578,7 +578,7 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
           {options.cuotas.map((cuota) => (
             <option key={cuota.id} value={cuota.id}>
               {cuota.descripcion} - $
-              {Number(cuota.monto).toLocaleString("es-AR")}
+              {formatMoney(Number(cuota.monto), locale)}
             </option>
           ))}
         </select>
@@ -687,7 +687,7 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
             <div>
               <span className="text-cyan-700 dark:text-cyan-300">Subtotal</span>
               <p className="font-semibold">
-                {formatMoney(pagoPreview.subtotal)}
+                {formatMoney(pagoPreview.subtotal, locale)}
               </p>
             </div>
             <div>
@@ -695,7 +695,7 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
                 {tx("Descuento", "Discount")}
               </span>
               <p className="font-semibold">
-                {formatMoney(pagoPreview.descuento_monto)} (
+                {formatMoney(pagoPreview.descuento_monto, locale)} (
                 {formatDiscountPercent(pagoPreview.descuento_porcentaje)})
               </p>
             </div>
@@ -703,7 +703,7 @@ export default function PagoForm({ pago, onCreated }: PagoFormProps) {
               <span className="text-cyan-700 dark:text-cyan-300">
                 {tx("Total sugerido", "Suggested total")}
               </span>
-              <p className="font-semibold">{formatMoney(pagoPreview.total)}</p>
+              <p className="font-semibold">{formatMoney(pagoPreview.total, locale)}</p>
             </div>
             <div>
               <span className="text-cyan-700 dark:text-cyan-300">

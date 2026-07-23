@@ -414,7 +414,7 @@ export default function ComercialStockLedgerPage() {
                 <CardContent className='flex items-center justify-between p-5'>
                   <div>
                     <p className='text-sm text-muted-foreground'>{c('Valor inventario')}</p>
-                    <p className='text-xl font-bold'>{loading ? '...' : formatCurrencyARS(dashboard.metricas.valorInventario)}</p>
+                    <p className='text-xl font-bold'>{loading ? '...' : formatCurrencyARS(dashboard.metricas.valorInventario, locale)}</p>
                   </div>
                   <BarChart3 className='h-6 w-6 text-indigo-600' />
                 </CardContent>
@@ -496,7 +496,7 @@ export default function ComercialStockLedgerPage() {
                               </div>
                               <div className='rounded-xl bg-white/55 p-2 dark:bg-slate-950/40'>
                                 <p className='opacity-70'>{c('Valor actual')}</p>
-                                <p className='text-base font-bold'>{formatCurrencyARS(item.valor_inventario)}</p>
+                                <p className='text-base font-bold'>{formatCurrencyARS(item.valor_inventario, locale)}</p>
                               </div>
                             </div>
                             <Button
@@ -506,7 +506,7 @@ export default function ComercialStockLedgerPage() {
                               onClick={() => prepareIncomingMovement(item)}
                             >
                               <ShoppingCart className='mr-2 h-4 w-4' />
-                              Preparar ingreso
+                              {c('Preparar ingreso')}
                             </Button>
                           </div>
                         );
@@ -572,7 +572,7 @@ export default function ComercialStockLedgerPage() {
                         <option value=''>{c('Seleccionar producto')}</option>
                         {dashboard.resumen.map((item) => (
                           <option key={item.producto_id} value={item.producto_id}>
-                            {item.producto_nombre} · Stock {item.stock_total}
+                            {item.producto_nombre} · {c('Stock')} {item.stock_total}
                           </option>
                         ))}
                       </select>
@@ -761,8 +761,8 @@ export default function ComercialStockLedgerPage() {
                                 <td className='px-4 py-3 text-right font-semibold'>{item.stock_total}</td>
                                 <td className='px-4 py-3 text-right'>{item.stock_minimo}</td>
                                 <td className='px-4 py-3 text-right'>{item.stock_objetivo || '-'}</td>
-                                <td className='px-4 py-3 text-right'>{formatCurrencyARS(item.valor_inventario)}</td>
-                                <td className='px-4 py-3 text-right'>{formatCurrencyARS(item.margen_unitario)}</td>
+                                <td className='px-4 py-3 text-right'>{formatCurrencyARS(item.valor_inventario, locale)}</td>
+                                <td className='px-4 py-3 text-right'>{formatCurrencyARS(item.margen_unitario, locale)}</td>
                                 <td className='px-4 py-3'>
                                   <span className={`rounded-full px-2 py-1 text-xs font-medium ${getEstadoClass(item)}`}>
                                     {c(getEstadoLabel(item))}

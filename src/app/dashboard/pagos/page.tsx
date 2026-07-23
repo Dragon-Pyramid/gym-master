@@ -126,6 +126,21 @@ function paymentPeriodFilterExportLabel(locale: string, value: string) {
   return translatePaymentExportText(locale, value);
 }
 
+function formatPaymentMoney(value: number, locale: string) {
+  return new Intl.NumberFormat(locale === "en" ? "en-US" : "es-AR", {
+    style: "currency",
+    currency: "ARS",
+    maximumFractionDigits: 0,
+  }).format(Number(value ?? 0));
+}
+
+function formatPaymentDate(value: string | null | undefined, locale: string) {
+  if (!value) return "-";
+  const parsed = new Date(`${value.slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return new Intl.DateTimeFormat(locale === "en" ? "en-US" : "es-AR").format(parsed);
+}
+
 
 export default function PagosPage() {
   const { isAuthenticated, initializeAuth, isInitialized } = useAuthStore();
@@ -209,7 +224,7 @@ export default function PagosPage() {
           },
           {
             label: tx("Total efectivo", "Cash total"),
-            value: `$${totalEfectivo.toLocaleString("es-AR")}`,
+            value: formatPaymentMoney(totalEfectivo, locale),
           },
         ],
         filtersLabel:
@@ -233,13 +248,13 @@ export default function PagosPage() {
           {
             header: tx("Fecha pago", "Payment date"),
             width: 24,
-            getValue: (p) => p.fecha_pago,
+            getValue: (p) => formatPaymentDate(p.fecha_pago, locale),
           },
           {
             header: tx("Período", "Period"),
             width: 36,
             getValue: (p) =>
-              `${p.periodo_desde || p.fecha_pago} / ${p.periodo_hasta || p.fecha_vencimiento}`,
+              `${formatPaymentDate(p.periodo_desde || p.fecha_pago, locale)} / ${formatPaymentDate(p.periodo_hasta || p.fecha_vencimiento, locale)}`,
           },
           {
             header: tx("Método", "Method"),
@@ -255,7 +270,7 @@ export default function PagosPage() {
             header: tx("Monto", "Amount"),
             width: 24,
             getValue: (p) =>
-              `$${numberOrZero(p.monto_pagado).toLocaleString("es-AR")}`,
+              formatPaymentMoney(numberOrZero(p.monto_pagado), locale),
             align: "right",
           },
           {
@@ -472,8 +487,7 @@ export default function PagosPage() {
                     {tx("Listado de pagos", "Payments list")}
                   </h2>
                   <p className="text-sm text-muted-foreground">
-                    {tx("Total efectivo filtrado", "Filtered cash total")}: $
-                    {totalEfectivo.toLocaleString("es-AR")}
+                    {tx("Total efectivo filtrado", "Filtered cash total")}: {formatPaymentMoney(totalEfectivo, locale)}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center w-full gap-2 md:w-auto">

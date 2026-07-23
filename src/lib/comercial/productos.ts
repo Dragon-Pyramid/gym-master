@@ -41,9 +41,12 @@ export function isProductoStockCritico(producto: Producto): boolean {
   return estado === 'stock_critico' || estado === 'sin_stock';
 }
 
-export function formatCurrencyARS(value: number | null | undefined): string {
+export function formatCurrencyARS(
+  value: number | null | undefined,
+  locale: string = 'es'
+): string {
   const numeric = Number(value ?? 0);
-  return new Intl.NumberFormat('es-AR', {
+  return new Intl.NumberFormat(locale === 'en' ? 'en-US' : 'es-AR', {
     style: 'currency',
     currency: 'ARS',
     maximumFractionDigits: 0,

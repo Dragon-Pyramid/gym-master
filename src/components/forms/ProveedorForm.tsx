@@ -95,7 +95,7 @@ export default function ProveedorForm({
     setLoading(true);
     try {
       if (!form.nombre?.trim()) {
-        throw new Error("El nombre comercial es obligatorio");
+        throw new Error(c("El nombre comercial es obligatorio"));
       }
 
       if (proveedor && proveedor.id) {
@@ -128,7 +128,7 @@ export default function ProveedorForm({
     >
       <QaFileNameBadge file="src/components/forms/ProveedorForm.tsx" />
       <div className="col-span-full rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
-        El nombre comercial queda como dato principal visible en productos, ventas y reportes. Los datos fiscales, ubicación y banco son opcionales, pero recomendados para compras, reposición y trazabilidad.
+        {c('El nombre comercial queda como dato principal visible en productos, ventas y reportes. Los datos fiscales, ubicación y banco son opcionales, pero recomendados para compras, reposición y trazabilidad.')}
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -159,7 +159,7 @@ export default function ProveedorForm({
         <Input
           id="identificacion_fiscal"
           name="identificacion_fiscal"
-          placeholder="Ej: 30-12345678-9"
+          placeholder={c("Ej: 30-12345678-9")}
           value={form.identificacion_fiscal ?? ""}
           onChange={handleChange}
         />
@@ -170,14 +170,14 @@ export default function ProveedorForm({
         <Input
           id="condicion_fiscal"
           name="condicion_fiscal"
-          placeholder="Ej: Responsable inscripto / Monotributo"
+          placeholder={c("Ej: Responsable inscripto / Monotributo")}
           value={form.condicion_fiscal ?? ""}
           onChange={handleChange}
         />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="contacto">Contacto principal</Label>
+        <Label htmlFor="contacto">{c("Contacto principal")}</Label>
         <Input
           id="contacto"
           name="contacto"
@@ -192,7 +192,7 @@ export default function ProveedorForm({
         <Input
           id="rubro"
           name="rubro"
-          placeholder="Ej: Suplementos / Bebidas / Equipamiento"
+          placeholder={c("Ej: Suplementos / Bebidas / Equipamiento")}
           value={form.rubro ?? ""}
           onChange={handleChange}
         />
@@ -204,7 +204,7 @@ export default function ProveedorForm({
           id="telefono"
           name="telefono"
           type="tel"
-          placeholder="Ej: 351 555 1234"
+          placeholder={c("Ej: 351 555 1234")}
           value={form.telefono ?? ""}
           onChange={handleChange}
         />
@@ -216,7 +216,7 @@ export default function ProveedorForm({
           id="whatsapp"
           name="whatsapp"
           type="tel"
-          placeholder="Ej: 5493515551234"
+          placeholder={c("Ej: 5493515551234")}
           value={form.whatsapp ?? ""}
           onChange={handleChange}
         />
@@ -228,14 +228,14 @@ export default function ProveedorForm({
           id="email"
           name="email"
           type="email"
-          placeholder="Ej: ventas@proveedor.com"
+          placeholder={c("Ej: ventas@proveedor.com")}
           value={form.email ?? ""}
           onChange={handleChange}
         />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="estado">Estado</Label>
+        <Label htmlFor="estado">{c("Estado")}</Label>
         <select
           id="estado"
           name="estado"
@@ -245,7 +245,7 @@ export default function ProveedorForm({
         >
           {PROVEEDOR_ESTADOS.map((estado) => (
             <option key={estado.value} value={estado.value}>
-              {estado.label}
+              {c(estado.label)}
             </option>
           ))}
         </select>
@@ -263,22 +263,22 @@ export default function ProveedorForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="ciudad">Ciudad</Label>
+        <Label htmlFor="ciudad">{c("Ciudad")}</Label>
         <Input
           id="ciudad"
           name="ciudad"
-          placeholder="Ej: Córdoba"
+          placeholder={c("Ej: Córdoba")}
           value={form.ciudad ?? ""}
           onChange={handleChange}
         />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="provincia">Provincia</Label>
+        <Label htmlFor="provincia">{c("Provincia")}</Label>
         <Input
           id="provincia"
           name="provincia"
-          placeholder="Ej: Córdoba"
+          placeholder={c("Ej: Córdoba")}
           value={form.provincia ?? ""}
           onChange={handleChange}
         />
@@ -289,29 +289,29 @@ export default function ProveedorForm({
         <Input
           id="pais"
           name="pais"
-          placeholder="Ej: Argentina"
+          placeholder={c("Ej: Argentina")}
           value={form.pais ?? ""}
           onChange={handleChange}
         />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="banco">Banco</Label>
+        <Label htmlFor="banco">{c("Banco")}</Label>
         <Input
           id="banco"
           name="banco"
-          placeholder="Ej: Banco Galicia"
+          placeholder={c("Ej: Banco Galicia")}
           value={form.banco ?? ""}
           onChange={handleChange}
         />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="alias_cbu">Alias CBU/CVU</Label>
+        <Label htmlFor="alias_cbu">{c("Alias CBU/CVU")}</Label>
         <Input
           id="alias_cbu"
           name="alias_cbu"
-          placeholder="Ej: proveedor.gym.mp"
+          placeholder={c("Ej: proveedor.gym.mp")}
           value={form.alias_cbu ?? ""}
           onChange={handleChange}
         />
@@ -322,14 +322,14 @@ export default function ProveedorForm({
         <Input
           id="cbu_cvu"
           name="cbu_cvu"
-          placeholder="Ingrese CBU/CVU"
+          placeholder={c("Ingrese CBU/CVU")}
           value={form.cbu_cvu ?? ""}
           onChange={handleChange}
         />
       </div>
 
       <div className="flex flex-col gap-1.5 md:col-span-2">
-        <Label htmlFor="titular_cuenta">Titular de cuenta</Label>
+        <Label htmlFor="titular_cuenta">{c("Titular de cuenta")}</Label>
         <Input
           id="titular_cuenta"
           name="titular_cuenta"
@@ -340,11 +340,11 @@ export default function ProveedorForm({
       </div>
 
       <div className="flex flex-col gap-1.5 md:col-span-2">
-        <Label htmlFor="observaciones">Observaciones</Label>
+        <Label htmlFor="observaciones">{c("Observaciones")}</Label>
         <textarea
           id="observaciones"
           name="observaciones"
-          placeholder="Notas internas, condiciones comerciales, horarios de entrega, etc."
+          placeholder={c("Notas internas, condiciones comerciales, horarios de entrega, etc.")}
           value={form.observaciones ?? ""}
           onChange={handleChange}
           className="min-h-[88px] rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -358,14 +358,14 @@ export default function ProveedorForm({
           className="text-gray-800 bg-gray-200 hover:bg-gray-300"
           disabled={loading}
         >
-          Cancelar
+          {c("Cancelar")}
         </Button>
         <Button type="submit" disabled={loading}>
           {loading
             ? c("Guardando...")
             : proveedor
-            ? "Actualizar Proveedor"
-            : "Crear Proveedor"}
+            ? c("Actualizar Proveedor")
+            : c("Crear Proveedor")}
         </Button>
       </div>
     </form>
