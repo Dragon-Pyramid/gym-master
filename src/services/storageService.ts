@@ -1,5 +1,6 @@
 import { jwtDecode } from "jwt-decode";
 import Cookies from "js-cookie";
+import { clearSensitivePwaCaches } from "@/utils/pwaCacheSecurity";
 
 interface JwtPayload {
   sub: string;
@@ -131,6 +132,8 @@ export function logoutSession() {
     } catch {
       // No bloquear logout si localStorage no está disponible.
     }
+
+    void clearSensitivePwaCaches();
   }
 }
 
@@ -161,6 +164,8 @@ export function logoutTerminalSession() {
     } catch {
       // No bloquear limpieza si localStorage no está disponible.
     }
+
+    void clearSensitivePwaCaches();
   }
 }
 
