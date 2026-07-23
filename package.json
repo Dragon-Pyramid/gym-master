@@ -5,13 +5,15 @@
   "scripts": {
     "vercel-build": "npm install --legacy-peer-deps && npm run build",
     "dev": "next dev",
+    "prebuild": "node scripts/clean-generated-pwa.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
-    "test:e2e:install": "playwright install chromium"
+    "test:e2e:install": "playwright install chromium",
+    "test:pwa-cache": "node scripts/verify-pwa-cache-policy.mjs"
   },
   "dependencies": {
     "@getbrevo/brevo": "^2.5.0",
