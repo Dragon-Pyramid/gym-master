@@ -10,6 +10,7 @@ import { useI18n } from '@/i18n/I18nProvider';
 
 const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
 const ONLINE_RESTORED_VISIBLE_MS = 4500;
+const UPDATE_ACTIVATION_TIMEOUT_MS = 10_000;
 
 function isStandaloneMode() {
   if (typeof window === 'undefined') return false;
@@ -22,6 +23,15 @@ function isStandaloneMode() {
     window.matchMedia('(display-mode: standalone)').matches ||
     navigatorWithStandalone.standalone === true
   );
+}
+
+function requestRegistrationUpdate(registration: ServiceWorkerRegistration) {
+  if (!window.navigator.onLine) return;
+
+  void registration.update().catch(() => {
+    // An update check is opportunistic. Network or browser failures must not
+    // interrupt the active Gym Master session.
+  });
 }
 
 export function PwaConnectionUpdateBanner() {
@@ -39,7 +49,13 @@ export function PwaConnectionUpdateBanner() {
   const wasOfflineRef = useRef(false);
 
   const isSocio = user?.rol?.trim().toLowerCase() === 'socio';
-  const shouldTargetSocioPwa = isAuthenticated && isSocio && (isMobile || isStandalone);
+  const isSocioMobile = isSocio && isMobile;
+
+  // Mobile users keep the original compact experience. Any authenticated role
+  // also receives update/offline notices when Gym Master runs as an installed
+  // standalone app on desktop, tablet or mobile.
+  const shouldShowPwaStatus =
+    isAuthenticated && (isMobile || isStandalone);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -98,15 +114,16 @@ export function PwaConnectionUpdateBanner() {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
 
     let intervalId: number | null = null;
-    const hadControllerAtMount = Boolean(navigator.serviceWorker.controller);
+    let cleanupRegistrationWatch: (() => void) | undefined;
+    let activeRegistration: ServiceWorkerRegistration | null = null;
 
     const markUpdateReady = () => {
-      if (!isRefreshing) {
-        setUpdateReady(true);
-      }
+      setUpdateReady(true);
     };
 
     const watchRegistration = (registration: ServiceWorkerRegistration) => {
+      activeRegistration = registration;
+
       if (registration.waiting && navigator.serviceWorker.controller) {
         markUpdateReady();
       }
@@ -115,11 +132,16 @@ export function PwaConnectionUpdateBanner() {
         const newWorker = registration.installing;
         if (!newWorker) return;
 
-        newWorker.addEventListener('statechange', () => {
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+        const handleStateChange = () => {
+          if (
+            newWorker.state === 'installed' &&
+            navigator.serviceWorker.controller
+          ) {
             markUpdateReady();
           }
-        });
+        };
+
+        newWorker.addEventListener('statechange', handleStateChange);
       };
 
       registration.addEventListener('updatefound', handleUpdateFound);
@@ -129,48 +151,99 @@ export function PwaConnectionUpdateBanner() {
       };
     };
 
-    let cleanupRegistrationWatch: (() => void) | undefined;
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && activeRegistration) {
+        requestRegistrationUpdate(activeRegistration);
+      }
+    };
+
+    const handleOnlineUpdateCheck = () => {
+      if (activeRegistration) {
+        requestRegistrationUpdate(activeRegistration);
+      }
+    };
 
     navigator.serviceWorker.ready
       .then((registration) => {
         cleanupRegistrationWatch = watchRegistration(registration);
+        requestRegistrationUpdate(registration);
 
         intervalId = window.setInterval(() => {
-          registration.update().catch(() => {
-            // La actualización del SW no debe romper la UI si el navegador falla o está offline.
-          });
+          requestRegistrationUpdate(registration);
         }, UPDATE_CHECK_INTERVAL_MS);
       })
       .catch(() => {
-        // Si no hay SW disponible, la experiencia online/offline sigue funcionando.
+        // Online/offline feedback remains available even when registration
+        // cannot be resolved in the current browser.
       });
 
-    const handleControllerChange = () => {
-      if (hadControllerAtMount) {
-        markUpdateReady();
-      }
-    };
-
-    navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('online', handleOnlineUpdateCheck);
 
     return () => {
       cleanupRegistrationWatch?.();
-      navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('online', handleOnlineUpdateCheck);
 
       if (intervalId) {
         window.clearInterval(intervalId);
       }
     };
-  }, [isRefreshing]);
+  }, []);
 
   const handleUpdateNow = useCallback(async () => {
+    if (!('serviceWorker' in navigator)) return;
+
     setIsRefreshing(true);
 
     try {
       const registration = await navigator.serviceWorker.getRegistration();
-      registration?.waiting?.postMessage({ type: 'SKIP_WAITING' });
+      const waitingWorker = registration?.waiting;
+
+      if (!waitingWorker) {
+        setUpdateReady(false);
+        setIsRefreshing(false);
+
+        if (registration) {
+          requestRegistrationUpdate(registration);
+        }
+
+        return;
+      }
+
+      await new Promise<void>((resolve) => {
+        let completed = false;
+
+        const finish = () => {
+          if (completed) return;
+          completed = true;
+          window.clearTimeout(timeoutId);
+          navigator.serviceWorker.removeEventListener(
+            'controllerchange',
+            handleControllerChange,
+          );
+          resolve();
+        };
+
+        const handleControllerChange = () => {
+          finish();
+        };
+
+        const timeoutId = window.setTimeout(
+          finish,
+          UPDATE_ACTIVATION_TIMEOUT_MS,
+        );
+
+        navigator.serviceWorker.addEventListener(
+          'controllerchange',
+          handleControllerChange,
+        );
+
+        waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+      });
     } catch {
-      // Si el SW no responde, forzamos la recarga igualmente para tomar los assets nuevos.
+      // A controlled reload is still the safest recovery if the waiting worker
+      // disappeared between detection and user confirmation.
     }
 
     window.location.reload();
@@ -211,13 +284,16 @@ export function PwaConnectionUpdateBanner() {
     return null;
   }, [isOnline, showOnlineRestored, t, updateReady]);
 
-  if (!shouldTargetSocioPwa || !banner) return null;
+  if (!shouldShowPwaStatus || !banner) return null;
 
   const Icon = banner.icon;
+  const positionClassName = isSocioMobile
+    ? 'inset-x-3 bottom-[calc(10.2rem+env(safe-area-inset-bottom))] mx-auto max-w-md'
+    : 'inset-x-3 bottom-[calc(1rem+env(safe-area-inset-bottom))] mx-auto max-w-md md:left-auto md:right-4 md:mx-0 md:w-full';
 
   return (
     <aside
-      className='fixed inset-x-3 bottom-[calc(10.2rem+env(safe-area-inset-bottom))] z-[76] mx-auto max-w-md rounded-3xl border border-slate-200 bg-white p-3 shadow-lg md:hidden dark:border-slate-800 dark:bg-slate-950 gm-pwa-floating-card'
+      className={`fixed z-[76] rounded-3xl border border-slate-200 bg-white p-3 shadow-lg dark:border-slate-800 dark:bg-slate-950 gm-pwa-floating-card ${positionClassName}`}
       role='status'
       aria-live='polite'
     >
@@ -235,7 +311,9 @@ export function PwaConnectionUpdateBanner() {
         </div>
 
         <div className='min-w-0 flex-1'>
-          <p className='text-sm font-bold text-slate-950 dark:text-slate-50'>{banner.title}</p>
+          <p className='text-sm font-bold text-slate-950 dark:text-slate-50'>
+            {banner.title}
+          </p>
           <p className='mt-0.5 text-xs leading-5 text-slate-600 dark:text-slate-300'>
             {banner.body}
           </p>
@@ -248,13 +326,16 @@ export function PwaConnectionUpdateBanner() {
                 onClick={handleUpdateNow}
                 disabled={isRefreshing}
               >
-                {isRefreshing ? t('socioDashboard.pwa.updating') : t('socioDashboard.pwa.update')}
+                {isRefreshing
+                  ? t('socioDashboard.pwa.updating')
+                  : t('socioDashboard.pwa.update')}
               </Button>
               <Button
                 size='sm'
                 variant='ghost'
                 className='h-8 rounded-full px-3 text-xs'
                 onClick={handleDismissUpdate}
+                disabled={isRefreshing}
               >
                 {t('socioDashboard.pwa.later')}
               </Button>
@@ -265,9 +346,10 @@ export function PwaConnectionUpdateBanner() {
         {banner.kind === 'update' ? (
           <button
             type='button'
-            className='rounded-full p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-900 dark:hover:text-slate-200'
+            className='rounded-full p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-slate-900 dark:hover:text-slate-200'
             onClick={handleDismissUpdate}
             aria-label={t('socioDashboard.pwa.hideUpdate')}
+            disabled={isRefreshing}
           >
             <X className='h-4 w-4' aria-hidden='true' />
           </button>

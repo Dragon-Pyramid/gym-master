@@ -13,7 +13,8 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:install": "playwright install chromium",
-    "test:pwa-cache": "node scripts/verify-pwa-cache-policy.mjs"
+    "test:pwa-cache": "node scripts/verify-pwa-cache-policy.mjs",
+    "test:pwa-install-update": "node scripts/verify-pwa-install-update.mjs"
   },
   "dependencies": {
     "@getbrevo/brevo": "^2.5.0",
