@@ -52,6 +52,7 @@ import {
 } from "@/services/apiClient";
 import { useAuthStore } from "@/stores/authStore";
 import { useI18n } from "@/i18n/I18nProvider";
+import { translateCoreLevel } from "@/utils/coreSeedI18n";
 
 type CatalogSummary = {
   total: number;
@@ -219,6 +220,10 @@ export default function RutinasExerciseMediaCatalogPage() {
   const { locale } = useI18n();
   const isEnglish = locale === "en";
   const tx = useCallback((es: string, en: string) => (isEnglish ? en : es), [isEnglish]);
+  const translateLevel = useCallback(
+    (value?: string | null) => translateCoreLevel(value, isEnglish),
+    [isEnglish],
+  );
 
   const [items, setItems] = useState<EjercicioMediaCatalogItem[]>([]);
   const [objetivos, setObjetivos] = useState<Objetivo[]>([]);
@@ -1497,7 +1502,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                                   </p>
                                   <p className="text-slate-500">
                                     {candidate.source_objetivo} ·{" "}
-                                    {candidate.source_nivel}
+                                    {translateLevel(candidate.source_nivel)}
                                   </p>
                                 </td>
                                 <td className="px-3 py-2">
@@ -1506,7 +1511,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                                   </p>
                                   <p className="text-slate-500">
                                     {candidate.target_objetivo} ·{" "}
-                                    {candidate.target_nivel}
+                                    {translateLevel(candidate.target_nivel)}
                                   </p>
                                 </td>
                                 <td className="px-3 py-2 text-slate-600">
@@ -1570,7 +1575,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                       <option value="todos">{tx("Todos los niveles", "All levels")}</option>
                       {niveles.map((nivel) => (
                         <option key={nivel.id_nivel} value={nivel.id_nivel}>
-                          {nivel.nombre_nivel}
+                          {translateLevel(nivel.nombre_nivel)}
                         </option>
                       ))}
                     </select>
@@ -1732,8 +1737,9 @@ export default function RutinasExerciseMediaCatalogPage() {
                                     `${tx("Objetivo", "Goal")} ${item.id_objetivo}`}
                                 </p>
                                 <p className="text-xs">
-                                  {item.nivel_nombre ??
-                                    `${tx("Nivel", "Level")} ${item.id_nivel}`}
+                                  {item.nivel_nombre
+                                    ? translateLevel(item.nivel_nombre)
+                                    : `${tx("Nivel", "Level")} ${item.id_nivel}`}
                                 </p>
                               </td>
                               <td className="px-4 py-3">
@@ -1863,7 +1869,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                         </p>
                         <p className="text-sm text-slate-500 dark:text-neutral-400">
                           {selectedExercise.objetivo_nombre} ·{" "}
-                          {selectedExercise.nivel_nombre} ·{" "}
+                          {translateLevel(selectedExercise.nivel_nombre)} ·{" "}
                           {selectedExercise.grupo_muscular_nombre}
                         </p>
                       </div>

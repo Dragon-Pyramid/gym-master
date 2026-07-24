@@ -9,6 +9,9 @@ import { I18nProvider } from '@/i18n/I18nProvider';
 import type { GymMasterLocale } from '@/i18n/config';
 import { clearSensitivePwaCaches } from '@/utils/pwaCacheSecurity';
 import { PwaServiceWorkerRegistrar } from '@/components/pwa/PwaServiceWorkerRegistrar';
+import { PwaAndroidInstalledAppPolish } from '@/components/pwa/PwaAndroidInstalledAppPolish';
+import { PwaConnectionUpdateBanner } from '@/components/pwa/PwaConnectionUpdateBanner';
+import { SocioPwaInstallPrompt } from '@/components/pwa/SocioPwaInstallPrompt';
 
 export function SessionWrapper({
   children,
@@ -32,7 +35,12 @@ export function SessionWrapper({
             enableSystem
             disableTransitionOnChange
           >
-            <I18nProvider initialLocale={initialLocale}>{children}</I18nProvider>
+            <I18nProvider initialLocale={initialLocale}>
+              {children}
+              <SocioPwaInstallPrompt />
+              <PwaConnectionUpdateBanner />
+              <PwaAndroidInstalledAppPolish />
+            </I18nProvider>
           </ThemeProvider>
         </SessionContextProvider>
       </SessionProvider>

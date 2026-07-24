@@ -6,9 +6,6 @@ import { CircleHelp, Lock, Menu, Moon, Search, Settings, SlidersHorizontal, Sun,
 import ProfileImage from '@/components/perfil/ProfileImage';
 import { HeaderNotificationsBell } from '@/components/header/HeaderNotificationsBell';
 import { SocioMobileBottomNavigation } from '@/components/navigation/SocioMobileBottomNavigation';
-import { SocioPwaInstallPrompt } from '@/components/pwa/SocioPwaInstallPrompt';
-import { PwaConnectionUpdateBanner } from '@/components/pwa/PwaConnectionUpdateBanner';
-import { PwaAndroidInstalledAppPolish } from '@/components/pwa/PwaAndroidInstalledAppPolish';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -243,9 +240,6 @@ export const AppHeader = ({ title }: AppHeaderProps) => {
       </header>
 
       <SocioMobileBottomNavigation />
-      <SocioPwaInstallPrompt />
-      <PwaConnectionUpdateBanner />
-      <PwaAndroidInstalledAppPolish />
     </>
   );
 };

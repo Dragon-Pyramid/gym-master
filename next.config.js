@@ -74,7 +74,9 @@ const runtimeCaching = [
 const withPWA = require('next-pwa')({
   dest: 'public',
   register: false,
-  skipWaiting: true,
+  // Keep updates waiting until the user explicitly accepts the new version.
+  // This avoids mixing an old page with a newly activated worker and hashed chunks.
+  skipWaiting: false,
   clientsClaim: true,
   cleanupOutdatedCaches: true,
   cacheStartUrl: false,
