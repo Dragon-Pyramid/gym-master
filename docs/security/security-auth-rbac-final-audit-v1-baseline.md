@@ -53,13 +53,21 @@ El endurecimiento de familias API quedó documentado en:
 
 Este bloque incorpora autenticación, rol, permiso de módulo y respuestas 401/403 uniformes en 40 archivos de rutas de Actividades, Cuotas, Avisos, Equipamientos, Infraestructura, Mantenimientos, Productos, Proveedores y Servicios.
 
-## Próximos bloques
+## Bloque 3 completado
 
-1. Auditar operaciones con `socioId`, `id_socio`, `usuarioId` o parámetros equivalentes.
-2. Validar Master Admin y sincronización de licencia.
-3. Revisar rutas protegidas restantes fuera de las familias cubiertas.
-4. Ejecutar la matriz manual por rol y por URL directa.
-5. Documentar hallazgos que deban resolverse específicamente con RLS.
+El endurecimiento de recursos sensibles quedó documentado en:
+
+`docs/security/security-auth-rbac-final-audit-v1-sensitive-resources.md`
+
+Este bloque incorpora autorización por módulo y propiedad del socio en Socios, Pagos, Ficha médica, Rutinas, Dietas, Evolución física, Mensajes, Notificaciones y analítica sensible. También aísla la gestión de licencia al rol Master Admin y reduce la exposición del verificador público de recibos.
+
+## Próximos pasos de la rama
+
+1. Ejecutar build y matriz manual completa del Bloque 3.
+2. Corregir únicamente regresiones detectadas durante QA.
+3. Realizar el gate consolidado de los tres bloques.
+4. Preparar PR e informe técnico de cierre.
+5. Registrar para la auditoría RLS cualquier riesgo que dependa de Supabase y no de la API.
 
 ## Base de datos
 

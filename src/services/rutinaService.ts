@@ -1,6 +1,7 @@
 import { GeneracionRutina, Rutina } from "@/interfaces/rutina.interface";
 import { getSupabaseClient } from "./supabaseClient";
 import { JwtUser } from "@/interfaces/jwtUser.interface";
+import { AuthorizationError } from "@/lib/auth/serverAuthorization";
 import { getSocioByIdUsuario } from "./socioService";
 
 const isValidUUID = (value?: string | null): value is string => {
@@ -11,10 +12,14 @@ const isValidUUID = (value?: string | null): value is string => {
   );
 };
 
-const isAdmin = (rol?: string | null): boolean => {
+const isManager = (rol?: string | null): boolean => {
   const normalizedRol = rol?.trim().toLowerCase();
 
-  return normalizedRol === "admin" || normalizedRol === "administrador";
+  return (
+    normalizedRol === "admin" ||
+    normalizedRol === "administrador" ||
+    normalizedRol === "usuario"
+  );
 };
 
 type RutinaAdminRow = Omit<Rutina, "socio"> & {
@@ -25,32 +30,37 @@ const resolveIdSocioForRutina = async (
   user: JwtUser,
   rutina: GeneracionRutina
 ): Promise<string> => {
-  const idSocioFromBody = rutina.id_socio ?? rutina.idSocio;
+  const requestedSocioId = rutina.id_socio ?? rutina.idSocio;
 
-  // Caso admin o generación explícita: el endpoint puede enviar el socio destino.
-  if (isValidUUID(idSocioFromBody)) {
-    return idSocioFromBody.trim();
-  }
+  if (user.rol === "socio") {
+    let ownSocioId = isValidUUID(user.id_socio) ? user.id_socio.trim() : null;
 
-  // Caso socio logueado: normalmente viene en el JWT.
-  if (isValidUUID(user.id_socio)) {
-    return user.id_socio.trim();
-  }
-
-  // Fallback robusto: si el token quedó viejo/incompleto, buscar el socio por usuario_id.
-  if (!isAdmin(user.rol) && isValidUUID(user.id)) {
-    const socio = await getSocioByIdUsuario(user.id);
-
-    if (isValidUUID(socio?.id_socio)) {
-      return socio.id_socio.trim();
+    if (!ownSocioId && isValidUUID(user.id)) {
+      const socio = await getSocioByIdUsuario(user.id);
+      ownSocioId = isValidUUID(socio?.id_socio) ? socio.id_socio.trim() : null;
     }
+
+    if (!ownSocioId) {
+      throw new Error(
+        "No se pudo determinar el id_socio del socio autenticado para generar la rutina."
+      );
+    }
+
+    if (isValidUUID(requestedSocioId) && requestedSocioId.trim() !== ownSocioId) {
+      throw new AuthorizationError("No autorizado para generar una rutina para otro socio", "AUTH_SOCIO_SCOPE_FORBIDDEN");
+    }
+
+    return ownSocioId;
+  }
+
+  if (isManager(user.rol) && isValidUUID(requestedSocioId)) {
+    return requestedSocioId.trim();
   }
 
   throw new Error(
-    "No se pudo determinar el id_socio para generar rutina. El socio debe tener perfil asociado o el request debe enviar id_socio."
+    "No se pudo determinar el id_socio para generar rutina. Un gestor autorizado debe indicar el socio destino."
   );
 };
-
 
 const resolveIdSocioForAuthenticatedUser = async (
   user: JwtUser
@@ -59,7 +69,7 @@ const resolveIdSocioForAuthenticatedUser = async (
     return user.id_socio.trim();
   }
 
-  if (!isAdmin(user.rol) && isValidUUID(user.id)) {
+  if (!isManager(user.rol) && isValidUUID(user.id)) {
     const socio = await getSocioByIdUsuario(user.id);
 
     if (isValidUUID(socio?.id_socio)) {
@@ -206,7 +216,7 @@ export const historialRutinasAdmin = async (
 export const historialRutinaSocioLogueado = async (
   user: JwtUser
 ): Promise<Rutina[]> => {
-  if (isAdmin(user.rol)) {
+  if (isManager(user.rol)) {
     return historialRutinasAdmin(user);
   }
 
@@ -251,6 +261,14 @@ export const historialRutinaSocio = async (
     return [];
   }
 
+  if (!isManager(user.rol)) {
+    const ownSocioId = await resolveIdSocioForAuthenticatedUser(user);
+
+    if (!ownSocioId || ownSocioId !== id_socio.trim()) {
+      throw new AuthorizationError("No autorizado para consultar rutinas de otro socio", "AUTH_SOCIO_SCOPE_FORBIDDEN");
+    }
+  }
+
   const { data, error } = await supabase
     .from("rutina")
     .select("*")
@@ -287,7 +305,7 @@ export const eliminarRutina = async (
     throw new Error("No se encontró la rutina");
   }
 
-  if (!isAdmin(user.rol)) {
+  if (!isManager(user.rol)) {
     const idSocio = await resolveIdSocioForAuthenticatedUser(user);
 
     if (!idSocio || rutina.id_socio !== idSocio) {

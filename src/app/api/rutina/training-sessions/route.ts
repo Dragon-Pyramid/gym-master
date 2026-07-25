@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
+import {
+  authorizationErrorResponse,
+  authorizePersonalOrDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
 import {
   listTrainingSessions,
   startTrainingSession,
@@ -16,10 +19,12 @@ const resolveStatus = (message: string): number => {
 
 export async function GET(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const user = await authorizePersonalOrDashboardRequest(
+      req,
+      ['/dashboard/rutinas/asistente', '/dashboard/gestor-rutinas'],
+      ['admin', 'usuario'],
+      ['socio'],
+    );
 
     const { searchParams } = new URL(req.url);
     const rutinaId = searchParams.get('rutinaId');
@@ -43,6 +48,8 @@ export async function GET(req: Request) {
       },
     );
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const message = error instanceof Error ? error.message : 'Error interno del servidor';
     return NextResponse.json({ error: message }, { status: resolveStatus(message) });
   }
@@ -50,16 +57,20 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const user = await authorizePersonalOrDashboardRequest(
+      req,
+      ['/dashboard/rutinas/asistente', '/dashboard/gestor-rutinas'],
+      ['admin', 'usuario'],
+      ['socio'],
+    );
 
     const body = await req.json();
     const data = await startTrainingSession(user, body);
 
     return NextResponse.json({ data }, { status: 201 });
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const message = error instanceof Error ? error.message : 'Error interno del servidor';
     return NextResponse.json({ error: message }, { status: resolveStatus(message) });
   }

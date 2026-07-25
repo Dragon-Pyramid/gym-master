@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
 import { authMiddleware } from '@/middlewares/auth.middleware';
+import {
+  authorizationErrorResponse,
+  requireRoles,
+} from '@/lib/auth/serverAuthorization';
 import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 import { getSocioByIdUsuario } from '@/services/socioService';
 
@@ -34,12 +38,7 @@ export async function GET(req: Request) {
   try {
     const { user } = await authMiddleware(req);
 
-    if (user.rol !== 'socio') {
-      return NextResponse.json(
-        { error: 'Este endpoint corresponde al historial del socio autenticado' },
-        { status: 403 }
-      );
-    }
+    requireRoles(user, ['socio']);
 
     let socioId = user.id_socio;
     let socioFallback: { id_socio: string; nombre_completo: string; email?: string | null } | null = null;
@@ -109,6 +108,9 @@ export async function GET(req: Request) {
       { status: 200 }
     );
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
+
     console.error('ERROR al obtener historial de pagos del socio:', error);
     return NextResponse.json(
       { error: error.message || 'Error al obtener historial de pagos' },

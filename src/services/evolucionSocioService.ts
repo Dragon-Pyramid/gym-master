@@ -3,6 +3,7 @@ import {
   EvolucionSocio,
 } from "@/interfaces/evolucionSocio.interface";
 import { JwtUser } from "@/interfaces/jwtUser.interface";
+import { AuthorizationError } from "@/lib/auth/serverAuthorization";
 import { conexionBD } from "@/middlewares/conexionBd.middleware";
 
 const round2 = (value: number) => Number(value.toFixed(2));
@@ -44,25 +45,48 @@ const normalizarFecha = (fecha?: string | null) => {
 
 const isSocioRole = (rol?: string) => (rol || "").toLowerCase().includes("socio");
 
+async function resolveOwnSocioId(user: JwtUser): Promise<string> {
+  if (!isSocioRole(user.rol)) {
+    throw new AuthorizationError("No autorizado: la identidad no corresponde a un socio", "AUTH_ROLE_FORBIDDEN");
+  }
+
+  if (user.id_socio) return user.id_socio;
+
+  const supabase = conexionBD();
+  const { data, error } = await supabase
+    .from("socio")
+    .select("id_socio")
+    .eq("usuario_id", user.id)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  if (!data?.id_socio) {
+    throw new Error("El usuario no tiene un socio asociado");
+  }
+
+  return data.id_socio as string;
+}
+
 export const createEvolucionSocio = async (
   createEvolucionSocio: CreateEvolucionSocioDto,
   user: JwtUser
 ) => {
   const supabase = conexionBD();
 
-  const socioId = createEvolucionSocio.socio_id || user.id_socio;
+  let socioId = createEvolucionSocio.socio_id || user.id_socio;
+
+  if (isSocioRole(user.rol)) {
+    const ownSocioId = await resolveOwnSocioId(user);
+
+    if (createEvolucionSocio.socio_id && createEvolucionSocio.socio_id !== ownSocioId) {
+      throw new AuthorizationError("No autorizado para registrar evolución de otro socio", "AUTH_SOCIO_SCOPE_FORBIDDEN");
+    }
+
+    socioId = ownSocioId;
+  }
 
   if (!socioId) {
     throw new Error("El usuario no tiene un socio asociado");
-  }
-
-  if (
-    createEvolucionSocio.socio_id &&
-    isSocioRole(user.rol) &&
-    user.id_socio &&
-    createEvolucionSocio.socio_id !== user.id_socio
-  ) {
-    throw new Error("No autorizado para registrar evolución de otro socio");
   }
 
   const peso = normalizarNumero(createEvolucionSocio.peso);
@@ -199,12 +223,11 @@ export const findAllEvolucionesSocioByIdSocio = async (
     throw new Error("Debe indicar un socio");
   }
 
-  if (
-    isSocioRole(user.rol) &&
-    user.id_socio &&
-    socio_id !== user.id_socio
-  ) {
-    throw new Error("No autorizado para consultar evolución de otro socio");
+  if (isSocioRole(user.rol)) {
+    const ownSocioId = await resolveOwnSocioId(user);
+    if (socio_id !== ownSocioId) {
+      throw new AuthorizationError("No autorizado para consultar evolución de otro socio", "AUTH_SOCIO_SCOPE_FORBIDDEN");
+    }
   }
 
   const { data, error } = await supabase

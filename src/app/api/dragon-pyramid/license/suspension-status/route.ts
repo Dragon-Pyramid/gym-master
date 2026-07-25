@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { authMiddleware } from '@/middlewares/auth.middleware';
+import { authorizationErrorResponse } from '@/lib/auth/serverAuthorization';
 import { getDragonPyramidLicense } from '@/services/server/dragonPyramidLicenseService';
 import { buildDragonPyramidSuspensionStatus } from '@/utils/dragonPyramidSuspension';
 
@@ -36,6 +37,9 @@ export async function GET(req: Request) {
       },
     );
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
+
     const message = error instanceof Error ? error.message : 'Error interno del servidor';
     return NextResponse.json({ error: message }, { status: resolveStatus(message) });
   }

@@ -88,6 +88,29 @@ export async function authorizeDashboardRequest(
   return user;
 }
 
+export async function authorizePersonalOrDashboardRequest(
+  req: Request,
+  pathnames: string | string[],
+  elevatedRoles: AppRole[] = ['admin', 'usuario'],
+  personalRoles: AppRole[] = ['socio'],
+) {
+  const { user } = await authMiddleware(req);
+
+  if (personalRoles.includes(user.rol as AppRole)) {
+    return user;
+  }
+
+  requireRoles(user, elevatedRoles);
+
+  if (Array.isArray(pathnames)) {
+    requireAnyDashboardPermission(user, pathnames);
+  } else {
+    requireDashboardPermission(user, pathnames);
+  }
+
+  return user;
+}
+
 export function requireOwnSocioOrRoles(
   user: JwtUser,
   socioId: string,

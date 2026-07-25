@@ -60,6 +60,56 @@ const protectedLegacyApiRoutes = [
   'src/app/api/servicios/route.ts',
 ];
 
+const protectedSensitiveDashboardRoutes = [
+  'src/app/api/admin/metricas/pagos/histograma/route.ts',
+  'src/app/api/admin/metricas/pagos/proyeccion-ingresos/route.ts',
+  'src/app/api/admin/metricas/pagos/segmentacion/route.ts',
+  'src/app/api/admin/metricas/rutinas/adherencia/route.ts',
+  'src/app/api/admin/metricas/rutinas/evolucion-promedio/route.ts',
+  'src/app/api/admin/metricas/rutinas/generar-rutina/route.ts',
+  'src/app/api/admin/metricas/rutinas/generar-rutina-personalizada/route.ts',
+  'src/app/api/admin/socios-mensajes/[id]/route.ts',
+  'src/app/api/admin/socios-mensajes/resumen/route.ts',
+  'src/app/api/admin/socios-mensajes/route.ts',
+  'src/app/api/dieta/todas/route.ts',
+  'src/app/api/dragon-pyramid/license/reactivate/route.ts',
+  'src/app/api/dragon-pyramid/license/route.ts',
+  'src/app/api/evolucion_socio/admin/resumen/route.ts',
+  'src/app/api/notificaciones/[id]/enviar/route.ts',
+  'src/app/api/notificaciones/[id]/route.ts',
+  'src/app/api/notificaciones/plantillas/route.ts',
+  'src/app/api/notificaciones/route.ts',
+  'src/app/api/pagos/[id]/route.ts',
+  'src/app/api/pagos/route.ts',
+  'src/app/api/socios/demografia-promociones-bi/route.ts',
+  'src/app/api/socios/mensajes/route.ts',
+  'src/app/api/socios/ranking-bonificacion-mensual/route.ts',
+  'src/app/api/socios/route.ts',
+];
+
+const protectedPersonalResourceRoutes = [
+  'src/app/api/dieta/[id]/route.ts',
+  'src/app/api/dieta/generar/route.ts',
+  'src/app/api/dieta/rag-assistant/generar/route.ts',
+  'src/app/api/dieta/socio/[id]/route.ts',
+  'src/app/api/evolucion_socio/[socio_id]/route.ts',
+  'src/app/api/evolucion_socio/rag-assistant/analizar/route.ts',
+  'src/app/api/evolucion_socio/registro/route.ts',
+  'src/app/api/rutina/[idSocio]/route.ts',
+  'src/app/api/rutina/delete/[id]/route.ts',
+  'src/app/api/rutina/generar/route.ts',
+  'src/app/api/rutina/historial/[id_socio]/route.ts',
+  'src/app/api/rutina/historial/route.ts',
+  'src/app/api/rutina/training-sessions/[id]/route.ts',
+  'src/app/api/rutina/training-sessions/route.ts',
+  'src/app/api/rutinas/rag-assistant/generar/route.ts',
+  'src/app/api/socios/[id]/ficha-medica/[id_ficha]/route.ts',
+  'src/app/api/socios/[id]/ficha-medica/actual/route.ts',
+  'src/app/api/socios/[id]/ficha-medica/historial/route.ts',
+  'src/app/api/socios/[id]/ficha-medica/route.ts',
+  'src/app/api/socios/[id]/route.ts',
+];
+
 const clientAuthChecks = [
   {
     path: 'src/services/infraestructuraMantenimientoClient.ts',
@@ -76,6 +126,39 @@ const clientAuthChecks = [
   {
     path: 'src/services/browser/cuotasPagosBiApiClient.ts',
     minimumHeaders: 1,
+  },
+];
+
+const sensitiveClientAuthChecks = [
+  {
+    path: 'src/services/apiClient.ts',
+    requiredSnippets: [
+      '/api/rutina/historial',
+      '/api/dieta/todas',
+      '/api/evolucion_socio/registro',
+      '/api/notificaciones',
+      '/api/dragon-pyramid/license',
+    ],
+  },
+  {
+    path: 'src/services/browser/pagoApiClient.ts',
+    requiredSnippets: ['/api/pagos', 'authHeader()'],
+  },
+  {
+    path: 'src/services/browser/socioApiClient.ts',
+    requiredSnippets: ['/api/socios', 'authHeader()'],
+  },
+  {
+    path: 'src/services/sociosDemografiaBiService.ts',
+    requiredSnippets: ['/api/socios/demografia-promociones-bi', 'authHeader()'],
+  },
+  {
+    path: 'src/services/sociosRankingBonificacionService.ts',
+    requiredSnippets: ['/api/socios/ranking-bonificacion-mensual', 'authHeader()'],
+  },
+  {
+    path: 'src/services/evolucionSocioClient.ts',
+    requiredSnippets: ['/api/evolucion_socio', 'authHeaders('],
   },
 ];
 
@@ -103,6 +186,10 @@ const assertions = [
   {
     ok: authorization.includes('authorizeDashboardRequest'),
     message: 'Debe existir el helper compuesto de autenticación, rol y permiso.',
+  },
+  {
+    ok: authorization.includes('authorizePersonalOrDashboardRequest'),
+    message: 'Debe existir el helper para recursos propios del socio o gestión autorizada.',
   },
   {
     ok: authorization.includes('authorizationErrorResponse'),
@@ -154,6 +241,56 @@ for (const route of protectedLegacyApiRoutes) {
   );
 }
 
+for (const route of protectedSensitiveDashboardRoutes) {
+  const source = read(route);
+  const handlerCount = countOccurrences(source, 'export async function ');
+
+  assertions.push(
+    {
+      ok: handlerCount > 0,
+      message: `${route} debe declarar al menos un handler HTTP.`,
+    },
+    {
+      ok: countOccurrences(source, 'authorizeDashboardRequest(') === handlerCount,
+      message: `${route} debe exigir rol y permiso de dashboard en cada handler.`,
+    },
+    {
+      ok: countOccurrences(source, 'authorizationErrorResponse(') >= handlerCount,
+      message: `${route} debe preservar respuestas 401/403 tipadas.`,
+    },
+    {
+      ok: !source.includes('authMiddleware('),
+      message: `${route} no debe limitarse a comprobar que exista un JWT.`,
+    },
+  );
+}
+
+for (const route of protectedPersonalResourceRoutes) {
+  const source = read(route);
+  const handlerCount = countOccurrences(source, 'export async function ');
+
+  assertions.push(
+    {
+      ok: handlerCount > 0,
+      message: `${route} debe declarar al menos un handler HTTP.`,
+    },
+    {
+      ok:
+        countOccurrences(source, 'authorizePersonalOrDashboardRequest(') ===
+        handlerCount,
+      message: `${route} debe autorizar cada recurso personal o de gestión.`,
+    },
+    {
+      ok: countOccurrences(source, 'authorizationErrorResponse(') >= handlerCount,
+      message: `${route} debe preservar respuestas 401/403 tipadas.`,
+    },
+    {
+      ok: !source.includes('authMiddleware('),
+      message: `${route} no debe autenticar sin aplicar alcance personal o permiso.`,
+    },
+  );
+}
+
 for (const client of clientAuthChecks) {
   const source = read(client.path);
   assertions.push(
@@ -166,6 +303,16 @@ for (const client of clientAuthChecks) {
       message: `${client.path} debe enviar Bearer en todas sus llamadas protegidas.`,
     },
   );
+}
+
+for (const client of sensitiveClientAuthChecks) {
+  const source = read(client.path);
+  for (const snippet of client.requiredSnippets) {
+    assertions.push({
+      ok: source.includes(snippet),
+      message: `${client.path} debe conservar autenticación para ${snippet}.`,
+    });
+  }
 }
 
 const actividadesRoute = read('src/app/api/actividades/route.ts');
@@ -203,6 +350,79 @@ assertions.push(
   },
 );
 
+const rutinaService = read('src/services/rutinaService.ts');
+const dietaService = read('src/services/dietaService.ts');
+const evolucionService = read('src/services/evolucionSocioService.ts');
+const socioServerService = read('src/services/server/socioServerService.ts');
+const miCuentaPagosRoute = read('src/app/api/mi-cuenta/pagos/route.ts');
+const pagoVerificationRoute = read('src/app/api/pagos/[id]/verificar/route.ts');
+const profileUploadRoute = read('src/app/api/file-upload/route.ts');
+const masterLicenseRoute = read('src/app/api/dragon-pyramid/license/route.ts');
+const masterReactivateRoute = read('src/app/api/dragon-pyramid/license/reactivate/route.ts');
+const licenseWarningRoute = read('src/app/api/dragon-pyramid/license/warning/route.ts');
+const suspensionStatusRoute = read('src/app/api/dragon-pyramid/license/suspension-status/route.ts');
+
+assertions.push(
+  {
+    ok:
+      rutinaService.includes('requestedSocioId.trim() !== ownSocioId') &&
+      rutinaService.includes('AUTH_SOCIO_SCOPE_FORBIDDEN'),
+    message: 'Rutinas debe rechazar generación y consulta para otro socio.',
+  },
+  {
+    ok:
+      dietaService.includes('requestedSocioId !== ownSocioId') &&
+      dietaService.includes('AUTH_SOCIO_SCOPE_FORBIDDEN'),
+    message: 'Dietas debe validar propiedad del socio solicitado.',
+  },
+  {
+    ok:
+      evolucionService.includes('createEvolucionSocio.socio_id !== ownSocioId') &&
+      evolucionService.includes('socio_id !== ownSocioId') &&
+      evolucionService.includes('AUTH_SOCIO_SCOPE_FORBIDDEN'),
+    message: 'Evolución física debe impedir altas y lecturas cruzadas entre socios.',
+  },
+  {
+    ok:
+      socioServerService.includes(".eq('usuario_id', user.id)") &&
+      socioServerService.includes('AUTH_SOCIO_SCOPE_FORBIDDEN'),
+    message: 'El detalle de socio debe resolver y validar la identidad propia.',
+  },
+  {
+    ok:
+      miCuentaPagosRoute.includes("requireRoles(user, ['socio'])") &&
+      miCuentaPagosRoute.includes(".eq('socio_id', socioId)"),
+    message: 'Mi Cuenta debe devolver pagos únicamente del socio autenticado.',
+  },
+  {
+    ok:
+      pagoVerificationRoute.includes('isPagoVerificationCodeValid') &&
+      !pagoVerificationRoute.includes('id_socio,nombre_completo,email'),
+    message: 'La verificación pública de recibos debe validar código y no exponer email.',
+  },
+  {
+    ok:
+      profileUploadRoute.includes("const folder = `${user.rol}/profile`") &&
+      profileUploadRoute.includes('updateFotoUsuarioById(user, uploadedUrl)') &&
+      profileUploadRoute.includes('authorizationErrorResponse(error)'),
+    message: 'La foto de perfil debe actualizar únicamente al usuario autenticado.',
+  },
+  {
+    ok:
+      masterLicenseRoute.includes("'/dashboard/masteradmin/license'") &&
+      masterLicenseRoute.includes("['masteradmin']") &&
+      masterReactivateRoute.includes("['masteradmin']"),
+    message: 'Licencia y reactivación deben quedar aisladas al Master Admin.',
+  },
+  {
+    ok:
+      licenseWarningRoute.includes("role !== 'admin' && role !== 'masteradmin'") &&
+      suspensionStatusRoute.includes("user.rol === 'socio'") &&
+      suspensionStatusRoute.includes('details: status.isSuspended ? [] : status.details'),
+    message: 'Avisos y suspensión deben conservar exposición mínima según el rol.',
+  },
+);
+
 const failures = assertions.filter((assertion) => !assertion.ok);
 
 if (failures.length > 0) {
@@ -224,6 +444,21 @@ console.log(
 );
 console.log(
   `Legacy API families OK: ${protectedLegacyApiRoutes.length} routes enforce authentication, role and module permission.`,
+);
+console.log(
+  `Sensitive dashboard APIs OK: ${protectedSensitiveDashboardRoutes.length} routes enforce role and module permission.`,
+);
+console.log(
+  `Personal resource APIs OK: ${protectedPersonalResourceRoutes.length} routes enforce socio scope or authorized management.`,
+);
+console.log(
+  'Socio ownership OK: member detail, medical records, payments, routines, diets and evolution reject cross-member access.',
+);
+console.log(
+  'Master Admin and public exposure OK: license controls are isolated and public receipt verification is redacted.',
+);
+console.log(
+  'Sensitive browser clients OK: personal, management and BI calls continue sending Bearer headers.',
 );
 console.log(
   'Protected browser clients OK: infrastructure, preventive equipment, equipment BI and fees BI send Bearer headers.',

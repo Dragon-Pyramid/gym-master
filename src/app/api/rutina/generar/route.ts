@@ -1,4 +1,7 @@
-import { authMiddleware } from "@/middlewares/auth.middleware";
+import {
+  authorizationErrorResponse,
+  authorizePersonalOrDashboardRequest,
+} from "@/lib/auth/serverAuthorization";
 import { dataGeneracionRutina } from "@/services/rutinaService";
 import { NextResponse } from "next/server";
 
@@ -7,11 +10,13 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
     try {
-        const { user } = await authMiddleware(req);
+        const user = await authorizePersonalOrDashboardRequest(
+            req,
+            ['/dashboard/rutinas/asistente', '/dashboard/gestor-rutinas'],
+            ['admin', 'usuario'],
+            ['socio'],
+        );
 
-        if (!user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
 
         const body = await req.json();
 
@@ -23,6 +28,8 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ message: "Rutina generada correctamente", data: generacionRutina }, { status: 200 });
     } catch (error: any) {
+        const authResponse = authorizationErrorResponse(error);
+        if (authResponse) return authResponse;
         console.error("Error en la generación de rutina:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }

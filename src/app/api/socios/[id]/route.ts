@@ -1,21 +1,31 @@
-import { authMiddleware } from '@/middlewares/auth.middleware';
-import { getSocioById } from '@/services/socioService';
 import { NextRequest, NextResponse } from 'next/server';
-
+import { getSocioByIdServer } from '@/services/server/socioServerService';
+import {
+  authorizationErrorResponse,
+  authorizePersonalOrDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { user } = await authMiddleware(req);
-
     const { id } = await params;
-    const socio = await getSocioById(id);
+    const user = await authorizePersonalOrDashboardRequest(
+      req,
+      '/dashboard/socios',
+      ['admin', 'usuario'],
+      ['socio'],
+    );
+    const socio = await getSocioByIdServer(user, id);
     return NextResponse.json({ data: socio }, { status: 200 });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message });
+  } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
+    const message = error instanceof Error ? error.message : 'Error al obtener el socio';
+    const status = message.includes('No se encontró') ? 404 : message.includes('No autorizado') ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

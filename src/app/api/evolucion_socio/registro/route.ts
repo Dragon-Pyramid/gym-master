@@ -1,4 +1,7 @@
-import { authMiddleware } from "@/middlewares/auth.middleware";
+import {
+  authorizationErrorResponse,
+  authorizePersonalOrDashboardRequest,
+} from "@/lib/auth/serverAuthorization";
 import { createEvolucionSocio } from "@/services/evolucionSocioService";
 import { NextResponse } from "next/server";
 
@@ -9,11 +12,11 @@ const getStatusFromError = (message?: string) => {
   if (!message) return 500;
   if (
     message.includes("Token") ||
-    message.includes("Unauthorized") ||
-    message.includes("No autorizado")
+    message.includes("Unauthorized")
   ) {
     return 401;
   }
+  if (message.includes("No autorizado")) return 403;
   if (
     message.includes("obligatorio") ||
     message.includes("obligatoria") ||
@@ -27,7 +30,12 @@ const getStatusFromError = (message?: string) => {
 
 export async function POST(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizePersonalOrDashboardRequest(
+      req,
+      ['/dashboard/evolucion-fisica', '/dashboard/gestor-evolucion-fisica'],
+      ['admin', 'usuario'],
+      ['socio'],
+    );
     const body = await req.json();
 
     const evolucion = await createEvolucionSocio(
@@ -46,6 +54,8 @@ export async function POST(req: Request) {
       { status: 201 }
     );
   } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const message =
       error instanceof Error ? error.message : "Error al registrar evolución";
 

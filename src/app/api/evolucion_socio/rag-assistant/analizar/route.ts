@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
+import {
+  authorizationErrorResponse,
+  authorizePersonalOrDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
 import type {
   RagEvolucionFisicaAssistantRequest,
   RagEvolucionFisicaIdioma,
@@ -40,11 +43,13 @@ function getStatusFromError(message: string) {
 
 export async function POST(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizePersonalOrDashboardRequest(
+      req,
+      ['/dashboard/evolucion-fisica', '/dashboard/gestor-evolucion-fisica'],
+      ['admin', 'usuario'],
+      ['socio'],
+    );
 
-    if (!user) {
-      return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
-    }
 
     const body = (await req.json().catch(() => ({}))) as Partial<RagEvolucionFisicaAssistantRequest>;
     const payload = validatePayload(body);
@@ -65,6 +70,8 @@ export async function POST(req: Request) {
       { status: 200 },
     );
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const message = error instanceof Error ? error.message : translateAiGeneratedTechnicalText('Error inesperado', 'es');
 
     console.error('Error en RAG Coach evolución física:', error);

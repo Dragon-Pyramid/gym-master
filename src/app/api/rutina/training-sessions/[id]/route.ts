@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
+import {
+  authorizationErrorResponse,
+  authorizePersonalOrDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
 import {
   cancelTrainingSession,
   finishTrainingSession,
@@ -21,10 +24,12 @@ export async function PATCH(
   { params }: { params: { id: string } },
 ) {
   try {
-    const { user } = await authMiddleware(req);
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const user = await authorizePersonalOrDashboardRequest(
+      req,
+      ['/dashboard/rutinas/asistente', '/dashboard/gestor-rutinas'],
+      ['admin', 'usuario'],
+      ['socio'],
+    );
 
     const body = await req.json();
     const action = String(body?.action ?? 'update_exercise');
@@ -46,6 +51,8 @@ export async function PATCH(
 
     return NextResponse.json({ error: 'Acción no soportada' }, { status: 400 });
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const message = error instanceof Error ? error.message : 'Error interno del servidor';
     return NextResponse.json({ error: message }, { status: resolveStatus(message) });
   }

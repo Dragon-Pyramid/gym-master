@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
 import {
-  assertMasterAdmin,
+  authorizationErrorResponse,
+  authorizeDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
+import {
   getDragonPyramidLicense,
   upsertDragonPyramidLicense,
 } from '@/services/server/dragonPyramidLicenseService';
@@ -16,8 +18,11 @@ function resolveStatus(message: string) {
 
 export async function GET(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
-    assertMasterAdmin(user);
+    await authorizeDashboardRequest(
+      req,
+      '/dashboard/masteradmin/license',
+      ['masteradmin'],
+    );
 
     const data = await getDragonPyramidLicense();
     return NextResponse.json(
@@ -28,6 +33,9 @@ export async function GET(req: Request) {
       },
     );
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
+
     const message = error instanceof Error ? error.message : 'Error interno del servidor';
     return NextResponse.json({ error: message }, { status: resolveStatus(message) });
   }
@@ -35,8 +43,11 @@ export async function GET(req: Request) {
 
 export async function PATCH(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
-    assertMasterAdmin(user);
+    const user = await authorizeDashboardRequest(
+      req,
+      '/dashboard/masteradmin/license',
+      ['masteradmin'],
+    );
 
     const body = await req.json();
     const data = await upsertDragonPyramidLicense({
@@ -51,6 +62,9 @@ export async function PATCH(req: Request) {
 
     return NextResponse.json({ data }, { status: 200 });
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
+
     const message = error instanceof Error ? error.message : 'Error interno del servidor';
     return NextResponse.json({ error: message }, { status: resolveStatus(message) });
   }

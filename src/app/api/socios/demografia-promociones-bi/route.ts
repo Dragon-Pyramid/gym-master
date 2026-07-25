@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
+import {
+  authorizationErrorResponse,
+  authorizeDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
 import { conexionBD } from '@/middlewares/conexionBd.middleware';
 import type {
   GeneroBi,
@@ -241,11 +244,11 @@ function buildPromotions(params: {
 
 export async function GET(request: NextRequest) {
   try {
-    const { user } = await authMiddleware(request);
-
-    if (user.rol !== 'admin' && user.rol !== 'usuario') {
-      return NextResponse.json({ error: 'No autorizado para consultar BI de socios' }, { status: 403 });
-    }
+    await authorizeDashboardRequest(
+      request,
+      '/dashboard/bi-socios-demografia-promociones',
+      ['admin', 'usuario'],
+    );
 
     const { searchParams } = new URL(request.url);
     const desde = normalizeDateParam(searchParams.get('desde'), firstDayOfCurrentYearISO(), 'Fecha desde');
@@ -502,10 +505,13 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ data: response }, { status: 200 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
+
     console.error('ERROR en BI demográfico de socios:', error.message || error);
     return NextResponse.json(
       { error: error.message || 'Error al obtener BI demográfico de socios' },
-      { status: error.message?.includes('No autorizado') ? 403 : 500 }
+      { status: 500 }
     );
   }
 }

@@ -1,34 +1,25 @@
-import { authMiddleware } from "@/middlewares/auth.middleware";
-import { getAllDietas } from "@/services/dietaService";
-import { NextResponse } from "next/server";
-
+import { NextResponse } from 'next/server';
+import { getAllDietas } from '@/services/dietaService';
+import {
+  authorizationErrorResponse,
+  authorizeDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
-    try {
-        const { user } = await authMiddleware(req);
-        if (!user) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 401 }
-            );
-        }
-
-        const dietas = await getAllDietas(user);
-        if (!dietas || dietas.length === 0) {
-            return NextResponse.json(
-                { message: "No se encontraron dietas" },
-                { status: 404 }
-            );
-        }
-
-        return NextResponse.json(dietas, { status: 200 });
-
-    } catch (error: any) {
-        return NextResponse.json(
-            { error: error.message },
-            { status: 500 }
-        );
-    }
-}   
+  try {
+    const user = await authorizeDashboardRequest(
+      req,
+      '/dashboard/gestor-dietas',
+      ['admin', 'usuario'],
+    );
+    const dietas = await getAllDietas(user);
+    return NextResponse.json(dietas ?? [], { status: 200 });
+  } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
+    const message = error instanceof Error ? error.message : 'Error al obtener las dietas';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}

@@ -1,4 +1,7 @@
-import { authMiddleware } from '@/middlewares/auth.middleware';
+import {
+  authorizationErrorResponse,
+  authorizePersonalOrDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
 import { historialRutinaSocio } from '@/services/rutinaService';
 import { deleteRutinaById } from '@/services/server/rutinaServerService';
 import { NextResponse } from 'next/server';
@@ -11,10 +14,12 @@ export async function GET(
   { params }: { params: Promise<{ idSocio: string }> }
 ) {
   try {
-    const { user } = await authMiddleware(req);
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const user = await authorizePersonalOrDashboardRequest(
+      req,
+      ['/dashboard/rutinas/asistente', '/dashboard/gestor-rutinas'],
+      ['admin', 'usuario'],
+      ['socio'],
+    );
 
     const { idSocio } = await params;
     if (!idSocio) {
@@ -35,6 +40,8 @@ export async function GET(
 
     return NextResponse.json(rutinas, { status: 200 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const message = error?.message ?? 'Error al obtener las rutinas del socio';
 
     if (
@@ -55,10 +62,12 @@ export async function DELETE(
   { params }: { params: Promise<{ idSocio: string }> }
 ) {
   try {
-    const { user } = await authMiddleware(req);
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const user = await authorizePersonalOrDashboardRequest(
+      req,
+      ['/dashboard/rutinas/asistente', '/dashboard/gestor-rutinas'],
+      ['admin', 'usuario'],
+      ['socio'],
+    );
 
     const { idSocio: idRutina } = await params;
     const deletedRutina = await deleteRutinaById(user, idRutina);
@@ -71,6 +80,8 @@ export async function DELETE(
       { status: 200 }
     );
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error('Error al eliminar rutina:', error);
 
     const message = error?.message ?? 'Error al eliminar rutina';

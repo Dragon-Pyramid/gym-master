@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
+import {
+  authorizationErrorResponse,
+  authorizePersonalOrDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
 import { dataGeneracionRutina } from '@/services/rutinaService';
 import { buildRutinasRagContext } from '@/services/server/ragRutinasCoachService';
 import type {
@@ -127,11 +130,13 @@ async function callRagCoach(payload: RagCoachPayload): Promise<RagCoachResponse>
 
 export async function POST(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizePersonalOrDashboardRequest(
+      req,
+      ['/dashboard/rutinas/asistente', '/dashboard/gestor-rutinas'],
+      ['admin', 'usuario'],
+      ['socio'],
+    );
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     const body = (await req.json().catch(() => ({}))) as RagRutinasAssistantRequest;
 
@@ -180,6 +185,8 @@ export async function POST(req: Request) {
         id_socio: body.id_socio,
       });
     } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
       internalRagError = error instanceof Error ? translateAiGeneratedTechnicalText(error.message, idioma) : translateAiGeneratedTechnicalText('Error desconocido al consultar RAG interno', idioma);
       console.warn('RAG interno de rutinas no disponible. Se usa fallback local:', internalRagError);
     }
@@ -192,6 +199,8 @@ export async function POST(req: Request) {
       try {
         ragRespuesta = await callRagCoach(ragPayload);
       } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
         ragError = error instanceof Error ? translateAiGeneratedTechnicalText(error.message, idioma) : translateAiGeneratedTechnicalText('Error desconocido del RAG Coach', idioma);
         console.warn('RAG Coach no disponible. Se usa fallback local:', ragError);
       }
@@ -254,6 +263,8 @@ export async function POST(req: Request) {
       { status: 200 }
     );
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const message = error instanceof Error ? error.message : translateAiGeneratedTechnicalText('Error inesperado', 'es');
     const status = message.toLowerCase().includes('token') ? 401 : 500;
 

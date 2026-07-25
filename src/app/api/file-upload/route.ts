@@ -1,5 +1,6 @@
 import { FileUploadDTO } from '@/interfaces/fileUpload.interface';
 import { authMiddleware } from '@/middlewares/auth.middleware';
+import { authorizationErrorResponse } from '@/lib/auth/serverAuthorization';
 import { uploadFile } from '@/services/fileUploadService';
 import { updateFotoUsuarioById } from '@/services/usuarioService';
 import { NextResponse } from 'next/server';
@@ -76,13 +77,11 @@ export async function POST(request: Request) {
       { status: 200 }
     );
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
+
     console.error('error file:', error);
     const message = error?.message || 'Error al subir la imagen.';
-    const status =
-      message.includes('Token no proporcionado') || message.includes('Token inválido')
-        ? 401
-        : 500;
-
-    return NextResponse.json({ error: message }, { status });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
