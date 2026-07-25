@@ -28,8 +28,8 @@ El problema se originaba porque `devices['iPhone 12 Pro']` incluye la propiedad 
 ## Validación
 
 ```bash
-export E2E_SOCIO_EMAIL="celsosoria2026@gmail.com"
-export E2E_SOCIO_PASSWORD="GymMaster2026!"
+export E2E_SOCIO_EMAIL="<qa-socio-email>"
+export E2E_SOCIO_PASSWORD="<qa-socio-password>"
 npm run test:e2e -- e2e/socio-mobile-final-qa.spec.ts
 ```
 

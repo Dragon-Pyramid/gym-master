@@ -1,4 +1,31 @@
+# Dependencies and build output
 .next
 node_modules
-.env.local
+out
+build
+coverage
+
+# Local environment and tool state
+.env
+.env.*
+.vercel
 .DS_Store
+playwright-report
+test-results
+e2e
+
+# Documentation, database tooling and local/private operational assets
+docs
+database
+supabase
+backups
+backup
+dumps
+dump
+exports
+logs
+
+# Generated PWA artifacts are created during the build
+public/sw.js
+public/workbox-*.js
+public/fallback-*.js

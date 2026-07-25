@@ -164,14 +164,15 @@ cd gym-master
 npm install
 ```
 
-3. Crear `.env.local` con las siguientes variables:
+3. Crear la configuración local a partir del contrato seguro:
+```bash
+cp .env.example .env.local
 ```
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-NEXTAUTH_URL=...
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
-STRIPE_SECRET_KEY=...
+
+Completar `.env.local` con credenciales propias del entorno. Nunca copiar secretos reales a `.env.example`, documentación, issues o commits. Antes de enviar cambios, ejecutar:
+
+```bash
+npm run test:repo-security
 ```
 
 4. Ejecutar la app:

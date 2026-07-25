@@ -154,8 +154,8 @@ Resultado esperado: `NOTICE: Validación OK...` y `ROLLBACK`.
 - Probar login con un socio demo:
 
 ```txt
-Email: qa.demo.socio.001@gymmaster.local
-Password: GymMaster88000001
+Email: <qa-demo-socio-email>
+Password: <qa-demo-socio-password>
 ```
 
 Recordar que `must_change_password = true`, por lo que puede exigir cambio de contraseña según el flujo actual.
