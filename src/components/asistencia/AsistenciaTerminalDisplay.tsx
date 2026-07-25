@@ -1,7 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type SyntheticEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -147,6 +154,25 @@ function getTerminalNeonClass(color?: string | null) {
   );
 }
 
+function normalizeTerminalPhotoUrl(value?: string | null) {
+  const normalized = value?.trim();
+  if (!normalized) return null;
+
+  if (normalized.startsWith('http://res.cloudinary.com/')) {
+    return `https://${normalized.slice('http://'.length)}`;
+  }
+
+  return normalized;
+}
+
+function replaceBrokenTerminalPhoto(event: SyntheticEvent<HTMLImageElement>) {
+  const image = event.currentTarget;
+  image.onerror = null;
+  image.src = '/gm_logo.svg';
+  image.classList.remove('object-cover');
+  image.classList.add('object-contain');
+}
+
 function decodeTokenExpiration(token?: string | null): Date | null {
   if (!token) return null;
 
@@ -218,7 +244,7 @@ function buildTerminalEventFromAsistencia(
     id: `asistencia-${row.id}`,
     variant,
     nombre,
-    foto: row.socio?.foto ?? null,
+    foto: normalizeTerminalPhotoUrl(row.socio?.foto),
     idSocio: row.socio?.id_socio ?? row.socio_id,
     title:
       row.tipo_movimiento === "salida"
@@ -257,7 +283,7 @@ function buildTerminalEventFromBroadcast(
       `${variant}-${payload.socio?.id_socio ?? "socio"}-${Date.now()}`,
     variant,
     nombre,
-    foto: payload.socio?.foto ?? null,
+    foto: normalizeTerminalPhotoUrl(payload.socio?.foto),
     idSocio: payload.socio?.id_socio,
     title:
       payload.tipo_movimiento === "salida"
@@ -733,7 +759,7 @@ export default function AsistenciaTerminalDisplay() {
         status: getVariantFromAccess(row.alert_type, row.access_status),
         hora: (row.hora_egreso || row.hora_ingreso)?.slice(0, 5) || "--:--",
         tipoMovimiento: row.tipo_movimiento,
-        foto: row.socio?.foto ?? null,
+        foto: normalizeTerminalPhotoUrl(row.socio?.foto),
       })),
     [recent],
   );
@@ -1065,6 +1091,7 @@ export default function AsistenciaTerminalDisplay() {
                             src={item.foto}
                             alt={item.nombre}
                             className="h-full w-full rounded-full object-cover"
+                            onError={replaceBrokenTerminalPhoto}
                           />
                         ) : (
                           <Image

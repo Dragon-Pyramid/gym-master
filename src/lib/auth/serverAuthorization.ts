@@ -7,7 +7,7 @@ import {
   AuthMiddlewareError,
   authMiddleware,
 } from '@/middlewares/auth.middleware';
-import { NextResponse } from 'next/server';
+import { noStoreJson } from '@/lib/security/httpRuntimeSecurity';
 
 export class AuthorizationError extends Error {
   code: string;
@@ -168,9 +168,23 @@ export function requireOwnSocioOrRoles(
 
 export function authorizationErrorResponse(error: unknown) {
   if (error instanceof AuthMiddlewareError || error instanceof AuthorizationError) {
-    return NextResponse.json(
-      { error: error.message, error_code: error.code },
-      { status: error.status },
+    const isServerFailure = error.status >= 500;
+
+    if (isServerFailure) {
+      console.error('Authorization runtime failure:', {
+        code: error.code,
+        status: error.status,
+      });
+    }
+
+    return noStoreJson(
+      {
+        error: isServerFailure
+          ? 'No se pudo validar la autorización de la solicitud'
+          : error.message,
+        error_code: error.code,
+      },
+      error.status,
     );
   }
 

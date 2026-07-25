@@ -44,10 +44,12 @@ export const signIn = async (login: SignInDto) => {
     .from('usuario')
     .select('id,nombre,email,password_hash,rol,activo,foto,permisos_menu,must_change_password')
     .eq('email', email)
-    .single();
+    .maybeSingle();
 
   if (error) {
-    console.log('Error al obtener el usuario:', error.message);
+    console.error('Error al consultar el usuario durante el inicio de sesión:', {
+      code: error.code || 'LOGIN_USER_QUERY_ERROR',
+    });
     throw new LoginBusinessError('Error al obtener el usuario', {
       code: 'LOGIN_USER_QUERY_ERROR',
       status: 500,
@@ -55,7 +57,6 @@ export const signIn = async (login: SignInDto) => {
   }
 
   if (!data) {
-    console.log('Email no encontrado');
     throw new LoginBusinessError(
       'Usuario no encontrado o contraseña incorrecta',
       {
@@ -68,7 +69,6 @@ export const signIn = async (login: SignInDto) => {
   const validatePassword = bcrypt.compareSync(password, data.password_hash);
 
   if (!validatePassword) {
-    console.log('Contraseña incorrecta');
     throw new LoginBusinessError(
       'Usuario no encontrado o contraseña incorrecta',
       {
@@ -79,7 +79,6 @@ export const signIn = async (login: SignInDto) => {
   }
 
   if (data.rol !== rol) {
-    console.log('Rol no autorizado');
     throw new LoginBusinessError(
       'Usuario no encontrado o contraseña incorrecta',
       {

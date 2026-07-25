@@ -86,18 +86,35 @@ function getTtlMinutes(): number {
   return Number.isFinite(raw) && raw >= 10 && raw <= 1440 ? Math.round(raw) : 60;
 }
 
-function buildAppBaseUrl(requestUrl: string, headers: Headers): string {
-  const envUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
-  if (envUrl) return envUrl.replace(/\/+$/, '');
+function normalizeAppBaseUrl(value: string): string {
+  let parsed: URL;
 
-  const origin = headers.get('origin');
-  if (origin) return origin.replace(/\/+$/, '');
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new PasswordRecoveryError('La URL pública de la aplicación no es válida', 500);
+  }
 
-  const host = headers.get('x-forwarded-host') || headers.get('host');
-  const proto = headers.get('x-forwarded-proto') || 'http';
-  if (host) return `${proto}://${host}`.replace(/\/+$/, '');
+  if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) {
+    throw new PasswordRecoveryError('La URL pública de la aplicación no es válida', 500);
+  }
 
-  return new URL(requestUrl).origin.replace(/\/+$/, '');
+  const path = parsed.pathname === '/' ? '' : parsed.pathname.replace(/\/+$/, '');
+  return `${parsed.origin}${path}`;
+}
+
+function buildAppBaseUrl(requestUrl: string): string {
+  const configuredUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
+  if (configuredUrl) return normalizeAppBaseUrl(configuredUrl);
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new PasswordRecoveryError(
+      'NEXT_PUBLIC_APP_URL o APP_URL debe estar configurada para recuperación de contraseña',
+      500,
+    );
+  }
+
+  return normalizeAppBaseUrl(new URL(requestUrl).origin);
 }
 
 function maskEmail(email: string): string {
@@ -245,7 +262,7 @@ export async function requestPasswordReset({
     throw new PasswordRecoveryError(insertError.message, 500);
   }
 
-  const appBaseUrl = buildAppBaseUrl(requestUrl, headers);
+  const appBaseUrl = buildAppBaseUrl(requestUrl);
   const resetUrl = `${appBaseUrl}/auth/reset-password?token=${encodeURIComponent(token)}`;
 
   try {

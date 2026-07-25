@@ -1,11 +1,19 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import Stripe from 'stripe';
+
 import { stripe } from '@/lib/stripe';
+import {
+  noStoreJson,
+  readTextBody,
+  runtimeErrorResponse,
+} from '@/lib/security/httpRuntimeSecurity';
 import { registerStripeCheckoutPago } from '@/services/server/stripePagoRegistrationService';
 
 export const dynamic = 'force-dynamic';
 
 // AUTH POLICY: PUBLIC_SIGNED_WEBHOOK
+
+const STRIPE_WEBHOOK_BODY_MAX_BYTES = 1024 * 1024;
 
 if (!process.env.STRIPE_WEBHOOK_SECRET) {
   throw new Error('STRIPE_WEBHOOK_SECRET no está definido');
@@ -14,13 +22,23 @@ if (!process.env.STRIPE_WEBHOOK_SECRET) {
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
 export async function POST(request: NextRequest) {
-  const body = await request.text();
+  let body: string;
+
+  try {
+    body = await readTextBody(request, STRIPE_WEBHOOK_BODY_MAX_BYTES);
+  } catch (error) {
+    return runtimeErrorResponse(
+      error,
+      'No se pudo procesar el webhook de Stripe',
+    );
+  }
+
   const sig = request.headers.get('stripe-signature');
 
-  if (!sig) {
-    return NextResponse.json(
-      { error: 'No se envió la firma de Stripe' },
-      { status: 400 }
+  if (!sig || sig.length > 2048) {
+    return noStoreJson(
+      { error: 'No se recibió una firma válida de Stripe' },
+      400,
     );
   }
 
@@ -28,16 +46,20 @@ export async function POST(request: NextRequest) {
 
   try {
     event = stripe.webhooks.constructEvent(body, sig, endpointSecret);
-  } catch (error: any) {
-    console.error('Firma de Stripe inválida:', error);
-    return NextResponse.json({ error: error.message }, { status: 400 });
+  } catch (error) {
+    console.error('Firma de Stripe inválida:', {
+      name: error instanceof Error ? error.name : 'UnknownError',
+    });
+    return noStoreJson(
+      { error: 'Firma de Stripe inválida' },
+      400,
+    );
   }
 
   if (event.type !== 'checkout.session.completed') {
-    console.log(`Evento no manejado: ${event.type}`);
-    return NextResponse.json(
+    return noStoreJson(
       { message: 'Evento recibido sin acción requerida' },
-      { status: 200 }
+      200,
     );
   }
 
@@ -47,7 +69,7 @@ export async function POST(request: NextRequest) {
       origen: 'stripe_webhook',
     });
 
-    return NextResponse.json(
+    return noStoreJson(
       {
         message:
           result.status === 'already_registered'
@@ -56,13 +78,15 @@ export async function POST(request: NextRequest) {
         status: result.status,
         data: result.pago,
       },
-      { status: 200 }
+      200,
     );
-  } catch (error: any) {
-    console.error('Error al registrar pago desde webhook Stripe:', error);
-    return NextResponse.json(
-      { error: error.message || 'Error al registrar pago desde Stripe' },
-      { status: 500 }
+  } catch (error) {
+    console.error('Error al registrar pago desde webhook Stripe:', {
+      name: error instanceof Error ? error.name : 'UnknownError',
+    });
+    return noStoreJson(
+      { error: 'No se pudo registrar el pago desde Stripe' },
+      500,
     );
   }
 }

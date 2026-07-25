@@ -4,6 +4,7 @@ import {
   hasSafeUploadSignature,
   isSafeUploadMimeType,
 } from '@/lib/security/uploadValidation';
+import { requestBodyTooLargeResponse } from '@/lib/security/httpRuntimeSecurity';
 
 import {
   authorizeDashboardRequest,
@@ -13,10 +14,14 @@ import {
 export const dynamic = 'force-dynamic';
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_REQUEST_BODY_BYTES = MAX_FILE_SIZE_BYTES + 512 * 1024;
 
 export async function POST(request: Request) {
   try {
     const user = await authorizeDashboardRequest(request, '/dashboard/otros-gastos', ['admin', 'usuario']);
+    const oversizedRequest = requestBodyTooLargeResponse(request, MAX_REQUEST_BODY_BYTES);
+    if (oversizedRequest) return oversizedRequest;
+
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
 
@@ -75,12 +80,12 @@ export async function POST(request: Request) {
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    const message = error?.message || 'Error al subir comprobante.';
-    const status =
-      message.includes('Token no proporcionado') || message.includes('Token inválido')
-        ? 401
-        : 500;
-
-    return NextResponse.json({ error: message }, { status });
+    console.error('Error al subir comprobante de gasto:', {
+      name: error instanceof Error ? error.name : 'UnknownError',
+    });
+    return NextResponse.json(
+      { error: 'No se pudo subir el comprobante.' },
+      { status: 500 }
+    );
   }
 }

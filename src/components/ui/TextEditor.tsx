@@ -21,6 +21,50 @@ interface TextEditorProps {
   onChange: (value: string) => void;
 }
 
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => {
+    const entities: Record<string, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    };
+    return entities[character] ?? character;
+  });
+}
+
+function decodeEscapedMarkdownUrl(value: string) {
+  return value
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .trim();
+}
+
+function sanitizeMarkdownUrl(value: string, kind: 'link' | 'image') {
+  const decoded = decodeEscapedMarkdownUrl(value);
+
+  if (kind === 'link' && (decoded.startsWith('/') || decoded.startsWith('#'))) {
+    return decoded;
+  }
+
+  try {
+    const parsed = new URL(decoded);
+    const allowedProtocols = kind === 'image'
+      ? new Set(['http:', 'https:'])
+      : new Set(['http:', 'https:', 'mailto:']);
+
+    if (!allowedProtocols.has(parsed.protocol) || parsed.username || parsed.password) {
+      return null;
+    }
+
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
 const TextEditor = forwardRef<HTMLDivElement, TextEditorProps>(
   //! Esto se añade debido a que React 18 y TypeScript requieren que los componentes de función sean forwardRef para poder usarlos con refs.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -61,7 +105,7 @@ const TextEditor = forwardRef<HTMLDivElement, TextEditorProps>(
     );
 
     const formatMarkdown = (text: string) => {
-      return text
+      return escapeHtml(text)
         .replace(
           /^### (.*$)/gm,
           '<h3 class="text-lg font-semibold mb-2">$1</h3>'
@@ -79,26 +123,36 @@ const TextEditor = forwardRef<HTMLDivElement, TextEditorProps>(
         )
         .replace(
           /!\[([^\]]*)\]\(([^)]+)\)/g,
-          '<img src="$2" alt="$1" class="max-w-full h-auto rounded-lg my-2" />'
+          (_match: string, alt: string, rawUrl: string) => {
+            const safeUrl = sanitizeMarkdownUrl(rawUrl, 'image');
+            if (!safeUrl) return `<span class="text-red-600">${alt}</span>`;
+
+            return `<img src="${escapeHtml(safeUrl)}" alt="${alt}" class="max-w-full h-auto rounded-lg my-2" loading="lazy" referrerpolicy="no-referrer" />`;
+          }
         )
         .replace(
           /\[([^\]]+)\]\(([^)]+)\)/g,
-          '<a href="$2" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 underline">$1</a>'
+          (_match: string, label: string, rawUrl: string) => {
+            const safeUrl = sanitizeMarkdownUrl(rawUrl, 'link');
+            if (!safeUrl) return label;
+
+            return `<a href="${escapeHtml(safeUrl)}" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 underline" target="_blank" rel="noopener noreferrer nofollow">${label}</a>`;
+          }
         )
         .replace(
-          /^> (.*)$/gm,
+          /^&gt; (.*)$/gm,
           '<blockquote class="border-l-4 border-gray-300 dark:border-gray-700 pl-4 italic text-gray-700 dark:text-gray-300 my-2">$1</blockquote>'
         )
         .replace(/^\* (.*)$/gm, '<li class="ml-4">$1</li>')
         .replace(/^(\d+)\. (.*)$/gm, '<li class="ml-4">$2</li>')
         .replace(/(<li.*>.*<\/li>)/g, (match: string) => {
-          if (match.includes("ml-4")) {
+          if (match.includes('ml-4')) {
             return match.replace(/<li class="ml-4">/g, '<li class="ml-4">• ');
           }
           return match;
         })
         .replace(/\n\n/g, '</p><p class="mb-4">')
-        .replace(/\n/g, "<br />");
+        .replace(/\n/g, '<br />');
     };
 
     const getPreviewHTML = () => {

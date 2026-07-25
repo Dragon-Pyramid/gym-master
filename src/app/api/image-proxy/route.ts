@@ -2,7 +2,10 @@ import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
 import { NextResponse } from 'next/server';
 
+import { noStoreJson } from '@/lib/security/httpRuntimeSecurity';
+
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 // AUTH POLICY: PUBLIC_CONTROLLED
 // The proxy is intentionally public because browser-generated PDFs load images
@@ -10,6 +13,8 @@ export const dynamic = 'force-dynamic';
 // to loopback, private, link-local and reserved network ranges.
 const MAX_REDIRECTS = 3;
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_IMAGE_URL_LENGTH = 4096;
+const IMAGE_FETCH_TIMEOUT_MS = 8000;
 
 function isBlockedIpv4(address: string) {
   const parts = address.split('.').map(Number);
@@ -55,6 +60,10 @@ function isBlockedIp(address: string) {
 }
 
 async function assertSafeImageUrl(value: string) {
+  if (!value || value.length > MAX_IMAGE_URL_LENGTH) {
+    throw new Error('URL de imagen inválida');
+  }
+
   let parsed: URL;
 
   try {
@@ -94,7 +103,10 @@ async function assertSafeImageUrl(value: string) {
   }
 
   const addresses = await lookup(hostname, { all: true, verbatim: true });
-  if (addresses.length === 0 || addresses.some(({ address }: { address: string }) => isBlockedIp(address))) {
+  if (
+    addresses.length === 0 ||
+    addresses.some(({ address }: { address: string }) => isBlockedIp(address))
+  ) {
     throw new Error('El host de imagen resuelve a una red no permitida');
   }
 
@@ -108,8 +120,9 @@ async function fetchSafeImage(initialUrl: string) {
     const response = await fetch(currentUrl, {
       cache: 'force-cache',
       redirect: 'manual',
+      signal: AbortSignal.timeout(IMAGE_FETCH_TIMEOUT_MS),
       headers: {
-        Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+        Accept: 'image/avif,image/webp,image/apng,image/png,image/jpeg,image/gif,image/*;q=0.8',
         'User-Agent': 'GymMaster-PDF-Image-Proxy/1.0',
       },
     });
@@ -132,13 +145,54 @@ async function fetchSafeImage(initialUrl: string) {
   throw new Error('Demasiadas redirecciones de imagen');
 }
 
-export async function GET(request: Request) {
-  const imageUrl = new URL(request.url).searchParams.get('url');
+async function readImageBodyWithinLimit(response: Response) {
+  if (!response.body) {
+    const body = new Uint8Array(await response.arrayBuffer());
+    if (body.byteLength > MAX_IMAGE_BYTES) {
+      throw new Error('La imagen supera el tamaño permitido');
+    }
+    return body;
+  }
 
-  if (!imageUrl) {
-    return NextResponse.json(
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+
+    totalBytes += value.byteLength;
+    if (totalBytes > MAX_IMAGE_BYTES) {
+      try {
+        await reader.cancel('Image body exceeds configured limit');
+      } catch {
+        // La respuesta ya excedió el límite; ignorar errores del cierre del stream.
+      }
+      throw new Error('La imagen supera el tamaño permitido');
+    }
+
+    chunks.push(value);
+  }
+
+  const body = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return body;
+}
+
+export async function GET(request: Request) {
+  const imageUrl = new URL(request.url).searchParams.get('url')?.trim() ?? '';
+
+  if (!imageUrl || imageUrl.length > MAX_IMAGE_URL_LENGTH) {
+    return noStoreJson(
       { message: 'URL de imagen inválida' },
-      { status: 400 },
+      400,
     );
   }
 
@@ -146,56 +200,61 @@ export async function GET(request: Request) {
     const response = await fetchSafeImage(imageUrl);
 
     if (!response.ok) {
-      return NextResponse.json(
+      return noStoreJson(
         { message: 'No se pudo obtener la imagen' },
-        { status: response.status },
+        502,
       );
     }
 
-    const contentType = response.headers.get('content-type') || '';
-    if (!contentType.toLowerCase().startsWith('image/')) {
-      return NextResponse.json(
-        { message: 'El recurso no es una imagen' },
-        { status: 415 },
+    const contentType = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase() ?? '';
+    if (!contentType.startsWith('image/') || contentType === 'image/svg+xml') {
+      return noStoreJson(
+        { message: 'El recurso no es una imagen permitida' },
+        415,
       );
     }
 
     const declaredLength = Number(response.headers.get('content-length') || 0);
     if (declaredLength > MAX_IMAGE_BYTES) {
-      return NextResponse.json(
+      return noStoreJson(
         { message: 'La imagen supera el tamaño permitido' },
-        { status: 413 },
+        413,
       );
     }
 
-    const imageBuffer = await response.arrayBuffer();
-    if (imageBuffer.byteLength > MAX_IMAGE_BYTES) {
-      return NextResponse.json(
-        { message: 'La imagen supera el tamaño permitido' },
-        { status: 413 },
-      );
-    }
+    const imageBuffer = await readImageBodyWithinLimit(response);
 
     return new NextResponse(imageBuffer, {
       status: 200,
       headers: {
         'Content-Type': contentType,
-        'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
-        'Access-Control-Allow-Origin': '*',
+        'Cache-Control': 'private, max-age=3600, no-transform',
         'X-Content-Type-Options': 'nosniff',
       },
     });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'Error al obtener la imagen';
-    const isPolicyError = /no permitid|inválid|credenciales|redirecci/i.test(
-      message,
-    );
+    const message = error instanceof Error ? error.message : '';
+    const isPolicyError = /no permitid|inválid|credenciales|redirecci|red de imagen/i.test(message);
+    const isTooLarge = /tamaño permitido/i.test(message);
+    const isTimeout = error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name);
 
-    console.error('Error en image-proxy:', message);
-    return NextResponse.json(
-      { message: isPolicyError ? message : 'Error al obtener la imagen' },
-      { status: isPolicyError ? 400 : 502 },
+    if (!isPolicyError && !isTooLarge && !isTimeout) {
+      console.error('Error en image-proxy:', {
+        name: error instanceof Error ? error.name : 'UnknownError',
+      });
+    }
+
+    return noStoreJson(
+      {
+        message: isPolicyError
+          ? message
+          : isTooLarge
+            ? 'La imagen supera el tamaño permitido'
+            : isTimeout
+              ? 'La descarga de la imagen excedió el tiempo permitido'
+              : 'Error al obtener la imagen',
+      },
+      isPolicyError ? 400 : isTooLarge ? 413 : isTimeout ? 504 : 502,
     );
   }
 }

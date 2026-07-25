@@ -1,59 +1,62 @@
-import { NextResponse } from "next/server";
-import { getSupabaseServerClient } from "@/services/supabaseServerClient";
+import { noStoreJson } from '@/lib/security/httpRuntimeSecurity';
+import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 import {
   buildPagoVerificationCode,
   isPagoVerificationCodeValid,
   normalizePagoVerificationCode,
-} from "@/utils/pagoReciboCodigo";
+} from '@/utils/pagoReciboCodigo';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 // AUTH POLICY: PUBLIC_VERIFICATION_CODE
 
+const MAX_PAYMENT_ID_LENGTH = 128;
+const MAX_VERIFICATION_CODE_LENGTH = 128;
+
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { id } = await params;
+    const { id: rawId } = await params;
+    const id = String(rawId ?? '').trim();
     const url = new URL(req.url);
-    const codigo = normalizePagoVerificationCode(url.searchParams.get("codigo"));
+    const codigo = normalizePagoVerificationCode(url.searchParams.get('codigo'));
 
-    if (!id) {
-      return NextResponse.json(
+    if (!id || id.length > MAX_PAYMENT_ID_LENGTH) {
+      return noStoreJson(
         {
           valid: false,
-          error: "ID de pago requerido",
+          error: 'ID de pago requerido',
         },
-        { status: 400 }
+        400,
       );
     }
 
-    if (!codigo) {
-      return NextResponse.json(
+    if (!codigo || codigo.length > MAX_VERIFICATION_CODE_LENGTH) {
+      return noStoreJson(
         {
           valid: false,
-          error: "Código de verificación requerido",
+          error: 'Código de verificación requerido',
         },
-        { status: 400 }
+        400,
       );
     }
 
     if (!isPagoVerificationCodeValid(id, codigo)) {
-      return NextResponse.json(
+      return noStoreJson(
         {
           valid: false,
-          codigo,
-          error: "Código de verificación inválido para este pago",
+          error: 'Código de verificación inválido para este pago',
         },
-        { status: 400 }
+        400,
       );
     }
 
     const supabase = getSupabaseServerClient();
 
     const { data, error } = await supabase
-      .from("pago")
+      .from('pago')
       .select(
         `
         id,
@@ -72,29 +75,37 @@ export async function GET(
         activo,
         socio:socio_id(id_socio,nombre_completo),
         cuota:cuota_id(id,descripcion,monto,periodo)
-      `
+      `,
       )
-      .eq("id", id)
+      .eq('id', id)
       .maybeSingle();
 
     if (error) {
-      throw new Error(error.message);
+      console.error('Error al consultar comprobante de pago:', {
+        code: error.code ?? 'PAYMENT_VERIFICATION_QUERY_ERROR',
+      });
+      return noStoreJson(
+        {
+          valid: false,
+          error: 'No se pudo verificar el comprobante',
+        },
+        500,
+      );
     }
 
     if (!data) {
-      return NextResponse.json(
+      return noStoreJson(
         {
           valid: false,
-          codigo,
-          error: "No se encontró el pago asociado al comprobante",
+          error: 'No se encontró el pago asociado al comprobante',
         },
-        { status: 404 }
+        404,
       );
     }
 
     const expectedCode = buildPagoVerificationCode(id);
 
-    return NextResponse.json({
+    return noStoreJson({
       valid: true,
       codigo: expectedCode,
       verificado_en: new Date().toISOString(),
@@ -122,19 +133,18 @@ export async function GET(
         socio: data.socio,
         cuota: data.cuota,
       },
-    });
+    }, 200);
   } catch (error) {
-    console.error("Error al verificar recibo de pago:", error);
+    console.error('Error al verificar recibo de pago:', {
+      name: error instanceof Error ? error.name : 'UnknownError',
+    });
 
-    return NextResponse.json(
+    return noStoreJson(
       {
         valid: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Error al verificar recibo de pago",
+        error: 'No se pudo verificar el comprobante',
       },
-      { status: 500 }
+      500,
     );
   }
 }

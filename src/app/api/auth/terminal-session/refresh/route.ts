@@ -1,7 +1,8 @@
 import * as jwt from 'jsonwebtoken';
-import { NextResponse } from 'next/server';
+
 import type { JwtUser } from '@/interfaces/jwtUser.interface';
 import { canAccessDashboardPath } from '@/lib/permissions/menuPermissions';
+import { noStoreJson } from '@/lib/security/httpRuntimeSecurity';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +14,14 @@ type TerminalSessionPayload = JwtUser & {
 };
 
 function getBearerToken(req: Request) {
-  return req.headers.get('authorization')?.split(' ')[1]?.trim() ?? '';
+  const authorization = req.headers.get('authorization')?.trim() ?? '';
+  const [scheme, token, ...rest] = authorization.split(/\s+/);
+
+  if (scheme?.toLowerCase() !== 'bearer' || !token || rest.length > 0) {
+    return '';
+  }
+
+  return token;
 }
 
 function getTerminalJwtExpiresIn() {
@@ -25,62 +33,63 @@ export async function POST(req: Request) {
     const token = getBearerToken(req);
 
     if (!token) {
-      return NextResponse.json(
+      return noStoreJson(
         {
           error: 'Token no proporcionado',
           error_code: 'TERMINAL_SESSION_TOKEN_MISSING',
         },
-        { status: 401 }
+        401,
       );
     }
 
     if (!process.env.JWT_SECRET) {
-      return NextResponse.json(
+      console.error('JWT_SECRET no está configurado para renovar Terminal.');
+      return noStoreJson(
         {
-          error: 'JWT_SECRET no está definido en las variables de entorno',
-          error_code: 'JWT_SECRET_MISSING',
+          error: 'No se pudo renovar la sesión de Terminal.',
+          error_code: 'TERMINAL_SESSION_CONFIGURATION_ERROR',
         },
-        { status: 500 }
+        500,
       );
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     if (!decoded || typeof decoded === 'string') {
-      return NextResponse.json(
+      return noStoreJson(
         {
           error: 'Token inválido',
           error_code: 'TERMINAL_SESSION_TOKEN_INVALID',
         },
-        { status: 401 }
+        401,
       );
     }
 
     const user = decoded as TerminalSessionPayload;
 
     if (user.must_change_password) {
-      return NextResponse.json(
+      return noStoreJson(
         {
           error: 'El usuario debe cambiar su contraseña antes de abrir la Terminal.',
           error_code: 'TERMINAL_SESSION_PASSWORD_CHANGE_REQUIRED',
         },
-        { status: 403 }
+        403,
       );
     }
 
     const canAccessTerminal = canAccessDashboardPath(
       user.rol,
       user.permisos_menu ?? null,
-      '/dashboard/asistencias/terminal'
+      '/dashboard/asistencias/terminal',
     );
 
     if (!canAccessTerminal) {
-      return NextResponse.json(
+      return noStoreJson(
         {
           error: 'El usuario no tiene permisos para renovar la sesión de Terminal.',
           error_code: 'TERMINAL_SESSION_FORBIDDEN',
         },
-        { status: 403 }
+        403,
       );
     }
 
@@ -104,20 +113,19 @@ export async function POST(req: Request) {
 
     const refreshedDecoded = jwt.decode(refreshedToken) as TerminalSessionPayload | null;
 
-    return NextResponse.json(
+    return noStoreJson(
       {
         token: refreshedToken,
         expires_at: refreshedDecoded?.exp
           ? new Date(refreshedDecoded.exp * 1000).toISOString()
           : null,
       },
-      { status: 200 }
+      200,
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Token inválido';
-    const isExpired = message.toLowerCase().includes('expired');
+    const isExpired = error instanceof jwt.TokenExpiredError;
 
-    return NextResponse.json(
+    return noStoreJson(
       {
         error: isExpired
           ? 'La sesión de Terminal expiró. Iniciá sesión nuevamente para reactivar la pantalla.'
@@ -126,7 +134,7 @@ export async function POST(req: Request) {
           ? 'TERMINAL_SESSION_EXPIRED'
           : 'TERMINAL_SESSION_REFRESH_ERROR',
       },
-      { status: 401 }
+      401,
     );
   }
 }
