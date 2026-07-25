@@ -13,6 +13,7 @@ import {
   Brain,
   CheckCircle2,
   Dumbbell,
+  FileDown,
   History,
   Info,
   Loader2,
@@ -46,6 +47,8 @@ import { fetchSociosApi } from '@/services/browser/socioApiClient';
 import { useAuthStore } from '@/stores/authStore';
 import { useI18n } from '@/i18n/I18nProvider';
 import { translateCoreLevel, translateCoreObjective } from '@/utils/coreSeedI18n';
+import { descargarRagCoachPdf } from '@/utils/ragCoachPdf';
+import { toast } from 'sonner';
 
 type ChatMessage = {
   id: string;
@@ -65,6 +68,13 @@ type ChatMessage = {
   memoryHighlights?: string[];
   memoryTrace?: string[];
   contextConfidence?: 'alta' | 'media' | 'baja';
+  createdAt: string;
+  requestMessage?: string;
+  socioSnapshot?: {
+    name: string;
+    dni?: string | null;
+    email?: string | null;
+  };
 };
 
 const coachCapabilities = [
@@ -356,6 +366,7 @@ export default function CoachIaPage() {
   const [sociosError, setSociosError] = useState<string | null>(null);
   const [selectedSocioId, setSelectedSocioId] = useState('');
   const [socioSearch, setSocioSearch] = useState('');
+  const [exportingPdfMessageId, setExportingPdfMessageId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const totalAssistantMessages = messages.filter((message) => message.role === 'assistant').length;
   const totalActionMessages = messages.reduce((total, message) => total + (message.actions?.filter((action) => action.ok).length ?? 0), 0);
@@ -449,6 +460,7 @@ export default function CoachIaPage() {
         ),
         suggestedReplies: localizedQuickPrompts,
         nextBestStep: c('Contame tu objetivo, disponibilidad semanal, nivel y restricciones.', 'Tell me your goal, weekly availability, level, and restrictions.'),
+        createdAt: new Date().toISOString(),
       },
     ]);
   }, [c, displayName, isAuthenticated, isInitialized, localizedQuickPrompts, messages.length]);
@@ -481,6 +493,7 @@ export default function CoachIaPage() {
       id: createId(),
       role: 'user',
       content: message,
+      createdAt: new Date().toISOString(),
     };
 
     setMessages((current) => [...current, userMessage]);
@@ -489,6 +502,23 @@ export default function CoachIaPage() {
       const effectiveSocioId = isAdminSession
         ? selectedSocioId || undefined
         : user?.id_socio || undefined;
+      const socioSnapshot = selectedSocio
+        ? {
+            name: selectedSocio.nombre_completo?.trim() || selectedSocio.email?.trim() || c('Socio', 'Member'),
+            dni: selectedSocio.dni,
+            email: selectedSocio.email,
+          }
+        : isAdminSession
+          ? {
+              name: c('Sin socio seleccionado', 'No member selected'),
+              dni: null,
+              email: null,
+            }
+          : {
+              name: displayName,
+              dni: typeof (user as { dni?: unknown } | null)?.dni === 'string' ? String((user as { dni?: string }).dni) : null,
+              email: user?.email ?? null,
+            };
 
       const res = await enviarMensajeCoachIa({
         message,
@@ -519,6 +549,9 @@ export default function CoachIaPage() {
         memoryHighlights: res.data.memoryHighlights,
         memoryTrace: res.data.memoryTrace,
         contextConfidence: res.data.contextConfidence,
+        createdAt: new Date().toISOString(),
+        requestMessage: message,
+        socioSnapshot,
       };
 
       setMessages((current) => [...current, assistantMessage]);
@@ -532,10 +565,35 @@ export default function CoachIaPage() {
             ? error.message
             : c('Ocurrió un error al consultar el Coach IA.', 'An error occurred while consulting the AI Coach.'),
           nextBestStep: c('Reintentá en unos segundos o revisá los módulos de rutinas, dietas y evolución desde el menú.', 'Try again in a few seconds or review the routines, diets, and physical evolution modules from the menu.'),
+          createdAt: new Date().toISOString(),
         },
       ]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDownloadPdf = async (message: ChatMessage) => {
+    if (!message.requestMessage || exportingPdfMessageId) return;
+
+    setExportingPdfMessageId(message.id);
+
+    try {
+      await descargarRagCoachPdf({
+        message,
+        subject: message.socioSnapshot ?? {
+          name: message.contextSnapshot?.socioName?.trim() || displayName,
+          email: user?.email ?? null,
+        },
+        generatedBy: displayName,
+        locale: locale === 'en' ? 'en' : 'es',
+      });
+      toast.success(c('Informe del RAG Coach descargado correctamente.', 'RAG Coach report downloaded successfully.'));
+    } catch (error) {
+      console.error('Error al descargar informe RAG Coach:', error);
+      toast.error(c('No se pudo descargar el informe del RAG Coach.', 'The RAG Coach report could not be downloaded.'));
+    } finally {
+      setExportingPdfMessageId(null);
     }
   };
 
@@ -556,6 +614,7 @@ export default function CoachIaPage() {
         ),
         suggestedReplies: localizedQuickPrompts,
         nextBestStep: c('Elegí una sugerencia o escribí tu consulta completa.', 'Choose a suggestion or write your full question.'),
+        createdAt: new Date().toISOString(),
       },
     ]);
   };
@@ -838,6 +897,29 @@ export default function CoachIaPage() {
                                       {suggestion}
                                     </button>
                                   ))}
+                                </div>
+                              )}
+
+
+                              {message.role === 'assistant' && message.requestMessage && (
+                                <div className="mt-4 border-t border-slate-200 pt-3 dark:border-slate-700">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-9 rounded-xl bg-white text-xs dark:bg-slate-950/60"
+                                    onClick={() => handleDownloadPdf(message)}
+                                    disabled={Boolean(exportingPdfMessageId)}
+                                  >
+                                    {exportingPdfMessageId === message.id ? (
+                                      <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                                    ) : (
+                                      <FileDown className="mr-1.5 h-3.5 w-3.5" />
+                                    )}
+                                    {exportingPdfMessageId === message.id
+                                      ? c('Generando PDF...', 'Generating PDF...')
+                                      : c('Descargar informe PDF', 'Download PDF report')}
+                                  </Button>
                                 </div>
                               )}
                             </div>
