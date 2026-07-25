@@ -1,28 +1,29 @@
-import { authMiddleware } from "@/middlewares/auth.middleware";
-import { rolAdminMiddleware } from "@/middlewares/rolAdmin.middleware";
 import { NextResponse } from "next/server";
-
+import {
+  authorizationErrorResponse,
+  authorizeDashboardRequest,
+} from "@/lib/auth/serverAuthorization";
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
-    try {
-        const { user } = await authMiddleware(req);
+  try {
+    await authorizeDashboardRequest(
+      req,
+      '/dashboard/finanzas',
+      ['admin', 'usuario'],
+    );
 
-        if (!user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+    // TODO: implementar lógica de proyección de ingresos.
+    return NextResponse.json({ error: 'Endpoint no implementado' }, { status: 501 });
+  } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
 
-        const rolAdmin = rolAdminMiddleware(user);
-        if (!rolAdmin) {
-            return NextResponse.json({ error: "Unauthorized: User no tiene rol de admin" }, { status: 403 });
-        }
-
-        //TODO IMPLEMENTAR LÓGICA DE PROYECCIÓN DE INGRESOS
-
-        return NextResponse.json({ error: "Endpoint no implementado" }, { status: 501 });
-    } catch (error: any) {
-        console.error("Error en la proyección de ingresos:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+    console.error('Error en la proyección de ingresos:', error);
+    return NextResponse.json(
+      { error: error.message || 'Error en la proyección de ingresos' },
+      { status: 500 },
+    );
+  }
 }

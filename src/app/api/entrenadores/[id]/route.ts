@@ -1,10 +1,14 @@
-import { authMiddleware } from '@/middlewares/auth.middleware';
 import {
   getEntrenadorById,
   updateEntrenador,
 } from '@/services/entrenadorService';
 import { NextResponse } from 'next/server';
 
+
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +17,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/empleados', ['admin', 'usuario']);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -37,6 +41,8 @@ export async function GET(
 
     return NextResponse.json(entrenador, { status: 200 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error('Error al obtener el entrenador:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -47,7 +53,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/empleados', ['admin', 'usuario']);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -69,6 +75,8 @@ export async function PUT(
       { status: 200 }
     );
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error('Error al actualizar el entrenador:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

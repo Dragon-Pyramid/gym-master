@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
 import {
-  assertMasterAdmin,
+  authorizationErrorResponse,
+  authorizeDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
+import {
   reactivateDragonPyramidLicenseAfterPayment,
 } from '@/services/server/dragonPyramidLicenseService';
 
@@ -15,8 +17,11 @@ function resolveStatus(message: string) {
 
 export async function POST(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
-    assertMasterAdmin(user);
+    const user = await authorizeDashboardRequest(
+      req,
+      '/dashboard/masteradmin/license',
+      ['masteradmin'],
+    );
 
     const body = await req.json().catch(() => ({}));
     const data = await reactivateDragonPyramidLicenseAfterPayment({
@@ -41,6 +46,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ data }, { status: 200 });
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
+
     const message = error instanceof Error ? error.message : 'Error interno del servidor';
     return NextResponse.json({ error: message }, { status: resolveStatus(message) });
   }

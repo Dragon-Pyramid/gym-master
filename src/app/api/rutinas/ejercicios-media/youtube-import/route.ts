@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
 import { importExerciseYoutubeVideos } from '@/services/ejercicioMediaCatalogService';
+
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +24,7 @@ function getAuthStatus(error: any) {
 
 export async function POST(request: Request) {
   try {
-    const { user } = await authMiddleware(request);
+    const user = await authorizeDashboardRequest(request, '/dashboard/rutinas/media', ['admin', 'usuario']);
     const payload = await request.json();
 
     if (!Array.isArray(payload?.items)) {
@@ -37,6 +41,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result, { status: 200 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const status = getAuthStatus(error);
 
     if (status === 500) {

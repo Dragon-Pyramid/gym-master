@@ -6,6 +6,11 @@ import {
 } from '@/services/avisoService';
 
 
+import {
+  authorizationErrorResponse,
+  authorizeDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
+
 export const dynamic = 'force-dynamic';
 
 export async function GET(
@@ -13,6 +18,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await authorizeDashboardRequest(_req, '/dashboard/avisos', ['admin', 'usuario']);
     const { id } = await params;
     const aviso = await getAvisoById(id);
     if (!aviso)
@@ -22,6 +28,8 @@ export async function GET(
       );
     return NextResponse.json(aviso);
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -31,11 +39,14 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await authorizeDashboardRequest(req, '/dashboard/avisos', ['admin', 'usuario']);
     const { id } = await params;
     const body = await req.json();
     const aviso = await updateAviso(id, body);
     return NextResponse.json(aviso);
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -45,10 +56,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await authorizeDashboardRequest(_req, '/dashboard/avisos', ['admin', 'usuario']);
     const { id } = await params;
     const aviso = await deleteAviso(id);
     return NextResponse.json(aviso);
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

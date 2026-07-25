@@ -1,13 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
 import { stripe } from '@/lib/stripe';
 import { registerStripeCheckoutPago } from '@/services/server/stripePagoRegistrationService';
+
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(
+      req,
+      '/dashboard/mi-cuenta/pagar-cuota',
+      ['socio']
+    );
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -35,18 +43,18 @@ export async function POST(req: NextRequest) {
     });
 
     const metadata = session.metadata ?? {};
-    const metadataUsuarioId = metadata.usuario_id;
+    const metadataUsuarioId = metadata.usuario_id?.trim();
+    const metadataSocioId = metadata.socio_id?.trim();
 
-    if (user.rol === 'socio' && metadataUsuarioId && metadataUsuarioId !== user.id) {
+    if (
+      !metadataUsuarioId ||
+      !metadataSocioId ||
+      !user.id_socio ||
+      metadataUsuarioId !== user.id ||
+      metadataSocioId !== user.id_socio
+    ) {
       return NextResponse.json(
         { error: 'La sesión de Stripe no corresponde al socio autenticado' },
-        { status: 403 }
-      );
-    }
-
-    if (!['socio', 'admin', 'usuario'].includes(user.rol)) {
-      return NextResponse.json(
-        { error: 'Rol no autorizado para confirmar pagos Stripe' },
         { status: 403 }
       );
     }
@@ -67,6 +75,8 @@ export async function POST(req: NextRequest) {
       { status: 200 }
     );
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error('Error al confirmar pago Stripe:', error);
     return NextResponse.json(
       { error: error.message || 'Error al confirmar pago Stripe' },

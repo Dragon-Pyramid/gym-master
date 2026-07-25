@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
-import { authMiddleware } from "@/middlewares/auth.middleware";
 import { getSupabaseServerClient } from "@/services/supabaseServerClient";
+
+import {
+  authorizationErrorResponse,
+  authorizeDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +38,11 @@ async function resolveEstadoByCupo(supabase: ReturnType<typeof getSupabaseServer
 
 export async function POST(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(
+      req,
+      "/dashboard/actividades",
+      ["admin", "usuario", "socio"],
+    );
     const body = await req.json();
     const turnoId = cleanString(body.turno_id);
     const isSocioRole = user.rol === "socio";
@@ -77,6 +85,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ message: estado === "lista_espera" ? "Solicitud registrada para revisión administrativa" : "Socio inscripto correctamente", data }, { status: 201 });
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
+
     const message = error instanceof Error ? error.message : "Error al inscribir socio";
     const status = message.includes("oblig") || message.includes("invál")
       ? 400

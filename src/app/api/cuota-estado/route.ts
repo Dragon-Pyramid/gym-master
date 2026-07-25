@@ -1,15 +1,19 @@
 import { NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
 import {
   getAdminCuotasEstadoServer,
   getEstadoCuotaSocioServer,
 } from '@/services/server/cuotaEstadoServerService';
 
+import {
+  authorizePersonalOrDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
+
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizePersonalOrDashboardRequest(req, ['/dashboard/cuotas', '/dashboard/mi-cuenta/pagar-cuota'], ['admin', 'usuario'], ['socio']);
     const url = new URL(req.url);
     const socioIdFromQuery = url.searchParams.get('socio_id');
 
@@ -33,6 +37,8 @@ export async function GET(req: Request) {
     const estadoGeneral = await getAdminCuotasEstadoServer(user);
     return NextResponse.json({ data: estadoGeneral }, { status: 200 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error('ERROR al obtener estado de cuota:', error.message || error);
     const message = error.message || 'Error al obtener estado de cuota';
     const status =

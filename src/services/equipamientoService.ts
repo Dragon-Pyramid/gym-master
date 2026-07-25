@@ -3,6 +3,7 @@ import { AlertasMantenimientoEquipamientoResponse } from "@/interfaces/equipamie
 import { EquipamientoMantenimientoBiResponse } from "@/interfaces/equipamientoMantenimientoBi.interface";
 import { TipoEquipamiento } from "@/enums/tipoEquipamiento.enum";
 import { getSupabaseClient, supabase } from "./supabaseClient";
+import { authHeader } from "./storageService";
 import dayjs from "dayjs";
 
 export const getAllEquipamientos = async () : Promise<Equipamento[]> => {
@@ -145,6 +146,7 @@ export const getAlertasMantenimientoEquipamientos = async (
     `/api/equipamientos/alertas-mantenimiento?umbralDias=${umbralDias}`,
     {
       method: "GET",
+      headers: authHeader(),
       cache: "no-store",
     }
   );
@@ -162,6 +164,7 @@ export const getAlertasMantenimientoEquipamientos = async (
 export const getEquipamientoMantenimientoBi = async (): Promise<EquipamientoMantenimientoBiResponse> => {
   const response = await fetch("/api/equipamientos/mantenimiento-bi", {
     method: "GET",
+    headers: authHeader(),
     cache: "no-store",
   });
 

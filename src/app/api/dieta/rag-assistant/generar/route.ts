@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
+import {
+  authorizationErrorResponse,
+  authorizePersonalOrDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
 import { createDietaSocio } from '@/services/dietaService';
 import { buildDietasRagContext } from '@/services/server/ragDietasCoachService';
 import type {
@@ -57,11 +60,13 @@ function validatePayload(body: Partial<RagDietasAssistantRequest>, fallbackSocio
 
 export async function POST(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizePersonalOrDashboardRequest(
+      req,
+      ['/dashboard/dietas', '/dashboard/gestor-dietas'],
+      ['admin', 'usuario'],
+      ['socio'],
+    );
 
-    if (!user) {
-      return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
-    }
 
     const body = (await req.json().catch(() => ({}))) as Partial<RagDietasAssistantRequest>;
     const payload = validatePayload(body, user.id_socio);
@@ -72,6 +77,8 @@ export async function POST(req: Request) {
     try {
       ragContext = await buildDietasRagContext(user, payload);
     } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
       ragError = error instanceof Error ? translateAiGeneratedTechnicalText(error.message, payload.idioma) : translateAiGeneratedTechnicalText('Error desconocido al consultar RAG de dietas', payload.idioma);
       console.warn('RAG interno de dietas no disponible. Se usa fallback local:', ragError);
     }
@@ -121,7 +128,11 @@ export async function POST(req: Request) {
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : translateAiGeneratedTechnicalText('Error inesperado', 'es');
-    const status = message.toLowerCase().includes('token') ? 401 : (message.includes('Debe enviar') || message.toLowerCase().includes('must send')) ? 400 : 500;
+    const status = message.includes('No autorizado')
+      ? 403
+      : (message.includes('Debe enviar') || message.toLowerCase().includes('must send'))
+        ? 400
+        : 500;
 
     console.error('Error en asistente RAG de dietas:', error);
 

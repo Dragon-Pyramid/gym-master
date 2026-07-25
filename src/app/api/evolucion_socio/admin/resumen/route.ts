@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { authMiddleware } from "@/middlewares/auth.middleware";
+import {
+  authorizationErrorResponse,
+  authorizeDashboardRequest,
+} from "@/lib/auth/serverAuthorization";
 import { conexionBD } from "@/middlewares/conexionBd.middleware";
 import type { TipoCorporal, SexoReferencia } from "@/interfaces/evolucionSocio.interface";
 
@@ -32,11 +35,6 @@ interface EvolucionAccumulator {
   latest: EvolucionResumenRow | null;
 }
 
-const isAdminRole = (rol?: string | null) => {
-  const normalized = rol?.trim().toLowerCase();
-  return normalized === "admin" || normalized === "administrador";
-};
-
 const getStatusFromError = (message?: string) => {
   if (!message) return 500;
   if (message.includes("Token") || message.includes("Unauthorized")) return 401;
@@ -46,14 +44,11 @@ const getStatusFromError = (message?: string) => {
 
 export async function GET(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
-
-    if (!isAdminRole(user.rol)) {
-      return NextResponse.json(
-        { error: "No autorizado para consultar el resumen administrativo de evolución física" },
-        { status: 403 }
-      );
-    }
+    await authorizeDashboardRequest(
+      req,
+      "/dashboard/gestor-evolucion-fisica",
+      ["admin", "usuario"],
+    );
 
     const supabase = conexionBD();
 
@@ -131,6 +126,8 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ data: rows }, { status: 200 });
   } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const message =
       error instanceof Error
         ? error.message

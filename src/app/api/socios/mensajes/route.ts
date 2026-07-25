@@ -1,35 +1,36 @@
-import { authMiddleware } from '@/middlewares/auth.middleware';
-import {
-  createMensajeSocio,
-  getMensajesSocio,
-} from '@/services/socioMensajeService';
 import { NextResponse } from 'next/server';
+import { createMensajeSocio, getMensajesSocio } from '@/services/socioMensajeService';
+import {
+  authorizationErrorResponse,
+  authorizeDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
+    const user = await authorizeDashboardRequest(req, '/dashboard/mensajes', ['socio']);
     const mensajes = await getMensajesSocio(user);
     return NextResponse.json({ data: mensajes });
-  } catch (error) {
+  } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const message = error instanceof Error ? error.message : 'Error interno del servidor';
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status = message.includes('Solo los socios') || message.includes('No autorizado') ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }
 
 export async function POST(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const body = await req.json();
-    const mensaje = await createMensajeSocio(body, user);
+    const user = await authorizeDashboardRequest(req, '/dashboard/mensajes', ['socio']);
+    const mensaje = await createMensajeSocio(await req.json(), user);
     return NextResponse.json({ data: mensaje }, { status: 201 });
-  } catch (error) {
+  } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const message = error instanceof Error ? error.message : 'Error interno del servidor';
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status = message.includes('Solo los socios') || message.includes('No autorizado') ? 403 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

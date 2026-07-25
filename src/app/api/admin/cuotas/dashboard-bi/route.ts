@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { supabase } from "@/services/supabaseClient";
 import { CuotasPagosDashboardBiResponse } from "@/interfaces/cuotasPagosBi.interface";
 
+import {
+  authorizationErrorResponse,
+  authorizeDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
+
 export const dynamic = "force-dynamic";
 
 type SocioEstadoRow = {
@@ -39,8 +44,9 @@ function toNumber(value: unknown): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    await authorizeDashboardRequest(req, '/dashboard/bi-cuotas-pagos', ['admin', 'usuario']);
     const [estadoResult, pagosResult, evolucionResult] = await Promise.all([
       supabase.rpc("obtener_socios_estado_cuota"),
       supabase
@@ -161,6 +167,8 @@ export async function GET() {
 
     return NextResponse.json(response);
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error("ERROR dashboard BI cuotas/pagos:", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Error al obtener dashboard BI de cuotas y pagos" },

@@ -1,18 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
 import {
   createComercialKioscoPosVenta,
   getComercialKioscoPosDashboard,
 } from '@/services/server/comercialKioscoPosServerService';
 
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
+
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
-    await authMiddleware(req);
+    await authorizeDashboardRequest(req, '/dashboard/comercial/kiosco', ['admin', 'usuario']);
     const dashboard = await getComercialKioscoPosDashboard();
     return NextResponse.json({ data: dashboard }, { status: 200 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const message = error?.message || 'Error al obtener POS/Kiosco';
     const status = message.includes('Token') || message.includes('JWT') ? 401 : 500;
     return NextResponse.json({ error: message }, { status });
@@ -21,11 +27,13 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/comercial/kiosco', ['admin', 'usuario']);
     const body = await req.json();
     const venta = await createComercialKioscoPosVenta(body, user ?? null);
     return NextResponse.json({ data: venta, message: 'Venta POS/Kiosco registrada' }, { status: 201 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const message = error?.message || 'Error al registrar venta POS/Kiosco';
     const status = message.includes('Token') || message.includes('JWT') ? 401 : 400;
     return NextResponse.json({ error: message }, { status });

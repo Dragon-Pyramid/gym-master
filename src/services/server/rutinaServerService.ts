@@ -1,4 +1,5 @@
 import { JwtUser } from '@/interfaces/jwtUser.interface';
+import { AuthorizationError } from '@/lib/auth/serverAuthorization';
 import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 
 const isValidUUID = (value?: string | null): value is string => {
@@ -9,10 +10,14 @@ const isValidUUID = (value?: string | null): value is string => {
   );
 };
 
-const isAdmin = (rol?: string | null): boolean => {
+const isManager = (rol?: string | null): boolean => {
   const normalizedRol = rol?.trim().toLowerCase();
 
-  return normalizedRol === 'admin' || normalizedRol === 'administrador';
+  return (
+    normalizedRol === 'admin' ||
+    normalizedRol === 'administrador' ||
+    normalizedRol === 'usuario'
+  );
 };
 
 const resolveUserSocioId = async (user: JwtUser): Promise<string | null> => {
@@ -65,11 +70,11 @@ export const deleteRutinaById = async (
     throw new Error('Rutina no encontrada');
   }
 
-  if (!isAdmin(user.rol)) {
+  if (!isManager(user.rol)) {
     const idSocioUsuario = await resolveUserSocioId(user);
 
     if (!idSocioUsuario || idSocioUsuario !== rutina.id_socio) {
-      throw new Error('No autorizado para eliminar esta rutina');
+      throw new AuthorizationError('No autorizado para eliminar esta rutina', 'AUTH_SOCIO_SCOPE_FORBIDDEN');
     }
   }
 

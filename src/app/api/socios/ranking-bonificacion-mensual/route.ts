@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authMiddleware } from "@/middlewares/auth.middleware";
+import {
+  authorizationErrorResponse,
+  authorizeDashboardRequest,
+} from "@/lib/auth/serverAuthorization";
 import { getSupabaseServerClient } from "@/services/supabaseServerClient";
 import type {
   SocioRankingBonificacionItem,
@@ -37,14 +40,6 @@ type PagoRow = {
 };
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-
-function unauthorized(message = "No autorizado") {
-  return NextResponse.json({ error: message }, { status: 401 });
-}
-
-function forbidden(message = "Permiso insuficiente") {
-  return NextResponse.json({ error: message }, { status: 403 });
-}
 
 function getPeriod(anioParam?: string | null, mesParam?: string | null) {
   const now = new Date();
@@ -284,8 +279,11 @@ async function buildResponse(anio: number, mes: number): Promise<SociosRankingBo
 
 export async function GET(req: NextRequest) {
   try {
-    const { user } = await authMiddleware(req);
-    if (!user || !["admin", "usuario"].includes(user.rol)) return forbidden();
+    await authorizeDashboardRequest(
+      req,
+      "/dashboard/socios-ranking-bonificacion",
+      ["admin", "usuario"],
+    );
 
     const { searchParams } = new URL(req.url);
     const { anio, mes } = getPeriod(searchParams.get("anio"), searchParams.get("mes"));
@@ -293,9 +291,8 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error: any) {
-    if (error?.message === "Token no proporcionado" || error?.message === "Token inválido") {
-      return unauthorized(error.message);
-    }
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
 
     return NextResponse.json({ error: error?.message || "Error al calcular ranking mensual" }, { status: 500 });
   }
@@ -303,8 +300,11 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const { user } = await authMiddleware(req);
-    if (!user || !["admin", "usuario"].includes(user.rol)) return forbidden();
+    const user = await authorizeDashboardRequest(
+      req,
+      "/dashboard/socios-ranking-bonificacion",
+      ["admin", "usuario"],
+    );
 
     const payload = (await req.json()) as SocioRankingBonificacionMutationPayload;
     const { anio, mes } = getPeriod(String(payload.anio), String(payload.mes));
@@ -379,9 +379,8 @@ export async function PATCH(req: NextRequest) {
     const refreshed = await buildResponse(anio, mes);
     return NextResponse.json(refreshed);
   } catch (error: any) {
-    if (error?.message === "Token no proporcionado" || error?.message === "Token inválido") {
-      return unauthorized(error.message);
-    }
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
 
     return NextResponse.json({ error: error?.message || "Error al actualizar bonificación mensual" }, { status: 500 });
   }

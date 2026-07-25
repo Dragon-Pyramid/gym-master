@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
+import {
+  authorizationErrorResponse,
+  authorizePersonalOrDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
 import { FindFichaMedicaSocio, resolveFichaMedicaSocioId } from '@/services/fichaMedicaService';
 
 
@@ -18,13 +21,12 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { user } = await authMiddleware(req);
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Usuario no autorizado' },
-        { status: 401 }
-      );
-    }
+    const user = await authorizePersonalOrDashboardRequest(
+      req,
+      '/dashboard/ficha-medica',
+      ['admin', 'usuario'],
+      ['socio'],
+    );
 
     const { id } = await params;
     if (!id) {
@@ -39,6 +41,8 @@ export async function GET(
 
     return NextResponse.json({ data: ficha }, { status: 200 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.log(error);
     const status = getFichaMedicaErrorStatus(error?.message);
     return NextResponse.json({ error: error.message }, { status });

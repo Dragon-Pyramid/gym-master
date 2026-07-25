@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
 import {
   getExerciseMediaCatalog,
   updateExerciseMediaCatalogItem,
 } from '@/services/ejercicioMediaCatalogService';
+
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,12 +27,14 @@ function getAuthStatus(error: any) {
 
 export async function GET(request: Request) {
   try {
-    const { user } = await authMiddleware(request);
+    const user = await authorizeDashboardRequest(request, '/dashboard/rutinas/media', ['admin', 'usuario']);
     const url = new URL(request.url);
     const catalog = await getExerciseMediaCatalog(user, url.searchParams);
 
     return NextResponse.json(catalog, { status: 200 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const status = getAuthStatus(error);
 
     if (status === 500) {
@@ -44,7 +50,7 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const { user } = await authMiddleware(request);
+    const user = await authorizeDashboardRequest(request, '/dashboard/rutinas/media', ['admin', 'usuario']);
     const payload = await request.json();
 
     if (!payload?.id_ejercicio || !Number.isInteger(Number(payload.id_ejercicio))) {
@@ -67,6 +73,8 @@ export async function PATCH(request: Request) {
       { status: 200 }
     );
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const status = getAuthStatus(error);
 
     if (status === 500) {

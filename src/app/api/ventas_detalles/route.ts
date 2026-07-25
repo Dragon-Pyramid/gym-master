@@ -4,14 +4,18 @@ import {
   getAllVentaDetalles,
   updateVentaDetalle,
 } from '@/services/ventaDetalleService';
-import { authMiddleware } from '@/middlewares/auth.middleware';
 import { NextResponse } from 'next/server';
+
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/ventas', ['admin', 'usuario']);
     if (!user) {
       return NextResponse.json(
         { error: 'No se pudo obtener el usuario' },
@@ -22,6 +26,8 @@ export async function GET(req: Request) {
     const detalles = await getAllVentaDetalles(user);
     return NextResponse.json({ data: detalles }, { status: 200 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json(
       { error: error.message || 'Error al obtener los detalles de venta' },
       { status: 500 }
@@ -31,7 +37,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/ventas', ['admin', 'usuario']);
     if (!user) {
       return NextResponse.json(
         { error: 'No se pudo obtener el usuario' },
@@ -53,6 +59,8 @@ export async function POST(req: Request) {
       { status: 201 }
     );
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json(
       { error: error.message || 'Error al crear el detalle de venta' },
       { status: 500 }
@@ -62,7 +70,7 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/ventas', ['admin', 'usuario']);
     if (!user) {
       return NextResponse.json(
         { error: 'No se pudo obtener el usuario' },
@@ -84,6 +92,8 @@ export async function PUT(req: Request) {
       { status: 200 }
     );
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json(
       { error: error.message || 'Error al actualizar detalle de venta' },
       { status: 500 }
@@ -93,7 +103,7 @@ export async function PUT(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/ventas', ['admin', 'usuario']);
     if (!user) {
       return NextResponse.json(
         { error: 'No se pudo obtener el usuario' },
@@ -115,6 +125,8 @@ export async function DELETE(req: Request) {
       { status: 200 }
     );
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json(
       { error: error.message || 'Error al eliminar detalle de venta' },
       { status: 500 }

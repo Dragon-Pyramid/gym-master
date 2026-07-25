@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
 import { conexionBD } from '@/middlewares/conexionBd.middleware';
+
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,18 +25,20 @@ async function fetchCompraById(supabase: ReturnType<typeof conexionBD>, id: stri
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    await authMiddleware(req);
+    await authorizeDashboardRequest(req, '/dashboard/compras', ['admin', 'usuario']);
     const supabase = conexionBD();
     const compra = await fetchCompraById(supabase, params.id);
     return NextResponse.json({ data: compra }, { status: 200 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json({ error: error.message || 'Error al obtener compra' }, { status: 500 });
   }
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    await authMiddleware(req);
+    await authorizeDashboardRequest(req, '/dashboard/compras', ['admin', 'usuario']);
     const supabase = conexionBD();
     const body = await req.json();
     const estado = body?.estado;
@@ -55,13 +61,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const compra = await fetchCompraById(supabase, params.id);
     return NextResponse.json({ data: compra }, { status: 200 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json({ error: error.message || 'Error al actualizar compra' }, { status: 500 });
   }
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/compras', ['admin', 'usuario']);
     const supabase = conexionBD();
     const compra = await fetchCompraById(supabase, params.id);
 
@@ -125,6 +133,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     const updated = await fetchCompraById(supabase, params.id);
     return NextResponse.json({ data: updated }, { status: 200 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json({ error: error.message || 'Error al anular compra' }, { status: 500 });
   }
 }

@@ -1,4 +1,7 @@
-import { authMiddleware } from "@/middlewares/auth.middleware";
+import {
+  authorizationErrorResponse,
+  authorizePersonalOrDashboardRequest,
+} from "@/lib/auth/serverAuthorization";
 import {
   eliminarRutina,
   historialRutinaSocio,
@@ -8,10 +11,14 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-const isAdmin = (rol?: string | null): boolean => {
+const isManager = (rol?: string | null): boolean => {
   const normalizedRol = rol?.trim().toLowerCase();
 
-  return normalizedRol === "admin" || normalizedRol === "administrador";
+  return (
+    normalizedRol === "admin" ||
+    normalizedRol === "administrador" ||
+    normalizedRol === "usuario"
+  );
 };
 
 export async function GET(
@@ -19,13 +26,15 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizePersonalOrDashboardRequest(
+      req,
+      ['/dashboard/rutinas/asistente', '/dashboard/gestor-rutinas'],
+      ['admin', 'usuario'],
+      ['socio'],
+    );
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
-    const rutinas = isAdmin(user.rol)
+    const rutinas = isManager(user.rol)
       ? await historialRutinaSocio(user, params.id)
       : await historialRutinaSocioLogueado(user);
 
@@ -36,6 +45,8 @@ export async function GET(
       },
     });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error("Error al obtener rutinas:", error);
 
     return NextResponse.json(
@@ -50,11 +61,13 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizePersonalOrDashboardRequest(
+      req,
+      ['/dashboard/rutinas/asistente', '/dashboard/gestor-rutinas'],
+      ['admin', 'usuario'],
+      ['socio'],
+    );
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
     const deleted = await eliminarRutina(user, params.id);
 
@@ -71,6 +84,8 @@ export async function DELETE(
       }
     );
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error("Error al eliminar rutina:", error);
 
     const message = error.message || "Error al eliminar la rutina";

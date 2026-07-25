@@ -1,4 +1,7 @@
-import { authMiddleware } from "@/middlewares/auth.middleware";
+import {
+  authorizationErrorResponse,
+  authorizePersonalOrDashboardRequest,
+} from "@/lib/auth/serverAuthorization";
 import { historialRutinaSocioLogueado } from "@/services/rutinaService";
 import { NextResponse } from "next/server";
 
@@ -6,11 +9,13 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizePersonalOrDashboardRequest(
+      req,
+      ['/dashboard/rutinas/asistente', '/dashboard/gestor-rutinas'],
+      ['admin', 'usuario'],
+      ['socio'],
+    );
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
 
     const historialRutina = await historialRutinaSocioLogueado(user);
 
@@ -21,6 +26,8 @@ export async function GET(req: Request) {
       },
     });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const message = error?.message ?? "Error al obtener historial de rutinas";
 
     if (

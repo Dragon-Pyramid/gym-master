@@ -5,6 +5,8 @@ import { canAccessDashboardPath } from '@/lib/permissions/menuPermissions';
 
 export const dynamic = 'force-dynamic';
 
+// AUTH POLICY: TERMINAL_BEARER_REFRESH
+
 type TerminalSessionPayload = JwtUser & {
   terminal_session?: boolean;
   terminal_issued_at?: string;

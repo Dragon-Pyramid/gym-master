@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
 import { conexionBD } from '@/middlewares/conexionBd.middleware';
 import {
   OtrosGastosEstado,
   OtrosGastosMedioPago,
 } from '@/interfaces/otros_gastos.interface';
+
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
 
@@ -154,7 +158,7 @@ async function fetchGastoById(supabase: ReturnType<typeof conexionBD>, id: strin
 
 export async function GET(req: NextRequest) {
   try {
-    await authMiddleware(req);
+    await authorizeDashboardRequest(req, '/dashboard/otros-gastos', ['admin', 'usuario']);
     const supabase = conexionBD();
     const { searchParams } = new URL(req.url);
     const estado = searchParams.get('estado');
@@ -184,6 +188,8 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ data: data ?? [] }, { status: 200 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json(
       { error: error.message || 'Error al obtener los gastos' },
       { status: 500 }
@@ -193,7 +199,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/otros-gastos', ['admin', 'usuario']);
     const supabase = conexionBD();
     const body = await req.json();
     const payload = buildPayload(body, 'create');
@@ -214,6 +220,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ message: 'Gasto creado con éxito', data }, { status: 201 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json(
       { error: error.message || 'Error al crear el gasto' },
       { status: 500 }
@@ -223,7 +231,7 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
-    await authMiddleware(req);
+    await authorizeDashboardRequest(req, '/dashboard/otros-gastos', ['admin', 'usuario']);
     const supabase = conexionBD();
     const { id, updateData } = await req.json();
 
@@ -247,6 +255,8 @@ export async function PUT(req: NextRequest) {
       { status: 200 }
     );
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json(
       { error: error.message || 'Error al actualizar gasto' },
       { status: 500 }
@@ -256,7 +266,7 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    await authMiddleware(req);
+    await authorizeDashboardRequest(req, '/dashboard/otros-gastos', ['admin', 'usuario']);
     const supabase = conexionBD();
     const { id } = await req.json();
 
@@ -277,6 +287,8 @@ export async function DELETE(req: NextRequest) {
       { status: 200 }
     );
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json(
       { error: error.message || 'Error al eliminar gasto' },
       { status: 500 }

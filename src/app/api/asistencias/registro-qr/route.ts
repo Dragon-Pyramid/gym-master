@@ -1,9 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
+import type { JwtUser } from '@/interfaces/jwtUser.interface';
+import {
+  authorizationErrorResponse,
+  authorizePersonalOrDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
 import { registrarAsistenciaDesdeQR } from '@/services/asistenciaService';
-
+import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
+
+const REGISTRO_QR_PATHS = [
+  '/dashboard/asistencias',
+  '/dashboard/control-asistencia',
+];
 
 function getInvalidRegistroStatus(registro: any) {
   if (registro?.access_status === 'desactivado') return 403;
@@ -11,20 +19,23 @@ function getInvalidRegistroStatus(registro: any) {
   return 400;
 }
 
-async function handleRegistroQR(req: NextRequest, tokenAsistencia: string | null) {
-  const { user } = await authMiddleware(req);
+async function authorizeRegistroQR(req: NextRequest) {
+  return authorizePersonalOrDashboardRequest(
+    req,
+    REGISTRO_QR_PATHS,
+    ['admin', 'usuario'],
+    ['socio'],
+  );
+}
 
-  if (!user) {
-    return NextResponse.json(
-      { valido: false, error: 'El usuario no esta logueado' },
-      { status: 400 }
-    );
-  }
-
+async function handleRegistroQR(
+  user: JwtUser,
+  tokenAsistencia: string | null,
+) {
   if (!tokenAsistencia) {
     return NextResponse.json(
       { valido: false, error: 'Falta el tokenAsistencia' },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -41,30 +52,38 @@ async function handleRegistroQR(req: NextRequest, tokenAsistencia: string | null
 
 export async function GET(req: NextRequest) {
   try {
+    const user = await authorizeRegistroQR(req);
     const { searchParams } = new URL(req.url);
-    const tokenAsistencia = searchParams.get('tokenAsistencia');
+    return handleRegistroQR(user, searchParams.get('tokenAsistencia'));
+  } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
 
-    return handleRegistroQR(req, tokenAsistencia);
-  } catch (err: any) {
-    console.error(err);
+    const message =
+      error instanceof Error ? error.message : 'Error al registrar asistencia';
+    console.error(error);
     return NextResponse.json(
-      { valido: false, error: err.message },
-      { status: 401 }
+      { valido: false, error: message },
+      { status: 400 },
     );
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
+    const user = await authorizeRegistroQR(req);
     const body = await req.json();
-    const tokenAsistencia = body.qr;
+    return handleRegistroQR(user, body.qr ?? null);
+  } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
 
-    return handleRegistroQR(req, tokenAsistencia);
-  } catch (err: any) {
-    console.error(err);
+    const message =
+      error instanceof Error ? error.message : 'Error al registrar asistencia';
+    console.error(error);
     return NextResponse.json(
-      { valido: false, error: err.message },
-      { status: 401 }
+      { valido: false, error: message },
+      { status: 400 },
     );
   }
 }
@@ -74,7 +93,7 @@ export async function OPTIONS() {
     status: 200,
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     },
   });

@@ -1,6 +1,13 @@
-import { authMiddleware } from '@/middlewares/auth.middleware';
+import {
+  AuthMiddlewareError,
+  authMiddleware,
+} from '@/middlewares/auth.middleware';
 import { getNotificacionesTerminalActivas } from '@/services/notificacionService';
 import { NextResponse } from 'next/server';
+import {
+  AuthorizationError,
+  requireDashboardPermission,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,18 +23,19 @@ function isAuthSessionError(error: unknown) {
 
 export async function GET(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized', error_code: 'TERMINAL_SESSION_UNAUTHORIZED' },
-        { status: 401 }
-      );
-    }
-
+    const { user } = await authMiddleware(req, { allowTerminalSession: true });
+    requireDashboardPermission(user, '/dashboard/asistencias/terminal');
     const notificaciones = await getNotificacionesTerminalActivas(user);
     return NextResponse.json(notificaciones);
   } catch (error) {
-    if (isAuthSessionError(error)) {
+    if (error instanceof AuthorizationError) {
+      return NextResponse.json(
+        { error: error.message, error_code: error.code },
+        { status: error.status },
+      );
+    }
+
+    if (error instanceof AuthMiddlewareError || isAuthSessionError(error)) {
       return NextResponse.json(
         {
           error: 'La sesión de Terminal expiró. Iniciá sesión nuevamente o renová la sesión.',

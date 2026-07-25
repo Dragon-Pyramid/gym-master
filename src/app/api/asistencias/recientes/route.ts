@@ -1,6 +1,13 @@
-import { authMiddleware } from "@/middlewares/auth.middleware";
+import {
+  AuthMiddlewareError,
+  authMiddleware,
+} from "@/middlewares/auth.middleware";
 import { NextResponse } from "next/server";
 import { conexionBD } from "@/middlewares/conexionBd.middleware";
+import {
+  AuthorizationError,
+  requireDashboardPermission,
+} from "@/lib/auth/serverAuthorization";
 
 export const dynamic = "force-dynamic";
 
@@ -109,11 +116,8 @@ async function enrichAsistenciaConEstadoCuota(supabase: any, row: any) {
 
 export async function GET(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
-    if (!user) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
-
+    const { user } = await authMiddleware(req, { allowTerminalSession: true });
+    requireDashboardPermission(user, '/dashboard/asistencias/terminal');
     const supabase = conexionBD();
 
     // Últimas 4 asistencias con datos del socio.
@@ -151,7 +155,14 @@ export async function GET(req: Request) {
 
     return NextResponse.json(enriched, { status: 200 });
   } catch (error: unknown) {
-    if (isAuthSessionError(error)) {
+    if (error instanceof AuthorizationError) {
+      return NextResponse.json(
+        { error: error.message, error_code: error.code },
+        { status: error.status },
+      );
+    }
+
+    if (error instanceof AuthMiddlewareError || isAuthSessionError(error)) {
       return NextResponse.json(
         {
           error:

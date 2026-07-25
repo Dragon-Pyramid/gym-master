@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
 import { importExerciseMediaFromRemoteUrl } from '@/services/ejercicioMediaCatalogService';
+
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,7 +36,7 @@ function getStatusFromError(error: any) {
 
 export async function POST(request: Request) {
   try {
-    const { user } = await authMiddleware(request);
+    const user = await authorizeDashboardRequest(request, '/dashboard/rutinas/media', ['admin', 'usuario']);
     const payload = await request.json();
 
     if (!payload?.id_ejercicio || !Number.isInteger(Number(payload.id_ejercicio))) {
@@ -55,6 +59,8 @@ export async function POST(request: Request) {
       { status: 200 }
     );
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const status = getStatusFromError(error);
 
     if (status === 500) {

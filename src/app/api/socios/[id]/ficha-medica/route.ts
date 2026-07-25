@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
+import {
+  authorizationErrorResponse,
+  authorizePersonalOrDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
 import { createFichaMedicaSocio, resolveFichaMedicaSocioId } from '@/services/fichaMedicaService';
 import { FileUploadDTO } from '@/interfaces/fileUpload.interface';
 
@@ -50,13 +53,12 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { user } = await authMiddleware(req);
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Usuario no autorizado', code: 'unauthorized' },
-        { status: 401 }
-      );
-    }
+    const user = await authorizePersonalOrDashboardRequest(
+      req,
+      '/dashboard/ficha-medica',
+      ['admin', 'usuario'],
+      ['socio'],
+    );
 
     const paramsResolved = await params;
     const id = paramsResolved?.id;
@@ -138,6 +140,8 @@ export async function POST(
       { status: 201 }
     );
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error('Error al crear ficha médica:', error);
     const status = getFichaMedicaErrorStatus(error?.message);
     return NextResponse.json(

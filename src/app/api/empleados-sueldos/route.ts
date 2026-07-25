@@ -1,12 +1,16 @@
-import { authMiddleware } from "@/middlewares/auth.middleware";
 import { createEmpleadoSueldo, getEmpleadoSueldos } from "@/services/empleadoSueldoService";
 import { NextResponse } from "next/server";
+
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/empleados-sueldos', ['admin', 'usuario']);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -14,6 +18,8 @@ export async function GET(req: Request) {
     const sueldos = await getEmpleadoSueldos(user);
     return NextResponse.json(sueldos);
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const message = error instanceof Error ? error.message : "Error interno del servidor";
     return NextResponse.json({ error: message }, { status: 500 });
   }
@@ -21,7 +27,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/empleados-sueldos', ['admin', 'usuario']);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -30,6 +36,8 @@ export async function POST(req: Request) {
     const sueldo = await createEmpleadoSueldo(body, user);
     return NextResponse.json(sueldo, { status: 201 });
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const message = error instanceof Error ? error.message : "Error interno del servidor";
     return NextResponse.json({ error: message }, { status: 500 });
   }

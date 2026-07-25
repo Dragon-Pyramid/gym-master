@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
 import { exportRespaldoNegocio } from '@/services/adminRespaldoNegocioService';
 
+
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
 
 // BUSINESS_BACKUP_I18N_EXPORTABLES_V1
 type BusinessBackupLocale = "es" | "en";
@@ -43,7 +47,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/respaldo-negocio', ['admin']);
     const body = await req.json().catch(() => ({}));
     const requestLocale = body?.locale ?? req.headers.get('x-gym-master-locale') ?? req.headers.get('accept-language');
     const result = await exportRespaldoNegocio(user, { ...body, locale: requestLocale });
@@ -60,6 +64,8 @@ export async function POST(req: Request) {
       },
     });
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const message = error instanceof Error ? error.message : 'Error interno del servidor';
     const status = message.includes('No autorizado') || message.includes('Token') ? 403 : 500;
     return NextResponse.json({ error: message }, { status });

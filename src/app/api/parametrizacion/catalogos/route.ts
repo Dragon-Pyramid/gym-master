@@ -6,6 +6,11 @@ import {
   CatalogoParametrizableStatus,
 } from "@/interfaces/parametrizacion.interface";
 
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
+
 export const dynamic = "force-dynamic";
 
 type CatalogDefinition = {
@@ -301,8 +306,9 @@ function buildCatalogPayload(
   return payload;
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    await authorizeDashboardRequest(req, '/dashboard/parametrizacion', ['admin']);
     const supabase = getSupabaseServerClient();
 
     const catalogos = await Promise.all(
@@ -336,6 +342,8 @@ export async function GET() {
       catalogos,
     });
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error("Error al obtener catálogos de parametrización:", error);
 
     return NextResponse.json(
@@ -347,6 +355,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    await authorizeDashboardRequest(request, '/dashboard/parametrizacion', ['admin']);
     const body = (await request.json()) as Record<string, unknown>;
     const definition = getCatalogDefinition(body.catalogo);
 
@@ -376,6 +385,8 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error("Error al crear catálogo de parametrización:", error);
 
     return NextResponse.json(
@@ -387,6 +398,7 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    await authorizeDashboardRequest(request, '/dashboard/parametrizacion', ['admin']);
     const body = (await request.json()) as Record<string, unknown>;
     const definition = getCatalogDefinition(body.catalogo);
     const id = parseString(body.id);
@@ -419,6 +431,8 @@ export async function PATCH(request: NextRequest) {
       message: "Registro actualizado correctamente",
     });
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error("Error al actualizar catálogo de parametrización:", error);
 
     return NextResponse.json(

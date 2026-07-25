@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
 import { getRagCorpusStatus } from '@/services/server/ragCorpusAdminService';
+
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,10 +17,12 @@ function getAuthStatus(error: any) {
 
 export async function GET(request: Request) {
   try {
-    const { user } = await authMiddleware(request);
+    const user = await authorizeDashboardRequest(request, '/dashboard/rag-corpus', ['admin']);
     const status = await getRagCorpusStatus(user);
     return NextResponse.json(status, { status: 200 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const status = getAuthStatus(error);
     if (status === 500) console.error('Error al consultar estado del corpus RAG:', error);
     return NextResponse.json(

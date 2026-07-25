@@ -2,10 +2,16 @@ import { createMantenimiento, getAllMantenimientos, updateMantenimiento } from "
 import { NextRequest, NextResponse } from "next/server";
 
 
+import {
+  authorizationErrorResponse,
+  authorizeDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
+
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest){
 try{
+    await authorizeDashboardRequest(req, '/dashboard/equipamientos', ['admin', 'usuario']);
     const body = await req.json();
 if(!body || !body.id_equipamiento || !body.tipo_mantenimiento || !body.descripcion  || !body.tecnico_responsable || !body.costo){
     return NextResponse.json({ error: "El cuerpo de la solicitud no puede estar vacío" }, { status: 400 });
@@ -16,24 +22,30 @@ const mantenimiento = await createMantenimiento(body);
 return NextResponse.json({message:"Mantenimiento creado",data: mantenimiento}, {status:201});
 
 }catch(error:any){
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.log(error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
 }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    await authorizeDashboardRequest(req, '/dashboard/equipamientos', ['admin', 'usuario']);
         const mantenimientos = await getAllMantenimientos();
         return NextResponse.json({data:mantenimientos},{status:200})
     } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
         console.log(error.message);
         return NextResponse.json({ error: error.message }, { status: 500 });        
     }
 }
 
 export async function PUT(req: NextRequest) {
-    const { id, updateData } = await req.json();
     try {
+    await authorizeDashboardRequest(req, '/dashboard/equipamientos', ['admin', 'usuario']);
+        const { id, updateData } = await req.json();
         if (!id || typeof id !== 'string') {
             return NextResponse.json({ error: 'ID inválido para actualizar' }, { status: 400 })
         }
@@ -43,6 +55,8 @@ export async function PUT(req: NextRequest) {
             data: mantenimiento
         }, { status: 200 });
     } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
        console.log(error.message);
         return NextResponse.json({ error: "error al modificar el mantenimiento"}, { status: 500 })
     }

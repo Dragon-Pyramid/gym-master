@@ -8,6 +8,8 @@ import {
 
 export const dynamic = "force-dynamic";
 
+// AUTH POLICY: PUBLIC_VERIFICATION_CODE
+
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -68,7 +70,7 @@ export async function GET(
         metodo_pago,
         estado,
         activo,
-        socio:socio_id(id_socio,nombre_completo,email),
+        socio:socio_id(id_socio,nombre_completo),
         cuota:cuota_id(id,descripcion,monto,periodo)
       `
       )

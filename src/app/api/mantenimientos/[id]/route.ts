@@ -2,6 +2,11 @@ import { getMantenimientoByIdEquipamiento } from '@/services/mantenimientoServic
 import { NextRequest, NextResponse } from 'next/server';
 
 
+import {
+  authorizationErrorResponse,
+  authorizeDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
+
 export const dynamic = 'force-dynamic';
 
 export async function GET(
@@ -9,6 +14,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await authorizeDashboardRequest(req, '/dashboard/equipamientos', ['admin', 'usuario']);
     const { id } = await params;
     if (!id || id === '') {
       return NextResponse.json(
@@ -23,6 +29,8 @@ export async function GET(
       { status: 200 }
     );
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.log(error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

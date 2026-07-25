@@ -238,15 +238,50 @@ function businessBackupColumnLabel(column: ExportColumn, locale: BusinessBackupL
   return locale === 'en' ? BUSINESS_BACKUP_COLUMN_LABELS_EN[column.key] ?? column.label : column.label;
 }
 
-function safeBusinessBackupWorksheetName(name: string): string {
-  const safeName = String(name || 'Sheet')
-    .replace(/[\/*?:[]]/g, ' - ')
-    .replace(/s+-s+/g, ' - ')
-    .replace(/s{2,}/g, ' ')
-    .trim()
-    .slice(0, 31);
+const EXCEL_WORKSHEET_NAME_MAX_LENGTH = 31;
+const EXCEL_WORKSHEET_FORBIDDEN_CHARACTERS = /[\\/*?:\[\]]/g;
+const EXCEL_WORKSHEET_CONTROL_CHARACTERS = /[\u0000-\u001f\u007f]/g;
 
-  return safeName || 'Sheet';
+function normalizeBusinessBackupWorksheetName(name: string, fallback: string): string {
+  const normalizedFallback = String(fallback || 'Sheet')
+    .replace(EXCEL_WORKSHEET_FORBIDDEN_CHARACTERS, ' ')
+    .replace(EXCEL_WORKSHEET_CONTROL_CHARACTERS, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/^'+|'+$/g, '')
+    .trim() || 'Sheet';
+
+  const normalizedName = String(name || '')
+    .replace(EXCEL_WORKSHEET_FORBIDDEN_CHARACTERS, ' - ')
+    .replace(EXCEL_WORKSHEET_CONTROL_CHARACTERS, ' ')
+    .replace(/\s*-\s*/g, ' - ')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/^'+|'+$/g, '')
+    .trim();
+
+  return (normalizedName || normalizedFallback)
+    .slice(0, EXCEL_WORKSHEET_NAME_MAX_LENGTH)
+    .trim();
+}
+
+function reserveBusinessBackupWorksheetName(
+  name: string,
+  usedNames: Set<string>,
+  fallback: string
+): string {
+  const baseName = normalizeBusinessBackupWorksheetName(name, fallback);
+  let candidate = baseName;
+  let sequence = 2;
+
+  while (usedNames.has(candidate.toLocaleLowerCase('en-US'))) {
+    const suffix = ` (${sequence})`;
+    const availableLength = EXCEL_WORKSHEET_NAME_MAX_LENGTH - suffix.length;
+    const prefix = baseName.slice(0, availableLength).trimEnd();
+    candidate = `${prefix || normalizeBusinessBackupWorksheetName(fallback, 'Sheet').slice(0, availableLength)}${suffix}`;
+    sequence += 1;
+  }
+
+  usedNames.add(candidate.toLocaleLowerCase('en-US'));
+  return candidate;
 }
 
 export const RESPLADO_NEGOCIO_MODULES: ExportModuleDefinition[] = [
@@ -726,7 +761,14 @@ async function buildXlsx(
   workbook.creator = 'Gym Master';
   workbook.created = new Date();
 
-  const resumen = workbook.addWorksheet(safeBusinessBackupWorksheetName(businessBackupText(locale, 'Resumen', 'Summary')));
+  const usedWorksheetNames = new Set<string>();
+  const worksheetFallback = businessBackupText(locale, 'Hoja', 'Sheet');
+  const summaryWorksheetName = reserveBusinessBackupWorksheetName(
+    businessBackupText(locale, 'Resumen', 'Summary'),
+    usedWorksheetNames,
+    worksheetFallback
+  );
+  const resumen = workbook.addWorksheet(summaryWorksheetName);
   resumen.columns = [
     { header: businessBackupText(locale, 'Módulo', 'Module'), key: 'modulo', width: 34 },
     { header: businessBackupText(locale, 'Tabla origen', 'Source table'), key: 'tabla', width: 28 },
@@ -755,7 +797,11 @@ async function buildXlsx(
   resumen.views = [{ state: 'frozen', ySplit: 1 }];
 
   moduleRows.forEach(({ module, rows }) => {
-    const worksheetName = safeBusinessBackupWorksheetName(businessBackupModuleLabel(module, locale));
+    const worksheetName = reserveBusinessBackupWorksheetName(
+      businessBackupModuleLabel(module, locale),
+      usedWorksheetNames,
+      worksheetFallback
+    );
     const worksheet = workbook.addWorksheet(worksheetName);
     worksheet.columns = module.columns.map((column) => ({
       header: businessBackupColumnLabel(column, locale),

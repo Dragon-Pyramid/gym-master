@@ -1,17 +1,16 @@
-import { authMiddleware } from '@/middlewares/auth.middleware';
-import { createNotificacion, getNotificaciones } from '@/services/notificacionService';
 import { NextResponse } from 'next/server';
+import { createNotificacion, getNotificaciones } from '@/services/notificacionService';
+import { authorizationErrorResponse, authorizeDashboardRequest } from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const notificaciones = await getNotificaciones(user);
-    return NextResponse.json(notificaciones);
-  } catch (error) {
+    const user = await authorizeDashboardRequest(req, '/dashboard/notificaciones', ['admin', 'usuario']);
+    return NextResponse.json(await getNotificaciones(user));
+  } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const message = error instanceof Error ? error.message : 'Error interno del servidor';
     return NextResponse.json({ error: message }, { status: 500 });
   }
@@ -19,13 +18,12 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const body = await req.json();
-    const notificacion = await createNotificacion(body, user);
+    const user = await authorizeDashboardRequest(req, '/dashboard/notificaciones', ['admin', 'usuario']);
+    const notificacion = await createNotificacion(await req.json(), user);
     return NextResponse.json(notificacion, { status: 201 });
-  } catch (error) {
+  } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const message = error instanceof Error ? error.message : 'Error interno del servidor';
     return NextResponse.json({ error: message }, { status: 500 });
   }

@@ -1,10 +1,14 @@
-import { authMiddleware } from "@/middlewares/auth.middleware";
 import {
   anularEmpleadoSueldo,
   getEmpleadoSueldoById,
   updateEmpleadoSueldo,
 } from "@/services/empleadoSueldoService";
 import { NextResponse } from "next/server";
+
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +17,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/empleados-sueldos', ['admin', 'usuario']);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -26,6 +30,8 @@ export async function GET(
     const sueldo = await getEmpleadoSueldoById(id, user);
     return NextResponse.json(sueldo);
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const message = error instanceof Error ? error.message : "Error interno del servidor";
     return NextResponse.json({ error: message }, { status: 500 });
   }
@@ -36,7 +42,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/empleados-sueldos', ['admin', 'usuario']);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -50,6 +56,8 @@ export async function PATCH(
     const sueldo = await updateEmpleadoSueldo(id, body, user);
     return NextResponse.json(sueldo);
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const message = error instanceof Error ? error.message : "Error interno del servidor";
     return NextResponse.json({ error: message }, { status: 500 });
   }
@@ -60,7 +68,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/empleados-sueldos', ['admin', 'usuario']);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -73,6 +81,8 @@ export async function DELETE(
     const sueldo = await anularEmpleadoSueldo(id, user);
     return NextResponse.json(sueldo);
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const message = error instanceof Error ? error.message : "Error interno del servidor";
     return NextResponse.json({ error: message }, { status: 500 });
   }

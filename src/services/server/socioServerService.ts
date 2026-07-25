@@ -1,5 +1,6 @@
 import { CreateSocioDto, Socio, UpdateSocioDto } from '@/interfaces/socio.interface';
 import { JwtUser } from '@/interfaces/jwtUser.interface';
+import { AuthorizationError } from '@/lib/auth/serverAuthorization';
 import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 
 const allowedManagerRoles = new Set(['admin', 'usuario']);
@@ -148,11 +149,30 @@ export const getSocioByIdServer = async (
   user: JwtUser,
   id_socio: string
 ): Promise<Socio> => {
-  if (user.rol === 'socio' && user.id_socio !== id_socio) {
-    throw new Error('No autorizado para consultar este socio');
+  const supabase = getSupabaseServerClient();
+
+  if (user.rol === 'socio') {
+    let ownSocioId = user.id_socio ?? null;
+
+    if (!ownSocioId) {
+      const { data: ownSocio, error: ownSocioError } = await supabase
+        .from('socio')
+        .select('id_socio')
+        .eq('usuario_id', user.id)
+        .maybeSingle();
+
+      if (ownSocioError) throw new Error(ownSocioError.message);
+      ownSocioId = ownSocio?.id_socio ?? null;
+    }
+
+    if (!ownSocioId || ownSocioId !== id_socio) {
+      throw new AuthorizationError(
+        'No autorizado para consultar este socio',
+        'AUTH_SOCIO_SCOPE_FORBIDDEN',
+      );
+    }
   }
 
-  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from('socio')
     .select(
