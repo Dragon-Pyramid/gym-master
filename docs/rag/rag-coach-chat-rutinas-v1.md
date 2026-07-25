@@ -62,7 +62,7 @@ Variables base ya existentes:
 ```env
 RAG_ENABLED=true
 EMBEDDING_PROVIDER=github
-GITHUB_TOKEN=token_real_solo_local_o_vercel
+GITHUB_TOKEN=
 GITHUB_EMBEDDING_MODEL=text-embedding-3-small
 GITHUB_EMBEDDING_MODEL_ID=openai/text-embedding-3-small
 RAG_VECTOR_RPC=match_rag_chunks

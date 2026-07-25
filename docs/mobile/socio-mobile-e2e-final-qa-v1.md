@@ -31,8 +31,8 @@ Esta feature no agrega lógica de negocio nueva. Su foco es dejar una base de va
 Para correr las pruebas autenticadas de socio:
 
 ```bash
-E2E_SOCIO_EMAIL="socio-demo@gymmaster.local"
-E2E_SOCIO_PASSWORD="password-demo"
+E2E_SOCIO_EMAIL="<qa-socio-email>"
+E2E_SOCIO_PASSWORD="<qa-socio-password>"
 ```
 
 También se puede usar contra Vercel o contra local:

@@ -48,8 +48,8 @@ npm run test:e2e:install
 Las pruebas públicas no requieren credenciales. Las pruebas autenticadas se omiten automáticamente si no están definidas estas variables:
 
 ```bash
-export E2E_ADMIN_EMAIL="admin@gimnasio.com"
-export E2E_ADMIN_PASSWORD="PASSWORD_QA"
+export E2E_ADMIN_EMAIL="<qa-admin-email>"
+export E2E_ADMIN_PASSWORD="<qa-admin-password>"
 export E2E_ADMIN_ROLE="admin"
 ```
 
