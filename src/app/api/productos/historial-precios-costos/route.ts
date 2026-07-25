@@ -1,10 +1,16 @@
 import { getProductoHistorialPreciosCostos } from "@/services/productoService";
 import { NextResponse } from "next/server";
 
+import {
+  authorizationErrorResponse,
+  authorizeDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
+
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   try {
+    await authorizeDashboardRequest(req, '/dashboard/productos', ['admin', 'usuario']);
     const { searchParams } = new URL(req.url);
     const productoId = searchParams.get("producto_id");
 
@@ -18,6 +24,8 @@ export async function GET(req: Request) {
     const historial = await getProductoHistorialPreciosCostos(productoId);
     return NextResponse.json({ data: historial }, { status: 200 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json(
       { error: error.message || "Error al obtener historial de precios/costos" },
       { status: 500 }

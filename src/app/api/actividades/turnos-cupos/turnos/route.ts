@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
-import { authMiddleware } from "@/middlewares/auth.middleware";
 import { getSupabaseServerClient } from "@/services/supabaseServerClient";
+
+import {
+  authorizationErrorResponse,
+  authorizeDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +54,7 @@ function normalizePayload(body: any) {
 
 export async function POST(req: Request) {
   try {
-    await authMiddleware(req);
+    await authorizeDashboardRequest(req, "/dashboard/actividades", ["admin", "usuario"]);
     const body = await req.json();
     const payload = normalizePayload(body);
     const supabase = getSupabaseServerClient();
@@ -65,6 +69,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ message: "Turno creado correctamente", data }, { status: 201 });
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
+
     const message = error instanceof Error ? error.message : "Error al crear turno";
     return NextResponse.json({ error: message }, { status: message.includes("oblig") || message.includes("invál") ? 400 : 500 });
   }

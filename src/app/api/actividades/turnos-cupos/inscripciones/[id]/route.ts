@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
-import { authMiddleware } from "@/middlewares/auth.middleware";
 import { getSupabaseServerClient } from "@/services/supabaseServerClient";
+
+import {
+  authorizationErrorResponse,
+  authorizeDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +51,11 @@ async function assertCapacityForApproval(
 
 export async function PUT(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(
+      req,
+      "/dashboard/actividades",
+      ["admin", "usuario", "socio"],
+    );
     const { id } = await context.params;
     const body = await req.json();
     const estado = cleanString(body.estado);
@@ -103,6 +111,9 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
 
     return NextResponse.json({ message: "Inscripción actualizada correctamente", data }, { status: 200 });
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
+
     const message = error instanceof Error ? error.message : "Error al actualizar inscripción";
     return NextResponse.json({ error: message }, { status: resolveStatus(message) });
   }
@@ -110,7 +121,11 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
 
 export async function DELETE(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(
+      req,
+      "/dashboard/actividades",
+      ["admin", "usuario", "socio"],
+    );
     const { id } = await context.params;
     const supabase = getSupabaseServerClient();
 
@@ -133,6 +148,9 @@ export async function DELETE(req: Request, context: { params: Promise<{ id: stri
 
     return NextResponse.json({ message: "Inscripción eliminada correctamente" }, { status: 200 });
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
+
     const message = error instanceof Error ? error.message : "Error al eliminar inscripción";
     return NextResponse.json({ error: message }, { status: resolveStatus(message) });
   }

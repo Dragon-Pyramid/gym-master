@@ -7,6 +7,11 @@ import {
   SeveridadAlertaMantenimiento,
 } from "@/interfaces/equipamientoAlertas.interface";
 
+import {
+  authorizationErrorResponse,
+  authorizeDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
+
 export const dynamic = "force-dynamic";
 
 type EquipamientoRevisionRow = {
@@ -149,6 +154,7 @@ function buildResumen(alertas: AlertaMantenimientoEquipamiento[]) {
 
 export async function GET(request: NextRequest) {
   try {
+    await authorizeDashboardRequest(request, '/dashboard/equipamientos', ['admin', 'usuario']);
     const umbralDias = parseUmbralDias(request);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -192,6 +198,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error("Error al obtener alertas de mantenimiento:", error);
 
     return NextResponse.json(

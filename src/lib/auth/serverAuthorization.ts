@@ -3,6 +3,11 @@ import {
   canAccessDashboardPath,
   type AppRole,
 } from '@/lib/permissions/menuPermissions';
+import {
+  AuthMiddlewareError,
+  authMiddleware,
+} from '@/middlewares/auth.middleware';
+import { NextResponse } from 'next/server';
 
 export class AuthorizationError extends Error {
   code: string;
@@ -44,6 +49,45 @@ export function requireDashboardPermission(user: JwtUser, pathname: string) {
   return user;
 }
 
+export function requireAnyDashboardPermission(
+  user: JwtUser,
+  pathnames: string[],
+) {
+  const canAccess = pathnames.some((pathname) =>
+    canAccessDashboardPath(
+      user.rol,
+      user.permisos_menu ?? null,
+      pathname,
+    ),
+  );
+
+  if (!canAccess) {
+    throw new AuthorizationError(
+      'El usuario no tiene permisos para acceder a este módulo',
+      'AUTH_PERMISSION_FORBIDDEN',
+    );
+  }
+
+  return user;
+}
+
+export async function authorizeDashboardRequest(
+  req: Request,
+  pathnames: string | string[],
+  roles: AppRole[],
+) {
+  const { user } = await authMiddleware(req);
+  requireRoles(user, roles);
+
+  if (Array.isArray(pathnames)) {
+    requireAnyDashboardPermission(user, pathnames);
+  } else {
+    requireDashboardPermission(user, pathnames);
+  }
+
+  return user;
+}
+
 export function requireOwnSocioOrRoles(
   user: JwtUser,
   socioId: string,
@@ -61,4 +105,15 @@ export function requireOwnSocioOrRoles(
   }
 
   return user;
+}
+
+export function authorizationErrorResponse(error: unknown) {
+  if (error instanceof AuthMiddlewareError || error instanceof AuthorizationError) {
+    return NextResponse.json(
+      { error: error.message, error_code: error.code },
+      { status: error.status },
+    );
+  }
+
+  return null;
 }

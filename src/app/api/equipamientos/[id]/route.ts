@@ -5,6 +5,11 @@ import {
 import { NextRequest, NextResponse } from 'next/server';
 
 
+import {
+  authorizationErrorResponse,
+  authorizeDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
+
 export const dynamic = 'force-dynamic';
 
 export async function PUT(
@@ -12,6 +17,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await authorizeDashboardRequest(req, '/dashboard/equipamientos', ['admin', 'usuario']);
     const { id } = await params;
     console.log(id);
 
@@ -30,6 +36,8 @@ export async function PUT(
       { status: 201 }
     );
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.log(error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -40,6 +48,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await authorizeDashboardRequest(req, '/dashboard/equipamientos', ['admin', 'usuario']);
     const { id } = await params;
     console.log(id);
 
@@ -55,6 +64,8 @@ export async function DELETE(
       { status: 200 }
     );
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.log(error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

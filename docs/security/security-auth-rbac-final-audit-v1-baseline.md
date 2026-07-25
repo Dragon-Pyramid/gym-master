@@ -45,14 +45,21 @@ Se detectaron rutas heredadas de actividades, avisos, cuotas, equipamientos, inf
   - aislamiento del socio autenticado.
 - Verificador estático `npm run test:auth-rbac`.
 
+## Bloque 2 completado
+
+El endurecimiento de familias API quedó documentado en:
+
+`docs/security/security-auth-rbac-final-audit-v1-api-families.md`
+
+Este bloque incorpora autenticación, rol, permiso de módulo y respuestas 401/403 uniformes en 40 archivos de rutas de Actividades, Cuotas, Avisos, Equipamientos, Infraestructura, Mantenimientos, Productos, Proveedores y Servicios.
+
 ## Próximos bloques
 
-1. Proteger endpoints heredados sin autenticación explícita.
-2. Aplicar RBAC server-side por familia funcional.
-3. Auditar operaciones con `socioId`, `id_socio`, `usuarioId` o parámetros equivalentes.
-4. Normalizar respuestas 401/403 sin convertir fallas de autorización en 500.
-5. Validar Master Admin y sincronización de licencia.
-6. Ejecutar matriz manual por rol y por URL directa.
+1. Auditar operaciones con `socioId`, `id_socio`, `usuarioId` o parámetros equivalentes.
+2. Validar Master Admin y sincronización de licencia.
+3. Revisar rutas protegidas restantes fuera de las familias cubiertas.
+4. Ejecutar la matriz manual por rol y por URL directa.
+5. Documentar hallazgos que deban resolverse específicamente con RLS.
 
 ## Base de datos
 

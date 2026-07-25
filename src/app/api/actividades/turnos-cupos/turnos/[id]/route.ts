@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
-import { authMiddleware } from "@/middlewares/auth.middleware";
 import { getSupabaseServerClient } from "@/services/supabaseServerClient";
+
+import {
+  authorizationErrorResponse,
+  authorizeDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +52,7 @@ function normalizePartialPayload(body: any) {
 
 export async function PUT(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    await authMiddleware(req);
+    await authorizeDashboardRequest(req, "/dashboard/actividades", ["admin", "usuario"]);
     const { id } = await context.params;
     const body = await req.json();
     const payload = normalizePartialPayload(body);
@@ -65,6 +69,9 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
 
     return NextResponse.json({ message: "Turno actualizado correctamente", data }, { status: 200 });
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
+
     const message = error instanceof Error ? error.message : "Error al actualizar turno";
     return NextResponse.json({ error: message }, { status: message.includes("invál") ? 400 : 500 });
   }
@@ -72,7 +79,7 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
 
 export async function DELETE(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    await authMiddleware(req);
+    await authorizeDashboardRequest(req, "/dashboard/actividades", ["admin", "usuario"]);
     const { id } = await context.params;
     const supabase = getSupabaseServerClient();
 
@@ -82,6 +89,9 @@ export async function DELETE(req: Request, context: { params: Promise<{ id: stri
 
     return NextResponse.json({ message: "Turno eliminado correctamente" }, { status: 200 });
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
+
     const message = error instanceof Error ? error.message : "Error al eliminar turno";
     return NextResponse.json({ error: message }, { status: 500 });
   }

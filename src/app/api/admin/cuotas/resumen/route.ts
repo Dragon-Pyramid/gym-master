@@ -1,12 +1,19 @@
 import { NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
 import { getAdminCuotasEstadoServer } from '@/services/server/cuotaEstadoServerService';
+import {
+  authorizationErrorResponse,
+  authorizeDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(
+      req,
+      '/dashboard/bi-cuotas-pagos',
+      ['admin', 'usuario'],
+    );
     const data = await getAdminCuotasEstadoServer(user);
 
     return NextResponse.json(
@@ -22,6 +29,9 @@ export async function GET(req: Request) {
       { status: 200 }
     );
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
+
     console.error('ERROR al obtener resumen de cuotas admin:', error.message || error);
     const message = error.message || 'Error al obtener resumen de cuotas';
     const status =

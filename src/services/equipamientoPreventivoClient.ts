@@ -1,3 +1,4 @@
+import { authHeader } from '@/services/storageService';
 import type {
   CreateEquipamientoOrdenTecnicaDTO,
   CreateEquipamientoPlanPreventivoDTO,
@@ -19,6 +20,7 @@ export async function getEquipamientosPreventivosDashboardClient() {
   return parseJsonResponse<EquipamientoPreventivosDashboard>(
     await fetch('/api/equipamientos/preventivos', {
       method: 'GET',
+      headers: authHeader(),
       cache: 'no-store',
     }),
   );
@@ -27,7 +29,7 @@ export async function getEquipamientosPreventivosDashboardClient() {
 export async function createEquipamientoPlanPreventivoClient(payload: CreateEquipamientoPlanPreventivoDTO) {
   const response = await fetch('/api/equipamientos/preventivos/planes', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify(payload),
   });
   return parseJsonResponse<{ message: string; data: EquipamientoPlanPreventivo }>(response);
@@ -36,7 +38,7 @@ export async function createEquipamientoPlanPreventivoClient(payload: CreateEqui
 export async function createEquipamientoOrdenTecnicaClient(payload: CreateEquipamientoOrdenTecnicaDTO) {
   const response = await fetch('/api/equipamientos/preventivos/ordenes', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify(payload),
   });
   return parseJsonResponse<{ message: string; data: EquipamientoOrdenTecnica }>(response);
@@ -45,7 +47,7 @@ export async function createEquipamientoOrdenTecnicaClient(payload: CreateEquipa
 export async function updateEquipamientoOrdenTecnicaClient(id: string, payload: UpdateEquipamientoOrdenTecnicaDTO) {
   const response = await fetch(`/api/equipamientos/preventivos/ordenes/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify(payload),
   });
   return parseJsonResponse<{ message: string; data: EquipamientoOrdenTecnica }>(response);

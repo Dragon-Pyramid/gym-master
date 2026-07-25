@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { updateMantenimientoEdilicioOrden } from '@/services/server/infraestructuraMantenimientoService';
 
+import {
+  authorizationErrorResponse,
+  authorizeDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
+
 export const dynamic = 'force-dynamic';
 
 export async function PATCH(
@@ -8,6 +13,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    await authorizeDashboardRequest(req, '/dashboard/infraestructura/mantenimiento-edilicio', ['admin', 'usuario']);
     const { id } = await params;
     if (!id) {
       return NextResponse.json({ error: 'ID de orden requerido.' }, { status: 400 });
@@ -17,6 +23,8 @@ export async function PATCH(
     const orden = await updateMantenimientoEdilicioOrden(id, body);
     return NextResponse.json({ message: 'Orden de mantenimiento edilicio actualizada con éxito', data: orden }, { status: 200 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json(
       { error: error?.message || 'Error al actualizar orden de mantenimiento edilicio.' },
       { status: 500 },

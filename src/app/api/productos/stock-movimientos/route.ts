@@ -1,6 +1,10 @@
-import { authMiddleware } from '@/middlewares/auth.middleware';
 import { conexionBD } from '@/middlewares/conexionBd.middleware';
 import { NextRequest, NextResponse } from 'next/server';
+
+import {
+  authorizationErrorResponse,
+  authorizeDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,10 +63,11 @@ function buildMotivo(operacion: OperacionStock, motivo: string): string {
 
 export async function GET(req: NextRequest) {
   try {
-    const { user } = await authMiddleware(req);
-    if (!user) {
-      return NextResponse.json({ error: 'No se pudo obtener el usuario' }, { status: 401 });
-    }
+    const user = await authorizeDashboardRequest(
+      req,
+      ['/dashboard/comercial/stock-ledger', '/dashboard/productos'],
+      ['admin', 'usuario'],
+    );
 
     const supabase = conexionBD();
     const { searchParams } = new URL(req.url);
@@ -89,6 +94,9 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ data: data ?? [] }, { status: 200 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
+
     return NextResponse.json(
       { error: error.message || 'Error al obtener movimientos de stock' },
       { status: 500 }
@@ -98,10 +106,11 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { user } = await authMiddleware(req);
-    if (!user) {
-      return NextResponse.json({ error: 'No se pudo obtener el usuario' }, { status: 401 });
-    }
+    const user = await authorizeDashboardRequest(
+      req,
+      ['/dashboard/comercial/stock-ledger', '/dashboard/productos'],
+      ['admin', 'usuario'],
+    );
 
     const body = await req.json();
     const productoId = String(body?.producto_id ?? '').trim();
@@ -208,6 +217,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ data: movimiento }, { status: 201 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
+
     return NextResponse.json(
       { error: error.message || 'Error al registrar movimiento de stock' },
       { status: 500 }

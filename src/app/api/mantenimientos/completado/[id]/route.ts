@@ -2,6 +2,11 @@ import { mantenimientoCompletado } from '@/services/mantenimientoService';
 import { NextRequest, NextResponse } from 'next/server';
 
 
+import {
+  authorizationErrorResponse,
+  authorizeDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
+
 export const dynamic = 'force-dynamic';
 
 export async function PUT(
@@ -9,6 +14,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await authorizeDashboardRequest(req, '/dashboard/equipamientos', ['admin', 'usuario']);
     const { id } = await params;
     if (!id || typeof id !== 'string') {
       return NextResponse.json(
@@ -26,6 +32,8 @@ export async function PUT(
       { status: 200 }
     );
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.log(error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

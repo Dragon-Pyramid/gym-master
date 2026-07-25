@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { authMiddleware } from "@/middlewares/auth.middleware";
 import { getSupabaseServerClient } from "@/services/supabaseServerClient";
 import type {
   ActividadBaseOption,
@@ -10,6 +9,11 @@ import type {
   ActividadTurnosCuposDashboard,
   ActividadUbicacionOption,
 } from "@/interfaces/actividadTurnosCupos.interface";
+
+import {
+  authorizationErrorResponse,
+  authorizeDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = "force-dynamic";
 
@@ -108,10 +112,11 @@ function buildEmptyDashboard(params: {
 
 export async function GET(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
-    if (!user) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const user = await authorizeDashboardRequest(
+      req,
+      "/dashboard/actividades",
+      ["admin", "usuario", "socio"],
+    );
 
     const supabase = getSupabaseServerClient();
     const warnings: string[] = [];
@@ -345,6 +350,9 @@ export async function GET(req: Request) {
 
     return NextResponse.json(dashboard, { status: 200 });
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
+
     const message = error instanceof Error ? error.message : "Error al obtener actividades, turnos y cupos";
 
     if (message.toLowerCase().includes("token") || message.toLowerCase().includes("jwt")) {

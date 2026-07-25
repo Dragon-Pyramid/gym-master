@@ -1,3 +1,4 @@
+import { authHeader } from '@/services/storageService';
 import type {
   CreateInfraestructuraActivoDTO,
   CreateInfraestructuraChecklistEjecucionDTO,
@@ -27,6 +28,7 @@ export async function getInfraestructuraMantenimientoDashboardClient() {
   return parseJsonResponse<InfraestructuraMantenimientoDashboard>(
     await fetch('/api/infraestructura/mantenimiento-edilicio', {
       method: 'GET',
+      headers: authHeader(),
       cache: 'no-store',
     }),
   );
@@ -35,7 +37,7 @@ export async function getInfraestructuraMantenimientoDashboardClient() {
 export async function createInfraestructuraSectorClient(payload: CreateInfraestructuraSectorDTO) {
   const response = await fetch('/api/infraestructura/sectores', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify(payload),
   });
   return parseJsonResponse<{ message: string; data: InfraestructuraSector }>(response);
@@ -44,7 +46,7 @@ export async function createInfraestructuraSectorClient(payload: CreateInfraestr
 export async function createInfraestructuraActivoClient(payload: CreateInfraestructuraActivoDTO) {
   const response = await fetch('/api/infraestructura/activos', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify(payload),
   });
   return parseJsonResponse<{ message: string; data: InfraestructuraActivo }>(response);
@@ -53,7 +55,7 @@ export async function createInfraestructuraActivoClient(payload: CreateInfraestr
 export async function createMantenimientoEdilicioOrdenClient(payload: CreateMantenimientoEdilicioOrdenDTO) {
   const response = await fetch('/api/infraestructura/ordenes', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify(payload),
   });
   return parseJsonResponse<{ message: string; data: MantenimientoEdilicioOrden }>(response);
@@ -65,7 +67,7 @@ export async function updateMantenimientoEdilicioOrdenClient(
 ) {
   const response = await fetch(`/api/infraestructura/ordenes/${id}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify(payload),
   });
   return parseJsonResponse<{ message: string; data: MantenimientoEdilicioOrden }>(response);
@@ -77,6 +79,7 @@ export async function getInfraestructuraQrLabelsDashboardClient() {
   return parseJsonResponse<InfraestructuraQrLabelsDashboard>(
     await fetch('/api/infraestructura/qr/labels', {
       method: 'GET',
+      headers: authHeader(),
       cache: 'no-store',
     }),
   );
@@ -85,7 +88,7 @@ export async function getInfraestructuraQrLabelsDashboardClient() {
 export async function createInfraestructuraQrCodeClient(payload: CreateInfraestructuraQrDTO) {
   const response = await fetch('/api/infraestructura/qr', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify(payload),
   });
   return parseJsonResponse<{ message: string; data: InfraestructuraQrCodigo }>(response);
@@ -94,6 +97,7 @@ export async function createInfraestructuraQrCodeClient(payload: CreateInfraestr
 export async function resolveInfraestructuraQrCodeClient(codigo: string) {
   const response = await fetch(`/api/infraestructura/qr/resolve?codigo=${encodeURIComponent(codigo)}`, {
     method: 'GET',
+    headers: authHeader(),
     cache: 'no-store',
   });
   return parseJsonResponse<{ message?: string; data: InfraestructuraQrResolveResult }>(response);
@@ -102,7 +106,7 @@ export async function resolveInfraestructuraQrCodeClient(codigo: string) {
 export async function createInfraestructuraChecklistEjecucionClient(payload: CreateInfraestructuraChecklistEjecucionDTO) {
   const response = await fetch('/api/infraestructura/checklists/ejecuciones', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify(payload),
   });
   return parseJsonResponse<{ message: string; data: InfraestructuraChecklistEjecucion }>(response);

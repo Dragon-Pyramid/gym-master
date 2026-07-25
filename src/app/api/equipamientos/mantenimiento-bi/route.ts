@@ -8,6 +8,11 @@ import {
   EquipamientoMantenimientoSerieMensual,
 } from "@/interfaces/equipamientoMantenimientoBi.interface";
 
+import {
+  authorizationErrorResponse,
+  authorizeDashboardRequest,
+} from '@/lib/auth/serverAuthorization';
+
 export const dynamic = "force-dynamic";
 
 type EquipoRow = {
@@ -139,8 +144,9 @@ function buildRiskScore(args: {
   return Math.min(score, 100);
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    await authorizeDashboardRequest(req, '/dashboard/equipamientos', ['admin', 'usuario']);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const since90 = new Date(today);
@@ -341,6 +347,8 @@ export async function GET() {
 
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error("Error al obtener BI de mantenimiento de equipamiento:", error);
     return NextResponse.json(
       {

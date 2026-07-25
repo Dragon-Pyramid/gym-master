@@ -1,3 +1,4 @@
+import { authHeader } from '@/services/storageService';
 import { CuotasPagosDashboardBiResponse } from "@/interfaces/cuotasPagosBi.interface";
 
 async function parseResponse<T>(res: Response): Promise<T> {
@@ -14,6 +15,7 @@ async function parseResponse<T>(res: Response): Promise<T> {
 export async function getCuotasPagosDashboardBi(): Promise<CuotasPagosDashboardBiResponse> {
   const res = await fetch("/api/admin/cuotas/dashboard-bi", {
     method: "GET",
+    headers: authHeader(),
     cache: "no-store",
   });
 
