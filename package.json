@@ -17,6 +17,7 @@
     "test:pwa-install-update": "node scripts/verify-pwa-install-update.mjs",
     "test:auth-rbac": "node scripts/verify-auth-rbac-security.mjs",
     "test:http-runtime-security": "node scripts/verify-http-runtime-security.mjs",
+    "test:rag-coach-pdf": "node scripts/verify-rag-coach-pdf-output.mjs",
     "test:business-backup-export": "node scripts/verify-business-backup-export.mjs",
     "security:cleanup-local-artifacts": "node scripts/cleanup-local-repo-artifacts.mjs",
     "test:repo-security": "node scripts/verify-repo-security.mjs"
