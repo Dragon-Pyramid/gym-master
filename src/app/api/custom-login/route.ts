@@ -1,9 +1,24 @@
-import { signIn } from "@/services/loginService";
-import { NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
+
+import {
+  noStoreJson,
+  readJsonBody,
+  runtimeErrorResponse,
+} from '@/lib/security/httpRuntimeSecurity';
+import { signIn } from '@/services/loginService';
 
 export const dynamic = 'force-dynamic';
 
 // AUTH POLICY: PUBLIC_LOGIN
+
+const LOGIN_BODY_MAX_BYTES = 8 * 1024;
+const LOGIN_ROLES = new Set(['admin', 'usuario', 'socio']);
+
+type LoginBody = {
+  email?: unknown;
+  password?: unknown;
+  rol?: unknown;
+};
 
 type LoginError = Error & {
   code?: string;
@@ -21,45 +36,63 @@ function getLoginStatus(error: LoginError) {
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { email, password, rol } = body;
+    const body = await readJsonBody<LoginBody>(req, LOGIN_BODY_MAX_BYTES);
+    const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+    const password = typeof body.password === 'string' ? body.password : '';
+    const rol = typeof body.rol === 'string' ? body.rol.trim().toLowerCase() : '';
 
     if (!email || !password || !rol) {
-      return NextResponse.json(
+      return noStoreJson(
         {
-          message: "Faltan datos",
-          error_code: "LOGIN_MISSING_FIELDS",
+          message: 'Faltan datos',
+          error_code: 'LOGIN_MISSING_FIELDS',
         },
-        { status: 400 }
+        400,
+      );
+    }
+
+    if (email.length > 254 || password.length > 256 || !LOGIN_ROLES.has(rol)) {
+      return noStoreJson(
+        {
+          message: 'Credenciales inválidas',
+          error_code: 'LOGIN_INVALID_INPUT',
+        },
+        400,
       );
     }
 
     const loginSignin = await signIn({ email, password, rol });
 
-    return NextResponse.json(
+    return noStoreJson(
       {
-        message: "Logueado con exito",
+        message: 'Logueado con exito',
         token: loginSignin,
       },
-      { status: 200 }
+      200,
     );
   } catch (error) {
     const loginError = error as LoginError;
     const status = getLoginStatus(loginError);
 
-    console.error("Error en el inicio de sesión:", {
-      message: loginError.message,
-      code: loginError.code,
-      status,
-    });
+    if (status >= 500) {
+      console.error('Error en el inicio de sesión:', {
+        code: loginError.code || 'LOGIN_ERROR',
+        status,
+      });
 
-    return NextResponse.json(
+      return runtimeErrorResponse(
+        error,
+        'No se pudo iniciar sesión',
+      );
+    }
+
+    return noStoreJson(
       {
-        message: loginError.message || "Error al iniciar sesión",
-        error_code: loginError.code || "LOGIN_ERROR",
+        message: loginError.message || 'No se pudo iniciar sesión',
+        error_code: loginError.code || 'LOGIN_ERROR',
         details: loginError.details ?? null,
       },
-      { status }
+      status,
     );
   }
 }

@@ -5,6 +5,10 @@ import {
 } from '@/lib/auth/serverAuthorization';
 import { createFichaMedicaSocio, resolveFichaMedicaSocioId } from '@/services/fichaMedicaService';
 import { FileUploadDTO } from '@/interfaces/fileUpload.interface';
+import {
+  hasSafeUploadSignature,
+} from '@/lib/security/uploadValidation';
+import { requestBodyTooLargeResponse } from '@/lib/security/httpRuntimeSecurity';
 
 
 function getFichaMedicaErrorStatus(message?: string) {
@@ -17,6 +21,7 @@ function getFichaMedicaErrorStatus(message?: string) {
 export const dynamic = 'force-dynamic';
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_REQUEST_BODY_BYTES = 30 * 1024 * 1024;
 const VALID_MEDICAL_FILE_TYPES = new Set([
   'application/pdf',
   'image/jpeg',
@@ -34,6 +39,10 @@ async function toFileDto(file: File, fieldName: string): Promise<FileUploadDTO> 
 
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
+
+  if (!hasSafeUploadSignature(buffer, file.type)) {
+    throw new Error(`El contenido de ${file.name} no coincide con el formato declarado.`);
+  }
 
   return {
     fieldName,
@@ -73,6 +82,9 @@ export async function POST(
       );
     }
 
+    const oversizedRequest = requestBodyTooLargeResponse(req, MAX_REQUEST_BODY_BYTES);
+    if (oversizedRequest) return oversizedRequest;
+
     const formdata = await req.formData();
     const fichaRaw = formdata.get('ficha');
 
@@ -98,7 +110,6 @@ export async function POST(
         {
           error: 'Ficha inválida: JSON malformado',
           code: 'invalid_ficha_json',
-          details: err?.message,
         },
         { status: 400 }
       );
@@ -142,10 +153,19 @@ export async function POST(
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    console.error('Error al crear ficha médica:', error);
     const status = getFichaMedicaErrorStatus(error?.message);
+    if (status >= 500) {
+      console.error('Error al crear ficha médica:', {
+        name: error instanceof Error ? error.name : 'UnknownError',
+      });
+    }
     return NextResponse.json(
-      { error: error.message || 'Error interno', code: 'server_error' },
+      {
+        error: status >= 500
+          ? 'No se pudo crear la ficha médica'
+          : error?.message || 'Solicitud inválida',
+        code: status >= 500 ? 'server_error' : 'request_error',
+      },
       { status }
     );
   }

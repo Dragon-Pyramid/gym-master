@@ -7,11 +7,13 @@ import {
   hasSafeUploadSignature,
   isSafeUploadMimeType,
 } from '@/lib/security/uploadValidation';
+import { requestBodyTooLargeResponse } from '@/lib/security/httpRuntimeSecurity';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_REQUEST_BODY_BYTES = MAX_FILE_SIZE_BYTES + 512 * 1024;
 
 export async function POST(request: Request) {
   try {
@@ -20,6 +22,9 @@ export async function POST(request: Request) {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const oversizedRequest = requestBodyTooLargeResponse(request, MAX_REQUEST_BODY_BYTES);
+    if (oversizedRequest) return oversizedRequest;
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
@@ -90,8 +95,12 @@ export async function POST(request: Request) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
 
-    console.error('error file:', error);
-    const message = error?.message || 'Error al subir la imagen.';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('Error al subir foto de perfil:', {
+      name: error instanceof Error ? error.name : 'UnknownError',
+    });
+    return NextResponse.json(
+      { error: 'No se pudo subir la imagen.' },
+      { status: 500 }
+    );
   }
 }

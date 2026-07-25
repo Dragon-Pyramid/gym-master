@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { registerStripeCheckoutPago } from '@/services/server/stripePagoRegistrationService';
+import {
+  noStoreJson,
+  readJsonBody,
+  runtimeErrorResponse,
+} from '@/lib/security/httpRuntimeSecurity';
 
 import {
   authorizeDashboardRequest,
@@ -8,6 +13,8 @@ import {
 } from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
+
+const PAYMENT_CONFIRMATION_BODY_MAX_BYTES = 8 * 1024;
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,20 +28,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    let body: { session_id?: string } = {};
-
-    try {
-      body = await req.json();
-    } catch {
-      body = {};
-    }
-
-    const sessionId = body.session_id?.trim();
+    const body = await readJsonBody<{ session_id?: unknown }>(
+      req,
+      PAYMENT_CONFIRMATION_BODY_MAX_BYTES,
+    );
+    const sessionId = typeof body.session_id === 'string'
+      ? body.session_id.trim()
+      : '';
 
     if (!sessionId) {
-      return NextResponse.json(
+      return noStoreJson(
         { error: 'session_id es obligatorio' },
-        { status: 400 }
+        400,
       );
     }
 
@@ -53,9 +58,9 @@ export async function POST(req: NextRequest) {
       metadataUsuarioId !== user.id ||
       metadataSocioId !== user.id_socio
     ) {
-      return NextResponse.json(
+      return noStoreJson(
         { error: 'La sesión de Stripe no corresponde al socio autenticado' },
-        { status: 403 }
+        403,
       );
     }
 
@@ -63,7 +68,7 @@ export async function POST(req: NextRequest) {
       origen: 'stripe_success_sync',
     });
 
-    return NextResponse.json(
+    return noStoreJson(
       {
         message:
           result.status === 'already_registered'
@@ -72,15 +77,20 @@ export async function POST(req: NextRequest) {
         status: result.status,
         data: result.pago,
       },
-      { status: 200 }
+      200,
     );
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    console.error('Error al confirmar pago Stripe:', error);
-    return NextResponse.json(
-      { error: error.message || 'Error al confirmar pago Stripe' },
-      { status: 500 }
+    const runtimeResponse = runtimeErrorResponse(
+      error,
+      'No se pudo confirmar el pago Stripe',
     );
+    if (runtimeResponse.status >= 500) {
+      console.error('Error al confirmar pago Stripe:', {
+        name: error instanceof Error ? error.name : 'UnknownError',
+      });
+    }
+    return runtimeResponse;
   }
 }

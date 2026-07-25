@@ -5,6 +5,7 @@ import {
   hasSafeUploadSignature,
   isSafeUploadMimeType,
 } from '@/lib/security/uploadValidation';
+import { requestBodyTooLargeResponse } from '@/lib/security/httpRuntimeSecurity';
 
 import {
   authorizeDashboardRequest,
@@ -14,6 +15,7 @@ import {
 export const dynamic = 'force-dynamic';
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_REQUEST_BODY_BYTES = MAX_FILE_SIZE_BYTES + 512 * 1024;
 
 function getStatusFromError(error: any) {
   const message = error?.message ?? '';
@@ -40,6 +42,9 @@ export async function POST(request: Request) {
         { status: 403 }
       );
     }
+
+    const oversizedRequest = requestBodyTooLargeResponse(request, MAX_REQUEST_BODY_BYTES);
+    if (oversizedRequest) return oversizedRequest;
 
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
@@ -114,11 +119,13 @@ export async function POST(request: Request) {
     const status = getStatusFromError(error);
 
     if (status === 500) {
-      console.error('Error al subir media de ejercicio:', error);
+      console.error('Error al subir media de ejercicio:', {
+        name: error instanceof Error ? error.name : 'UnknownError',
+      });
     }
 
     return NextResponse.json(
-      { error: error?.message ?? 'Error al subir media de ejercicio.' },
+      { error: status >= 500 ? 'No se pudo subir la media del ejercicio.' : 'Solicitud no autorizada.' },
       { status }
     );
   }

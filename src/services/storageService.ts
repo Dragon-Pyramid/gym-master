@@ -117,13 +117,14 @@ export function loginSession(token: string) {
   Cookies.set(TOKEN_KEY, token, {
     sameSite: "strict",
     secure: shouldUseSecureCookie(),
+    path: "/",
     ...(expiresAt ? { expires: new Date(expiresAt) } : {}),
   });
 }
 
 export function logoutSession() {
-  Cookies.remove(TOKEN_KEY);
-  Cookies.remove(TERMINAL_TOKEN_KEY);
+  Cookies.remove(TOKEN_KEY, { path: "/" });
+  Cookies.remove(TERMINAL_TOKEN_KEY, { path: "/" });
 
   if (typeof window !== "undefined") {
     try {
@@ -143,6 +144,7 @@ export function loginTerminalSession(token: string) {
   Cookies.set(TERMINAL_TOKEN_KEY, token, {
     sameSite: "strict",
     secure: shouldUseSecureCookie(),
+    path: "/",
     ...(expiresAt ? { expires: new Date(expiresAt) } : {}),
   });
 
@@ -156,7 +158,7 @@ export function loginTerminalSession(token: string) {
 }
 
 export function logoutTerminalSession() {
-  Cookies.remove(TERMINAL_TOKEN_KEY);
+  Cookies.remove(TERMINAL_TOKEN_KEY, { path: "/" });
 
   if (typeof window !== "undefined") {
     try {
@@ -180,7 +182,7 @@ export function getToken() {
 
   if (validCandidates.length === 0) {
     if (cookieToken && isTokenExpired(cookieToken)) {
-      Cookies.remove(TOKEN_KEY);
+      Cookies.remove(TOKEN_KEY, { path: "/" });
     }
 
     return null;
@@ -202,7 +204,7 @@ export function getTerminalToken() {
 
   if (validCandidates.length === 0) {
     if (cookieToken && isTokenExpired(cookieToken)) {
-      Cookies.remove(TERMINAL_TOKEN_KEY);
+      Cookies.remove(TERMINAL_TOKEN_KEY, { path: "/" });
     }
 
     return null;

@@ -1,8 +1,13 @@
+import { NextRequest, NextResponse } from 'next/server';
+
+import {
+  readJsonBody,
+  runtimeErrorResponse,
+} from '@/lib/security/httpRuntimeSecurity';
 import {
   createPublicComercialScannerEvent,
   getPublicComercialScannerSession,
 } from '@/services/server/comercialMobileScannerServerService';
-import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,11 +16,16 @@ export const dynamic = 'force-dynamic';
 // limited by a 144-bit random token, strict token format, expiry and session
 // state checks in the server service.
 const PUBLIC_SCANNER_TOKEN_RE = /^gm-pos-[a-f0-9]{36}$/;
+const PUBLIC_SCANNER_BODY_MAX_BYTES = 8 * 1024;
 
 type Params = {
   params: {
     token: string;
   };
+};
+
+type ScannerBody = {
+  codigo?: unknown;
 };
 
 function getValidatedToken(token: string) {
@@ -36,6 +46,38 @@ function publicScannerResponse<T>(payload: T, status: number) {
   });
 }
 
+function getPublicScannerError(error: unknown, operation: 'read' | 'write') {
+  const message = error instanceof Error ? error.message : '';
+
+  if (/Token de scanner inválido/i.test(message)) {
+    return { message: 'Token de scanner inválido', status: 400 };
+  }
+
+  if (/Sesión de scanner no encontrada/i.test(message)) {
+    return { message: 'Sesión de scanner no encontrada', status: 404 };
+  }
+
+  if (/no está activa|expiró/i.test(message)) {
+    return { message, status: 409 };
+  }
+
+  if (/código válido/i.test(message)) {
+    return { message: 'El código escaneado es inválido', status: 400 };
+  }
+
+  console.error('Error en scanner público:', {
+    operation,
+    name: error instanceof Error ? error.name : 'UnknownError',
+  });
+
+  return {
+    message: operation === 'read'
+      ? 'No se pudo obtener la sesión pública de scanner'
+      : 'No se pudo procesar el código escaneado',
+    status: 500,
+  };
+}
+
 export async function GET(_req: NextRequest, { params }: Params) {
   try {
     const session = await getPublicComercialScannerSession(
@@ -43,19 +85,22 @@ export async function GET(_req: NextRequest, { params }: Params) {
     );
     return publicScannerResponse({ data: session }, 200);
   } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : 'Error al obtener sesión pública de scanner';
-    return publicScannerResponse({ error: message }, 404);
+    const publicError = getPublicScannerError(error, 'read');
+    return publicScannerResponse(
+      { error: publicError.message },
+      publicError.status,
+    );
   }
 }
 
 export async function POST(req: NextRequest, { params }: Params) {
   try {
     const token = getValidatedToken(params.token);
-    const body = await req.json().catch(() => ({}));
-    const codigo = String(body?.codigo ?? '').trim();
+    const body = await readJsonBody<ScannerBody>(
+      req,
+      PUBLIC_SCANNER_BODY_MAX_BYTES,
+    );
+    const codigo = String(body.codigo ?? '').trim();
 
     if (!codigo || codigo.length > 160) {
       return publicScannerResponse(
@@ -70,10 +115,17 @@ export async function POST(req: NextRequest, { params }: Params) {
       201,
     );
   } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : 'Error al enviar código escaneado';
-    return publicScannerResponse({ error: message }, 400);
+    const runtimeResponse = runtimeErrorResponse(
+      error,
+      'No se pudo procesar el código escaneado',
+    );
+
+    if (runtimeResponse.status !== 500) return runtimeResponse;
+
+    const publicError = getPublicScannerError(error, 'write');
+    return publicScannerResponse(
+      { error: publicError.message },
+      publicError.status,
+    );
   }
 }

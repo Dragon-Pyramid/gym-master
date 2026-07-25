@@ -4,6 +4,7 @@ import {
   hasSafeUploadSignature,
   isSafeUploadMimeType,
 } from '@/lib/security/uploadValidation';
+import { requestBodyTooLargeResponse } from '@/lib/security/httpRuntimeSecurity';
 
 import {
   authorizeDashboardRequest,
@@ -13,6 +14,7 @@ import {
 export const dynamic = 'force-dynamic';
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_REQUEST_BODY_BYTES = MAX_FILE_SIZE_BYTES + 512 * 1024;
 
 function normalizeRole(role?: string | null) {
   return role?.trim().toLowerCase() ?? '';
@@ -36,6 +38,9 @@ export async function POST(request: Request) {
         { status: 403 }
       );
     }
+
+    const oversizedRequest = requestBodyTooLargeResponse(request, MAX_REQUEST_BODY_BYTES);
+    if (oversizedRequest) return oversizedRequest;
 
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
@@ -91,11 +96,13 @@ export async function POST(request: Request) {
     const status = getStatusFromError(error);
 
     if (status === 500) {
-      console.error('Error al subir logo del gimnasio a Cloudinary:', error);
+      console.error('Error al subir logo del gimnasio a Cloudinary:', {
+        name: error instanceof Error ? error.name : 'UnknownError',
+      });
     }
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Error al subir logo del gimnasio.' },
+      { error: status >= 500 ? 'No se pudo subir el logo del gimnasio.' : 'Solicitud no autorizada.' },
       { status }
     );
   }

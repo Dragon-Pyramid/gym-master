@@ -1,44 +1,63 @@
 import bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
-import { NextResponse } from 'next/server';
 
-import { authMiddleware } from '@/middlewares/auth.middleware';
-import { authorizationErrorResponse } from '@/lib/auth/serverAuthorization';
+import type { JwtUser } from '@/interfaces/jwtUser.interface';
+import {
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
 import { sanitizeMenuPermissionsForRole } from '@/lib/permissions/menuPermissions';
+import {
+  noStoreJson,
+  readJsonBody,
+  runtimeErrorResponse,
+} from '@/lib/security/httpRuntimeSecurity';
+import { authMiddleware } from '@/middlewares/auth.middleware';
 import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 import { getPasswordPolicyMessage, isStrongPassword } from '@/utils/passwordPolicy';
-import type { JwtUser } from '@/interfaces/jwtUser.interface';
 
 export const dynamic = 'force-dynamic';
+
+const CHANGE_PASSWORD_BODY_MAX_BYTES = 8 * 1024;
+
+type ChangePasswordBody = {
+  new_password?: unknown;
+};
 
 export async function POST(req: Request) {
   try {
     const { user } = await authMiddleware(req);
-    const { new_password } = await req.json();
+    const body = await readJsonBody<ChangePasswordBody>(
+      req,
+      CHANGE_PASSWORD_BODY_MAX_BYTES,
+    );
+    const newPassword = typeof body.new_password === 'string'
+      ? body.new_password
+      : '';
 
-    if (!new_password || typeof new_password !== 'string') {
-      return NextResponse.json(
+    if (!newPassword) {
+      return noStoreJson(
         { error: 'La nueva contraseña es obligatoria' },
-        { status: 400 }
+        400,
       );
     }
 
-    if (!isStrongPassword(new_password)) {
-      return NextResponse.json(
+    if (!isStrongPassword(newPassword)) {
+      return noStoreJson(
         { error: getPasswordPolicyMessage() },
-        { status: 400 }
+        400,
       );
     }
 
     if (!process.env.JWT_SECRET) {
-      return NextResponse.json(
-        { error: 'JWT_SECRET no está definido en las variables de entorno' },
-        { status: 500 }
+      console.error('JWT_SECRET no está configurado para cambio de contraseña.');
+      return noStoreJson(
+        { error: 'No se pudo actualizar la contraseña' },
+        500,
       );
     }
 
     const supabase = getSupabaseServerClient();
-    const password_hash = await bcrypt.hash(new_password.trim(), 10);
+    const password_hash = await bcrypt.hash(newPassword.trim(), 10);
 
     const { data: updatedUser, error } = await supabase
       .from('usuario')
@@ -53,10 +72,13 @@ export async function POST(req: Request) {
       .select('id,nombre,email,rol,activo,foto,permisos_menu,must_change_password')
       .single();
 
-    if (error) {
-      return NextResponse.json(
-        { error: error.message || 'No se pudo actualizar la contraseña' },
-        { status: 500 }
+    if (error || !updatedUser) {
+      console.error('No se pudo actualizar la contraseña:', {
+        code: error?.code ?? 'UPDATE_USER_FAILED',
+      });
+      return noStoreJson(
+        { error: 'No se pudo actualizar la contraseña' },
+        500,
       );
     }
 
@@ -82,7 +104,7 @@ export async function POST(req: Request) {
       foto: updatedUser.foto ? updatedUser.foto : null,
       permisos_menu: sanitizeMenuPermissionsForRole(
         updatedUser.rol,
-        updatedUser.permisos_menu
+        updatedUser.permisos_menu,
       ),
       must_change_password: false,
     };
@@ -90,20 +112,23 @@ export async function POST(req: Request) {
     const jwtExpiresIn = (process.env.JWT_EXPIRES_IN || '12h') as jwt.SignOptions['expiresIn'];
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: jwtExpiresIn });
 
-    return NextResponse.json(
+    return noStoreJson(
       {
         message: 'Contraseña actualizada correctamente',
         token,
       },
-      { status: 200 }
+      200,
     );
-  } catch (error: any) {
+  } catch (error) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
 
-    return NextResponse.json(
-      { error: error.message || 'Error al cambiar contraseña' },
-      { status: error.message?.includes('Token') ? 401 : 500 }
+    console.error('Error inesperado al cambiar contraseña:', {
+      name: error instanceof Error ? error.name : 'UnknownError',
+    });
+    return runtimeErrorResponse(
+      error,
+      'No se pudo actualizar la contraseña',
     );
   }
 }

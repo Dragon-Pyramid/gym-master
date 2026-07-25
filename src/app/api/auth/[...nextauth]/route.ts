@@ -13,6 +13,8 @@ const supabase = createClient(
 );
 
 const handler = NextAuth({
+  useSecureCookies: process.env.NODE_ENV === 'production',
+  debug: false,
   providers: [
     CredentialsProvider({
       name: "credentials",
