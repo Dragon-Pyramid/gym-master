@@ -111,6 +111,42 @@ export async function authorizePersonalOrDashboardRequest(
   return user;
 }
 
+export function requireOwnUserOrRoles(
+  user: JwtUser,
+  userId: string,
+  elevatedRoles: AppRole[] = ['admin'],
+) {
+  if (user.id === userId) {
+    return user;
+  }
+
+  if (!elevatedRoles.includes(user.rol as AppRole)) {
+    throw new AuthorizationError(
+      'El usuario no puede consultar el perfil de otra cuenta',
+      'AUTH_USER_SCOPE_FORBIDDEN',
+    );
+  }
+
+  return user;
+}
+
+export async function authorizeOwnUserOrDashboardRequest(
+  req: Request,
+  userId: string,
+  pathname: string,
+  elevatedRoles: AppRole[] = ['admin'],
+) {
+  const { user } = await authMiddleware(req);
+
+  if (user.id === userId) {
+    return user;
+  }
+
+  requireRoles(user, elevatedRoles);
+  requireDashboardPermission(user, pathname);
+  return user;
+}
+
 export function requireOwnSocioOrRoles(
   user: JwtUser,
   socioId: string,

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
 import {
   createComercialOrdenCompra,
   getComercialComprasReposicionDashboard,
@@ -7,14 +6,21 @@ import {
   upsertComercialProveedorProducto,
 } from '@/services/server/comercialComprasReposicionServerService';
 
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
+
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
-    await authMiddleware(req);
+    await authorizeDashboardRequest(req, '/dashboard/comercial/compras-reposicion', ['admin', 'usuario']);
     const dashboard = await getComercialComprasReposicionDashboard();
     return NextResponse.json({ data: dashboard }, { status: 200 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const message = error?.message || 'Error al obtener compras y reposición comercial';
     const status = message.includes('Token') || message.includes('JWT') ? 401 : 500;
     return NextResponse.json({ error: message }, { status });
@@ -23,7 +29,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/comercial/compras-reposicion', ['admin', 'usuario']);
     const body = await req.json();
 
     if (body?.action === 'proveedor_producto') {
@@ -43,6 +49,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ error: 'Acción de compras/reposición inválida' }, { status: 400 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const message = error?.message || 'Error al operar compras y reposición comercial';
     const status = message.includes('Token') || message.includes('JWT') ? 401 : 400;
     return NextResponse.json({ error: message }, { status });

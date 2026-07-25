@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authMiddleware } from "@/middlewares/auth.middleware";
 import { getSupabaseServerClient } from "@/services/supabaseServerClient";
 import {
   fetchCuotaDescuentoConfig,
   upsertCuotaDescuentoConfig,
 } from "@/services/cuotaDescuentoService";
+
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +42,7 @@ function toNullableString(value: unknown): string | null {
 
 export async function GET(req: NextRequest) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/parametrizacion', ['admin']);
     assertAdminRole(user?.rol);
 
     const supabase = getSupabaseServerClient();
@@ -46,6 +50,8 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ data: config }, { status: 200 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json(
       { error: error.message || "Error al obtener descuento por pago adelantado" },
       { status: error.message?.includes("No autorizado") ? 403 : 500 }
@@ -55,7 +61,7 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/parametrizacion', ['admin']);
     assertAdminRole(user?.rol);
 
     const body = await req.json();
@@ -76,6 +82,8 @@ export async function PATCH(req: NextRequest) {
       { status: 200 }
     );
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json(
       { error: error.message || "Error al actualizar descuento por pago adelantado" },
       { status: error.message?.includes("No autorizado") ? 403 : 500 }

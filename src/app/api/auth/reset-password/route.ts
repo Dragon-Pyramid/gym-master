@@ -8,6 +8,8 @@ import {
 
 export const dynamic = 'force-dynamic';
 
+// AUTH POLICY: PUBLIC_RECOVERY_TOKEN
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const token = searchParams.get('token') ?? '';

@@ -3,6 +3,7 @@ import * as jwt from 'jsonwebtoken';
 import { NextResponse } from 'next/server';
 
 import { authMiddleware } from '@/middlewares/auth.middleware';
+import { authorizationErrorResponse } from '@/lib/auth/serverAuthorization';
 import { sanitizeMenuPermissionsForRole } from '@/lib/permissions/menuPermissions';
 import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 import { getPasswordPolicyMessage, isStrongPassword } from '@/utils/passwordPolicy';
@@ -97,6 +98,9 @@ export async function POST(req: Request) {
       { status: 200 }
     );
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
+
     return NextResponse.json(
       { error: error.message || 'Error al cambiar contraseña' },
       { status: error.message?.includes('Token') ? 401 : 500 }

@@ -8,6 +8,8 @@ import {
 
 export const dynamic = "force-dynamic";
 
+// AUTH POLICY: PUBLIC_VERIFICATION_CODE
+
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }

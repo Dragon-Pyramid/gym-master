@@ -3,12 +3,15 @@ import { authMiddleware } from '@/middlewares/auth.middleware';
 import { authorizationErrorResponse } from '@/lib/auth/serverAuthorization';
 import { uploadFile } from '@/services/fileUploadService';
 import { updateFotoUsuarioById } from '@/services/usuarioService';
+import {
+  hasSafeUploadSignature,
+  isSafeUploadMimeType,
+} from '@/lib/security/uploadValidation';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
-const VALID_IMAGE_TYPES = /^image\/(png|jpe?g|webp|gif|svg\+xml|heic|heif)$/i;
 
 export async function POST(request: Request) {
   try {
@@ -35,7 +38,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!VALID_IMAGE_TYPES.test(file.type)) {
+    if (!isSafeUploadMimeType(file.type) || file.type === 'application/pdf') {
       return NextResponse.json(
         {
           error:
@@ -47,6 +50,13 @@ export async function POST(request: Request) {
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+
+    if (!hasSafeUploadSignature(buffer, file.type)) {
+      return NextResponse.json(
+        { error: 'El contenido del archivo no coincide con una imagen permitida.' },
+        { status: 400 }
+      );
+    }
 
     const fileDto: FileUploadDTO = {
       fieldName: file.name,

@@ -1,4 +1,3 @@
-import { authMiddleware } from "@/middlewares/auth.middleware";
 import {
   getAllAsistencias,
   createAsistencia,
@@ -7,17 +6,24 @@ import {
 } from "@/services/asistenciaService";
 import { NextResponse } from "next/server";
 
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
+
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/asistencias', ['admin', 'usuario']);
     if (!user) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
     const asistencias = await getAllAsistencias(user);
     return NextResponse.json(asistencias, { status: 200 });
-  } catch {
+  } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json(
       { error: "Error al obtener asistencias" },
       { status: 500 },
@@ -27,7 +33,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/asistencias', ['admin', 'usuario']);
     if (!user) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
@@ -45,6 +51,8 @@ export async function POST(req: Request) {
       { status: 201 },
     );
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json(
       { error: error.message || "Error al registrar asistencia" },
       { status: 500 },
@@ -54,7 +62,7 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/asistencias', ['admin', 'usuario']);
     if (!user) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
@@ -74,6 +82,8 @@ export async function PUT(req: Request) {
       { status: 200 },
     );
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json(
       { error: error.message || "Error al actualizar asistencia" },
       { status: 500 },
@@ -83,7 +93,7 @@ export async function PUT(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/asistencias', ['admin', 'usuario']);
     if (!user) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
@@ -100,6 +110,8 @@ export async function DELETE(req: Request) {
       { status: 200 },
     );
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json(
       { error: error.message || "Error al eliminar asistencia" },
       { status: 500 },

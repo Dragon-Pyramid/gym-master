@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
-import { authMiddleware } from "@/middlewares/auth.middleware";
 import { getAforoAsistencia } from "@/services/asistenciaService";
+
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +22,7 @@ function isAuthError(error: unknown) {
 
 export async function GET(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/asistencias/aforo', ['admin', 'usuario']);
     if (!user) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
@@ -26,6 +30,8 @@ export async function GET(req: Request) {
     const aforo = await getAforoAsistencia(user);
     return NextResponse.json(aforo, { status: 200 });
   } catch (error: unknown) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const message =
       error instanceof Error ? error.message : "Error al obtener aforo";
 

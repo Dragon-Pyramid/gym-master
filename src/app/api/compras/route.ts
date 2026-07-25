@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
 import { conexionBD } from '@/middlewares/conexionBd.middleware';
+
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,7 +61,7 @@ async function fetchCompraById(supabase: ReturnType<typeof conexionBD>, id: stri
 
 export async function GET(req: NextRequest) {
   try {
-    await authMiddleware(req);
+    await authorizeDashboardRequest(req, '/dashboard/compras', ['admin', 'usuario']);
     const supabase = conexionBD();
     const { searchParams } = new URL(req.url);
     const proveedorId = searchParams.get('proveedor_id');
@@ -81,6 +85,8 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ data: data ?? [] }, { status: 200 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json(
       { error: error.message || 'Error al obtener compras' },
       { status: 500 }
@@ -90,7 +96,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/compras', ['admin', 'usuario']);
     const supabase = conexionBD();
     const body = await req.json();
 
@@ -262,6 +268,8 @@ export async function POST(req: NextRequest) {
     const fullCompra = await fetchCompraById(supabase, compra.id);
     return NextResponse.json({ data: fullCompra }, { status: 201 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json(
       { error: error.message || 'Error al registrar compra' },
       { status: 500 }

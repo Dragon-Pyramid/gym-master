@@ -1,13 +1,17 @@
-import { authMiddleware } from '@/middlewares/auth.middleware';
 import { NextRequest, NextResponse } from 'next/server';
 import { createSessionPago, previewSessionPago } from '@/services/stripeService';
+
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
 
 
 export async function GET(req: NextRequest) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/mi-cuenta/pagar-cuota', ['socio']);
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -28,6 +32,8 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ data: preview }, { status: 200 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error('Error al obtener vista previa de pago:', error);
     const message = error.message || 'Error al obtener vista previa de pago';
     const status = message.includes('pagos online') || message.includes('no están habilitados') ? 403 : 500;
@@ -40,7 +46,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/mi-cuenta/pagar-cuota', ['socio']);
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -67,6 +73,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ url: session.url }, { status: 200 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error('Error al crear la sesión de pago:', error);
     const message = error.message || 'Error al crear la sesión de pago';
     const status = message.includes('pagos online') || message.includes('no están habilitados') ? 403 : 500;

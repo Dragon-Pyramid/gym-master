@@ -1,14 +1,18 @@
-import { authMiddleware } from "@/middlewares/auth.middleware";
 import { rolAdminMiddleware } from "@/middlewares/rolAdmin.middleware";
 import { dataRankingFallosEquipamiento } from "@/services/equipamientoService";
 import { NextResponse } from "next/server";
 
 
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
+
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
     try {
-        const { user } = await authMiddleware(req);
+        const user = await authorizeDashboardRequest(req, '/dashboard/equipamientos', ['admin', 'usuario']);
         if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
@@ -26,6 +30,8 @@ export async function GET(req: Request) {
 
         return NextResponse.json(topFallos);
     } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
         console.error("Error en el ranking de fallos de equipamiento:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }

@@ -1,14 +1,18 @@
-import { authMiddleware } from "@/middlewares/auth.middleware";
 import { rolAdminMiddleware } from "@/middlewares/rolAdmin.middleware";
 import { dataRetencionPorCombinacion } from "@/services/rutinaService";
 import { NextResponse } from "next/server";
 
 
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
+
 export const dynamic = 'force-dynamic';
 
 export async function GET(req:Request){
 try {
-    const {user} = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/gestor-rutinas', ['admin', 'usuario']);
     if(!user){
         return NextResponse.json({error: "Unauthorized"}, {status: 401});
     }
@@ -27,6 +31,8 @@ try {
     return NextResponse.json({data: retencion}, {status: 200});
 
 } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.log("Error en la obtención de métricas:", error);
     return NextResponse.json({error: "Error en la obtención de métricas"}, {status: 500});
 }

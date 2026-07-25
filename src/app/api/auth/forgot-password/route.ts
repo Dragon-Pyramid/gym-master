@@ -7,6 +7,8 @@ import {
 
 export const dynamic = 'force-dynamic';
 
+// AUTH POLICY: PUBLIC_RECOVERY
+
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));

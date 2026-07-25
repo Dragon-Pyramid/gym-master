@@ -1,12 +1,19 @@
 import { NextResponse } from 'next/server';
 import { FileUploadDTO } from '@/interfaces/fileUpload.interface';
-import { authMiddleware } from '@/middlewares/auth.middleware';
 import { uploadFileCloudinaryWithResult } from '@/lib/cloudinary';
+import {
+  hasSafeUploadSignature,
+  isSafeUploadMimeType,
+} from '@/lib/security/uploadValidation';
+
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
-const VALID_MEDIA_TYPES = /^image\/(png|jpe?g|webp|gif|svg\+xml|heic|heif)$/i;
 
 function getStatusFromError(error: any) {
   const message = error?.message ?? '';
@@ -24,7 +31,7 @@ function normalizeRole(role?: string | null) {
 
 export async function POST(request: Request) {
   try {
-    const { user } = await authMiddleware(request);
+    const user = await authorizeDashboardRequest(request, '/dashboard/rutinas/media', ['admin', 'usuario']);
     const role = normalizeRole(user.rol);
 
     if (role !== 'admin' && role !== 'administrador') {
@@ -52,15 +59,22 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!VALID_MEDIA_TYPES.test(file.type)) {
+    if (!isSafeUploadMimeType(file.type) || file.type === 'application/pdf') {
       return NextResponse.json(
-        { error: 'Formato no válido. Usá PNG, JPG, WEBP, GIF, SVG, HEIC o HEIF.' },
+        { error: 'Formato no válido. Usá PNG, JPG, WEBP, GIF, HEIC o HEIF.' },
         { status: 400 }
       );
     }
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+
+    if (!hasSafeUploadSignature(buffer, file.type)) {
+      return NextResponse.json(
+        { error: 'El contenido del archivo no coincide con una imagen permitida.' },
+        { status: 400 }
+      );
+    }
 
     const fileDto: FileUploadDTO = {
       fieldName: file.name,
@@ -95,6 +109,8 @@ export async function POST(request: Request) {
       { status: 200 }
     );
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const status = getStatusFromError(error);
 
     if (status === 500) {

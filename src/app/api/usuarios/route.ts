@@ -5,17 +5,21 @@ import {
   fetchUsuariosServer,
   updateUsuarioServer,
 } from '@/services/server/usuarioServerService';
-import { authMiddleware } from '@/middlewares/auth.middleware';
-
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/usuarios', ['admin']);
     const usuarios = await fetchUsuariosServer(user);
     return NextResponse.json({ data: usuarios }, { status: 200 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json(
       { error: error.message || 'Error al obtener usuarios' },
       { status: error.message?.includes('No autorizado') ? 403 : 500 }
@@ -25,7 +29,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/usuarios', ['admin']);
     const body = await req.json();
     const {
       nombre,
@@ -95,6 +99,8 @@ export async function POST(req: Request) {
       { status: 201 }
     );
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json(
       { error: error.message || 'Error al crear usuario' },
       { status: error.message?.includes('No autorizado') ? 403 : 500 }
@@ -104,7 +110,7 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/usuarios', ['admin']);
     const { id, updateData } = await req.json();
 
     if (!id || typeof id !== 'string') {
@@ -123,6 +129,8 @@ export async function PUT(req: Request) {
       { status: 200 }
     );
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json(
       { error: error.message || 'Error al actualizar usuario' },
       { status: error.message?.includes('No autorizado') ? 403 : 500 }
@@ -132,7 +140,7 @@ export async function PUT(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/usuarios', ['admin']);
     const { id } = await req.json();
 
     if (!id || typeof id !== 'string') {
@@ -148,6 +156,8 @@ export async function DELETE(req: Request) {
       { status: 200 }
     );
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json(
       { error: error.message || 'Error al desactivar usuario' },
       { status: error.message?.includes('No autorizado') ? 403 : 500 }

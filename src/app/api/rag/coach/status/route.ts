@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
 import { getRagHealth } from '@/services/server/ragCoachSearchService';
+
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,10 +17,12 @@ function getAuthStatus(error: any) {
 
 export async function GET(request: Request) {
   try {
-    const { user } = await authMiddleware(request);
+    const user = await authorizeDashboardRequest(request, '/dashboard/coach', ['admin', 'socio']);
     const status = await getRagHealth(user);
     return NextResponse.json(status, { status: 200 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const status = getAuthStatus(error);
     if (status === 500) console.error('Error al consultar estado RAG:', error);
     return NextResponse.json(

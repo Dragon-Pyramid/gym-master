@@ -1,11 +1,18 @@
 import { NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
 import { uploadFileCloudinaryWithResult } from '@/lib/cloudinary';
+import {
+  hasSafeUploadSignature,
+  isSafeUploadMimeType,
+} from '@/lib/security/uploadValidation';
+
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
-const VALID_IMAGE_TYPES = /^image\/(png|jpe?g|webp|gif|svg\+xml)$/i;
 
 function normalizeRole(role?: string | null) {
   return role?.trim().toLowerCase() ?? '';
@@ -20,7 +27,7 @@ function getStatusFromError(error: unknown) {
 
 export async function POST(request: Request) {
   try {
-    const { user } = await authMiddleware(request);
+    const user = await authorizeDashboardRequest(request, '/dashboard/gimnasio-parametrizacion', ['admin']);
     const role = normalizeRole(user.rol);
 
     if (role !== 'admin' && role !== 'administrador') {
@@ -44,15 +51,23 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!VALID_IMAGE_TYPES.test(file.type)) {
+    if (!isSafeUploadMimeType(file.type) || file.type === 'application/pdf') {
       return NextResponse.json(
-        { error: 'Formato no válido. Usá PNG, JPG, WEBP, GIF o SVG.' },
+        { error: 'Formato no válido. Usá PNG, JPG, WEBP, GIF, HEIC o HEIF.' },
         { status: 400 }
       );
     }
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+
+    if (!hasSafeUploadSignature(buffer, file.type)) {
+      return NextResponse.json(
+        { error: 'El contenido del archivo no coincide con una imagen permitida.' },
+        { status: 400 }
+      );
+    }
+
     const folder = 'gym-master/gimnasio/branding';
 
     const result = await uploadFileCloudinaryWithResult(buffer, file.name, folder);
@@ -71,6 +86,8 @@ export async function POST(request: Request) {
       { status: 200 }
     );
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const status = getStatusFromError(error);
 
     if (status === 500) {

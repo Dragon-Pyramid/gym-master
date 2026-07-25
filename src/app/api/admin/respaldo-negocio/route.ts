@@ -1,15 +1,19 @@
 import { NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
 import {
   getRespaldoNegocioHistory,
   getRespaldoNegocioModules,
 } from '@/services/adminRespaldoNegocioService';
 
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
+
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/respaldo-negocio', ['admin']);
     const [modulos, historial] = await Promise.all([
       Promise.resolve(getRespaldoNegocioModules(user)),
       getRespaldoNegocioHistory(user),
@@ -17,6 +21,8 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ data: { modulos, historial } });
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const message = error instanceof Error ? error.message : 'Error interno del servidor';
     const status = message.includes('No autorizado') || message.includes('Token') ? 403 : 500;
     return NextResponse.json({ error: message }, { status });

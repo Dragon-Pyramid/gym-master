@@ -61,11 +61,19 @@ El endurecimiento de recursos sensibles quedó documentado en:
 
 Este bloque incorpora autorización por módulo y propiedad del socio en Socios, Pagos, Ficha médica, Rutinas, Dietas, Evolución física, Mensajes, Notificaciones y analítica sensible. También aísla la gestión de licencia al rol Master Admin y reduce la exposición del verificador público de recibos.
 
+## Bloque 4 completado
+
+El barrido final quedó documentado en:
+
+`docs/security/security-auth-rbac-final-audit-v1-final-sweep.md`
+
+Este bloque clasifica explícitamente los 175 archivos de API Routes, protege las familias operativas restantes, refuerza la confirmación Stripe y el perfil propio, registra las excepciones públicas/internas, endurece el proxy de imágenes y valida la firma real de archivos antes de cargarlos.
+
 ## Próximos pasos de la rama
 
-1. Ejecutar build y matriz manual completa del Bloque 3.
-2. Corregir únicamente regresiones detectadas durante QA.
-3. Realizar el gate consolidado de los tres bloques.
+1. Ejecutar build y gates automáticos consolidados.
+2. Ejecutar la matriz manual del Bloque 4.
+3. Corregir únicamente regresiones detectadas durante QA.
 4. Preparar PR e informe técnico de cierre.
 5. Registrar para la auditoría RLS cualquier riesgo que dependa de Supabase y no de la API.
 

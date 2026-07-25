@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
 import type { RagCoachChatRequest } from '@/interfaces/ragCoachChat.interface';
 import { handleUnifiedRagCoachChat } from '@/services/server/ragCoachUnifiedChatService';
 import { aiGeneratedContentTx, normalizeAiGeneratedContentLocale } from '@/utils/aiGeneratedContentI18n';
+
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +20,7 @@ function getStatusFromError(message: string) {
 
 export async function POST(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/coach', ['admin', 'socio']);
     if (!user) {
       return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
     }
@@ -42,6 +46,8 @@ export async function POST(req: Request) {
       { status: 200 },
     );
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const message = error instanceof Error ? error.message : 'Error inesperado';
 
     console.error('Error en chat unificado RAG Coach:', error);

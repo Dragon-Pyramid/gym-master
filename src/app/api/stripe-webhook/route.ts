@@ -5,6 +5,8 @@ import { registerStripeCheckoutPago } from '@/services/server/stripePagoRegistra
 
 export const dynamic = 'force-dynamic';
 
+// AUTH POLICY: PUBLIC_SIGNED_WEBHOOK
+
 if (!process.env.STRIPE_WEBHOOK_SECRET) {
   throw new Error('STRIPE_WEBHOOK_SECRET no está definido');
 }

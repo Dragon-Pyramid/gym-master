@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 
 export const dynamic = 'force-dynamic';
 
+// AUTH POLICY: PUBLIC_LOGIN
+
 type LoginError = Error & {
   code?: string;
   status?: number;

@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import {
   reactivateDragonPyramidLicenseAfterPayment,
@@ -6,8 +7,22 @@ import {
 
 export const dynamic = 'force-dynamic';
 
+// AUTH POLICY: INTERNAL_SHARED_SECRET
+// This endpoint is used only by Dragon Pyramid's billing platform and requires
+// a dedicated server-to-server secret. It never accepts a browser JWT.
+
 function getSyncSecret() {
   return process.env.DRAGON_PYRAMID_LICENSE_SYNC_SECRET?.trim() || '';
+}
+
+function secretsMatch(provided: string, expected: string) {
+  const providedBuffer = Buffer.from(provided, 'utf8');
+  const expectedBuffer = Buffer.from(expected, 'utf8');
+
+  return (
+    providedBuffer.length === expectedBuffer.length &&
+    timingSafeEqual(providedBuffer, expectedBuffer)
+  );
 }
 
 function resolveStatus(message: string) {
@@ -25,7 +40,7 @@ export async function POST(req: Request) {
     }
 
     const providedSecret = req.headers.get('x-dragon-pyramid-sync-key')?.trim() || '';
-    if (!providedSecret || providedSecret !== expectedSecret) {
+    if (!providedSecret || !secretsMatch(providedSecret, expectedSecret)) {
       throw new Error('Sincronización no autorizada');
     }
 

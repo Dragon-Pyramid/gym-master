@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
 import { searchRagKnowledge } from '@/services/server/ragCoachSearchService';
+
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,11 +17,13 @@ function getAuthStatus(error: any) {
 
 export async function POST(request: Request) {
   try {
-    const { user } = await authMiddleware(request);
+    const user = await authorizeDashboardRequest(request, '/dashboard/coach', ['admin', 'socio']);
     const payload = await request.json();
     const result = await searchRagKnowledge(user, payload);
     return NextResponse.json(result, { status: 200 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     const status = getAuthStatus(error);
     if (status === 500) console.error('Error en búsqueda RAG:', error);
     return NextResponse.json(

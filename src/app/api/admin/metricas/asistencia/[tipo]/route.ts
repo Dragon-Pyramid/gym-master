@@ -1,4 +1,3 @@
-import { authMiddleware } from '@/middlewares/auth.middleware';
 import { rolAdminMiddleware } from '@/middlewares/rolAdmin.middleware';
 import {
   dataConcurrenciaAnual,
@@ -8,6 +7,11 @@ import {
 import { NextResponse } from 'next/server';
 
 
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
+
 export const dynamic = 'force-dynamic';
 
 export async function GET(
@@ -15,7 +19,7 @@ export async function GET(
   { params }: { params: Promise<{ tipo: string }> }
 ) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/asistencias', ['admin', 'usuario']);
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -54,6 +58,8 @@ export async function GET(
 
     return NextResponse.json(concurrencia);
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error('Error en la concurrencia de asistencia:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

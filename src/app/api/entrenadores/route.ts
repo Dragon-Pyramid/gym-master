@@ -1,4 +1,3 @@
-import { authMiddleware } from "@/middlewares/auth.middleware";
 import { rolAdminMiddleware } from "@/middlewares/rolAdmin.middleware";
 import {
   createEntrenador,
@@ -7,17 +6,24 @@ import {
 import { NextResponse } from "next/server";
 
 
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
+
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/empleados', ['admin', 'usuario']);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const entrenadores = await getEntrenadores(user);
     return NextResponse.json(entrenadores);
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     if (error instanceof Error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
@@ -30,7 +36,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/empleados', ['admin', 'usuario']);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -54,6 +60,8 @@ export async function POST(req: Request) {
     );
     return NextResponse.json(entrenador, { status: 201 });
   } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     if (error instanceof Error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }

@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authMiddleware } from '@/middlewares/auth.middleware';
 import { conexionBD } from '@/middlewares/conexionBd.middleware';
 import type {
   FinanzasCategoriaResumen,
   FinanzasDashboardResponse,
   FinanzasSerieMensual,
 } from '@/interfaces/finanzas.interface';
+
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
 
@@ -142,7 +146,7 @@ function isVencido(value: unknown) {
 
 export async function GET(req: NextRequest) {
   try {
-    await authMiddleware(req);
+    await authorizeDashboardRequest(req, '/dashboard/finanzas', ['admin', 'usuario']);
     const supabase = conexionBD();
     const { searchParams } = new URL(req.url);
 
@@ -328,6 +332,8 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ data }, { status: 200 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json(
       { error: error.message || 'Error al obtener BI financiero' },
       { status: error.message?.includes('Token') ? 401 : 500 }

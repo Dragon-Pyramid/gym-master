@@ -565,6 +565,14 @@ export const DASHBOARD_ROUTE_PERMISSIONS: DashboardRoutePermission[] = [
     exact: false,
   },
   {
+    // Ruta heredada que redirige a Empleados. Debe conservar el mismo
+    // permiso para no bloquear a usuarios internos autorizados antes del redirect.
+    path: "/dashboard/entrenadores",
+    permissionKey: "Empleados",
+    roles: ["admin", "usuario"],
+    exact: false,
+  },
+  {
     path: "/dashboard/asistencias/terminal",
     permissionKey: "Asistencias",
     roles: ["admin", "usuario"],

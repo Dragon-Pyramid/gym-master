@@ -1,6 +1,10 @@
-import { authMiddleware } from '@/middlewares/auth.middleware';
 import { getVentaById } from '@/services/ventaService';
 import { NextRequest, NextResponse } from 'next/server';
+
+import {
+  authorizeDashboardRequest,
+  authorizationErrorResponse,
+} from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,7 +13,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { user } = await authMiddleware(req);
+    const user = await authorizeDashboardRequest(req, '/dashboard/ventas', ['admin', 'usuario']);
     if (!user) {
       return NextResponse.json(
         { error: 'No se pudo obtener el usuario' },
@@ -21,6 +25,8 @@ export async function GET(
     const venta = await getVentaById(user, id);
     return NextResponse.json({ data: venta }, { status: 200 });
   } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
     return NextResponse.json(
       { error: error.message || 'Error al obtener la venta' },
       { status: 500 }
