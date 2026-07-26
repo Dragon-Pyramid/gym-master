@@ -187,6 +187,14 @@ for (const file of browserReachable) {
     );
   }
   if (
+    source.includes("'postgres_changes'") ||
+    source.includes('"postgres_changes"')
+  ) {
+    browserDatabaseViolations.push(
+      `${path.relative(root, file)} -> direct postgres_changes subscription`
+    );
+  }
+  if (
     source.includes('@/middlewares/conexionBd.middleware') ||
     source.includes('@/services/supabaseServerClient')
   ) {

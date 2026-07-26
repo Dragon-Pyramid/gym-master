@@ -6,7 +6,6 @@ import type { AsistenciaReciente as AsistenciaRecienteApi } from '@/services/qrS
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock, User } from 'lucide-react';
-import { supabaseBrowser } from '@/lib/supabase-browser';
 import { formatFrontendDate } from '@/utils/dateFormat';
 
 const RECENT_ADMIN_SPLASH_WINDOW_MS = 15000;
@@ -131,36 +130,15 @@ export default function AsistenciasRecientesTable({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshTrigger]);
 
-  // Realtime + fallback polling
+  // Polling protegido mediante API Route. No usamos postgres_changes sobre
+  // tablas de negocio porque el navegador opera con la anon key y la
+  // autorización real vive en las API Routes de Gym Master.
   useEffect(() => {
-    const channel = supabaseBrowser
-      .channel('asistencias-realtime')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'asistencia' },
-        () => loadAsistencias()
-      )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'asistencia' },
-        () => loadAsistencias()
-      )
-      .on(
-        'postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'asistencia' },
-        () => loadAsistencias()
-      )
-      .subscribe();
-
-    // Fallback por si Realtime no está habilitado o hay cortes de red
     const interval = setInterval(() => {
       if (!inFlight.current) loadAsistencias();
     }, 2500);
 
-    return () => {
-      supabaseBrowser.removeChannel(channel);
-      clearInterval(interval);
-    };
+    return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
