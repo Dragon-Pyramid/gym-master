@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { createServicio, updateServicio } from "@/services/servicioService";
+import { createServicio, updateServicio } from "@/services/browser/servicioApiClient";
 import { Servicio } from "@/interfaces/servicio.interface";
 import { toast } from "sonner";
 import { useI18n } from '@/i18n/I18nProvider';

@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, FileText, FileSpreadsheet } from "lucide-react";
-import { getAllCuotas, deleteCuota } from "@/services/cuotaService";
+import { getAllCuotas, deleteCuota } from "@/services/browser/cuotaApiClient";
 import CuotasModal from "@/components/modal/CuotasModal";
 import CuotasViewModal from "@/components/modal/CuotasViewModal";
 import CuotaTable from "@/components/tables/CuotaTable";

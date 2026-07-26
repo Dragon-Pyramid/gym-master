@@ -15,7 +15,7 @@ import {
   getProductoStockEstadoLabel,
   getProductoStockMinimo,
 } from "@/lib/comercial/productos";
-import { getProductoHistorialPreciosCostos } from "@/services/productoService";
+import { getProductoHistorialPreciosCostos } from "@/services/browser/productoApiClient";
 import { getProductoStockMovimientos } from "@/services/productoStockMovimientoService";
 import { formatFrontendDateTime, formatFrontendDate } from '@/utils/dateFormat';
 import { useI18n } from '@/i18n/I18nProvider';

@@ -1,5 +1,6 @@
 import {
   deleteEquipamiento,
+  getOneEquipamientoById,
   updateEquipamiento,
 } from '@/services/equipamientoService';
 import { NextRequest, NextResponse } from 'next/server';
@@ -11,6 +12,37 @@ import {
 } from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
+
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    await authorizeDashboardRequest(req, '/dashboard/equipamientos', ['admin', 'usuario']);
+    const { id } = await params;
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'El ID del equipamiento no puede estar vacío' },
+        { status: 400 }
+      );
+    }
+
+    const equipamiento = await getOneEquipamientoById(id);
+    return NextResponse.json(
+      { data: equipamiento },
+      { status: 200 }
+    );
+  } catch (error: any) {
+    const authResponse = authorizationErrorResponse(error);
+    if (authResponse) return authResponse;
+    return NextResponse.json(
+      { error: error?.message || 'Error al obtener el equipamiento' },
+      { status: 500 }
+    );
+  }
+}
 
 export async function PUT(
   req: NextRequest,

@@ -10,8 +10,8 @@ import {
 } from "@/components/ui/dialog";
 import { Equipamento } from "@/interfaces/equipamiento.interface";
 import { Mantenimiento } from "@/interfaces/mantenimiento.interface";
-import { getOneEquipamientoById } from "@/services/equipamientoService";
-import { getMantenimientoByIdEquipamiento } from "@/services/mantenimientoService";
+import { getOneEquipamientoById } from "@/services/browser/equipamientoApiClient";
+import { getMantenimientoByIdEquipamiento } from "@/services/browser/mantenimientoApiClient";
 import { formatFrontendDateTime, formatFrontendDate } from '@/utils/dateFormat';
 import { useI18n } from "@/i18n/I18nProvider";
 

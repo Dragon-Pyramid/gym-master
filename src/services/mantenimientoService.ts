@@ -1,9 +1,11 @@
 import { CreateMantenimientoDTO, Mantenimiento, UpdateMantenimientoDTO } from "@/interfaces/mantenimiento.interface";
-import { supabase } from "./supabaseClient";
+import { getSupabaseClient } from "./supabaseClient";
 import { getOneEquipamientoById, updateEquipamiento } from "./equipamientoService";
 import dayjs from "dayjs";
 import { EstadoMantenimiento } from "@/enums/estadoMantenimiento.enum";
 import { EstadoEquipamiento } from "@/enums/estadoEquipamiento.enum";
+
+const supabase = getSupabaseClient();
 
 type TipoMantenimientoCatalogo = {
   id: string;

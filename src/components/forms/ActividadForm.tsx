@@ -10,7 +10,7 @@ import {
   CreateActividadDto,
   UpdateActividadDto,
 } from "@/interfaces/actividad.interface";
-import { createActividad, updateActividad } from "@/services/actividadService";
+import { createActividad, updateActividad } from "@/services/browser/actividadApiClient";
 import { toast } from "sonner";
 
 export interface ActividadFormProps {

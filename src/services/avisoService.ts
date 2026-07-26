@@ -1,5 +1,7 @@
-import { supabase } from "./supabaseClient";
+import { getSupabaseClient } from "./supabaseClient";
 import { Aviso, CreateAvisoDto, UpdateAvisoDto } from "../interfaces/aviso.interface";
+
+const supabase = getSupabaseClient();
 
 export const getAllAvisos = async (): Promise<Aviso[]> => {
   const { data, error } = await supabase.from("avisos").select();

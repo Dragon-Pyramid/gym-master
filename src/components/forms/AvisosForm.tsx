@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { createAviso } from "@/services/avisoService";
+import { createAviso } from "@/services/browser/avisoApiClient";
 import { CreateAvisoDto } from "@/interfaces/aviso.interface";
 import TextEditor from "@/components/ui/TextEditor";
 import { useI18n } from "@/i18n/I18nProvider";

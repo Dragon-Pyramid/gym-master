@@ -1,5 +1,7 @@
-import { supabase } from "./supabaseClient";
+import { getSupabaseClient } from "./supabaseClient";
 import { Cuota, CreateCuotaDto, UpdateCuotaDto } from "../interfaces/cuota.interface";
+
+const supabase = getSupabaseClient();
 
 export const getAllCuotas = async (): Promise<Cuota[]> => {
   const { data, error } = await supabase.from("cuota").select();

@@ -3,7 +3,7 @@ import {
   authorizationErrorResponse,
   authorizeDashboardRequest,
 } from '@/lib/auth/serverAuthorization';
-import { conexionBD } from '@/middlewares/conexionBd.middleware';
+import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 import type {
   GeneroBi,
   SociosBiAsistenciaSegmento,
@@ -261,7 +261,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = conexionBD();
+    const supabase = getSupabaseServerClient();
 
     const [sociosResult, asistenciasResult, pagosResult, ventasResult] = await Promise.all([
       supabase

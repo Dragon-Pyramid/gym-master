@@ -3,7 +3,7 @@ import {
   authMiddleware,
 } from "@/middlewares/auth.middleware";
 import { NextResponse } from "next/server";
-import { conexionBD } from "@/middlewares/conexionBd.middleware";
+import { getSupabaseServerClient } from "@/services/supabaseServerClient";
 import {
   AuthorizationError,
   requireDashboardPermission,
@@ -118,7 +118,7 @@ export async function GET(req: Request) {
   try {
     const { user } = await authMiddleware(req, { allowTerminalSession: true });
     requireDashboardPermission(user, '/dashboard/asistencias/terminal');
-    const supabase = conexionBD();
+    const supabase = getSupabaseServerClient();
 
     // Últimas 4 asistencias con datos del socio.
     // Se enriquecen con estado de cuota para que el dashboard admin no muestre

@@ -68,7 +68,7 @@ import type {
 import {
   deleteActividad,
   fetchAllActividades,
-} from "@/services/actividadService";
+} from "@/services/browser/actividadApiClient";
 import {
   createActividadInscripcion,
   createActividadTurno,

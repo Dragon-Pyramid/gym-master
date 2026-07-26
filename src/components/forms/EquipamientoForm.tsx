@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import {
   createEquipamiento,
   updateEquipamiento,
-} from "@/services/equipamientoService";
+} from "@/services/browser/equipamientoApiClient";
 import {
   Equipamento,
   CreateEquipamentoDTO,

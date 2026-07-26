@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { conexionBD } from '@/middlewares/conexionBd.middleware';
+import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 import type {
   FinanzasCategoriaResumen,
   FinanzasDashboardResponse,
@@ -147,7 +147,7 @@ function isVencido(value: unknown) {
 export async function GET(req: NextRequest) {
   try {
     await authorizeDashboardRequest(req, '/dashboard/finanzas', ['admin', 'usuario']);
-    const supabase = conexionBD();
+    const supabase = getSupabaseServerClient();
     const { searchParams } = new URL(req.url);
 
     const desde = normalizeDateParam(

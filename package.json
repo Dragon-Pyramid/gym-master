@@ -20,7 +20,8 @@
     "test:rag-coach-pdf": "node scripts/verify-rag-coach-pdf-output.mjs",
     "test:business-backup-export": "node scripts/verify-business-backup-export.mjs",
     "security:cleanup-local-artifacts": "node scripts/cleanup-local-repo-artifacts.mjs",
-    "test:repo-security": "node scripts/verify-repo-security.mjs"
+    "test:repo-security": "node scripts/verify-repo-security.mjs",
+    "test:database-rls-boundary": "node scripts/verify-database-rls-boundary.mjs"
   },
   "dependencies": {
     "@getbrevo/brevo": "^2.5.0",

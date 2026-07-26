@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FileSpreadsheet, FileText, Plus, Search, Store } from 'lucide-react';
-import { deleteVenta, getAllVentas } from '@/services/ventaService';
+import { deleteVenta, getAllVentas } from '@/services/browser/ventaApiClient';
 import VentaModal from '@/components/modal/VentaModal';
 import VentaViewModal from '@/components/modal/VentaViewModal';
 import VentaTable from '@/components/tables/VentaTable';

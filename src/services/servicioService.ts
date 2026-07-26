@@ -1,5 +1,7 @@
-import { supabase } from "./supabaseClient";
+import { getSupabaseClient } from "./supabaseClient";
 import { Servicio, CreateServicioDto, UpdateServicioDto } from "../interfaces/servicio.interface";
+
+const supabase = getSupabaseClient();
 
 function normalizeServicioCode(value: unknown) {
   const text = String(value ?? '').trim();

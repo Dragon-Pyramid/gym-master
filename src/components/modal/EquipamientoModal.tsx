@@ -13,7 +13,7 @@ import FechaHora from "@/components/ui/FechaHora";
 import EquipamientoForm from "../forms/EquipamientoForm";
 import MantenimientoForm from "../forms/MantenimientoForm";
 import { Equipamento } from "@/interfaces/equipamiento.interface";
-import { getOneEquipamientoById } from "@/services/equipamientoService";
+import { getOneEquipamientoById } from "@/services/browser/equipamientoApiClient";
 import { useI18n } from "@/i18n/I18nProvider";
 
 export default function EquipamientoModal({

@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, FileText, FileSpreadsheet } from "lucide-react";
-import { getAllServicios, deleteServicio } from "@/services/servicioService";
+import { getAllServicios, deleteServicio } from "@/services/browser/servicioApiClient";
 import ServicioModal from "@/components/modal/ServicioModal";
 import ServicioViewModal from "@/components/modal/ServicioViewModal";
 import ServicioTable from "@/components/tables/ServicioTable";

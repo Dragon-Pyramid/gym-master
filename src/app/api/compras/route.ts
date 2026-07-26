@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { conexionBD } from '@/middlewares/conexionBd.middleware';
+import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 
 import {
   authorizeDashboardRequest,
@@ -44,7 +44,7 @@ function calculateMargin(price: number, cost: number) {
   return { margen, porcentaje };
 }
 
-async function fetchCompraById(supabase: ReturnType<typeof conexionBD>, id: string) {
+async function fetchCompraById(supabase: ReturnType<typeof getSupabaseServerClient>, id: string) {
   const { data, error } = await supabase
     .from('compra')
     .select(`
@@ -62,7 +62,7 @@ async function fetchCompraById(supabase: ReturnType<typeof conexionBD>, id: stri
 export async function GET(req: NextRequest) {
   try {
     await authorizeDashboardRequest(req, '/dashboard/compras', ['admin', 'usuario']);
-    const supabase = conexionBD();
+    const supabase = getSupabaseServerClient();
     const { searchParams } = new URL(req.url);
     const proveedorId = searchParams.get('proveedor_id');
     const estado = searchParams.get('estado');
@@ -97,7 +97,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const user = await authorizeDashboardRequest(req, '/dashboard/compras', ['admin', 'usuario']);
-    const supabase = conexionBD();
+    const supabase = getSupabaseServerClient();
     const body = await req.json();
 
     const proveedorId = String(body?.proveedor_id ?? '').trim();

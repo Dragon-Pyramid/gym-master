@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/services/supabaseClient";
+import { getSupabaseServerClient } from "@/services/supabaseServerClient";
 import {
   AlertaMantenimientoEquipamiento,
   AlertasMantenimientoEquipamientoResponse,
@@ -11,6 +11,8 @@ import {
   authorizationErrorResponse,
   authorizeDashboardRequest,
 } from '@/lib/auth/serverAuthorization';
+
+const supabase = getSupabaseServerClient();
 
 export const dynamic = "force-dynamic";
 

@@ -1,4 +1,4 @@
-import { conexionBD } from '@/middlewares/conexionBd.middleware';
+import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 import { NextRequest, NextResponse } from 'next/server';
 
 import {
@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
       ['admin', 'usuario'],
     );
 
-    const supabase = conexionBD();
+    const supabase = getSupabaseServerClient();
     const { searchParams } = new URL(req.url);
     const productoId = searchParams.get('producto_id');
     const limit = Math.min(Number(searchParams.get('limit') ?? 50) || 50, 200);
@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const supabase = conexionBD();
+    const supabase = getSupabaseServerClient();
     const { data: producto, error: productoError } = await supabase
       .from('producto')
       .select('id, nombre, stock, activo')

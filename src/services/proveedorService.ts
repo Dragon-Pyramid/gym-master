@@ -1,4 +1,4 @@
-import { supabase } from "./supabaseClient";
+import { getSupabaseClient } from "./supabaseClient";
 
 import {
   Proveedor,
@@ -6,6 +6,8 @@ import {
   CreateProveedorDto,
   UpdateProveedorDto,
 } from "../interfaces/proveedor.interface";
+
+const supabase = getSupabaseClient();
 
 type ProveedorPayload = Partial<Record<keyof CreateProveedorDto, string | null>>;
 

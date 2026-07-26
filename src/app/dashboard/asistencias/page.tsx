@@ -20,7 +20,7 @@ import {
 import {
   getAllAsistencias,
   deleteAsistencia,
-} from "@/services/asistenciaService";
+} from "@/services/browser/asistenciaApiClient";
 import AsistenciaModal from "@/components/modal/AsistenciaModal";
 import AsistenciaViewModal from "@/components/modal/AsistenciaViewModal";
 import AsistenciaTable from "@/components/tables/AsistenciaTable";

@@ -12,7 +12,7 @@ import { Search } from "lucide-react";
 import AvisosTable from "@/components/tables/AvisosTable";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { getAllAvisos, deleteAviso } from "@/services/avisoService";
+import { getAllAvisos, deleteAviso } from "@/services/browser/avisoApiClient";
 import { Aviso } from "@/interfaces/aviso.interface";
 import AvisosModal from "@/components/modal/AvisosModal";
 import AvisosModalView from "@/components/modal/AvisosModalView";

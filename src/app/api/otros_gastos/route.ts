@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { conexionBD } from '@/middlewares/conexionBd.middleware';
+import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 import {
   OtrosGastosEstado,
   OtrosGastosMedioPago,
@@ -142,7 +142,7 @@ function buildPayload(body: Record<string, unknown>, mode: 'create' | 'update') 
   return payload;
 }
 
-async function fetchGastoById(supabase: ReturnType<typeof conexionBD>, id: string) {
+async function fetchGastoById(supabase: ReturnType<typeof getSupabaseServerClient>, id: string) {
   const { data, error } = await supabase
     .from('otros_gastos')
     .select(`
@@ -159,7 +159,7 @@ async function fetchGastoById(supabase: ReturnType<typeof conexionBD>, id: strin
 export async function GET(req: NextRequest) {
   try {
     await authorizeDashboardRequest(req, '/dashboard/otros-gastos', ['admin', 'usuario']);
-    const supabase = conexionBD();
+    const supabase = getSupabaseServerClient();
     const { searchParams } = new URL(req.url);
     const estado = searchParams.get('estado');
     const tipoGastoId = searchParams.get('id_tipo_gasto');
@@ -200,7 +200,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const user = await authorizeDashboardRequest(req, '/dashboard/otros-gastos', ['admin', 'usuario']);
-    const supabase = conexionBD();
+    const supabase = getSupabaseServerClient();
     const body = await req.json();
     const payload = buildPayload(body, 'create');
 
@@ -232,7 +232,7 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     await authorizeDashboardRequest(req, '/dashboard/otros-gastos', ['admin', 'usuario']);
-    const supabase = conexionBD();
+    const supabase = getSupabaseServerClient();
     const { id, updateData } = await req.json();
 
     if (!id || typeof id !== 'string') {
@@ -267,7 +267,7 @@ export async function PUT(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     await authorizeDashboardRequest(req, '/dashboard/otros-gastos', ['admin', 'usuario']);
-    const supabase = conexionBD();
+    const supabase = getSupabaseServerClient();
     const { id } = await req.json();
 
     if (!id || typeof id !== 'string') {

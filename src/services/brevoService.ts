@@ -1,8 +1,10 @@
 import { sendEmail } from "@/lib/brevo";
-import { supabase } from "./supabaseClient";
+import { getSupabaseClient } from "./supabaseClient";
 import  dayjs  from 'dayjs';
 import { Socio } from "@/interfaces/socio.interface";
 import { getAllSociosActivos } from "./socioService";
+
+const supabase = getSupabaseClient();
 
 export async function obtenerSociosDeudores() : Promise<Socio[]> {
   const hoy = new Date().toISOString().slice(0, 10);

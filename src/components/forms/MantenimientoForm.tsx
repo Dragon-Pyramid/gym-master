@@ -2,7 +2,7 @@
 
 import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
 import { useState } from "react";
-import { createMantenimiento } from "@/services/mantenimientoService";
+import { createMantenimiento } from "@/services/browser/mantenimientoApiClient";
 import { CreateMantenimientoDTO } from "@/interfaces/mantenimiento.interface";
 import { CatalogoParametrizableItem } from "@/interfaces/parametrizacion.interface";
 import { useCatalogoParametrizable } from "@/hooks/useCatalogosParametrizables";

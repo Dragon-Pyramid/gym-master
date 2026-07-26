@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { conexionBD } from '@/middlewares/conexionBd.middleware';
+import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 
 import {
   authorizeDashboardRequest,
@@ -8,7 +8,7 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-async function fetchCompraById(supabase: ReturnType<typeof conexionBD>, id: string) {
+async function fetchCompraById(supabase: ReturnType<typeof getSupabaseServerClient>, id: string) {
   const { data, error } = await supabase
     .from('compra')
     .select(`
@@ -26,7 +26,7 @@ async function fetchCompraById(supabase: ReturnType<typeof conexionBD>, id: stri
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     await authorizeDashboardRequest(req, '/dashboard/compras', ['admin', 'usuario']);
-    const supabase = conexionBD();
+    const supabase = getSupabaseServerClient();
     const compra = await fetchCompraById(supabase, params.id);
     return NextResponse.json({ data: compra }, { status: 200 });
   } catch (error: any) {
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     await authorizeDashboardRequest(req, '/dashboard/compras', ['admin', 'usuario']);
-    const supabase = conexionBD();
+    const supabase = getSupabaseServerClient();
     const body = await req.json();
     const estado = body?.estado;
 
@@ -70,7 +70,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const user = await authorizeDashboardRequest(req, '/dashboard/compras', ['admin', 'usuario']);
-    const supabase = conexionBD();
+    const supabase = getSupabaseServerClient();
     const compra = await fetchCompraById(supabase, params.id);
 
     if (!compra) {
