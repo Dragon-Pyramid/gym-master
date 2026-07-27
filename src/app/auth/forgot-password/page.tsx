@@ -21,9 +21,9 @@ import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { useI18n } from '@/i18n/I18nProvider';
 import { translateAuthMessage } from '@/i18n/authErrorMessages';
 
-type LoginRole = 'admin' | 'usuario' | 'socio';
+type LoginRole = 'admin' | 'usuario' | 'socio' | 'masteradmin';
 
-const roleValues: LoginRole[] = ['admin', 'usuario', 'socio'];
+const roleValues: LoginRole[] = ['admin', 'usuario', 'socio', 'masteradmin'];
 
 function useDarkMode() {
   const [dark, setDark] = useState(false);
@@ -65,12 +65,14 @@ function ForgotPasswordContent() {
       { value: 'admin' as const, label: t('preferences.roleAdmin') },
       { value: 'usuario' as const, label: t('preferences.roleInternalUser') },
       { value: 'socio' as const, label: t('preferences.roleMember') },
+      { value: 'masteradmin' as const, label: t('preferences.roleMasterAdmin') },
     ],
     [t],
   );
 
   const backHref = useMemo(() => {
     if (rol === 'socio') return '/auth/login/socio';
+    if (rol === 'masteradmin') return '/auth/login/masteradmin';
     if (rol === 'admin' || rol === 'usuario') return '/auth/login/admin';
     return '/auth/login';
   }, [rol]);

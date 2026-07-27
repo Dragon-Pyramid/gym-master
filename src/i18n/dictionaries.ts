@@ -806,6 +806,7 @@ export const dictionaries: Record<GymMasterLocale, I18nDictionary> = {
       roleAdmin: 'Administrador',
       roleInternalUser: 'Usuario interno',
       roleMember: 'Socio',
+      roleMasterAdmin: 'Master Admin',
       personalTitle: 'Preferencias personales',
       personalDescription:
         'Esta pantalla centraliza configuraciones personales simples. Las preferencias avanzadas por gimnasio se mantienen en Parametrización y Datos del Gimnasio.',
@@ -1653,6 +1654,7 @@ export const dictionaries: Record<GymMasterLocale, I18nDictionary> = {
       roleAdmin: 'Administrator',
       roleInternalUser: 'Internal user',
       roleMember: 'Member',
+      roleMasterAdmin: 'Master Admin',
       personalTitle: 'Personal preferences',
       personalDescription:
         'This screen centralizes simple personal settings. Advanced gym-level preferences remain in Parametrization and Gym Data.',
