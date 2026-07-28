@@ -182,7 +182,7 @@ export default function AsistenciaForm({
           socio_id: form.id_socio,
           fecha: form.fecha,
           hora_ingreso: form.hora_ingreso,
-          hora_egreso: form.hora_egreso,
+          hora_egreso: form.hora_egreso || null,
         };
 
         await updateAsistencia(
@@ -202,7 +202,7 @@ export default function AsistenciaForm({
           socio_id: form.id_socio,
           fecha: form.fecha,
           hora_ingreso: form.hora_ingreso,
-          hora_egreso: form.hora_egreso,
+          hora_egreso: form.hora_egreso || null,
         };
 
         await createAsistencia(

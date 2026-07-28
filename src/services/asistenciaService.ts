@@ -92,9 +92,14 @@ export const createAsistencia = async (
     throw new Error("El socio no existe o está inactivo");
   }
 
+  const normalizedPayload: CreateAsistenciaDto = {
+    ...payload,
+    hora_egreso: payload.hora_egreso?.trim() || null,
+  };
+
   const { data, error } = await supabase
     .from("asistencia")
-    .insert(payload)
+    .insert(normalizedPayload)
     .select()
     .single();
   if (error) throw new Error(error.message);
@@ -109,9 +114,17 @@ export const updateAsistencia = async (
   updateData: UpdateAsistenciaDto,
 ): Promise<Asistencia> => {
   const supabase = conexionBD();
+
+  const normalizedUpdateData: UpdateAsistenciaDto = {
+    ...updateData,
+    ...(Object.prototype.hasOwnProperty.call(updateData, "hora_egreso")
+      ? { hora_egreso: updateData.hora_egreso?.trim() || null }
+      : {}),
+  };
+
   const { data, error } = await supabase
     .from("asistencia")
-    .update(updateData)
+    .update(normalizedUpdateData)
     .eq("id", id)
     .select()
     .single();
