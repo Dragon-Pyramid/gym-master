@@ -5,7 +5,7 @@ import { sendEmail } from '@/lib/brevo';
 import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 import { getPasswordPolicyMessage, isStrongPassword } from '@/utils/passwordPolicy';
 
-type RecoveryRole = 'admin' | 'usuario' | 'socio';
+type RecoveryRole = 'admin' | 'usuario' | 'socio' | 'masteradmin';
 
 type RequestPasswordResetParams = {
   email: string;
@@ -41,7 +41,7 @@ type UsuarioRecoveryRow = {
 export const PASSWORD_RESET_GENERIC_MESSAGE =
   'Si el email corresponde a una cuenta válida, enviaremos un enlace para restablecer la contraseña.';
 
-const allowedRoles = new Set<RecoveryRole>(['admin', 'usuario', 'socio']);
+const allowedRoles = new Set<RecoveryRole>(['admin', 'usuario', 'socio', 'masteradmin']);
 
 class PasswordRecoveryError extends Error {
   status: number;

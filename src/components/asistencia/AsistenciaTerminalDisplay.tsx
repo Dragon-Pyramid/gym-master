@@ -709,24 +709,6 @@ export default function AsistenciaTerminalDisplay() {
       if (sessionStateRef.current.status !== "expired") loadRecent();
     }, 3000);
 
-    const realtimeChannel = supabaseBrowser
-      .channel("asistencias-terminal-realtime")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "asistencia" },
-        () => {
-          if (sessionStateRef.current.status !== "expired") loadRecent();
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "asistencia" },
-        () => {
-          if (sessionStateRef.current.status !== "expired") loadRecent();
-        },
-      )
-      .subscribe();
-
     const broadcastChannel = supabaseBrowser
       .channel("gym-master-asistencia-access-events")
       .on(
@@ -745,7 +727,6 @@ export default function AsistenciaTerminalDisplay() {
         window.clearTimeout(resultTimeoutRef.current);
       }
       clearAdTimers();
-      supabaseBrowser.removeChannel(realtimeChannel);
       supabaseBrowser.removeChannel(broadcastChannel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

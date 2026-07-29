@@ -1,4 +1,6 @@
-import { supabase } from "./supabaseClient";
+import { getSupabaseClient } from "./supabaseClient";
+
+const supabase = getSupabaseClient();
 
 export const fetchAllActividades = async ()=>{
     const {data, error} = await supabase

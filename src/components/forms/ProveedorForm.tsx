@@ -11,7 +11,7 @@ import {
   UpdateProveedorDto,
   PROVEEDOR_ESTADOS,
 } from "@/interfaces/proveedor.interface";
-import { createProveedor, updateProveedor } from "@/services/proveedorService";
+import { createProveedor, updateProveedor } from "@/services/browser/proveedorApiClient";
 import { toast } from "sonner";
 import { useI18n } from '@/i18n/I18nProvider';
 import { translateCommercialUi } from '@/i18n/commercialUi';

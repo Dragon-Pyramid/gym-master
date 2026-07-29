@@ -13,7 +13,7 @@ import {
   deleteEquipamiento,
   getAlertasMantenimientoEquipamientos,
   getEquipamientoMantenimientoBi,
-} from "@/services/equipamientoService";
+} from "@/services/browser/equipamientoApiClient";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import EquipamientoModal from "@/components/modal/EquipamientoModal";
 import EquipamientoViewModal from "@/components/modal/EquipamientoViewModal";

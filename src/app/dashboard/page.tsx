@@ -39,8 +39,8 @@ import {
   Users,
   Wrench,
 } from 'lucide-react';
-import { getAllEquipamientos } from '@/services/equipamientoService';
-import { getAllMantenimientos } from '@/services/mantenimientoService';
+import { getAllEquipamientos } from '@/services/browser/equipamientoApiClient';
+import { getAllMantenimientos } from '@/services/browser/mantenimientoApiClient';
 import {
   getAdherenciaRutinas,
   getEvolucionPromedioRutinas,

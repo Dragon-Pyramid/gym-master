@@ -1,4 +1,4 @@
-import { supabase } from "./supabaseClient";
+import { getSupabaseClient } from "./supabaseClient";
 import {
   Producto,
   CreateProductoDto,
@@ -6,6 +6,8 @@ import {
   ProductoPrecioCostoHistorial,
 } from "../interfaces/producto.interface";
 import { existeProveedor } from "./proveedorService";
+
+const supabase = getSupabaseClient();
 
 type HistorialInput = {
   motivo_cambio_precio?: string | null;

@@ -2,9 +2,11 @@ import { CreateEquipamentoDTO, Equipamento, UpdateEquipamentoDTO } from "@/inter
 import { AlertasMantenimientoEquipamientoResponse } from "@/interfaces/equipamientoAlertas.interface";
 import { EquipamientoMantenimientoBiResponse } from "@/interfaces/equipamientoMantenimientoBi.interface";
 import { TipoEquipamiento } from "@/enums/tipoEquipamiento.enum";
-import { getSupabaseClient, supabase } from "./supabaseClient";
+import { getSupabaseClient } from "./supabaseClient";
 import { authHeader } from "./storageService";
 import dayjs from "dayjs";
+
+const supabase = getSupabaseClient();
 
 export const getAllEquipamientos = async () : Promise<Equipamento[]> => {
   const { data, error } = await supabase

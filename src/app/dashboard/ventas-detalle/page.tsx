@@ -12,7 +12,7 @@ import { Search, Printer, FileSpreadsheet } from "lucide-react";
 import {
   getAllVentaDetalles,
   deleteVentaDetalle,
-} from "@/services/ventaDetalleService";
+} from "@/services/browser/ventaDetalleApiClient";
 import VentaDetalleModal from "@/components/modal/VentaDetalleModal";
 import VentaDetalleViewModal from "@/components/modal/VentaDetalleViewModal";
 import VentaDetalleTable from "@/components/tables/VentaDetalleTable";

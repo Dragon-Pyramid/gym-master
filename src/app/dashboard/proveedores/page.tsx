@@ -12,7 +12,7 @@ import { Search, FileText, FileSpreadsheet } from "lucide-react";
 import {
   getAllProveedores,
   deleteProveedor,
-} from "@/services/proveedorService";
+} from "@/services/browser/proveedorApiClient";
 import ProveedorModal from "@/components/modal/ProveedorModal";
 import ProveedorViewModal from "@/components/modal/ProveedorViewModal";
 import ProveedoresTable from "@/components/tables/ProveedoresTable";

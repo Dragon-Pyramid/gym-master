@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import {
   createVentaDetalle,
   updateVentaDetalle,
-} from '@/services/ventaDetalleService';
+} from '@/services/browser/ventaDetalleApiClient';
 import { toast } from 'sonner';
 import { useI18n } from '@/i18n/I18nProvider';
 import { translateCommercialUi } from '@/i18n/commercialUi';

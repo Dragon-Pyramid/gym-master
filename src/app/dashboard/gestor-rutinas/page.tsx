@@ -13,7 +13,7 @@ import { PaginationControls } from '@/components/ui/PaginationControls';
 import { useI18n } from '@/i18n/I18nProvider';
 import { Search } from 'lucide-react';
 import SociosRutinasGrid from '@/components/gestor-rutinas/SociosRutinasGrid';
-import { fetchSocios } from '@/services/socioService';
+import { fetchSocios } from '@/services/browser/socioApiClient';
 import { getObjetivos, getNiveles } from '@/services/apiClient';
 import { Socio } from '@/interfaces/socio.interface';
 import { JwtUser } from '@/interfaces/jwtUser.interface';

@@ -3,7 +3,7 @@ import {
   authorizationErrorResponse,
   authorizeDashboardRequest,
 } from "@/lib/auth/serverAuthorization";
-import { conexionBD } from "@/middlewares/conexionBd.middleware";
+import { getSupabaseServerClient } from "@/services/supabaseServerClient";
 import type { TipoCorporal, SexoReferencia } from "@/interfaces/evolucionSocio.interface";
 
 export const dynamic = "force-dynamic";
@@ -50,7 +50,7 @@ export async function GET(req: Request) {
       ["admin", "usuario"],
     );
 
-    const supabase = conexionBD();
+    const supabase = getSupabaseServerClient();
 
     const { data: socios, error: sociosError } = await supabase
       .from("socio")

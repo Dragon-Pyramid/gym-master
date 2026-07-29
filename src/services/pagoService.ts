@@ -1,4 +1,4 @@
-import { getSupabaseClient, supabase } from "./supabaseClient";
+import { getSupabaseClient } from "./supabaseClient";
 import {
   Pago,
   CreatePagoDto,
@@ -12,6 +12,8 @@ import {
 } from "./morosidadService";
 import { calcularDescuentoPago } from "@/lib/cuotas/descuentoPago";
 import { fetchCuotaDescuentoConfig } from "@/services/cuotaDescuentoService";
+
+const supabase = getSupabaseClient();
 
 /*export const getAllPagos = async (): Promise<Pago[]> => {
   const { data, error } = await supabase.from("pago").select();

@@ -67,3 +67,7 @@ export async function deactivateSocioApi(id: string): Promise<Socio> {
   const response = await parseResponse<{ data: Socio }>(res);
   return response.data;
 }
+
+export async function fetchSocios(_user?: unknown): Promise<Socio[]> {
+  return fetchSociosApi();
+}
