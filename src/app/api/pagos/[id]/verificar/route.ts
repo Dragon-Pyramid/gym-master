@@ -1,15 +1,16 @@
 import { noStoreJson } from '@/lib/security/httpRuntimeSecurity';
-import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 import {
-  buildPagoVerificationCode,
-  isPagoVerificationCodeValid,
-  normalizePagoVerificationCode,
-} from '@/utils/pagoReciboCodigo';
+  isPagoReceiptVerificationCodeValid,
+  normalizePagoReceiptVerificationCode,
+} from '@/lib/security/pagoReceiptVerification';
+import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 
 export const dynamic = 'force-dynamic';
 
-// AUTH POLICY: PUBLIC_VERIFICATION_CODE
-
+// AUTH POLICY: PUBLIC_SIGNED_VERIFICATION_CODE
+// This endpoint is intentionally public so a receipt QR can be verified without
+// an authenticated Gym Master session. Access requires a server-signed HMAC V2
+// code that cannot be derived from the payment ID.
 const MAX_PAYMENT_ID_LENGTH = 128;
 const MAX_VERIFICATION_CODE_LENGTH = 128;
 
@@ -20,8 +21,11 @@ export async function GET(
   try {
     const { id: rawId } = await params;
     const id = String(rawId ?? '').trim();
+
     const url = new URL(req.url);
-    const codigo = normalizePagoVerificationCode(url.searchParams.get('codigo'));
+    const codigo = normalizePagoReceiptVerificationCode(
+      url.searchParams.get('codigo'),
+    );
 
     if (!id || id.length > MAX_PAYMENT_ID_LENGTH) {
       return noStoreJson(
@@ -43,7 +47,7 @@ export async function GET(
       );
     }
 
-    if (!isPagoVerificationCodeValid(id, codigo)) {
+    if (!isPagoReceiptVerificationCodeValid(id, codigo)) {
       return noStoreJson(
         {
           valid: false,
@@ -84,6 +88,7 @@ export async function GET(
       console.error('Error al consultar comprobante de pago:', {
         code: error.code ?? 'PAYMENT_VERIFICATION_QUERY_ERROR',
       });
+
       return noStoreJson(
         {
           valid: false,
@@ -103,37 +108,42 @@ export async function GET(
       );
     }
 
-    const expectedCode = buildPagoVerificationCode(id);
-
-    return noStoreJson({
-      valid: true,
-      codigo: expectedCode,
-      verificado_en: new Date().toISOString(),
-      pago: {
-        id: data.id,
-        fecha_pago: data.fecha_pago,
-        fecha_vencimiento: data.fecha_vencimiento,
-        periodo_desde: data.periodo_desde,
-        periodo_hasta: data.periodo_hasta,
-        meses_cubiertos: data.meses_cubiertos,
-        monto_pagado: Number(data.monto_pagado ?? 0),
-        subtotal: data.subtotal === null || data.subtotal === undefined ? null : Number(data.subtotal),
-        descuento_porcentaje:
-          data.descuento_porcentaje === null || data.descuento_porcentaje === undefined
-            ? null
-            : Number(data.descuento_porcentaje),
-        descuento_monto:
-          data.descuento_monto === null || data.descuento_monto === undefined
-            ? null
-            : Number(data.descuento_monto),
-        descuento_motivo: data.descuento_motivo ?? null,
-        metodo_pago: data.metodo_pago,
-        estado: data.estado,
-        activo: data.activo,
-        socio: data.socio,
-        cuota: data.cuota,
+    return noStoreJson(
+      {
+        valid: true,
+        verificado_en: new Date().toISOString(),
+        pago: {
+          id: data.id,
+          fecha_pago: data.fecha_pago,
+          fecha_vencimiento: data.fecha_vencimiento,
+          periodo_desde: data.periodo_desde,
+          periodo_hasta: data.periodo_hasta,
+          meses_cubiertos: data.meses_cubiertos,
+          monto_pagado: Number(data.monto_pagado ?? 0),
+          subtotal:
+            data.subtotal === null || data.subtotal === undefined
+              ? null
+              : Number(data.subtotal),
+          descuento_porcentaje:
+            data.descuento_porcentaje === null ||
+            data.descuento_porcentaje === undefined
+              ? null
+              : Number(data.descuento_porcentaje),
+          descuento_monto:
+            data.descuento_monto === null ||
+            data.descuento_monto === undefined
+              ? null
+              : Number(data.descuento_monto),
+          descuento_motivo: data.descuento_motivo ?? null,
+          metodo_pago: data.metodo_pago,
+          estado: data.estado,
+          activo: data.activo,
+          socio: data.socio,
+          cuota: data.cuota,
+        },
       },
-    }, 200);
+      200,
+    );
   } catch (error) {
     console.error('Error al verificar recibo de pago:', {
       name: error instanceof Error ? error.name : 'UnknownError',

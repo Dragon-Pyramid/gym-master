@@ -4,7 +4,7 @@ import { jsPDF } from "jspdf";
 import { buildTimestampedDownloadFileName } from "@/utils/downloadFileName";
 import QRCode from "qrcode";
 import { ResponsePago } from "@/interfaces/pago.interface";
-import { buildPagoVerificationCode } from "@/utils/pagoReciboCodigo";
+import { fetchPagoReceiptVerificationCredentialsApi } from "@/services/browser/pagoApiClient";
 import type { GymMasterLocale } from "@/i18n/config";
 import {
   assertGimnasioBrandingReadyForCommercialDocs,
@@ -126,17 +126,12 @@ function getSocioEmail(pago: ResponsePago) {
   return pago.socio?.email?.trim() || "-";
 }
 
-function getVerificationUrl(pago: ResponsePago) {
-  const codigo = buildPagoVerificationCode(pago.id);
-
+function getVerificationUrl(verificationPath: string) {
   if (typeof window === "undefined") {
-    return `/api/pagos/${pago.id}/verificar?codigo=${encodeURIComponent(codigo)}`;
+    return verificationPath;
   }
 
-  return new URL(
-    `/api/pagos/${pago.id}/verificar?codigo=${encodeURIComponent(codigo)}`,
-    window.location.origin
-  ).toString();
+  return new URL(verificationPath, window.location.origin).toString();
 }
 
 async function loadImageAsPngDataUrl(
@@ -268,8 +263,9 @@ export async function descargarPagoReciboPdf(
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 16;
-  const codigo = buildPagoVerificationCode(pago.id);
-  const verificationUrl = getVerificationUrl(pago);
+  const verificationCredentials = await fetchPagoReceiptVerificationCredentialsApi(pago.id);
+  const codigo = verificationCredentials.codigo;
+  const verificationUrl = getVerificationUrl(verificationCredentials.verification_path);
   const branding = await getResolvedGimnasioBranding();
   assertGimnasioBrandingReadyForCommercialDocs(branding);
 
