@@ -343,122 +343,162 @@ export async function validatePasswordResetToken(token: string) {
   };
 }
 
-export async function resetPasswordWithToken({ token, newPassword, headers }: ResetPasswordParams) {
+type AtomicPasswordResetResult = {
+  result?:
+    | 'success'
+    | 'invalid_token'
+    | 'token_used'
+    | 'token_expired'
+    | 'user_not_recoverable'
+    | string;
+  usuario_id?: string;
+  email?: string;
+  rol?: RecoveryRole;
+  expires_at?: string;
+};
+
+export async function resetPasswordWithToken({
+  token,
+  newPassword,
+  headers,
+}: ResetPasswordParams) {
   const supabase = getSupabaseServerClient();
-  const normalizedToken = typeof token === 'string' ? token.trim() : '';
+  const normalizedToken =
+    typeof token === 'string' ? token.trim() : '';
   const ip = getClientIp(headers);
   const userAgent = getUserAgent(headers);
 
   if (!normalizedToken) {
-    throw new PasswordRecoveryError('El enlace de recuperación es obligatorio', 400);
+    throw new PasswordRecoveryError(
+      'El enlace de recuperación es obligatorio',
+      400,
+    );
   }
 
   if (!newPassword || typeof newPassword !== 'string') {
-    throw new PasswordRecoveryError('La nueva contraseña es obligatoria', 400);
+    throw new PasswordRecoveryError(
+      'La nueva contraseña es obligatoria',
+      400,
+    );
   }
 
   if (!isStrongPassword(newPassword)) {
-    throw new PasswordRecoveryError(getPasswordPolicyMessage(), 400);
+    throw new PasswordRecoveryError(
+      getPasswordPolicyMessage(),
+      400,
+    );
   }
 
   const tokenHash = getTokenHash(normalizedToken);
-  const { data: tokenRow, error: tokenError } = await supabase
-    .from('auth_password_reset_tokens')
-    .select('id,usuario_id,email,rol,token_hash,expires_at,used_at')
-    .eq('token_hash', tokenHash)
-    .maybeSingle();
-
-  if (tokenError || !tokenRow) {
-    await insertAudit({
-      accion: 'reset',
-      resultado: 'invalid_token',
-      ip,
-      userAgent,
-    });
-    throw new PasswordRecoveryError('El enlace no es válido o expiró', 400);
-  }
-
-  const row = tokenRow as PasswordResetTokenRow;
-
-  if (row.used_at) {
-    await insertAudit({
-      usuarioId: row.usuario_id,
-      email: row.email,
-      rol: row.rol,
-      accion: 'reset',
-      resultado: 'token_used',
-      ip,
-      userAgent,
-    });
-    throw new PasswordRecoveryError('El enlace ya fue utilizado', 400);
-  }
-
-  if (new Date(row.expires_at).getTime() < Date.now()) {
-    await insertAudit({
-      usuarioId: row.usuario_id,
-      email: row.email,
-      rol: row.rol,
-      accion: 'reset',
-      resultado: 'token_expired',
-      ip,
-      userAgent,
-      detalle: { expires_at: row.expires_at },
-    });
-    throw new PasswordRecoveryError('El enlace expiró. Solicitá uno nuevo.', 400);
-  }
-
-  const { data: usuario, error: userError } = await supabase
-    .from('usuario')
-    .select('id,nombre,email,rol,activo')
-    .eq('id', row.usuario_id)
-    .maybeSingle();
-
-  if (userError || !usuario || (usuario as UsuarioRecoveryRow).activo === false) {
-    await insertAudit({
-      usuarioId: row.usuario_id,
-      email: row.email,
-      rol: row.rol,
-      accion: 'reset',
-      resultado: 'user_not_recoverable',
-      ip,
-      userAgent,
-    });
-    throw new PasswordRecoveryError('No se pudo restablecer la contraseña de esta cuenta', 400);
-  }
-
   const passwordHash = await bcrypt.hash(newPassword.trim(), 10);
-  const now = new Date().toISOString();
 
-  const { error: updateError } = await supabase
-    .from('usuario')
-    .update({
-      password_hash: passwordHash,
-      must_change_password: false,
-      password_actualizado_en: now,
-      actualizado_en: now,
-    })
-    .eq('id', row.usuario_id);
+  const { data, error } = await supabase.rpc(
+    'consume_password_reset_token',
+    {
+      p_token_hash: tokenHash,
+      p_password_hash: passwordHash,
+    },
+  );
 
-  if (updateError) {
-    throw new PasswordRecoveryError(updateError.message, 500);
+  if (error) {
+    console.error(
+      'Error al ejecutar recuperación atómica de contraseña:',
+      {
+        code: error.code ?? 'UNKNOWN',
+      },
+    );
+
+    throw new PasswordRecoveryError(
+      'No se pudo restablecer la contraseña',
+      500,
+    );
   }
 
-  await supabase
-    .from('auth_password_reset_tokens')
-    .update({ used_at: now })
-    .eq('id', row.id);
+  const result = (data ?? {}) as AtomicPasswordResetResult;
 
-  await insertAudit({
-    usuarioId: row.usuario_id,
-    email: row.email,
-    rol: row.rol,
+  const auditIdentity = {
+    usuarioId: result.usuario_id ?? null,
+    email: result.email ?? null,
+    rol: result.rol ?? null,
     accion: 'reset',
-    resultado: 'success',
     ip,
     userAgent,
-  });
+  };
 
-  return { message: 'Contraseña actualizada correctamente. Ya podés iniciar sesión.' };
+  switch (result.result) {
+    case 'invalid_token':
+      await insertAudit({
+        accion: 'reset',
+        resultado: 'invalid_token',
+        ip,
+        userAgent,
+      });
+
+      throw new PasswordRecoveryError(
+        'El enlace no es válido o expiró',
+        400,
+      );
+
+    case 'token_used':
+      await insertAudit({
+        ...auditIdentity,
+        resultado: 'token_used',
+      });
+
+      throw new PasswordRecoveryError(
+        'El enlace ya fue utilizado',
+        400,
+      );
+
+    case 'token_expired':
+      await insertAudit({
+        ...auditIdentity,
+        resultado: 'token_expired',
+        detalle: {
+          expires_at: result.expires_at ?? null,
+        },
+      });
+
+      throw new PasswordRecoveryError(
+        'El enlace expiró. Solicitá uno nuevo.',
+        400,
+      );
+
+    case 'user_not_recoverable':
+      await insertAudit({
+        ...auditIdentity,
+        resultado: 'user_not_recoverable',
+      });
+
+      throw new PasswordRecoveryError(
+        'No se pudo restablecer la contraseña de esta cuenta',
+        400,
+      );
+
+    case 'success':
+      await insertAudit({
+        ...auditIdentity,
+        resultado: 'success',
+      });
+
+      return {
+        message:
+          'Contraseña actualizada correctamente. Ya podés iniciar sesión.',
+      };
+
+    default:
+      console.error(
+        'Resultado inesperado de recuperación atómica de contraseña:',
+        {
+          result: result.result ?? 'missing',
+        },
+      );
+
+      throw new PasswordRecoveryError(
+        'No se pudo restablecer la contraseña',
+        500,
+      );
+  }
 }
 
 export function getPasswordRecoveryErrorStatus(error: unknown) {
