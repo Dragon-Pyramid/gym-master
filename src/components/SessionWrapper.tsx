@@ -1,6 +1,5 @@
 'use client';
 
-import { SessionProvider } from 'next-auth/react';
 import { SessionContextProvider } from '@supabase/auth-helpers-react';
 import { supabase } from '@/services/supabaseClient';
 import { ThemeProvider } from '@/components/theme-provider';
@@ -27,7 +26,6 @@ export function SessionWrapper({
   return (
     <>
       <PwaServiceWorkerRegistrar />
-      <SessionProvider>
         <SessionContextProvider supabaseClient={supabase}>
           <ThemeProvider
             attribute='class'
@@ -43,7 +41,6 @@ export function SessionWrapper({
             </I18nProvider>
           </ThemeProvider>
         </SessionContextProvider>
-      </SessionProvider>
     </>
   );
 }

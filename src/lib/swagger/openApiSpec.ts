@@ -3233,7 +3233,7 @@ function buildOperation(endpoint: EndpointDefinition, method: string) {
   const requestBody = getRequestBody(endpoint, lowerMethod);
   const security =
     endpoint.auth || endpoint.admin
-      ? [{ bearerAuth: [] }, { nextAuthSession: [] }]
+      ? [{ bearerAuth: [] }]
       : undefined;
 
   const operation: OpenApiOperation = {
@@ -3319,12 +3319,6 @@ export const openApiSpec = {
         bearerFormat: "JWT",
         description:
           "Token JWT cuando el endpoint se consuma desde clientes externos o pruebas técnicas.",
-      },
-      nextAuthSession: {
-        type: "apiKey",
-        in: "cookie",
-        name: "next-auth.session-token",
-        description: "Sesión de NextAuth usada por el frontend de Gym Master.",
       },
     },
     schemas: {
