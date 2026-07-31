@@ -13,6 +13,9 @@ import {
   reactivarSocioPorPago,
 } from './morosidadService';
 
+const DUMMY_LOGIN_PASSWORD_HASH =
+  '$2b$10$O9UGi8Aa2Zg4NZpWk.e0EuHvuj01JLz6dp6z8fJTMWufJ/xSf2gOu';
+
 class LoginBusinessError extends Error {
   code: string;
   status: number;
@@ -57,6 +60,8 @@ export const signIn = async (login: SignInDto) => {
   }
 
   if (!data) {
+    bcrypt.compareSync(password, DUMMY_LOGIN_PASSWORD_HASH);
+
     throw new LoginBusinessError(
       'Usuario no encontrado o contraseña incorrecta',
       {
