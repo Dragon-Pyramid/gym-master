@@ -2225,7 +2225,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     tag: "General",
     summary: "Especificación OpenAPI de Gym Master",
     description:
-      "Devuelve la especificación OpenAPI usada por la pantalla /swagger. Permite auditar la documentación de endpoints desde Swagger UI o herramientas externas.",
+      "Devuelve la especificación OpenAPI usada por la pantalla /swagger. En producción permanece deshabilitada por defecto y solo se expone cuando EXPOSE_SWAGGER_DOCUMENTATION=true.",
     auth: false,
     admin: false,
     notImplemented: false,

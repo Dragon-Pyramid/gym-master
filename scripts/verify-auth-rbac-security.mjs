@@ -201,12 +201,9 @@ const authenticatedOnlyRoutes = [
   'src/app/api/notificaciones/header/route.ts',
 ];
 
+const protectedReceiptCredentialRoute =
+  'src/app/api/pagos/[id]/verification-credentials/route.ts';
 const explicitNonJwtPolicies = [
-  {
-    path: 'src/app/api/auth/[...nextauth]/route.ts',
-    marker: 'AUTH POLICY: PUBLIC_AUTH_PROVIDER',
-    snippets: ['NextAuth'],
-  },
   {
     path: 'src/app/api/auth/forgot-password/route.ts',
     marker: 'AUTH POLICY: PUBLIC_RECOVERY',
@@ -244,8 +241,8 @@ const explicitNonJwtPolicies = [
   },
   {
     path: 'src/app/api/pagos/[id]/verificar/route.ts',
-    marker: 'AUTH POLICY: PUBLIC_VERIFICATION_CODE',
-    snippets: ['isPagoVerificationCodeValid'],
+    marker: 'AUTH POLICY: PUBLIC_SIGNED_VERIFICATION_CODE',
+    snippets: ['isPagoReceiptVerificationCodeValid'],
   },
   {
     path: 'src/app/api/stripe-webhook/route.ts',
@@ -254,8 +251,13 @@ const explicitNonJwtPolicies = [
   },
   {
     path: 'src/app/api/swagger-json/route.ts',
-    marker: 'AUTH POLICY: PUBLIC_DOCUMENTATION',
-    snippets: ['openApiSpec'],
+    marker: 'AUTH POLICY: ENV_GATED_DOCUMENTATION',
+    snippets: [
+      'openApiSpec',
+      'EXPOSE_SWAGGER_DOCUMENTATION',
+      'process.env.NODE_ENV',
+      'status: 404',
+    ],
   },
 ];
 
@@ -689,6 +691,7 @@ const evolucionService = read('src/services/evolucionSocioService.ts');
 const socioServerService = read('src/services/server/socioServerService.ts');
 const miCuentaPagosRoute = read('src/app/api/mi-cuenta/pagos/route.ts');
 const pagoVerificationRoute = read('src/app/api/pagos/[id]/verificar/route.ts');
+const pagoReceiptCredentialsRoute = read(protectedReceiptCredentialRoute);
 const profileUploadRoute = read('src/app/api/file-upload/route.ts');
 const masterLicenseRoute = read('src/app/api/dragon-pyramid/license/route.ts');
 const masterReactivateRoute = read('src/app/api/dragon-pyramid/license/reactivate/route.ts');
@@ -729,9 +732,21 @@ assertions.push(
   },
   {
     ok:
-      pagoVerificationRoute.includes('isPagoVerificationCodeValid') &&
+      pagoVerificationRoute.includes('isPagoReceiptVerificationCodeValid') &&
       !pagoVerificationRoute.includes('id_socio,nombre_completo,email'),
     message: 'La verificación pública de recibos debe validar código y no exponer email.',
+  },
+  {
+    ok:
+      pagoReceiptCredentialsRoute.includes('AUTH POLICY: AUTHENTICATED_RECEIPT_CREDENTIALS') &&
+      pagoReceiptCredentialsRoute.includes('authMiddleware(req)') &&
+      pagoReceiptCredentialsRoute.includes("user.rol === 'socio'") &&
+      pagoReceiptCredentialsRoute.includes("requireRoles(user, ['socio'])") &&
+      pagoReceiptCredentialsRoute.includes("requireRoles(user, ['admin', 'usuario'])") &&
+      pagoReceiptCredentialsRoute.includes('requireDashboardPermission(user, PAGOS_PATH)') &&
+      pagoReceiptCredentialsRoute.includes('getPagoReceiptVerificationCredentialsServer') &&
+      pagoReceiptCredentialsRoute.includes('authorizationErrorResponse(error)'),
+    message: 'Las credenciales de recibo deben exigir JWT, alcance por socio y permiso de Pagos para gestión.',
   },
   {
     ok:
@@ -866,6 +881,7 @@ const classifiedApiRoutes = new Set([
   ...protectedFinalPersonalRoutes,
   ...protectedOwnUserRoutes,
   ...authenticatedOnlyRoutes,
+  protectedReceiptCredentialRoute,
   ...explicitNonJwtPolicies.map((policy) => policy.path),
 ]);
 const allApiRouteFiles = listApiRouteFiles(path.join(root, 'src/app/api'));
