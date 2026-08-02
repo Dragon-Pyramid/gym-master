@@ -52,6 +52,23 @@ if (badRoutes.length > 0) {
   fail(`API routes still depend on browser/anon database clients:\n${badRoutes.join('\n')}`);
 }
 
+const topLevelPrivilegedClientRoutes = [];
+for (const file of routeFiles) {
+  const source = fs.readFileSync(file, 'utf8');
+  const topLevelServerClientPattern =
+    /^(?:export\s+)?(?:const|let|var)\s+[A-Za-z_$][\w$]*\s*=\s*getSupabaseServerClient\(\)\s*;?[ \t]*$/m;
+
+  if (topLevelServerClientPattern.test(source)) {
+    topLevelPrivilegedClientRoutes.push(path.relative(root, file));
+  }
+}
+
+if (topLevelPrivilegedClientRoutes.length > 0) {
+  fail(
+    `API routes must not initialize the privileged Supabase client at module scope:\n${topLevelPrivilegedClientRoutes.join('\n')}`
+  );
+}
+
 const hardenedRoutes = [
   'src/app/api/admin/cuotas/dashboard-bi/route.ts',
   'src/app/api/asistencias/recientes/route.ts',

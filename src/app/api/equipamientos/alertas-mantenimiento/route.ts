@@ -12,8 +12,6 @@ import {
   authorizeDashboardRequest,
 } from '@/lib/auth/serverAuthorization';
 
-const supabase = getSupabaseServerClient();
-
 export const dynamic = "force-dynamic";
 
 type EquipamientoRevisionRow = {
@@ -157,6 +155,7 @@ function buildResumen(alertas: AlertaMantenimientoEquipamiento[]) {
 export async function GET(request: NextRequest) {
   try {
     await authorizeDashboardRequest(request, '/dashboard/equipamientos', ['admin', 'usuario']);
+    const supabase = getSupabaseServerClient();
     const umbralDias = parseUmbralDias(request);
     const today = new Date();
     today.setHours(0, 0, 0, 0);

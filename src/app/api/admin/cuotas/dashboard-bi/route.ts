@@ -7,8 +7,6 @@ import {
   authorizeDashboardRequest,
 } from '@/lib/auth/serverAuthorization';
 
-const supabase = getSupabaseServerClient();
-
 export const dynamic = "force-dynamic";
 
 type SocioEstadoRow = {
@@ -49,6 +47,7 @@ function toNumber(value: unknown): number {
 export async function GET(req: Request) {
   try {
     await authorizeDashboardRequest(req, '/dashboard/bi-cuotas-pagos', ['admin', 'usuario']);
+    const supabase = getSupabaseServerClient();
     const [estadoResult, pagosResult, evolucionResult] = await Promise.all([
       supabase.rpc("obtener_socios_estado_cuota"),
       supabase
