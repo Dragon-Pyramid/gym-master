@@ -885,6 +885,123 @@ const classifiedApiRoutes = new Set([
   ...explicitNonJwtPolicies.map((policy) => policy.path),
 ]);
 const allApiRouteFiles = listApiRouteFiles(path.join(root, 'src/app/api'));
+
+function getHttpHandlerBlocks(source) {
+  const matches = [
+    ...source.matchAll(
+      /export\s+async\s+function\s+(GET|POST|PUT|PATCH|DELETE)\b/g,
+    ),
+  ];
+
+  return matches.map((match, index) => ({
+    method: match[1],
+    source: source.slice(
+      match.index,
+      matches[index + 1]?.index ?? source.length,
+    ),
+  }));
+}
+
+const privilegedClientGuardSnippets = [
+  'authorizeDashboardRequest(',
+  'authorizePersonalOrDashboardRequest(',
+  'authorizeOwnUserOrDashboardRequest(',
+  'authMiddleware(',
+  'isPagoReceiptVerificationCodeValid(',
+];
+
+const privilegedClientOrderFailures = [];
+const rankingBonificacionRoute =
+  'src/app/api/socios/ranking-bonificacion-mensual/route.ts';
+
+for (const route of allApiRouteFiles) {
+  const source = read(route);
+
+  if (
+    !source.includes('getSupabaseServerClient()') ||
+    route === rankingBonificacionRoute
+  ) {
+    continue;
+  }
+
+  for (const handler of getHttpHandlerBlocks(source)) {
+    const clientIndex = handler.source.indexOf(
+      'getSupabaseServerClient()',
+    );
+
+    if (clientIndex < 0) {
+      continue;
+    }
+
+    const guardedBeforeClient = privilegedClientGuardSnippets.some(
+      (snippet) => {
+        const guardIndex = handler.source.indexOf(snippet);
+        return guardIndex >= 0 && guardIndex < clientIndex;
+      },
+    );
+
+    if (!guardedBeforeClient) {
+      privilegedClientOrderFailures.push(
+        `${route}#${handler.method}`,
+      );
+    }
+  }
+}
+
+const rankingSource = read(rankingBonificacionRoute);
+const rankingHandlers = new Map(
+  getHttpHandlerBlocks(rankingSource).map((handler) => [
+    handler.method,
+    handler.source,
+  ]),
+);
+const rankingGetHandler = rankingHandlers.get('GET') ?? '';
+const rankingPatchHandler = rankingHandlers.get('PATCH') ?? '';
+
+function appearsAfter(source, guard, target) {
+  const guardIndex = source.indexOf(guard);
+  const targetIndex = source.indexOf(target);
+
+  return guardIndex >= 0 && targetIndex > guardIndex;
+}
+
+if (
+  !appearsAfter(
+    rankingGetHandler,
+    'authorizeDashboardRequest(',
+    'buildResponse(',
+  )
+) {
+  privilegedClientOrderFailures.push(
+    `${rankingBonificacionRoute}#GET`,
+  );
+}
+
+if (
+  !appearsAfter(
+    rankingPatchHandler,
+    'authorizeDashboardRequest(',
+    'getSupabaseServerClient()',
+  ) ||
+  !appearsAfter(
+    rankingPatchHandler,
+    'authorizeDashboardRequest(',
+    'buildResponse(',
+  )
+) {
+  privilegedClientOrderFailures.push(
+    `${rankingBonificacionRoute}#PATCH`,
+  );
+}
+
+assertions.push({
+  ok: privilegedClientOrderFailures.length === 0,
+  message:
+    `Las rutas con cliente Supabase privilegiado deben autenticar o validar ` +
+    `su control firmado antes de adquirirlo. Fallos: ` +
+    privilegedClientOrderFailures.join(', '),
+});
+
 const unclassifiedApiRoutes = allApiRouteFiles.filter(
   (route) => !classifiedApiRoutes.has(route),
 );
