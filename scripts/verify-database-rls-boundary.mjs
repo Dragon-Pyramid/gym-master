@@ -52,20 +52,30 @@ if (badRoutes.length > 0) {
   fail(`API routes still depend on browser/anon database clients:\n${badRoutes.join('\n')}`);
 }
 
-const topLevelPrivilegedClientRoutes = [];
-for (const file of routeFiles) {
+const privilegedClientCandidateFiles = walk(
+  path.join(root, 'src'),
+  (file) => file.endsWith('.ts') || file.endsWith('.tsx')
+);
+
+const topLevelPrivilegedClientFiles = [];
+for (const file of privilegedClientCandidateFiles) {
   const source = fs.readFileSync(file, 'utf8');
+
+  if (!source.includes('getSupabaseServerClient')) {
+    continue;
+  }
+
   const topLevelServerClientPattern =
     /^(?:export\s+)?(?:const|let|var)\s+[A-Za-z_$][\w$]*\s*=\s*getSupabaseServerClient\(\)\s*;?[ \t]*$/m;
 
   if (topLevelServerClientPattern.test(source)) {
-    topLevelPrivilegedClientRoutes.push(path.relative(root, file));
+    topLevelPrivilegedClientFiles.push(path.relative(root, file));
   }
 }
 
-if (topLevelPrivilegedClientRoutes.length > 0) {
+if (topLevelPrivilegedClientFiles.length > 0) {
   fail(
-    `API routes must not initialize the privileged Supabase client at module scope:\n${topLevelPrivilegedClientRoutes.join('\n')}`
+    `Source modules must not initialize the privileged Supabase client at module scope:\n${topLevelPrivilegedClientFiles.join('\n')}`
   );
 }
 
