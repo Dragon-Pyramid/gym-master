@@ -1,11 +1,12 @@
+import 'server-only';
+
 import { CreateMantenimientoDTO, Mantenimiento, UpdateMantenimientoDTO } from "@/interfaces/mantenimiento.interface";
-import { getSupabaseClient } from "./supabaseClient";
+import { getSupabaseServerClient } from "./supabaseServerClient";
 import { getOneEquipamientoById, updateEquipamiento } from "./equipamientoService";
 import dayjs from "dayjs";
 import { EstadoMantenimiento } from "@/enums/estadoMantenimiento.enum";
 import { EstadoEquipamiento } from "@/enums/estadoEquipamiento.enum";
 
-const supabase = getSupabaseClient();
 
 type TipoMantenimientoCatalogo = {
   id: string;
@@ -16,6 +17,8 @@ type TipoMantenimientoCatalogo = {
 
 async function getTipoMantenimientoById(id?: string | null): Promise<TipoMantenimientoCatalogo | null> {
   if (!id) return null;
+
+  const supabase = getSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("tipo_mantenimiento")
@@ -45,6 +48,7 @@ export const getMantenimientoByIdEquipamiento = async (id: string): Promise<Mant
     throw new Error(`No se encontró el equipamiento con ID: ${id}`);
   }
 
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("mantenimiento")
     .select()
@@ -59,6 +63,7 @@ export const getMantenimientoByIdEquipamiento = async (id: string): Promise<Mant
 };
 
 export const createMantenimiento = async (payload: CreateMantenimientoDTO): Promise<Mantenimiento> => {
+  const supabase = getSupabaseServerClient();
   const observaciones = payload.observaciones || "Sin observaciones";
   const fecha_mantenimiento = payload.fecha_mantenimiento || dayjs().format("YYYY-MM-DD");
 
@@ -83,6 +88,7 @@ export const createMantenimiento = async (payload: CreateMantenimientoDTO): Prom
 };
 
 export const updateMantenimiento = async (id: string, updateData: UpdateMantenimientoDTO): Promise<Mantenimiento> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("mantenimiento")
     .update(updateData)
@@ -98,6 +104,7 @@ export const updateMantenimiento = async (id: string, updateData: UpdateMantenim
 };
 
 export const getAllMantenimientos = async (): Promise<Mantenimiento[]> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("mantenimiento")
     .select()
@@ -111,6 +118,7 @@ export const getAllMantenimientos = async (): Promise<Mantenimiento[]> => {
 };
 
 export const mantenimientoCompletado = async (id: string): Promise<Mantenimiento> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("mantenimiento")
     .update({ estado: EstadoMantenimiento.COMPLETADO })
