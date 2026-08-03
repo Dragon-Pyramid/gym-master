@@ -1,8 +1,10 @@
+import 'server-only';
+
 import { Objetivo } from "@/interfaces/objetivo.interface";
-import { getSupabaseClient } from "./supabaseClient";
+import { getSupabaseServerClient } from "./supabaseServerClient";
 
 export const getAllObjetivos = async (user: any) : Promise<Objetivo[]> => {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseServerClient();
     const { data, error } = await supabase
         .from('objetivo')
         .select('*')
