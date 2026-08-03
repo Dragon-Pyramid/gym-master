@@ -1,8 +1,9 @@
-import { getSupabaseClient } from "./supabaseClient";
+import 'server-only';
 
-const supabase = getSupabaseClient();
+import { getSupabaseServerClient } from "./supabaseServerClient";
 
 export const fetchAllActividades = async ()=>{
+    const supabase = getSupabaseServerClient();
     const {data, error} = await supabase
     .from("actividad")
     .select()
@@ -12,6 +13,7 @@ export const fetchAllActividades = async ()=>{
 export const createActividad = async (payload:{
     nombre_actividad:string;
 })=>{
+    const supabase = getSupabaseServerClient();
     const {data, error} = await supabase
     .from("actividad")
     .insert(payload)
@@ -21,6 +23,7 @@ export const createActividad = async (payload:{
 export const updateActividad = async (id:string,updateData:{
     nombre_actividad?:string;
 } ) =>{
+    const supabase = getSupabaseServerClient();
     console.log(updateData);
     
 
@@ -36,6 +39,7 @@ export const updateActividad = async (id:string,updateData:{
 }
 
 export const deleteActividad = async (id: string) => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from('actividad')
     .delete()
@@ -47,6 +51,7 @@ export const deleteActividad = async (id: string) => {
 }
 
 export const getActividadById = async (id: string): Promise<any> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("actividad")
     .select()
