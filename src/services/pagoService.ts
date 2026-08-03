@@ -1,4 +1,6 @@
-import { getSupabaseClient } from "./supabaseClient";
+import 'server-only';
+
+import { getSupabaseServerClient } from "./supabaseServerClient";
 import {
   Pago,
   CreatePagoDto,
@@ -13,7 +15,6 @@ import {
 import { calcularDescuentoPago } from "@/lib/cuotas/descuentoPago";
 import { fetchCuotaDescuentoConfig } from "@/services/cuotaDescuentoService";
 
-const supabase = getSupabaseClient();
 
 /*export const getAllPagos = async (): Promise<Pago[]> => {
   const { data, error } = await supabase.from("pago").select();
@@ -69,6 +70,7 @@ type PagoRow = {
 };
 
 export const getAllPagos = async (): Promise<ResponsePago[]> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("pago")
     .select(`
@@ -167,6 +169,7 @@ const responsePago = (data: PagoRow): ResponsePago => {
 };
 
 export const createPago = async (payload: CreatePagoDto): Promise<Pago> => {
+  const supabase = getSupabaseServerClient();
   const dto = payload as CreatePagoDto & {
     cuota_id?: string;
     fecha_pago?: string;
@@ -279,6 +282,7 @@ export const updatePago = async (
   id: string,
   updateData: UpdatePagoDto
 ): Promise<Pago> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("pago")
     .update(updateData)
@@ -303,6 +307,7 @@ export const updatePago = async (
 };
 
 export const deletePago = async (id: string): Promise<Pago> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("pago")
     .update({
@@ -329,6 +334,7 @@ export const deletePago = async (id: string): Promise<Pago> => {
 };
 
 export const getPagoById = async (id: string): Promise<ResponsePago> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("pago")
     .select(`
@@ -363,7 +369,7 @@ export const getPagoById = async (id: string): Promise<ResponsePago> => {
 
 // Funciones para métricas de pagos
 export const dataAnalisisConductaPagos = async (user: any) => {
-  const supabase = getSupabaseClient();
+  const supabase = getSupabaseServerClient();
 
   const { data, error } = await supabase.rpc("sp_analisis_conducta_pagos");
 
