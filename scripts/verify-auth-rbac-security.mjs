@@ -271,10 +271,6 @@ const clientAuthChecks = [
     minimumHeaders: 4,
   },
   {
-    path: 'src/services/equipamientoService.ts',
-    minimumHeaders: 2,
-  },
-  {
     path: 'src/services/browser/cuotasPagosBiApiClient.ts',
     minimumHeaders: 1,
   },
@@ -289,6 +285,23 @@ const sensitiveClientAuthChecks = [
       '/api/evolucion_socio/registro',
       '/api/notificaciones',
       '/api/dragon-pyramid/license',
+    ],
+  },
+  {
+    path: 'src/services/browser/databaseApiClient.ts',
+    requiredSnippets: [
+      'authHeader()',
+      'headers: mergeHeaders(init)',
+      "cache: init.cache ?? 'no-store'",
+    ],
+  },
+  {
+    path: 'src/services/browser/equipamientoApiClient.ts',
+    requiredSnippets: [
+      'requestDatabaseApi',
+      '/api/equipamientos',
+      '/api/equipamientos/alertas-mantenimiento',
+      '/api/equipamientos/mantenimiento-bi',
     ],
   },
   {
