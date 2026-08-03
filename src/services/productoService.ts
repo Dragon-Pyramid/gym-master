@@ -1,4 +1,6 @@
-import { getSupabaseClient } from "./supabaseClient";
+import 'server-only';
+
+import { getSupabaseServerClient } from "./supabaseServerClient";
 import {
   Producto,
   CreateProductoDto,
@@ -7,7 +9,6 @@ import {
 } from "../interfaces/producto.interface";
 import { existeProveedor } from "./proveedorService";
 
-const supabase = getSupabaseClient();
 
 type HistorialInput = {
   motivo_cambio_precio?: string | null;
@@ -89,6 +90,7 @@ async function insertPrecioCostoHistorial(params: {
   input?: HistorialInput;
   origen?: "manual" | "sistema" | "importado";
 }) {
+  const supabase = getSupabaseServerClient();
   const margenAnterior =
     params.precioAnterior == null || params.costoAnterior == null
       ? { margen: null, porcentaje: null }
@@ -124,6 +126,7 @@ async function insertPrecioCostoHistorial(params: {
 }
 
 export const getAllProductos = async (): Promise<Producto[]> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase.from("producto").select();
   if (error) throw new Error(error.message);
   return data as Producto[];
@@ -132,6 +135,7 @@ export const getAllProductos = async (): Promise<Producto[]> => {
 export const getProductoHistorialPreciosCostos = async (
   productoId: string
 ): Promise<ProductoPrecioCostoHistorial[]> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("producto_precio_costo_historial")
     .select("*")
@@ -143,6 +147,7 @@ export const getProductoHistorialPreciosCostos = async (
 };
 
 export const createProducto = async (payload: CreateProductoDto): Promise<Producto> => {
+  const supabase = getSupabaseServerClient();
   const { productoPayload, historialInput } = sanitizeProductPayload(payload as any);
   const { proveedor_id } = productoPayload;
   const proveedor = await existeProveedor(proveedor_id);
@@ -181,6 +186,7 @@ export const createProducto = async (payload: CreateProductoDto): Promise<Produc
 };
 
 export const updateProducto = async (id: string, updateData: UpdateProductoDto): Promise<Producto> => {
+  const supabase = getSupabaseServerClient();
   const { productoPayload, historialInput } = sanitizeProductPayload(updateData as any);
 
   const { data: currentProducto, error: currentError } = await supabase
@@ -234,6 +240,7 @@ export const updateProducto = async (id: string, updateData: UpdateProductoDto):
 };
 
 export const deleteProducto = async (id: string): Promise<Producto> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("producto")
     .update({ activo: false, actualizado_en: new Date().toISOString() })
@@ -249,6 +256,7 @@ export const verificoStock = async (
   producto_id: string,
   cantidad: number
 ): Promise<{ precio_unitario: number; tieneStock: boolean }> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("producto")
     .select("id, nombre, stock, precio")
@@ -271,6 +279,7 @@ export const verificoStock = async (
 };
 
 export const getProductoById = async (id: string): Promise<Producto> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase.from("producto").select().eq("id", id).single();
   if (error) {
     console.log(error.message);

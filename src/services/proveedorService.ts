@@ -1,4 +1,6 @@
-import { getSupabaseClient } from "./supabaseClient";
+import 'server-only';
+
+import { getSupabaseServerClient } from "./supabaseServerClient";
 
 import {
   Proveedor,
@@ -7,7 +9,6 @@ import {
   UpdateProveedorDto,
 } from "../interfaces/proveedor.interface";
 
-const supabase = getSupabaseClient();
 
 type ProveedorPayload = Partial<Record<keyof CreateProveedorDto, string | null>>;
 
@@ -70,6 +71,7 @@ const normalizeUpdatePayload = (payload: UpdateProveedorDto): ProveedorPayload =
 };
 
 export const getAllProveedores = async (): Promise<Proveedor[]> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("proveedor")
     .select("*")
@@ -81,6 +83,7 @@ export const getAllProveedores = async (): Promise<Proveedor[]> => {
 };
 
 export const createProveedor = async (payload: CreateProveedorDto): Promise<Proveedor> => {
+  const supabase = getSupabaseServerClient();
   const normalizedPayload = normalizeCreatePayload(payload);
 
   if (!normalizedPayload.nombre) {
@@ -98,6 +101,7 @@ export const createProveedor = async (payload: CreateProveedorDto): Promise<Prov
 };
 
 export const updateProveedor = async (id: string, updateData: UpdateProveedorDto): Promise<Proveedor> => {
+  const supabase = getSupabaseServerClient();
   const normalizedPayload = normalizeUpdatePayload(updateData);
 
   if (Object.prototype.hasOwnProperty.call(normalizedPayload, "nombre") && !normalizedPayload.nombre) {
@@ -117,6 +121,7 @@ export const updateProveedor = async (id: string, updateData: UpdateProveedorDto
 };
 
 export const deleteProveedor = async (id: string): Promise<Proveedor> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("proveedor")
     .update({ estado: "inactivo" })
@@ -130,6 +135,7 @@ export const deleteProveedor = async (id: string): Promise<Proveedor> => {
 };
 
 export const existeProveedor = async (id: string) => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("proveedor")
     .select("id, estado")
@@ -141,6 +147,7 @@ export const existeProveedor = async (id: string) => {
 };
 
 export const getProveedorById = async (id: string): Promise<Proveedor> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("proveedor")
     .select()
