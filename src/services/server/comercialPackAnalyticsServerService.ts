@@ -1,4 +1,6 @@
-import { createClient } from '@supabase/supabase-js';
+import 'server-only';
+
+import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 import type {
   ComercialPackAnalyticsCuponUso,
   ComercialPackAnalyticsDashboard,
@@ -6,22 +8,6 @@ import type {
   ComercialPackAnalyticsTopPack,
   ComercialPackVentaRegistro,
 } from '@/interfaces/comercialPackAnalytics.interface';
-
-function getComercialDbClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY no está configurada para consultar analítica comercial.');
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
-}
 
 function asNumber(value: unknown, fallback = 0) {
   const numeric = Number(value);
@@ -86,9 +72,9 @@ export async function getComercialPackAnalyticsDashboard(filters?: {
   desde?: string | null;
   hasta?: string | null;
 }): Promise<ComercialPackAnalyticsDashboard> {
-  const supabase = getComercialDbClient();
   const desde = normalizeDate(filters?.desde);
   const hasta = normalizeDate(filters?.hasta);
+  const supabase = getSupabaseServerClient();
 
   let query = supabase
     .from('comercial_pack_venta')
