@@ -108,15 +108,27 @@ if (!serverClientSource.includes('SUPABASE_SERVICE_ROLE_KEY')) {
   fail('The server-only Supabase client must require SUPABASE_SERVICE_ROLE_KEY.');
 }
 
-const sharedClientSource = read('src/services/supabaseClient.ts');
+const browserClientSource = read('src/services/supabaseClient.ts');
+
 for (const required of [
-  'typeof window !== "undefined"',
+  'NEXT_PUBLIC_SUPABASE_URL',
+  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  'persistSession: true',
+  'autoRefreshToken: true',
+]) {
+  if (!browserClientSource.includes(required)) {
+    fail(`src/services/supabaseClient.ts is missing browser client marker: ${required}`);
+  }
+}
+
+for (const forbidden of [
   'SUPABASE_SERVICE_ROLE_KEY',
+  'getSupabaseClient',
   'persistSession: false',
   'autoRefreshToken: false',
 ]) {
-  if (!sharedClientSource.includes(required)) {
-    fail(`src/services/supabaseClient.ts is missing runtime boundary marker: ${required}`);
+  if (browserClientSource.includes(forbidden)) {
+    fail(`src/services/supabaseClient.ts contains forbidden server client marker: ${forbidden}`);
   }
 }
 

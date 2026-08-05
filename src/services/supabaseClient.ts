@@ -1,4 +1,4 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -23,37 +23,3 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
   },
 });
-
-let serverRuntimeClient: SupabaseClient | null = null;
-
-/**
- * Cliente de datos compatible con módulos compartidos.
- *
- * - Navegador: anon key; cualquier acceso queda sujeto a RLS/grants.
- * - Servidor: service role; solo debe invocarse después de autorización en API.
- *
- * La clave service role se lee únicamente en runtime Node y nunca se exporta.
- */
-export const getSupabaseClient = (): SupabaseClient => {
-  if (typeof window !== "undefined") {
-    return supabase;
-  }
-
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!serviceRoleKey) {
-    throw new Error(
-      "Falta SUPABASE_SERVICE_ROLE_KEY para operar la base desde el servidor"
-    );
-  }
-
-  if (!serverRuntimeClient) {
-    serverRuntimeClient = createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    });
-  }
-
-  return serverRuntimeClient;
-};

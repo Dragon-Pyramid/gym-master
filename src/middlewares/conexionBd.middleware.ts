@@ -1,11 +1,13 @@
-import { getSupabaseClient } from "@/services/supabaseClient";
+import 'server-only';
+
+import { getSupabaseServerClient } from "@/services/supabaseServerClient";
 
 /**
- * Devuelve el cliente único de Supabase para este deployment.
+ * Devuelve el cliente privilegiado único para operaciones server-side.
  *
- * Ya no recibe un identificador de gimnasio porque Gym Master pasa a modo single-tenant:
- * una URL/app + una base de datos por gimnasio.
+ * Ya no recibe un identificador de gimnasio porque Gym Master funciona en modo
+ * single-tenant: una URL/app y una base de datos por gimnasio.
  */
 export function conexionBD() {
-  return getSupabaseClient();
+  return getSupabaseServerClient();
 }
