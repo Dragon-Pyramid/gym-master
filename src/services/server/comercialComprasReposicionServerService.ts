@@ -1,4 +1,6 @@
-import { createClient } from '@supabase/supabase-js';
+import 'server-only';
+
+import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 import type { JwtUser } from '@/interfaces/jwtUser.interface';
 import type {
   ComercialComprasReposicionDashboard,
@@ -10,17 +12,6 @@ import type {
   UpsertProveedorProductoDTO,
 } from '@/interfaces/comercialComprasReposicion.interface';
 import { createComercialStockMovimiento } from './comercialStockLedgerServerService';
-
-function getComercialDbClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY no está configurada para operar Compras/Reposición desde API server.');
-  }
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
 
 function asNumber(value: unknown, fallback = 0) {
   const numeric = Number(value);
@@ -75,7 +66,7 @@ function mapOrden(row: any): ComercialOrdenCompra {
   };
 }
 
-async function fetchOrdenById(supabase: ReturnType<typeof getComercialDbClient>, id: string): Promise<ComercialOrdenCompra> {
+async function fetchOrdenById(supabase: ReturnType<typeof getSupabaseServerClient>, id: string): Promise<ComercialOrdenCompra> {
   const { data, error } = await supabase
     .from('comercial_orden_compra')
     .select(
@@ -96,7 +87,7 @@ async function fetchOrdenById(supabase: ReturnType<typeof getComercialDbClient>,
   return mapOrden(data);
 }
 
-async function updateOrdenTotals(supabase: ReturnType<typeof getComercialDbClient>, ordenId: string) {
+async function updateOrdenTotals(supabase: ReturnType<typeof getSupabaseServerClient>, ordenId: string) {
   const { data: detalles, error } = await supabase
     .from('comercial_orden_compra_detalle')
     .select('cantidad_solicitada, costo_unitario')
@@ -116,7 +107,7 @@ async function updateOrdenTotals(supabase: ReturnType<typeof getComercialDbClien
 }
 
 export async function getComercialComprasReposicionDashboard(): Promise<ComercialComprasReposicionDashboard> {
-  const supabase = getComercialDbClient();
+  const supabase = getSupabaseServerClient();
 
   const [proveedoresResult, productosResult, ubicacionesResult, relacionesResult, reposicionResult, ordenesResult] = await Promise.all([
     supabase.from('proveedor').select('*').order('nombre', { ascending: true }),
@@ -181,7 +172,6 @@ export async function upsertComercialProveedorProducto(
   payload: UpsertProveedorProductoDTO,
   user?: JwtUser | null
 ): Promise<ComercialProveedorProducto> {
-  const supabase = getComercialDbClient();
   const productoId = String(payload.producto_id ?? '').trim();
   const proveedorId = String(payload.proveedor_id ?? '').trim();
   if (!productoId) throw new Error('Debe seleccionar un producto');
@@ -191,6 +181,8 @@ export async function upsertComercialProveedorProducto(
   const compraMinima = payload.compra_minima == null ? 1 : parsePositiveInteger(payload.compra_minima, 'La compra mínima');
   const leadTimeDias = payload.lead_time_dias == null ? 0 : parseNonNegativeInteger(payload.lead_time_dias, 'El lead time');
   const principal = Boolean(payload.principal);
+
+  const supabase = getSupabaseServerClient();
 
   const [{ data: producto, error: productoError }, { data: proveedor, error: proveedorError }] = await Promise.all([
     supabase.from('producto').select('id, nombre, activo').eq('id', productoId).single(),
@@ -249,12 +241,13 @@ export async function createComercialOrdenCompra(
   payload: CreateOrdenCompraDTO,
   user?: JwtUser | null
 ): Promise<ComercialOrdenCompra> {
-  const supabase = getComercialDbClient();
   const proveedorId = String(payload.proveedor_id ?? '').trim();
   if (!proveedorId) throw new Error('Debe seleccionar un proveedor');
 
   const detallesInput = Array.isArray(payload.detalles) ? payload.detalles : [];
   if (!detallesInput.length) throw new Error('La orden debe tener al menos un producto');
+
+  const supabase = getSupabaseServerClient();
 
   const { data: proveedor, error: proveedorError } = await supabase
     .from('proveedor')
@@ -343,9 +336,10 @@ export async function recibirComercialOrdenCompra(
   payload: RecibirOrdenCompraDTO,
   user?: JwtUser | null
 ): Promise<ComercialOrdenCompra> {
-  const supabase = getComercialDbClient();
   const ordenId = String(payload.orden_compra_id ?? '').trim();
   if (!ordenId) throw new Error('Debe seleccionar una orden de compra');
+
+  const supabase = getSupabaseServerClient();
 
   const orden = await fetchOrdenById(supabase, ordenId);
   if (orden.estado === 'recibida' || orden.estado === 'anulada') {
