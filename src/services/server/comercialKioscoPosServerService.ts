@@ -1,4 +1,6 @@
-import { createClient } from '@supabase/supabase-js';
+import 'server-only';
+
+import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 import type {
   ComercialPosDashboard,
   ComercialPosProducto,
@@ -10,22 +12,6 @@ import type {
 } from '@/interfaces/comercialPos.interface';
 import type { ComercialCupon, ComercialPack, ComercialPromocion } from '@/interfaces/comercialServiciosPromociones.interface';
 import type { JwtUser } from '@/interfaces/jwtUser.interface';
-
-function getComercialDbClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY no está configurada para operar POS/Kiosco desde API server.');
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
-}
 
 function asNumber(value: unknown, fallback = 0) {
   const numeric = Number(value);
@@ -79,7 +65,7 @@ function isDateActive(start?: string | null, end?: string | null) {
   return true;
 }
 
-async function getDefaultLocation(supabase: ReturnType<typeof getComercialDbClient>, requestedId?: string | null) {
+async function getDefaultLocation(supabase: ReturnType<typeof getSupabaseServerClient>, requestedId?: string | null) {
   if (requestedId) {
     const { data, error } = await supabase
       .from('comercial_ubicacion_stock')
@@ -116,7 +102,7 @@ async function getDefaultLocation(supabase: ReturnType<typeof getComercialDbClie
   return data as ComercialPosUbicacion;
 }
 
-async function getProductTotalStock(supabase: ReturnType<typeof getComercialDbClient>, productoId: string) {
+async function getProductTotalStock(supabase: ReturnType<typeof getSupabaseServerClient>, productoId: string) {
   const { data, error } = await supabase
     .from('comercial_producto_stock_ubicacion')
     .select('cantidad')
@@ -126,7 +112,7 @@ async function getProductTotalStock(supabase: ReturnType<typeof getComercialDbCl
   return (data ?? []).reduce((total, row) => total + Number(row.cantidad ?? 0), 0);
 }
 
-async function getOpenCashSessionId(supabase: ReturnType<typeof getComercialDbClient>) {
+async function getOpenCashSessionId(supabase: ReturnType<typeof getSupabaseServerClient>) {
   const { data, error } = await supabase
     .from('comercial_caja_sesion')
     .select('id')
@@ -140,7 +126,7 @@ async function getOpenCashSessionId(supabase: ReturnType<typeof getComercialDbCl
 }
 
 async function getLocationStockRow(
-  supabase: ReturnType<typeof getComercialDbClient>,
+  supabase: ReturnType<typeof getSupabaseServerClient>,
   productoId: string,
   ubicacionId: string
 ) {
@@ -180,7 +166,7 @@ function mapPack(row: any): ComercialPack {
 }
 
 export async function getComercialKioscoPosDashboard(): Promise<ComercialPosDashboard> {
-  const supabase = getComercialDbClient();
+  const supabase = getSupabaseServerClient();
   const today = new Date().toISOString().slice(0, 10);
 
   const [productosResult, serviciosResultDashboard, stockResult, ubicacionesResult, ventasResult, packsResult, promocionesResult, cuponesResult] = await Promise.all([
@@ -385,7 +371,7 @@ function applyDistributedDiscount(items: NormalizedVentaItem[], discount: number
   return roundMoney(targetDiscount - remaining);
 }
 
-async function resolveCoupon(supabase: ReturnType<typeof getComercialDbClient>, rawCode?: string | null) {
+async function resolveCoupon(supabase: ReturnType<typeof getSupabaseServerClient>, rawCode?: string | null) {
   const codigo = String(rawCode ?? '').trim().toUpperCase();
   if (!codigo) return null;
 
@@ -418,7 +404,6 @@ export async function createComercialKioscoPosVenta(
   payload: CreateComercialPosVentaDTO,
   user?: JwtUser | null
 ): Promise<ComercialPosVentaResumen> {
-  const supabase = getComercialDbClient();
   const clienteTipo = normalizeClienteTipo(payload.cliente_tipo);
   const metodoPago = normalizeMetodoPago(payload.metodo_pago);
   const items = Array.isArray(payload.items) ? payload.items : [];
@@ -426,12 +411,14 @@ export async function createComercialKioscoPosVenta(
   if (!items.length) throw new Error('La venta debe tener al menos un ítem');
   if (clienteTipo === 'socio') throw new Error('La venta POS v1 opera consumidor final o visitante. La venta a socio queda para la etapa de POS avanzado.');
 
-  const ubicacion = await getDefaultLocation(supabase, payload.ubicacion_stock_id ?? null);
   const directProductoIds = Array.from(new Set(items.map((item) => normalizeItemTipo(item.item_tipo) === 'producto' ? String(item.producto_id ?? '').trim() : '').filter(Boolean)));
   const directServicioIds = Array.from(new Set(items.map((item) => normalizeItemTipo(item.item_tipo) === 'servicio' ? String(item.servicio_id ?? '').trim() : '').filter(Boolean)));
   const packIds = Array.from(new Set(items.map((item) => normalizeItemTipo(item.item_tipo) === 'pack' ? String(item.pack_id ?? '').trim() : '').filter(Boolean)));
 
   if (!directProductoIds.length && !directServicioIds.length && !packIds.length) throw new Error('Debe seleccionar productos, servicios o packs válidos');
+
+  const supabase = getSupabaseServerClient();
+  const ubicacion = await getDefaultLocation(supabase, payload.ubicacion_stock_id ?? null);
 
   const packsResult = packIds.length
     ? await supabase
