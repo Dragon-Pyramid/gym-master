@@ -1,4 +1,6 @@
-import { createClient } from '@supabase/supabase-js';
+import 'server-only';
+
+import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 import type {
   ComercialProductoStockUbicacion,
   ComercialStockLedgerDashboard,
@@ -8,22 +10,6 @@ import type {
   ComercialUbicacionStock,
   CreateComercialStockMovimientoDTO,
 } from '@/interfaces/comercialStockLedger.interface';
-
-function getComercialDbClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY no está configurada para operar Comercial desde API server.');
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
-}
 
 function asNumber(value: unknown, fallback = 0) {
   const numeric = Number(value);
@@ -69,7 +55,7 @@ function isOutgoingMovement(tipo: ComercialStockMovimientoTipo) {
   return ['venta', 'ajuste_salida', 'merma', 'vencimiento', 'uso_interno'].includes(tipo);
 }
 
-async function getLocationStock(supabase: ReturnType<typeof getComercialDbClient>, productoId: string, ubicacionId: string) {
+async function getLocationStock(supabase: ReturnType<typeof getSupabaseServerClient>, productoId: string, ubicacionId: string) {
   const { data, error } = await supabase
     .from('comercial_producto_stock_ubicacion')
     .select('*')
@@ -91,7 +77,7 @@ async function getLocationStock(supabase: ReturnType<typeof getComercialDbClient
   return created;
 }
 
-async function getProductTotalStock(supabase: ReturnType<typeof getComercialDbClient>, productoId: string) {
+async function getProductTotalStock(supabase: ReturnType<typeof getSupabaseServerClient>, productoId: string) {
   const { data, error } = await supabase
     .from('comercial_producto_stock_ubicacion')
     .select('cantidad')
@@ -102,7 +88,7 @@ async function getProductTotalStock(supabase: ReturnType<typeof getComercialDbCl
 }
 
 export async function getComercialStockLedgerDashboard(): Promise<ComercialStockLedgerDashboard> {
-  const supabase = getComercialDbClient();
+  const supabase = getSupabaseServerClient();
 
   const [ubicacionesResult, stockResult, movimientosResult, productosResult] = await Promise.all([
     supabase
@@ -204,7 +190,6 @@ export async function createComercialStockMovimiento(
   payload: CreateComercialStockMovimientoDTO,
   userId?: string | null
 ): Promise<ComercialStockMovimiento> {
-  const supabase = getComercialDbClient();
   const productoId = String(payload.producto_id ?? '').trim();
   const tipo = payload.tipo;
   const motivo = String(payload.motivo ?? '').trim();
@@ -228,6 +213,16 @@ export async function createComercialStockMovimiento(
     throw new Error('La ubicación de origen y destino deben ser distintas');
   }
 
+  const stockReal = tipo === 'conteo_fisico'
+    ? parseNonNegativeInteger(payload.stock_real, 'El stock real')
+    : 0;
+
+  let cantidadMovimiento = tipo === 'conteo_fisico'
+    ? 0
+    : parsePositiveInteger(payload.cantidad, 'La cantidad');
+
+  const supabase = getSupabaseServerClient();
+
   const { data: producto, error: productoError } = await supabase
     .from('producto')
     .select('id, nombre, stock, costo, precio, activo')
@@ -238,9 +233,6 @@ export async function createComercialStockMovimiento(
   if (producto.activo === false) throw new Error('No se puede operar stock de un producto inactivo');
 
   const stockAnteriorTotal = await getProductTotalStock(supabase, productoId);
-  let cantidadMovimiento = tipo === 'conteo_fisico'
-    ? 0
-    : parsePositiveInteger(payload.cantidad, 'La cantidad');
 
   if (isIncomingMovement(tipo)) {
     const target = await getLocationStock(supabase, productoId, ubicacionDestinoId!);
@@ -287,7 +279,6 @@ export async function createComercialStockMovimiento(
   }
 
   if (tipo === 'conteo_fisico') {
-    const stockReal = parseNonNegativeInteger(payload.stock_real, 'El stock real');
     const target = await getLocationStock(supabase, productoId, ubicacionDestinoId!);
     const currentQty = Number(target.cantidad ?? 0);
     cantidadMovimiento = Math.abs(stockReal - currentQty);
