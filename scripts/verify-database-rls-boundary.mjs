@@ -132,6 +132,47 @@ for (const forbidden of [
   }
 }
 
+const serviceClientFactoryFiles = walk(
+  path.join(root, 'src', 'services'),
+  (file) => file.endsWith('.ts') || file.endsWith('.tsx')
+);
+
+const allowedServiceClientFactoryFiles = new Set([
+  'src/services/supabaseClient.ts',
+  'src/services/supabaseServerClient.ts',
+]);
+
+const serviceClientFactoryViolations = [];
+
+for (const file of serviceClientFactoryFiles) {
+  const source = fs.readFileSync(file, 'utf8');
+  const relativePath = path.relative(root, file).replaceAll('\\', '/');
+
+  const importsCreateClient =
+    /import\s*\{[^}]*\bcreateClient\b[^}]*\}\s*from\s*['"]@supabase\/supabase-js['"]/s.test(
+      source
+    );
+
+  const invokesCreateClient =
+    /\bcreateClient(?:\s*<[^;\n]+>)?\s*\(/.test(source);
+
+  const referencesServiceRole =
+    source.includes('SUPABASE_SERVICE_ROLE_KEY');
+
+  if (
+    (importsCreateClient || invokesCreateClient || referencesServiceRole) &&
+    !allowedServiceClientFactoryFiles.has(relativePath)
+  ) {
+    serviceClientFactoryViolations.push(relativePath);
+  }
+}
+
+if (serviceClientFactoryViolations.length > 0) {
+  fail(
+    `Supabase client factories must remain centralized in the canonical browser and server clients:\n${serviceClientFactoryViolations.join('\n')}`
+  );
+}
+
 const sourceFiles = walk(
   path.join(root, 'src'),
   (file) => file.endsWith('.ts') || file.endsWith('.tsx')
