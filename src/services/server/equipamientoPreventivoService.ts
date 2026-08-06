@@ -1,5 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
+import 'server-only';
+
 import dayjs from 'dayjs';
+
+import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 
 import type { Equipamento } from '@/interfaces/equipamiento.interface';
 import type {
@@ -11,22 +14,6 @@ import type {
   EquipamientoPreventivosDashboard,
   UpdateEquipamientoOrdenTecnicaDTO,
 } from '@/interfaces/equipamientoPreventivo.interface';
-
-function getEquipamientoPreventivoClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY no está configurada para operar preventivos de equipamientos.');
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
-}
 
 function normalizeCode(value: string) {
   return value
@@ -82,7 +69,7 @@ function calculateMetricas(equipos: Equipamento[], ordenes: EquipamientoOrdenTec
 }
 
 export async function getEquipamientosPreventivosDashboard(): Promise<EquipamientoPreventivosDashboard> {
-  const supabase = getEquipamientoPreventivoClient();
+  const supabase = getSupabaseServerClient();
 
   const [equiposResult, planesResult, ordenesResult, historialResult] = await Promise.all([
     supabase.from('equipamiento').select('*').eq('activo', true).order('nombre', { ascending: true }),
@@ -132,12 +119,15 @@ export async function getEquipamientosPreventivosDashboard(): Promise<Equipamien
 export async function createEquipamientoPlanPreventivo(
   payload: CreateEquipamientoPlanPreventivoDTO,
 ): Promise<EquipamientoPlanPreventivo> {
-  const supabase = getEquipamientoPreventivoClient();
   const nombre = String(payload.nombre ?? '').trim();
   if (!nombre) throw new Error('El nombre del plan preventivo es obligatorio.');
 
   const codigo = payload.codigo?.trim() || normalizeCode(nombre);
   const frecuencia = Number(payload.frecuencia_dias || 90);
+  const tareas = (payload.tareas ?? [])
+    .map((tarea) => String(tarea ?? '').trim())
+    .filter(Boolean);
+  const supabase = getSupabaseServerClient();
 
   const { data, error } = await supabase
     .from('equipamiento_plan_preventivo')
@@ -155,10 +145,6 @@ export async function createEquipamientoPlanPreventivo(
     .single();
 
   if (error) throw new Error(error.message);
-
-  const tareas = (payload.tareas ?? [])
-    .map((tarea) => String(tarea ?? '').trim())
-    .filter(Boolean);
 
   if (tareas.length > 0) {
     const { error: tareasError } = await supabase.from('equipamiento_plan_tarea').insert(
@@ -179,10 +165,13 @@ export async function createEquipamientoPlanPreventivo(
 export async function createEquipamientoOrdenTecnica(
   payload: CreateEquipamientoOrdenTecnicaDTO,
 ): Promise<EquipamientoOrdenTecnica> {
-  const supabase = getEquipamientoPreventivoClient();
   const titulo = String(payload.titulo ?? '').trim();
   if (!titulo) throw new Error('El título de la orden técnica es obligatorio.');
   if (!payload.id_equipamiento) throw new Error('Seleccioná un equipamiento para crear la orden técnica.');
+
+  const fechaBase = payload.fecha_programada || new Date().toISOString().slice(0, 10);
+  const fechaVencimiento = payload.fecha_vencimiento || fechaBase;
+  const supabase = getSupabaseServerClient();
 
   let plan: EquipamientoPlanPreventivo | null = null;
   if (payload.plan_id) {
@@ -194,9 +183,6 @@ export async function createEquipamientoOrdenTecnica(
     if (planError) throw new Error(planError.message);
     plan = planData as EquipamientoPlanPreventivo | null;
   }
-
-  const fechaBase = payload.fecha_programada || new Date().toISOString().slice(0, 10);
-  const fechaVencimiento = payload.fecha_vencimiento || fechaBase;
 
   const { data, error } = await supabase
     .from('equipamiento_orden_tecnica')
@@ -255,7 +241,6 @@ export async function updateEquipamientoOrdenTecnica(
   id: string,
   payload: UpdateEquipamientoOrdenTecnicaDTO,
 ): Promise<EquipamientoOrdenTecnica> {
-  const supabase = getEquipamientoPreventivoClient();
   if (!id) throw new Error('ID de orden técnica inválido.');
 
   const updatePayload: Record<string, unknown> = {
@@ -266,6 +251,8 @@ export async function updateEquipamientoOrdenTecnica(
   if (payload.estado === 'completada' && !payload.fecha_cierre) {
     updatePayload.fecha_cierre = new Date().toISOString();
   }
+
+  const supabase = getSupabaseServerClient();
 
   const { data, error } = await supabase
     .from('equipamiento_orden_tecnica')
