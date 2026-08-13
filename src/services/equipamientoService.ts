@@ -1,14 +1,13 @@
+import 'server-only';
+
 import { CreateEquipamentoDTO, Equipamento, UpdateEquipamentoDTO } from "@/interfaces/equipamiento.interface";
-import { AlertasMantenimientoEquipamientoResponse } from "@/interfaces/equipamientoAlertas.interface";
-import { EquipamientoMantenimientoBiResponse } from "@/interfaces/equipamientoMantenimientoBi.interface";
 import { TipoEquipamiento } from "@/enums/tipoEquipamiento.enum";
-import { getSupabaseClient } from "./supabaseClient";
-import { authHeader } from "./storageService";
+import { getSupabaseServerClient } from "./supabaseServerClient";
 import dayjs from "dayjs";
 
-const supabase = getSupabaseClient();
 
 export const getAllEquipamientos = async () : Promise<Equipamento[]> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("equipamiento")
     .select()
@@ -21,6 +20,7 @@ export const getAllEquipamientos = async () : Promise<Equipamento[]> => {
 };
 
 export const createEquipamiento = async (payload : CreateEquipamentoDTO) :Promise <Equipamento> => {
+  const supabase = getSupabaseServerClient();
 const fecha_adquisicion = dayjs().format("YYYY-MM-DD");
 const ultima_revision = dayjs().format("YYYY-MM-DD");
 const observaciones = payload.observaciones || "Sin observaciones";
@@ -66,6 +66,7 @@ if (tipoLower === "cardio") {
     }
 
 export const updateEquipamiento = async (id: string, updateData:UpdateEquipamentoDTO): Promise<Equipamento> => {
+  const supabase = getSupabaseServerClient();
     const { data, error } = await supabase
         .from("equipamiento")
         .update(updateData)
@@ -82,6 +83,7 @@ export const updateEquipamiento = async (id: string, updateData:UpdateEquipament
 
 
 export const deleteEquipamiento = async (id: string): Promise<Equipamento> => {
+  const supabase = getSupabaseServerClient();
     const {data, error } = await supabase
         .from("equipamiento")
         .update({ activo: false }) // Marcar como inactivo
@@ -98,6 +100,7 @@ export const deleteEquipamiento = async (id: string): Promise<Equipamento> => {
 };
 
 export const getOneEquipamientoById = async (id:string) : Promise<Equipamento> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("equipamiento")
     .select()
@@ -113,7 +116,7 @@ export const getOneEquipamientoById = async (id:string) : Promise<Equipamento> =
 
 // Funciones para métricas de equipamiento
 export const dataEstadoEquipamientoSemaforo = async (user: any) => {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseServerClient();
     const { data, error } = await supabase
         .rpc('sp_estado_equipamiento_semaforo');
     if (error) throw new Error(error.message);
@@ -121,7 +124,7 @@ export const dataEstadoEquipamientoSemaforo = async (user: any) => {
 }
 
 export const dataRankingFallosEquipamiento = async (user: any) => {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseServerClient();
     const { data, error } = await supabase
         .rpc('sp_ranking_fallos_equipamiento');
     if (error) throw new Error(error.message);
@@ -129,7 +132,7 @@ export const dataRankingFallosEquipamiento = async (user: any) => {
 }
 
 export const dataAnalisisCostoBeneficio = async (user: any) => {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseServerClient();
     const { data, error } = await supabase
         .rpc('sp_analisis_costo_beneficio');
     if (error) throw new Error(error.message);
@@ -140,41 +143,3 @@ export const dataPrediccionFallo = async (user: any) => {
     //TODO IMPLEMENTAR LÓGICA DE PREDICCIÓN DE FALLOS DE EQUIPAMIENTO
     throw new Error("Funcionalidad no implementada");
 }
-
-export const getAlertasMantenimientoEquipamientos = async (
-  umbralDias = 5
-): Promise<AlertasMantenimientoEquipamientoResponse> => {
-  const response = await fetch(
-    `/api/equipamientos/alertas-mantenimiento?umbralDias=${umbralDias}`,
-    {
-      method: "GET",
-      headers: authHeader(),
-      cache: "no-store",
-    }
-  );
-
-  const payload = await response.json();
-
-  if (!response.ok) {
-    throw new Error(payload?.error || "Error al obtener alertas de mantenimiento");
-  }
-
-  return payload as AlertasMantenimientoEquipamientoResponse;
-};
-
-
-export const getEquipamientoMantenimientoBi = async (): Promise<EquipamientoMantenimientoBiResponse> => {
-  const response = await fetch("/api/equipamientos/mantenimiento-bi", {
-    method: "GET",
-    headers: authHeader(),
-    cache: "no-store",
-  });
-
-  const payload = await response.json();
-
-  if (!response.ok) {
-    throw new Error(payload?.error || "Error al obtener BI de mantenimiento de equipamiento");
-  }
-
-  return payload as EquipamientoMantenimientoBiResponse;
-};

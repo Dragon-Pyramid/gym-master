@@ -59,7 +59,7 @@ function getPolicy(request: NextRequest): RateLimitPolicy | null {
   }
 
   if (pathname.startsWith('/api/auth/') && method === 'POST') {
-    return { id: 'next-auth', limit: 60, windowMs: 10 * MINUTE };
+    return { id: 'auth-post-fallback', limit: 60, windowMs: 10 * MINUTE };
   }
 
   if (pathname.startsWith('/api/comercial/mobile-scanner/public/')) {

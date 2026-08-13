@@ -77,3 +77,26 @@ export async function deletePagoApi(id: string): Promise<ResponsePago> {
   const response = await parseResponse<{ data: ResponsePago }>(res);
   return response.data;
 }
+
+export type PagoReceiptVerificationCredentials = {
+  codigo: string;
+  verification_path: string;
+};
+
+export async function fetchPagoReceiptVerificationCredentialsApi(
+  id: string
+): Promise<PagoReceiptVerificationCredentials> {
+  const res = await fetch(
+    `/api/pagos/${encodeURIComponent(id)}/verification-credentials`,
+    {
+      method: 'GET',
+      headers: authHeader(),
+    }
+  );
+
+  const payload = await parseResponse<{
+    data: PagoReceiptVerificationCredentials;
+  }>(res);
+
+  return payload.data;
+}

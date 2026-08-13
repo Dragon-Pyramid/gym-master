@@ -1,5 +1,7 @@
+import 'server-only';
+
 import { randomBytes } from 'crypto';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 import type { JwtUser } from '@/interfaces/jwtUser.interface';
 
 type ResolvedScan = {
@@ -19,22 +21,6 @@ import type {
   PublicComercialScannerScanResponse,
   PublicComercialScannerSessionInfo,
 } from '@/interfaces/comercialMobileScanner.interface';
-
-function getComercialDbClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY no está configurada para operar scanner móvil comercial desde API server.');
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
-}
 
 function normalizeCode(value: unknown) {
   return String(value ?? '').trim().replace(/\s+/g, ' ').slice(0, 160);
@@ -87,7 +73,7 @@ function mapEvent(row: any): ComercialScannerEvent {
   };
 }
 
-async function getActiveSessionById(supabase: ReturnType<typeof getComercialDbClient>, sessionId: string) {
+async function getActiveSessionById(supabase: ReturnType<typeof getSupabaseServerClient>, sessionId: string) {
   const { data, error } = await supabase
     .from('comercial_scanner_session')
     .select('*')
@@ -98,7 +84,7 @@ async function getActiveSessionById(supabase: ReturnType<typeof getComercialDbCl
   return data ? mapSession(data) : null;
 }
 
-async function getSessionByToken(supabase: ReturnType<typeof getComercialDbClient>, token: string) {
+async function getSessionByToken(supabase: ReturnType<typeof getSupabaseServerClient>, token: string) {
   const { data, error } = await supabase
     .from('comercial_scanner_session')
     .select('*')
@@ -110,7 +96,7 @@ async function getSessionByToken(supabase: ReturnType<typeof getComercialDbClien
 }
 
 export async function createComercialMobileScannerSession(user?: JwtUser | null): Promise<ComercialScannerSession> {
-  const supabase = getComercialDbClient();
+  const supabase = getSupabaseServerClient();
   const token = buildToken();
   const now = new Date();
 
@@ -131,7 +117,7 @@ export async function createComercialMobileScannerSession(user?: JwtUser | null)
 }
 
 export async function closeComercialMobileScannerSession(sessionId: string): Promise<ComercialScannerSession> {
-  const supabase = getComercialDbClient();
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from('comercial_scanner_session')
     .update({ estado: 'cerrada', cerrado_en: new Date().toISOString() })
@@ -144,12 +130,13 @@ export async function closeComercialMobileScannerSession(sessionId: string): Pro
 }
 
 export async function getComercialMobileScannerState(sessionId?: string | null): Promise<ComercialScannerState> {
-  const supabase = getComercialDbClient();
   const cleanSessionId = String(sessionId ?? '').trim();
 
   if (!cleanSessionId) {
     return { session: null, pendingEvents: [], recentEvents: [] };
   }
+
+  const supabase = getSupabaseServerClient();
 
   const session = await getActiveSessionById(supabase, cleanSessionId);
   if (!session) return { session: null, pendingEvents: [], recentEvents: [] };
@@ -189,7 +176,7 @@ export async function getComercialMobileScannerState(sessionId?: string | null):
 }
 
 export async function markComercialMobileScannerEventProcessed(eventId: string): Promise<ComercialScannerEvent> {
-  const supabase = getComercialDbClient();
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from('comercial_scanner_event')
     .update({ estado: 'procesado', procesado_en: new Date().toISOString() })
@@ -201,7 +188,7 @@ export async function markComercialMobileScannerEventProcessed(eventId: string):
   return mapEvent(data);
 }
 
-async function resolveScannedCode(supabase: ReturnType<typeof getComercialDbClient>, codigo: string): Promise<ResolvedScan> {
+async function resolveScannedCode(supabase: ReturnType<typeof getSupabaseServerClient>, codigo: string): Promise<ResolvedScan> {
   const exact = codigo.trim();
   const upper = exact.toUpperCase();
 
@@ -318,9 +305,10 @@ async function resolveScannedCode(supabase: ReturnType<typeof getComercialDbClie
 }
 
 export async function getPublicComercialScannerSession(tokenInput: string): Promise<PublicComercialScannerSessionInfo> {
-  const supabase = getComercialDbClient();
   const token = String(tokenInput ?? '').trim();
   if (!token) throw new Error('Token de scanner inválido');
+
+  const supabase = getSupabaseServerClient();
 
   const session = await getSessionByToken(supabase, token);
   if (!session) throw new Error('Sesión de scanner no encontrada');
@@ -348,12 +336,13 @@ export async function createPublicComercialScannerEvent(
   tokenInput: string,
   codigoInput: string
 ): Promise<PublicComercialScannerScanResponse> {
-  const supabase = getComercialDbClient();
   const token = String(tokenInput ?? '').trim();
   const codigo = normalizeCode(codigoInput);
 
   if (!token) throw new Error('Token de scanner inválido');
   if (!codigo) throw new Error('Ingresá o escaneá un código válido');
+
+  const supabase = getSupabaseServerClient();
 
   const session = await getSessionByToken(supabase, token);
   if (!session) throw new Error('Sesión de scanner no encontrada');

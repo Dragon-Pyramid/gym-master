@@ -1,5 +1,7 @@
+import 'server-only';
+
 import { GeneracionRutina, Rutina } from "@/interfaces/rutina.interface";
-import { getSupabaseClient } from "./supabaseClient";
+import { getSupabaseServerClient } from "./supabaseServerClient";
 import { JwtUser } from "@/interfaces/jwtUser.interface";
 import { AuthorizationError } from "@/lib/auth/serverAuthorization";
 import { getSocioByIdUsuario } from "./socioService";
@@ -91,7 +93,7 @@ const normalizeRutinaId = (idRutina: string | number): number => {
 };
 // Funciones para métricas de rutinas IA
 export const dataAdherenciaMensualRutinas = async (user: JwtUser) => {
-  const supabase = getSupabaseClient();
+  const supabase = getSupabaseServerClient();
 
   const { data, error } = await supabase.rpc("sp_adherencia_mensual_rutinas");
 
@@ -101,7 +103,7 @@ export const dataAdherenciaMensualRutinas = async (user: JwtUser) => {
 };
 
 export const dataEvolucionPromedioPorObjetivo = async (user: JwtUser) => {
-  const supabase = getSupabaseClient();
+  const supabase = getSupabaseServerClient();
 
   const { data, error } = await supabase.rpc(
     "sp_evolucion_promedio_por_objetivo"
@@ -116,9 +118,8 @@ export const dataGeneracionRutina = async (
   user: JwtUser,
   rutina: GeneracionRutina
 ) => {
-  const supabase = getSupabaseClient();
-
   const idSocio = await resolveIdSocioForRutina(user, rutina);
+  const supabase = getSupabaseServerClient();
 
   const { data, error } = await supabase
     .rpc("generar_rutina_socio", {
@@ -145,7 +146,7 @@ export const dataGeneracionRutinaPersonalizada = async (
     dias: number;
   }
 ) => {
-  const supabase = getSupabaseClient();
+  const supabase = getSupabaseServerClient();
 
   const { data, error } = await supabase.rpc(
     "sp_generar_rutina_personalizada",
@@ -167,7 +168,7 @@ export const dataGeneracionRutinaPersonalizada = async (
 export const historialRutinasAdmin = async (
   user: JwtUser
 ): Promise<Rutina[]> => {
-  const supabase = getSupabaseClient();
+  const supabase = getSupabaseServerClient();
 
   const { data, error } = await supabase
     .from("rutina")
@@ -220,7 +221,6 @@ export const historialRutinaSocioLogueado = async (
     return historialRutinasAdmin(user);
   }
 
-  const supabase = getSupabaseClient();
   const idSocio = await resolveIdSocioForAuthenticatedUser(user);
 
   if (!idSocio) {
@@ -232,6 +232,7 @@ export const historialRutinaSocioLogueado = async (
     return [];
   }
 
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("rutina")
     .select("*")
@@ -250,8 +251,6 @@ export const historialRutinaSocio = async (
   user: JwtUser,
   id_socio: string
 ): Promise<Rutina[]> => {
-  const supabase = getSupabaseClient();
-
   if (!isValidUUID(id_socio)) {
     console.warn(
       "No se consultó historial de rutinas porque el id_socio no es válido:",
@@ -269,6 +268,7 @@ export const historialRutinaSocio = async (
     }
   }
 
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("rutina")
     .select("*")
@@ -287,8 +287,8 @@ export const eliminarRutina = async (
   user: JwtUser,
   idRutina: string | number
 ): Promise<{ id_rutina: number }> => {
-  const supabase = getSupabaseClient();
   const rutinaId = normalizeRutinaId(idRutina);
+  const supabase = getSupabaseServerClient();
 
   const { data: rutina, error: findError } = await supabase
     .from("rutina")
@@ -330,7 +330,7 @@ export const eliminarRutina = async (
 };
 
 export const dataRetencionPorCombinacion = async (user: JwtUser) => {
-  const supabase = getSupabaseClient();
+  const supabase = getSupabaseServerClient();
 
   const { data, error } = await supabase.rpc(
     "calcular_retencion_por_combinacion"

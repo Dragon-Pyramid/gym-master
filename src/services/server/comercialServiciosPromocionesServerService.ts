@@ -1,4 +1,6 @@
-import { createClient } from '@supabase/supabase-js';
+import 'server-only';
+
+import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 import type {
   ComercialCupon,
   ComercialPack,
@@ -8,15 +10,6 @@ import type {
   CreateComercialPackDTO,
   CreateComercialPromocionDTO,
 } from '@/interfaces/comercialServiciosPromociones.interface';
-
-function getComercialDbClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY no está configurada para operar Servicios/Promociones desde API server.');
-  }
-  return createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
-}
 
 function parseMoney(value: unknown, field: string) {
   const numeric = Number(value ?? 0);
@@ -58,7 +51,7 @@ function mapPack(row: any): ComercialPack {
   return { ...row, items, comercial_pack_item: items };
 }
 
-async function fetchPackById(supabase: ReturnType<typeof getComercialDbClient>, id: string): Promise<ComercialPack> {
+async function fetchPackById(supabase: ReturnType<typeof getSupabaseServerClient>, id: string): Promise<ComercialPack> {
   const { data, error } = await supabase
     .from('comercial_pack')
     .select(
@@ -80,7 +73,7 @@ async function fetchPackById(supabase: ReturnType<typeof getComercialDbClient>, 
 }
 
 export async function getComercialServiciosPromocionesDashboard(): Promise<ComercialServiciosPromocionesDashboard> {
-  const supabase = getComercialDbClient();
+  const supabase = getSupabaseServerClient();
   const [productosResult, serviciosResult, canalesResult, gruposResult, packsResult, promocionesResult, cuponesResult, itemsResult] = await Promise.all([
     supabase.from('producto').select('id, nombre, descripcion, precio, costo, stock, sku, codigo_barras, activo').eq('activo', true).order('nombre', { ascending: true }),
     supabase.from('servicio').select('*').eq('activo', true).order('nombre', { ascending: true }),
@@ -138,7 +131,6 @@ export async function getComercialServiciosPromocionesDashboard(): Promise<Comer
 }
 
 export async function createComercialPack(payload: CreateComercialPackDTO): Promise<ComercialPack> {
-  const supabase = getComercialDbClient();
   const nombre = String(payload.nombre ?? '').trim();
   if (nombre.length < 3) throw new Error('El nombre del pack debe tener al menos 3 caracteres');
   const precio = parseMoney(payload.precio, 'El precio del pack');
@@ -157,6 +149,13 @@ export async function createComercialPack(payload: CreateComercialPackDTO): Prom
   });
 
   const codigo = String(payload.codigo ?? '').trim() || slugify(nombre, 'PACK');
+  const vigenciaDias = parsePositiveInteger(
+    payload.vigencia_dias,
+    'La vigencia',
+    true
+  );
+  const supabase = getSupabaseServerClient();
+
   const { data: pack, error: packError } = await supabase
     .from('comercial_pack')
     .insert({
@@ -164,7 +163,7 @@ export async function createComercialPack(payload: CreateComercialPackDTO): Prom
       nombre,
       descripcion: String(payload.descripcion ?? '').trim() || null,
       precio,
-      vigencia_dias: parsePositiveInteger(payload.vigencia_dias, 'La vigencia', true),
+      vigencia_dias: vigenciaDias,
       canal_venta_id: payload.canal_venta_id || null,
       grupo_cliente_id: payload.grupo_cliente_id || null,
       disponible_pos: payload.disponible_pos !== false,
@@ -190,13 +189,20 @@ export async function createComercialPack(payload: CreateComercialPackDTO): Prom
 }
 
 export async function createComercialPromocion(payload: CreateComercialPromocionDTO): Promise<ComercialPromocion> {
-  const supabase = getComercialDbClient();
   const nombre = String(payload.nombre ?? '').trim();
   if (nombre.length < 3) throw new Error('El nombre de la promoción debe tener al menos 3 caracteres');
   const tipo = normalizePromoType(payload.tipo);
   const valor = parseMoney(payload.valor, 'El valor de la promoción');
   if (tipo === 'descuento_porcentaje' && valor > 100) throw new Error('El descuento porcentual no puede superar 100%');
   const codigo = String(payload.codigo ?? '').trim() || slugify(nombre, 'PROMO');
+  const fechaInicio = normalizeDate(payload.fecha_inicio);
+  const fechaFin = normalizeDate(payload.fecha_fin);
+  const maxUsos = parsePositiveInteger(
+    payload.max_usos,
+    'Máximo de usos',
+    true
+  );
+  const supabase = getSupabaseServerClient();
 
   const { data, error } = await supabase
     .from('comercial_promocion')
@@ -206,12 +212,12 @@ export async function createComercialPromocion(payload: CreateComercialPromocion
       descripcion: String(payload.descripcion ?? '').trim() || null,
       tipo,
       valor,
-      fecha_inicio: normalizeDate(payload.fecha_inicio),
-      fecha_fin: normalizeDate(payload.fecha_fin),
+      fecha_inicio: fechaInicio,
+      fecha_fin: fechaFin,
       canal_venta_id: payload.canal_venta_id || null,
       grupo_cliente_id: payload.grupo_cliente_id || null,
       acumulable: Boolean(payload.acumulable),
-      max_usos: parsePositiveInteger(payload.max_usos, 'Máximo de usos', true),
+      max_usos: maxUsos,
       activo: true,
     })
     .select('*, canal:canal_venta_id(*), grupo_cliente:grupo_cliente_id(*)')
@@ -222,11 +228,18 @@ export async function createComercialPromocion(payload: CreateComercialPromocion
 }
 
 export async function createComercialCupon(payload: CreateComercialCuponDTO): Promise<ComercialCupon> {
-  const supabase = getComercialDbClient();
   const promocionId = String(payload.promocion_id ?? '').trim();
   const codigo = String(payload.codigo ?? '').trim().toUpperCase();
   if (!promocionId) throw new Error('Debe seleccionar una promoción');
   if (codigo.length < 3) throw new Error('El código de cupón debe tener al menos 3 caracteres');
+
+  const maxUsos = parsePositiveInteger(
+    payload.max_usos,
+    'Máximo de usos',
+    true
+  );
+  const fechaExpiracion = normalizeDate(payload.fecha_expiracion);
+  const supabase = getSupabaseServerClient();
 
   const { data: promocion, error: promoError } = await supabase
     .from('comercial_promocion')
@@ -241,8 +254,8 @@ export async function createComercialCupon(payload: CreateComercialCuponDTO): Pr
     .insert({
       promocion_id: promocionId,
       codigo,
-      max_usos: parsePositiveInteger(payload.max_usos, 'Máximo de usos', true),
-      fecha_expiracion: normalizeDate(payload.fecha_expiracion),
+      max_usos: maxUsos,
+      fecha_expiracion: fechaExpiracion,
       activo: true,
     })
     .select('*, promocion:promocion_id(id, codigo, nombre, tipo, valor)')

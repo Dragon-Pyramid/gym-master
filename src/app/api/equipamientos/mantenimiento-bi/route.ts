@@ -13,8 +13,6 @@ import {
   authorizeDashboardRequest,
 } from '@/lib/auth/serverAuthorization';
 
-const supabase = getSupabaseServerClient();
-
 export const dynamic = "force-dynamic";
 
 type EquipoRow = {
@@ -149,6 +147,7 @@ function buildRiskScore(args: {
 export async function GET(req: Request) {
   try {
     await authorizeDashboardRequest(req, '/dashboard/equipamientos', ['admin', 'usuario']);
+    const supabase = getSupabaseServerClient();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const since90 = new Date(today);

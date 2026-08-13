@@ -1,9 +1,11 @@
-import { getSupabaseClient } from "./supabaseClient";
+import 'server-only';
+
+import { getSupabaseServerClient } from "./supabaseServerClient";
 import { Cuota, CreateCuotaDto, UpdateCuotaDto } from "../interfaces/cuota.interface";
 
-const supabase = getSupabaseClient();
 
 export const getAllCuotas = async (): Promise<Cuota[]> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase.from("cuota").select();
   if (error) throw new Error(error.message);
   return data as Cuota[];
@@ -12,6 +14,7 @@ export const getAllCuotas = async (): Promise<Cuota[]> => {
 
 //TODO: CREAR LOGICA NECESARIA PARA LAS VALIDACIONES DE FECHA,
 export const createCuota = async (payload: CreateCuotaDto): Promise<Cuota> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase.from("cuota").insert({...payload, activo:true})
     .select().single();
   if (error) throw new Error(error.message);
@@ -20,6 +23,7 @@ export const createCuota = async (payload: CreateCuotaDto): Promise<Cuota> => {
 };
 
 export const updateCuota = async (id: string, updateData: UpdateCuotaDto): Promise<Cuota> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase.from("cuota").update(updateData).eq("id", id).select().single();
   if (error) throw new Error(error.message);
   if (!data || data.length === 0) throw new Error("No se encontró cuota con ese id");
@@ -27,6 +31,7 @@ export const updateCuota = async (id: string, updateData: UpdateCuotaDto): Promi
 };
 
 export const deleteCuota = async (id: string): Promise<Cuota> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase.from("cuota").update({ activo: false }).eq("id", id).select().single();
   if (error) throw new Error(error.message);
   if (!data) throw new Error("No se encontró cuota con ese id");
@@ -34,6 +39,7 @@ export const deleteCuota = async (id: string): Promise<Cuota> => {
 };
 
 export const getCuotaById = async (id: string): Promise<Cuota> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("cuota")
     .select()

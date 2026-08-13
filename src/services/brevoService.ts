@@ -1,12 +1,14 @@
+import 'server-only';
+
 import { sendEmail } from "@/lib/brevo";
-import { getSupabaseClient } from "./supabaseClient";
+import { getSupabaseServerClient } from "./supabaseServerClient";
 import  dayjs  from 'dayjs';
 import { Socio } from "@/interfaces/socio.interface";
 import { getAllSociosActivos } from "./socioService";
 
-const supabase = getSupabaseClient();
 
 export async function obtenerSociosDeudores() : Promise<Socio[]> {
+  const supabase = getSupabaseServerClient();
   const hoy = new Date().toISOString().slice(0, 10);
 
   // todos los socios activos
@@ -72,6 +74,7 @@ export async function obtenerSociosDeudores() : Promise<Socio[]> {
  * Desactiva socios cuando el pago está vencido hace 7 días o más
  */
 export const desactivarSociosPorDeuda = async () => {
+  const supabase = getSupabaseServerClient();
   const hoy = new Date().toISOString().slice(0, 10);
   // Buscar todos los socios activos
   const socios = await getAllSociosActivos(undefined as any);

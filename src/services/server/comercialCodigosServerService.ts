@@ -1,18 +1,11 @@
-import { createClient } from '@supabase/supabase-js';
+import 'server-only';
+
+import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 import type {
   ComercialCodigoLabelItem,
   ComercialCodigosLabelsDashboard,
   GenerateComercialQrCodeDTO,
 } from '@/interfaces/comercialCodigos.interface';
-
-function getComercialDbClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY no está configurada para operar códigos comerciales.');
-  }
-  return createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
-}
 
 function normalizeQrCode(value: unknown) {
   return String(value ?? '')
@@ -46,7 +39,7 @@ function qrByTarget(qrCodes: any[]) {
 }
 
 export async function getComercialCodigosLabelsDashboard(): Promise<ComercialCodigosLabelsDashboard> {
-  const supabase = getComercialDbClient();
+  const supabase = getSupabaseServerClient();
   const [productosResult, serviciosResult, packsResult, qrResult] = await Promise.all([
     supabase.from('producto').select('id,nombre,descripcion,precio,stock,sku,codigo_barras,activo').order('nombre', { ascending: true }),
     supabase.from('servicio').select('id,nombre,descripcion,precio,codigo,categoria,activo').order('nombre', { ascending: true }),
@@ -135,7 +128,6 @@ export async function getComercialCodigosLabelsDashboard(): Promise<ComercialCod
 }
 
 export async function generateComercialQrCode(payload: GenerateComercialQrCodeDTO) {
-  const supabase = getComercialDbClient();
   const targetType = String(payload.target_type ?? '').trim();
   const targetId = String(payload.target_id ?? '').trim();
 
@@ -144,6 +136,7 @@ export async function generateComercialQrCode(payload: GenerateComercialQrCodeDT
   }
   if (!targetId) throw new Error('Seleccioná un producto o servicio para generar QR.');
 
+  const supabase = getSupabaseServerClient();
   const table = targetType === 'producto' ? 'producto' : 'servicio';
   const { data: target, error: targetError } = await supabase
     .from(table)

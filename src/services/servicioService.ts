@@ -1,7 +1,8 @@
-import { getSupabaseClient } from "./supabaseClient";
+import 'server-only';
+
+import { getSupabaseServerClient } from "./supabaseServerClient";
 import { Servicio, CreateServicioDto, UpdateServicioDto } from "../interfaces/servicio.interface";
 
-const supabase = getSupabaseClient();
 
 function normalizeServicioCode(value: unknown) {
   const text = String(value ?? '').trim();
@@ -41,6 +42,7 @@ const normalizeServicioPayload = <T extends CreateServicioDto | UpdateServicioDt
 };
 
 export const getAllServicios = async (): Promise<Servicio[]> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("servicio")
     .select()
@@ -51,6 +53,7 @@ export const getAllServicios = async (): Promise<Servicio[]> => {
 };
 
 export const createServicio = async (payload: CreateServicioDto): Promise<Servicio> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("servicio")
     .insert(normalizeServicioPayload(payload))
@@ -66,6 +69,7 @@ export const createServicio = async (payload: CreateServicioDto): Promise<Servic
 };
 
 export const updateServicio = async (id: string, updateData: UpdateServicioDto): Promise<Servicio> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("servicio")
     .update(normalizeServicioPayload(updateData))
@@ -83,6 +87,7 @@ export const updateServicio = async (id: string, updateData: UpdateServicioDto):
 };
 
 export const deleteServicio = async (id: string): Promise<Servicio[]> => {
+  const supabase = getSupabaseServerClient();
   const current = await getServicioById(id);
   const { data, error } = await supabase
     .from("servicio")
@@ -98,6 +103,7 @@ export const deleteServicio = async (id: string): Promise<Servicio[]> => {
 };
 
 export const getServicioById = async (id: string): Promise<Servicio> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("servicio")
     .select()

@@ -1,4 +1,6 @@
-import { createClient } from '@supabase/supabase-js';
+import 'server-only';
+
+import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 import type {
   CreateInfraestructuraActivoDTO,
   CreateInfraestructuraChecklistEjecucionDTO,
@@ -20,22 +22,6 @@ import type {
 
 
 const ALERT_THRESHOLD_DAYS = 30;
-
-function getInfraestructuraDbClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY no está configurada para operar Infraestructura desde API server.');
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
-}
 
 
 function normalizeCode(value: string) {
@@ -179,7 +165,7 @@ function buildGeneratedQrCode(targetType: string, targetId: string) {
   return normalizeQrCode(`GM-${targetType.replace(/_/g, '-').toUpperCase()}-${targetId.slice(0, 8)}`);
 }
 
-async function getQrTargetTitle(supabase: ReturnType<typeof getInfraestructuraDbClient>, targetType: string, targetId: string) {
+async function getQrTargetTitle(supabase: ReturnType<typeof getSupabaseServerClient>, targetType: string, targetId: string) {
   if (!targetId) throw new Error('El target_id es obligatorio para generar QR/código de barras.');
 
   if (targetType === 'infra_activo') {
@@ -228,7 +214,7 @@ async function getQrTargetTitle(supabase: ReturnType<typeof getInfraestructuraDb
 }
 
 export async function getInfraestructuraMantenimientoDashboard(): Promise<InfraestructuraMantenimientoDashboard> {
-  const supabase = getInfraestructuraDbClient();
+  const supabase = getSupabaseServerClient();
 
   const [sectoresResult, categoriasResult, activosResult, ordenesResult, checklistsResult, ejecucionesResult, qrCodesResult] = await Promise.all([
     supabase
@@ -304,7 +290,7 @@ export async function getInfraestructuraMantenimientoDashboard(): Promise<Infrae
 
 
 export async function getInfraestructuraQrLabelsDashboard(): Promise<InfraestructuraQrLabelsDashboard> {
-  const supabase = getInfraestructuraDbClient();
+  const supabase = getSupabaseServerClient();
 
   const [qrCodesResult, activosResult, sectoresResult, equipamientosResult] = await Promise.all([
     supabase
@@ -399,8 +385,6 @@ function labelFromDbValue(value?: string | null) {
 export async function createInfraestructuraSector(
   payload: CreateInfraestructuraSectorDTO,
 ): Promise<InfraestructuraSector> {
-  const supabase = getInfraestructuraDbClient();
-
   const nombre = String(payload.nombre ?? '').trim();
   if (!nombre) throw new Error('El nombre del sector es obligatorio.');
 
@@ -417,6 +401,8 @@ export async function createInfraestructuraSector(
     activo: true,
   };
 
+  const supabase = getSupabaseServerClient();
+
   const { data, error } = await supabase
     .from('infraestructura_sector')
     .insert(insertPayload)
@@ -430,10 +416,10 @@ export async function createInfraestructuraSector(
 export async function createInfraestructuraActivo(
   payload: CreateInfraestructuraActivoDTO,
 ): Promise<InfraestructuraActivo> {
-  const supabase = getInfraestructuraDbClient();
-
   const nombre = String(payload.nombre ?? '').trim();
   if (!nombre) throw new Error('El nombre del activo edilicio es obligatorio.');
+
+  const supabase = getSupabaseServerClient();
 
   let categoria: InfraestructuraCategoriaActivo | null = null;
   if (payload.categoria_id) {
@@ -493,8 +479,6 @@ export async function createInfraestructuraActivo(
 export async function createMantenimientoEdilicioOrden(
   payload: CreateMantenimientoEdilicioOrdenDTO,
 ): Promise<MantenimientoEdilicioOrden> {
-  const supabase = getInfraestructuraDbClient();
-
   const titulo = String(payload.titulo ?? '').trim();
   if (!titulo) throw new Error('El título de la orden es obligatorio.');
   if (!payload.activo_id && !payload.sector_id) {
@@ -520,6 +504,8 @@ export async function createMantenimientoEdilicioOrden(
     activo: true,
   };
 
+  const supabase = getSupabaseServerClient();
+
   const { data, error } = await supabase
     .from('mantenimiento_edilicio_orden')
     .insert(insertPayload)
@@ -542,8 +528,6 @@ export async function updateMantenimientoEdilicioOrden(
   id: string,
   payload: UpdateMantenimientoEdilicioOrdenDTO,
 ): Promise<MantenimientoEdilicioOrden> {
-  const supabase = getInfraestructuraDbClient();
-
   if (!id) throw new Error('ID de orden inválido.');
 
   const updatePayload: Record<string, unknown> = {
@@ -554,6 +538,8 @@ export async function updateMantenimientoEdilicioOrden(
   if (payload.estado === 'completada' && !payload.fecha_cierre) {
     updatePayload.fecha_cierre = new Date().toISOString();
   }
+
+  const supabase = getSupabaseServerClient();
 
   const { data, error } = await supabase
     .from('mantenimiento_edilicio_orden')
@@ -596,13 +582,13 @@ export async function updateMantenimientoEdilicioOrden(
 
 
 export async function createInfraestructuraQrCode(payload: CreateInfraestructuraQrDTO): Promise<InfraestructuraQrCodigo> {
-  const supabase = getInfraestructuraDbClient();
   const targetType = String(payload.target_type ?? '').trim();
   const targetId = String(payload.target_id ?? '').trim();
 
   if (!targetType) throw new Error('El tipo de destino QR es obligatorio.');
   if (!targetId) throw new Error('El identificador destino del QR es obligatorio.');
 
+  const supabase = getSupabaseServerClient();
   const targetInfo = await getQrTargetTitle(supabase, targetType, targetId);
   const codigo = normalizeQrCode(payload.codigo || buildGeneratedQrCode(targetType, targetId));
   const titulo = String(payload.titulo || targetInfo.titulo).trim();
@@ -631,9 +617,10 @@ export async function createInfraestructuraQrCode(payload: CreateInfraestructura
 }
 
 export async function resolveInfraestructuraQrCode(codigoInput: string): Promise<InfraestructuraQrResolveResult> {
-  const supabase = getInfraestructuraDbClient();
   const codigo = normalizeQrCode(String(codigoInput ?? ''));
   if (!codigo) throw new Error('Ingresá o escaneá un código QR/barra válido.');
+
+  const supabase = getSupabaseServerClient();
 
   const { data, error } = await supabase
     .from('infraestructura_qr_codigo')
@@ -662,12 +649,13 @@ export async function resolveInfraestructuraQrCode(codigoInput: string): Promise
 export async function createInfraestructuraChecklistEjecucion(
   payload: CreateInfraestructuraChecklistEjecucionDTO,
 ): Promise<InfraestructuraChecklistEjecucion> {
-  const supabase = getInfraestructuraDbClient();
   const templateId = String(payload.template_id ?? '').trim();
   if (!templateId) throw new Error('Seleccioná un checklist para ejecutar.');
   if (!payload.activo_id && !payload.sector_id && !payload.orden_id) {
     throw new Error('La ejecución debe estar asociada a un activo, sector u orden edilicia.');
   }
+
+  const supabase = getSupabaseServerClient();
 
   const { data: template, error: templateError } = await supabase
     .from('infraestructura_checklist_template')

@@ -1,15 +1,18 @@
-import { getSupabaseClient } from "./supabaseClient";
+import 'server-only';
+
+import { getSupabaseServerClient } from "./supabaseServerClient";
 import { Aviso, CreateAvisoDto, UpdateAvisoDto } from "../interfaces/aviso.interface";
 
-const supabase = getSupabaseClient();
 
 export const getAllAvisos = async (): Promise<Aviso[]> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase.from("avisos").select();
   if (error) throw new Error(error.message);
   return data as Aviso[];
 };
 
 export const createAviso = async (payload: CreateAvisoDto): Promise<Aviso> => {
+  const supabase = getSupabaseServerClient();
 
   const { data, error } = await supabase.from("avisos").insert({ ...payload, activo: true }).select().single();
   if (error) throw new Error(error.message);
@@ -17,6 +20,7 @@ export const createAviso = async (payload: CreateAvisoDto): Promise<Aviso> => {
 };
 
 export const updateAviso = async (id: string, updateData: UpdateAvisoDto): Promise<Aviso> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase.from("avisos").update(updateData).eq("id", id).select().single();
   if (error) throw new Error(error.message);
   if (!data || data.length === 0) throw new Error("No se encontró aviso con ese id");
@@ -24,6 +28,7 @@ export const updateAviso = async (id: string, updateData: UpdateAvisoDto): Promi
 };
 
 export const deleteAviso = async (id: string): Promise<Aviso> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase.from("avisos").update({ activo: false }).eq("id", id).select().single();
   if (error) throw new Error(error.message);
   if (!data) throw new Error("No se encontró aviso con ese id");
@@ -31,6 +36,7 @@ export const deleteAviso = async (id: string): Promise<Aviso> => {
 };
 
 export const getAvisoById = async (id: string): Promise<Aviso> => {
+  const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("avisos")
     .select()

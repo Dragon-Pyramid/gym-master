@@ -2225,7 +2225,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     tag: "General",
     summary: "Especificación OpenAPI de Gym Master",
     description:
-      "Devuelve la especificación OpenAPI usada por la pantalla /swagger. Permite auditar la documentación de endpoints desde Swagger UI o herramientas externas.",
+      "Devuelve la especificación OpenAPI usada por la pantalla /swagger. En producción permanece deshabilitada por defecto y solo se expone cuando EXPOSE_SWAGGER_DOCUMENTATION=true.",
     auth: false,
     admin: false,
     notImplemented: false,
@@ -3233,7 +3233,7 @@ function buildOperation(endpoint: EndpointDefinition, method: string) {
   const requestBody = getRequestBody(endpoint, lowerMethod);
   const security =
     endpoint.auth || endpoint.admin
-      ? [{ bearerAuth: [] }, { nextAuthSession: [] }]
+      ? [{ bearerAuth: [] }]
       : undefined;
 
   const operation: OpenApiOperation = {
@@ -3319,12 +3319,6 @@ export const openApiSpec = {
         bearerFormat: "JWT",
         description:
           "Token JWT cuando el endpoint se consuma desde clientes externos o pruebas técnicas.",
-      },
-      nextAuthSession: {
-        type: "apiKey",
-        in: "cookie",
-        name: "next-auth.session-token",
-        description: "Sesión de NextAuth usada por el frontend de Gym Master.",
       },
     },
     schemas: {

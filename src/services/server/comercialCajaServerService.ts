@@ -1,4 +1,6 @@
-import { createClient } from '@supabase/supabase-js';
+import 'server-only';
+
+import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 import type {
   AbrirCajaDTO,
   CerrarCajaDTO,
@@ -9,17 +11,6 @@ import type {
 } from '@/interfaces/comercialCaja.interface';
 import type { ComercialPosVentaResumen } from '@/interfaces/comercialPos.interface';
 import type { JwtUser } from '@/interfaces/jwtUser.interface';
-
-function getComercialDbClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY no está configurada para operar Caja Comercial desde API server.');
-  }
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
 
 function asNumber(value: unknown, fallback = 0) {
   const numeric = Number(value);
@@ -56,7 +47,7 @@ function mapVenta(venta: any): ComercialPosVentaResumen {
   };
 }
 
-async function getOpenSession(supabase: ReturnType<typeof getComercialDbClient>) {
+async function getOpenSession(supabase: ReturnType<typeof getSupabaseServerClient>) {
   const { data, error } = await supabase
     .from('comercial_caja_sesion')
     .select('*')
@@ -68,7 +59,7 @@ async function getOpenSession(supabase: ReturnType<typeof getComercialDbClient>)
   return (data ?? null) as ComercialCajaSesion | null;
 }
 
-async function getVentasByCaja(supabase: ReturnType<typeof getComercialDbClient>, cajaId: string) {
+async function getVentasByCaja(supabase: ReturnType<typeof getSupabaseServerClient>, cajaId: string) {
   const { data, error } = await supabase
     .from('venta')
     .select(
@@ -98,7 +89,7 @@ async function getVentasByCaja(supabase: ReturnType<typeof getComercialDbClient>
   return (data ?? []).map(mapVenta);
 }
 
-async function getVentasSinCaja(supabase: ReturnType<typeof getComercialDbClient>) {
+async function getVentasSinCaja(supabase: ReturnType<typeof getSupabaseServerClient>) {
   const today = new Date().toISOString().slice(0, 10);
   const { data, error } = await supabase
     .from('venta')
@@ -113,7 +104,7 @@ async function getVentasSinCaja(supabase: ReturnType<typeof getComercialDbClient
   return (data ?? []).map(mapVenta);
 }
 
-async function getMovimientosByCaja(supabase: ReturnType<typeof getComercialDbClient>, cajaId?: string | null) {
+async function getMovimientosByCaja(supabase: ReturnType<typeof getSupabaseServerClient>, cajaId?: string | null) {
   if (!cajaId) return [];
   const { data, error } = await supabase
     .from('comercial_caja_movimiento')
@@ -124,7 +115,7 @@ async function getMovimientosByCaja(supabase: ReturnType<typeof getComercialDbCl
   return (data ?? []) as ComercialCajaMovimiento[];
 }
 
-async function getRecentSessions(supabase: ReturnType<typeof getComercialDbClient>) {
+async function getRecentSessions(supabase: ReturnType<typeof getSupabaseServerClient>) {
   const { data, error } = await supabase
     .from('comercial_caja_sesion')
     .select('*')
@@ -143,7 +134,7 @@ function calculateCajaTotals(caja: ComercialCajaSesion | null, ventas: Comercial
 }
 
 export async function getComercialCajaDashboard(): Promise<ComercialCajaDashboard> {
-  const supabase = getComercialDbClient();
+  const supabase = getSupabaseServerClient();
   const cajaAbierta = await getOpenSession(supabase);
   const ventasTurno = cajaAbierta ? await getVentasByCaja(supabase, cajaAbierta.id) : [];
   const movimientos = cajaAbierta ? await getMovimientosByCaja(supabase, cajaAbierta.id) : [];
@@ -179,7 +170,7 @@ export async function getComercialCajaDashboard(): Promise<ComercialCajaDashboar
 }
 
 export async function abrirCaja(payload: AbrirCajaDTO, user?: JwtUser | null) {
-  const supabase = getComercialDbClient();
+  const supabase = getSupabaseServerClient();
   const cajaExistente = await getOpenSession(supabase);
   if (cajaExistente) throw new Error(`Ya existe una caja abierta: ${cajaExistente.codigo}`);
 
@@ -213,7 +204,7 @@ export async function abrirCaja(payload: AbrirCajaDTO, user?: JwtUser | null) {
 }
 
 export async function registrarMovimientoCaja(payload: RegistrarMovimientoCajaDTO, user?: JwtUser | null) {
-  const supabase = getComercialDbClient();
+  const supabase = getSupabaseServerClient();
   const caja = await getOpenSession(supabase);
   if (!caja) throw new Error('No hay caja abierta para registrar movimientos');
 
@@ -240,7 +231,7 @@ export async function registrarMovimientoCaja(payload: RegistrarMovimientoCajaDT
 }
 
 export async function cerrarCaja(payload: CerrarCajaDTO, user?: JwtUser | null) {
-  const supabase = getComercialDbClient();
+  const supabase = getSupabaseServerClient();
   const caja = await getOpenSession(supabase);
   if (!caja) throw new Error('No hay caja abierta para cerrar');
 

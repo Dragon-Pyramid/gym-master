@@ -1,8 +1,10 @@
+import 'server-only';
+
 import { Nivel } from "@/interfaces/niveles.interface";
-import { getSupabaseClient } from "./supabaseClient";
+import { getSupabaseServerClient } from "./supabaseServerClient";
 
 export const getAllNiveles = async (user: any) : Promise<Nivel[]> => {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseServerClient();
     const { data, error } = await supabase
         .from('nivel')
         .select('*')

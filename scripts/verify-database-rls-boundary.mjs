@@ -52,6 +52,33 @@ if (badRoutes.length > 0) {
   fail(`API routes still depend on browser/anon database clients:\n${badRoutes.join('\n')}`);
 }
 
+const privilegedClientCandidateFiles = walk(
+  path.join(root, 'src'),
+  (file) => file.endsWith('.ts') || file.endsWith('.tsx')
+);
+
+const topLevelPrivilegedClientFiles = [];
+for (const file of privilegedClientCandidateFiles) {
+  const source = fs.readFileSync(file, 'utf8');
+
+  if (!source.includes('getSupabaseServerClient')) {
+    continue;
+  }
+
+  const topLevelServerClientPattern =
+    /^(?:export\s+)?(?:const|let|var)\s+[A-Za-z_$][\w$]*\s*=\s*getSupabaseServerClient\(\)\s*;?[ \t]*$/m;
+
+  if (topLevelServerClientPattern.test(source)) {
+    topLevelPrivilegedClientFiles.push(path.relative(root, file));
+  }
+}
+
+if (topLevelPrivilegedClientFiles.length > 0) {
+  fail(
+    `Source modules must not initialize the privileged Supabase client at module scope:\n${topLevelPrivilegedClientFiles.join('\n')}`
+  );
+}
+
 const hardenedRoutes = [
   'src/app/api/admin/cuotas/dashboard-bi/route.ts',
   'src/app/api/asistencias/recientes/route.ts',
@@ -81,16 +108,69 @@ if (!serverClientSource.includes('SUPABASE_SERVICE_ROLE_KEY')) {
   fail('The server-only Supabase client must require SUPABASE_SERVICE_ROLE_KEY.');
 }
 
-const sharedClientSource = read('src/services/supabaseClient.ts');
+const browserClientSource = read('src/services/supabaseClient.ts');
+
 for (const required of [
-  'typeof window !== "undefined"',
+  'NEXT_PUBLIC_SUPABASE_URL',
+  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  'persistSession: true',
+  'autoRefreshToken: true',
+]) {
+  if (!browserClientSource.includes(required)) {
+    fail(`src/services/supabaseClient.ts is missing browser client marker: ${required}`);
+  }
+}
+
+for (const forbidden of [
   'SUPABASE_SERVICE_ROLE_KEY',
+  'getSupabaseClient',
   'persistSession: false',
   'autoRefreshToken: false',
 ]) {
-  if (!sharedClientSource.includes(required)) {
-    fail(`src/services/supabaseClient.ts is missing runtime boundary marker: ${required}`);
+  if (browserClientSource.includes(forbidden)) {
+    fail(`src/services/supabaseClient.ts contains forbidden server client marker: ${forbidden}`);
   }
+}
+
+const serviceClientFactoryFiles = walk(
+  path.join(root, 'src', 'services'),
+  (file) => file.endsWith('.ts') || file.endsWith('.tsx')
+);
+
+const allowedServiceClientFactoryFiles = new Set([
+  'src/services/supabaseClient.ts',
+  'src/services/supabaseServerClient.ts',
+]);
+
+const serviceClientFactoryViolations = [];
+
+for (const file of serviceClientFactoryFiles) {
+  const source = fs.readFileSync(file, 'utf8');
+  const relativePath = path.relative(root, file).replaceAll('\\', '/');
+
+  const importsCreateClient =
+    /import\s*\{[^}]*\bcreateClient\b[^}]*\}\s*from\s*['"]@supabase\/supabase-js['"]/s.test(
+      source
+    );
+
+  const invokesCreateClient =
+    /\bcreateClient(?:\s*<[^;\n]+>)?\s*\(/.test(source);
+
+  const referencesServiceRole =
+    source.includes('SUPABASE_SERVICE_ROLE_KEY');
+
+  if (
+    (importsCreateClient || invokesCreateClient || referencesServiceRole) &&
+    !allowedServiceClientFactoryFiles.has(relativePath)
+  ) {
+    serviceClientFactoryViolations.push(relativePath);
+  }
+}
+
+if (serviceClientFactoryViolations.length > 0) {
+  fail(
+    `Supabase client factories must remain centralized in the canonical browser and server clients:\n${serviceClientFactoryViolations.join('\n')}`
+  );
 }
 
 const sourceFiles = walk(

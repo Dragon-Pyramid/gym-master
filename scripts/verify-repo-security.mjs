@@ -131,7 +131,6 @@ const missingEnvKeys = [...usedEnvKeys]
   .sort();
 
 const sensitiveExampleKeys = [
-  'NEXTAUTH_SECRET',
   'JWT_SECRET',
   'DRAGON_PYRAMID_LICENSE_SYNC_SECRET',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
