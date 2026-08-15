@@ -26,6 +26,7 @@ import { AppFooter } from '@/components/footer/AppFooter';
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -809,7 +810,11 @@ export default function ComercialStockLedgerPage() {
                       </div>
                     ))}
                     {!loading && dashboard.movimientos.length === 0 && (
-                      <p className='text-sm text-muted-foreground'>{c('Aún no hay movimientos comerciales registrados.')}</p>
+                      <CompactEmptyState
+                        icon={ArrowRightLeft}
+                        title={c('Aún no hay movimientos comerciales registrados.')}
+                        className='py-6'
+                      />
                     )}
                   </div>
                 </CardContent>

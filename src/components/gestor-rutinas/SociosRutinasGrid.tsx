@@ -6,6 +6,7 @@ import { Rutina } from "@/interfaces/rutina.interface";
 import { Objetivo } from "@/interfaces/objetivo.interface";
 import { Nivel } from "@/interfaces/niveles.interface";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CompactEmptyState } from "@/components/ui/compact-empty-state";
 import { useI18n } from "@/i18n/I18nProvider";
 import SocioRutinaCard from "./SocioRutinaCard";
 import { getHistorialRutinas, getRutinasPorSocio } from "@/services/apiClient";
@@ -48,9 +49,7 @@ export default function SociosRutinasGrid({
   objetivos,
   niveles,
 }: SociosRutinasGridProps) {
-  const { locale } = useI18n();
-  const isEnglish = locale === "en";
-  const tx = (es: string, en: string) => (isEnglish ? en : es);
+  const { t } = useI18n();
   const [sociosConRutinas, setSociosConRutinas] = useState<SocioConRutina[]>(
     []
   );
@@ -170,9 +169,10 @@ export default function SociosRutinasGrid({
 
   if (sociosConRutinas.length === 0) {
     return (
-      <div className="py-12 text-center text-muted-foreground">
-        {tx("No hay socios registrados aún.", "No members have been registered yet.")}
-      </div>
+      <CompactEmptyState
+        title={t('common.states.empty.members.title')}
+        description={t('common.states.empty.members.description')}
+      />
     );
   }
 

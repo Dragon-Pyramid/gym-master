@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -211,17 +212,19 @@ export default function EvolucionSocioTable({
 
   if (evoluciones.length === 0) {
     return (
-      <div className="rounded-md border border-dashed py-12 text-center text-muted-foreground">
-        {tx("No hay evoluciones registradas para este socio.", "There are no evolution records for this member.")}
-      </div>
+      <CompactEmptyState
+        title={tx("No hay evoluciones registradas para este socio.", "There are no evolution records for this member.")}
+        className="py-12"
+      />
     );
   }
 
   if (filtered.length === 0) {
     return (
-      <div className="rounded-md border border-dashed py-10 text-center text-muted-foreground">
-        {tx("No hay resultados para la búsqueda actual.", "There are no results for the current search.")}
-      </div>
+      <CompactEmptyState
+        title={tx("No hay resultados para la búsqueda actual.", "There are no results for the current search.")}
+        className="py-10"
+      />
     );
   }
 

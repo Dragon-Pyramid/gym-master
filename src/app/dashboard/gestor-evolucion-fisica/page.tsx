@@ -8,6 +8,7 @@ import { AppFooter } from "@/components/footer/AppFooter";
 import { AppHeader } from "@/components/header/AppHeader";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { Button } from "@/components/ui/button";
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
 import {
   Card,
   CardContent,
@@ -357,9 +358,11 @@ export default function GestorEvolucionFisicaPage() {
                 </div>
 
                 {filteredRows.length === 0 ? (
-                  <div className="rounded-lg border border-dashed py-12 text-center text-muted-foreground">
-                    {tx("No hay socios que coincidan con la búsqueda actual.", "No members match the current search.")}
-                  </div>
+                  <CompactEmptyState
+                    icon={Search}
+                    title={tx("No hay socios que coincidan con la búsqueda actual.", "No members match the current search.")}
+                    className="py-12"
+                  />
                 ) : (
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {paginatedRows.map((socio) => (

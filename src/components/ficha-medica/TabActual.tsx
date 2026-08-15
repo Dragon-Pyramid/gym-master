@@ -7,6 +7,8 @@ import type { FichaMedica } from '../../interfaces/fichaMedica.interface';
 import { useAuthStore } from '../../stores/authStore';
 import { formatFrontendDate } from '@/utils/dateFormat';
 import { useI18n } from '@/i18n/I18nProvider';
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
+import { CompactErrorState } from '@/components/ui/compact-error-state';
 
 export default function TabActual({
   socioId,
@@ -27,11 +29,14 @@ export default function TabActual({
   const [ficha, setFicha] = useState<FichaMedica | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorRetryable, setErrorRetryable] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!active) return;
     setLoading(true);
     setError(null);
+    setErrorRetryable(false);
     let cancelled = false;
     (async () => {
       try {
@@ -57,11 +62,13 @@ export default function TabActual({
         } else {
           setFicha(null);
           setError(tx('No se pudo cargar la ficha', 'Could not load the record'));
+          setErrorRetryable(true);
         }
       } catch {
         if (cancelled) return;
         setFicha(null);
         setError(tx('No se pudo cargar la ficha', 'Could not load the record'));
+        setErrorRetryable(true);
       } finally {
         if (cancelled) return;
         setLoading(false);
@@ -70,7 +77,11 @@ export default function TabActual({
     return () => {
       cancelled = true;
     };
-  }, [active, socioId, authUser?.id, authUser?.id_socio, tx]);
+  }, [active, socioId, authUser?.id, authUser?.id_socio, reloadKey, tx]);
+
+  const handleRetry = useCallback(() => {
+    setReloadKey((current) => current + 1);
+  }, []);
 
   const formatDate = (value: unknown) => {
     if (!value) return '—';
@@ -257,13 +268,24 @@ export default function TabActual({
       {loading ? (
         <div className='mt-4 rounded-xl border bg-muted/30 p-4 text-sm text-muted-foreground'>{tx('Cargando ficha médica...', 'Loading medical record...')}</div>
       ) : error ? (
-        <div className='mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/20 dark:text-red-300'>
-          {error}
-        </div>
+        <CompactErrorState
+          message={error}
+          onRetry={errorRetryable ? handleRetry : undefined}
+          className='mt-4'
+        />
       ) : !hasFicha ? (
-        <div className='mt-4 rounded-xl border border-dashed bg-muted/20 p-6 text-sm text-muted-foreground dark:border-slate-700 dark:bg-slate-900/40'>
-          {tx('El socio todavía no tiene una ficha médica cargada. Desde la pestaña Nueva se puede registrar el control y adjuntar documentación.', 'This member does not have a medical record yet. Use the New tab to register the check and attach documentation.')}
-        </div>
+        <CompactEmptyState
+          icon={FileText}
+          title={tx(
+            'El socio todavía no tiene una ficha médica cargada.',
+            'This member does not have a medical record yet.',
+          )}
+          description={tx(
+            'Desde la pestaña Nueva se puede registrar el control y adjuntar documentación.',
+            'Use the New tab to register the check and attach documentation.',
+          )}
+          className='mt-4 py-6'
+        />
       ) : (
         <div className='mt-5 space-y-5'>
           <div className='grid gap-3 md:grid-cols-3'>

@@ -7,6 +7,7 @@ import { AppFooter } from '@/components/footer/AppFooter';
 import { AppHeader } from '@/components/header/AppHeader';
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { Button } from '@/components/ui/button';
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -231,7 +232,11 @@ export default function MensajesAdminPage() {
                   {loading ? (
                     <div className='py-8 text-center text-muted-foreground'>{c('Cargando mensajes...', 'Loading messages...')}</div>
                   ) : mensajes.length === 0 ? (
-                    <div className='rounded-lg border border-dashed border-slate-300 p-6 text-center text-sm text-muted-foreground dark:border-slate-700'>{c('No hay mensajes para el filtro seleccionado.', 'There are no messages for the selected filter.')}</div>
+                    <CompactEmptyState
+                      icon={Inbox}
+                      title={c('No hay mensajes para el filtro seleccionado.', 'There are no messages for the selected filter.')}
+                      className='py-6'
+                    />
                   ) : (
                     mensajes.map((mensaje) => (
                       <button

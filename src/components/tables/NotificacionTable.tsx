@@ -1,6 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
 import { Notificacion } from '@/interfaces/notificacion.interface';
 import { formatFrontendDateTime } from '@/utils/dateFormat';
 import { useI18n } from '@/i18n/I18nProvider';
@@ -168,9 +169,10 @@ export default function NotificacionTable({
 
   if (notificaciones.length === 0) {
     return (
-      <div className='rounded-[1.5rem] border border-dashed border-border bg-muted/20 px-4 py-10 text-center text-sm text-muted-foreground'>
-        {c('No hay notificaciones para los filtros seleccionados.', 'No notifications match the selected filters.')}
-      </div>
+      <CompactEmptyState
+        title={c('No hay notificaciones para los filtros seleccionados.', 'No notifications match the selected filters.')}
+        className='rounded-[1.5rem] py-10'
+      />
     );
   }
 

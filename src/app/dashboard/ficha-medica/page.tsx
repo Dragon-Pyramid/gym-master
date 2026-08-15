@@ -12,6 +12,7 @@ import Tabs from '@/components/ficha-medica/Tabs';
 import type { Socio } from '@/interfaces/socio.interface';
 import { fetchSociosApi } from '@/services/browser/socioApiClient';
 import { useI18n } from '@/i18n/I18nProvider';
+import { CompactErrorState } from '@/components/ui/compact-error-state';
 import type { GymMasterLocale } from '@/i18n/config';
 
 const REVIEW_ROLES = new Set(['admin', 'usuario']);
@@ -36,6 +37,7 @@ export default function FichaMedicaPage() {
   const [socios, setSocios] = useState<Socio[]>([]);
   const [sociosLoading, setSociosLoading] = useState(false);
   const [sociosError, setSociosError] = useState<string | null>(null);
+  const [sociosReloadKey, setSociosReloadKey] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSocioId, setSelectedSocioId] = useState<string>('');
   const { locale } = useI18n();
@@ -86,7 +88,11 @@ export default function FichaMedicaPage() {
     return () => {
       cancelled = true;
     };
-  }, [isInitialized, isAuthenticated, canReviewSocios, tx]);
+  }, [isInitialized, isAuthenticated, canReviewSocios, sociosReloadKey, tx]);
+
+  const handleRetrySocios = useCallback(() => {
+    setSociosReloadKey((current) => current + 1);
+  }, []);
 
   const filteredSocios = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -235,9 +241,11 @@ export default function FichaMedicaPage() {
                   </div>
 
                   {sociosError ? (
-                    <div className='mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200'>
-                      {sociosError}
-                    </div>
+                    <CompactErrorState
+                      message={sociosError}
+                      onRetry={handleRetrySocios}
+                      className='mt-4'
+                    />
                   ) : null}
 
                   <div className='mt-4 grid gap-3 sm:grid-cols-3'>

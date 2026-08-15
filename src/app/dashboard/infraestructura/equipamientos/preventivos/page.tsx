@@ -17,6 +17,8 @@ import { AppFooter } from '@/components/footer/AppFooter';
 import { AppHeader } from '@/components/header/AppHeader';
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { Button } from '@/components/ui/button';
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
+import { CompactErrorState } from '@/components/ui/compact-error-state';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
@@ -212,7 +214,8 @@ export default function EquipamientosPreventivosPage() {
   const [dashboard, setDashboard] = useState<EquipamientoPreventivosDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   const [planForm, setPlanForm] = useState<CreateEquipamientoPlanPreventivoDTO>({
@@ -239,12 +242,19 @@ export default function EquipamientosPreventivosPage() {
 
   const loadDashboard = async () => {
     setLoading(true);
-    setError(null);
+    setLoadError(null);
     try {
       const data = await getEquipamientosPreventivosDashboardClient();
       setDashboard(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : tx('No se pudo cargar preventivos de equipamientos.', 'Equipment preventive tasks could not be loaded.'));
+      setLoadError(
+        err instanceof Error
+          ? err.message
+          : tx(
+              'No se pudo cargar preventivos de equipamientos.',
+              'Equipment preventive tasks could not be loaded.',
+            ),
+      );
     } finally {
       setLoading(false);
     }
@@ -268,7 +278,7 @@ export default function EquipamientosPreventivosPage() {
   const handleCreatePlan = async (event: FormEvent) => {
     event.preventDefault();
     setSaving('plan');
-    setError(null);
+    setActionError(null);
     try {
       await createEquipamientoPlanPreventivoClient({
         ...planForm,
@@ -277,7 +287,14 @@ export default function EquipamientosPreventivosPage() {
       setPlanForm({ nombre: '', tipo_equipamiento: '', frecuencia_dias: 90, criticidad: 'media', descripcion: '', tareas: [''] });
       await registerSuccess(tx('Plan preventivo creado correctamente.', 'Preventive plan created successfully.'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : tx('No se pudo crear el plan preventivo.', 'The preventive plan could not be created.'));
+      setActionError(
+        err instanceof Error
+          ? err.message
+          : tx(
+              'No se pudo crear el plan preventivo.',
+              'The preventive plan could not be created.',
+            ),
+      );
     } finally {
       setSaving(null);
     }
@@ -286,7 +303,7 @@ export default function EquipamientosPreventivosPage() {
   const handleCreateOrden = async (event: FormEvent) => {
     event.preventDefault();
     setSaving('orden');
-    setError(null);
+    setActionError(null);
     try {
       await createEquipamientoOrdenTecnicaClient({
         ...ordenForm,
@@ -298,7 +315,14 @@ export default function EquipamientosPreventivosPage() {
       setOrdenForm({ id_equipamiento: '', plan_id: '', tipo_orden: 'preventivo', prioridad: 'media', titulo: '', fecha_programada: '', fecha_vencimiento: '', tecnico_responsable: '', costo_estimado: null, descripcion: '' });
       await registerSuccess(tx('Orden técnica creada correctamente.', 'Technical order created successfully.'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : tx('No se pudo crear la orden técnica.', 'The technical order could not be created.'));
+      setActionError(
+        err instanceof Error
+          ? err.message
+          : tx(
+              'No se pudo crear la orden técnica.',
+              'The technical order could not be created.',
+            ),
+      );
     } finally {
       setSaving(null);
     }
@@ -306,7 +330,7 @@ export default function EquipamientosPreventivosPage() {
 
   const completeOrder = async (orden: EquipamientoOrdenTecnica) => {
     setSaving(orden.id);
-    setError(null);
+    setActionError(null);
     try {
       await updateEquipamientoOrdenTecnicaClient(orden.id, {
         estado: 'completada',
@@ -316,7 +340,14 @@ export default function EquipamientosPreventivosPage() {
       });
       await registerSuccess(tx('Orden técnica completada y equipamiento actualizado.', 'Technical order completed and equipment updated.'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : tx('No se pudo completar la orden técnica.', 'The technical order could not be completed.'));
+      setActionError(
+        err instanceof Error
+          ? err.message
+          : tx(
+              'No se pudo completar la orden técnica.',
+              'The technical order could not be completed.',
+            ),
+      );
     } finally {
       setSaving(null);
     }
@@ -354,11 +385,18 @@ export default function EquipamientosPreventivosPage() {
               </div>
             </Card>
 
-            {error ? (
+            {loadError ? (
+              <CompactErrorState
+                message={loadError}
+                onRetry={loadDashboard}
+              />
+            ) : null}
+
+            {actionError ? (
               <Card className="border-red-200 bg-red-50 p-4 text-sm text-red-800">
                 <div className="flex gap-2">
                   <AlertTriangle className="mt-0.5 h-4 w-4" />
-                  <span>{error}</span>
+                  <span>{actionError}</span>
                 </div>
               </Card>
             ) : null}
@@ -543,7 +581,14 @@ export default function EquipamientosPreventivosPage() {
                 </div>
                 <div className="space-y-3">
                   {(dashboard?.historial ?? []).length === 0 ? (
-                    <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">{tx('Todavía no hay historial técnico registrado.', 'No technical history has been recorded yet.')}</p>
+                    <CompactEmptyState
+                      icon={ClipboardCheck}
+                      title={tx(
+                        'Todavía no hay historial técnico registrado.',
+                        'No technical history has been recorded yet.',
+                      )}
+                      className='py-6'
+                    />
                   ) : (
                     (dashboard?.historial ?? []).slice(0, 8).map((item) => (
                       <div key={item.id} className="rounded-lg border p-3">

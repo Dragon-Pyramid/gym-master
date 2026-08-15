@@ -20,6 +20,7 @@ import { AppHeader } from '@/components/header/AppHeader';
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -348,7 +349,11 @@ export default function ComercialComprasReposicionPage() {
                 <CardHeader><CardTitle>{c('Reposición sugerida')}</CardTitle></CardHeader>
                 <CardContent className='space-y-3'>
                   {sugerenciasPendientes.length === 0 ? (
-                    <div className='rounded-lg border border-dashed p-4 text-sm text-muted-foreground'>{c('No hay productos sugeridos para reposición.')}</div>
+                    <CompactEmptyState
+                      icon={PackagePlus}
+                      title={c('No hay productos sugeridos para reposición.')}
+                      className='py-6'
+                    />
                   ) : (
                     sugerenciasPendientes.slice(0, 12).map((item) => (
                       <div key={item.producto_id} className='grid grid-cols-1 gap-3 rounded-lg border p-3 lg:grid-cols-[1.4fr_0.7fr_0.7fr_auto] lg:items-center'>
@@ -475,7 +480,11 @@ export default function ComercialComprasReposicionPage() {
               <CardHeader><CardTitle>{c('Órdenes abiertas y recepción')}</CardTitle></CardHeader>
               <CardContent className='space-y-4'>
                 {ordenesAbiertas.length === 0 ? (
-                  <div className='rounded-lg border border-dashed p-4 text-sm text-muted-foreground'>{c('No hay órdenes abiertas.')}</div>
+                  <CompactEmptyState
+                    icon={ClipboardList}
+                    title={c('No hay órdenes abiertas.')}
+                    className='py-6'
+                  />
                 ) : (
                   ordenesAbiertas.map((orden) => (
                     <div key={orden.id} className='space-y-3 rounded-xl border p-4'>

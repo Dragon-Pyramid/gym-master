@@ -29,6 +29,7 @@ import { AppFooter } from "@/components/footer/AppFooter";
 import { AppHeader } from "@/components/header/AppHeader";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { Button } from "@/components/ui/button";
+import { CompactErrorState } from "@/components/ui/compact-error-state";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -438,7 +439,8 @@ export default function ParametrizacionPage() {
   const c = (es: string, en: string) => parametrizacionTx(locale, es, en);
   const [catalogosData, setCatalogosData] = useState<ParametrizacionCatalogosResponse | null>(null);
   const [loadingCatalogos, setLoadingCatalogos] = useState(false);
-  const [catalogosError, setCatalogosError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedCatalog, setSelectedCatalog] = useState<CatalogoParametrizableSummary | null>(null);
@@ -463,7 +465,7 @@ export default function ParametrizacionPage() {
 
   const loadCatalogos = useCallback(async () => {
     setLoadingCatalogos(true);
-    setCatalogosError(null);
+    setLoadError(null);
 
     try {
       const [data, descuento] = await Promise.all([
@@ -474,7 +476,7 @@ export default function ParametrizacionPage() {
       setDescuentoConfig(descuento);
       setDescuentoForm(descuentoFormFromConfig(descuento));
     } catch (error) {
-      setCatalogosError(
+      setLoadError(
         error instanceof Error ? error.message : parametrizacionTx(locale, "No se pudieron cargar los catálogos", "Catalogs could not be loaded")
       );
     } finally {
@@ -522,7 +524,7 @@ export default function ParametrizacionPage() {
     if (!selectedCatalog) return;
 
     setSaving(true);
-    setCatalogosError(null);
+    setActionError(null);
     setActionMessage(null);
 
     const payload: CatalogoParametrizablePayload = {
@@ -557,7 +559,7 @@ export default function ParametrizacionPage() {
       setDialogOpen(false);
       await loadCatalogos();
     } catch (error) {
-      setCatalogosError(error instanceof Error ? error.message : c("No se pudo guardar el registro", "The record could not be saved"));
+      setActionError(error instanceof Error ? error.message : c("No se pudo guardar el registro", "The record could not be saved"));
     } finally {
       setSaving(false);
     }
@@ -567,7 +569,7 @@ export default function ParametrizacionPage() {
     catalogo: CatalogoParametrizableSummary,
     item: CatalogoParametrizableItem
   ) => {
-    setCatalogosError(null);
+    setActionError(null);
     setActionMessage(null);
 
     try {
@@ -579,7 +581,7 @@ export default function ParametrizacionPage() {
       setActionMessage(item.activo ? c("Registro desactivado.", "Record deactivated.") : c("Registro activado.", "Record activated."));
       await loadCatalogos();
     } catch (error) {
-      setCatalogosError(error instanceof Error ? error.message : c("No se pudo cambiar el estado", "The status could not be changed"));
+      setActionError(error instanceof Error ? error.message : c("No se pudo cambiar el estado", "The status could not be changed"));
     }
   };
 
@@ -587,7 +589,7 @@ export default function ParametrizacionPage() {
     event.preventDefault();
 
     setSavingDescuento(true);
-    setCatalogosError(null);
+    setActionError(null);
     setActionMessage(null);
 
     try {
@@ -602,7 +604,7 @@ export default function ParametrizacionPage() {
       setDescuentoForm(descuentoFormFromConfig(saved));
       setActionMessage(c("Descuento por pago adelantado actualizado correctamente.", "Advance payment discount updated successfully."));
     } catch (error) {
-      setCatalogosError(
+      setActionError(
         error instanceof Error
           ? error.message
           : c("No se pudo actualizar el descuento por pago adelantado", "The advance payment discount could not be updated")
@@ -818,11 +820,21 @@ export default function ParametrizacionPage() {
                     </Button>
                   </CardHeader>
                   <CardContent className="p-4 space-y-4">
-                    {catalogosError && (
-                      <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                        {catalogosError}
+                    {loadError ? (
+                      <CompactErrorState
+                        message={loadError}
+                        onRetry={loadCatalogos}
+                      />
+                    ) : null}
+
+                    {actionError ? (
+                      <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                          <span>{actionError}</span>
+                        </div>
                       </div>
-                    )}
+                    ) : null}
                     {actionMessage && (
                       <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
                         {actionMessage}

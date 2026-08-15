@@ -2,6 +2,7 @@
 
 import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -41,9 +42,10 @@ export default function RutinasTable({
 
   if (rutinas.length === 0 && !loading) {
     return (
-      <div className="py-10 text-center text-muted-foreground">
-        No hay rutinas registradas aún.
-      </div>
+      <CompactEmptyState
+        title="No hay rutinas registradas aún."
+        className="py-10"
+      />
     );
   }
 

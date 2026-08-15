@@ -2,6 +2,7 @@
 
 import { LogOut, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -49,9 +50,10 @@ export default function AsistenciaTable({
 
   if (asistencias.length === 0 && !loading) {
     return (
-      <div className="py-10 text-center text-muted-foreground">
-        {attendanceText("No hay asistencias registradas aún.", "No attendances registered yet.")}
-      </div>
+      <CompactEmptyState
+        title={attendanceText("No hay asistencias registradas aún.", "No attendances registered yet.")}
+        className="py-10"
+      />
     );
   }
 

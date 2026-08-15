@@ -1,6 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Compra } from '@/interfaces/compra.interface';
 import { formatCurrencyARS } from '@/lib/comercial/productos';
@@ -58,7 +59,12 @@ export default function CompraTable({
   }
 
   if (compras.length === 0) {
-    return <div className="py-10 text-center text-muted-foreground">{c("No hay compras registradas aún.")}</div>;
+    return (
+      <CompactEmptyState
+        title={c("No hay compras registradas aún.")}
+        className="py-10"
+      />
+    );
   }
 
   return (

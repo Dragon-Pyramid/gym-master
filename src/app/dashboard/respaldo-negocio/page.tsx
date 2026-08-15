@@ -8,6 +8,7 @@ import { AppFooter } from '@/components/footer/AppFooter';
 import { AppHeader } from '@/components/header/AppHeader';
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { Button } from '@/components/ui/button';
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { useI18n } from '@/i18n/I18nProvider';
@@ -347,10 +348,14 @@ export default function RespaldoNegocioPage() {
                 </CardHeader>
                 <CardContent>
                   {!historial.length ? (
-                    <div className='rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-muted-foreground dark:border-slate-700 dark:text-slate-400'>
-                      <Archive className='mx-auto mb-2 h-8 w-8 opacity-60' />
-                      {c('Todavía no hay exportaciones registradas.', 'No exports registered yet.')}
-                    </div>
+                    <CompactEmptyState
+                      icon={Archive}
+                      title={c(
+                        'Todavía no hay exportaciones registradas.',
+                        'No exports registered yet.',
+                      )}
+                      className='py-6'
+                    />
                   ) : (
                     <div className='space-y-3'>
                       {historial.map((item) => (

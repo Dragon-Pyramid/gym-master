@@ -2,6 +2,7 @@
 
 import { Eye, Pencil, Trash2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -70,9 +71,10 @@ export default function OtrosGastosTable({
 
   if (gastos.length === 0 && !loading) {
     return (
-      <div className="py-10 text-center text-muted-foreground">
-        {c("No hay gastos registrados aún.")}
-      </div>
+      <CompactEmptyState
+        title={c("No hay gastos registrados aún.")}
+        className="py-10"
+      />
     );
   }
 

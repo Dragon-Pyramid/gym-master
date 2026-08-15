@@ -2,6 +2,7 @@
 
 import { Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
@@ -95,9 +96,10 @@ export default function VentaTable({
 
   if (ventas.length === 0 && !loading) {
     return (
-      <div className='py-10 text-center text-muted-foreground'>
-        {c("No hay ventas registradas aún.")}
-      </div>
+      <CompactEmptyState
+        title={c("No hay ventas registradas aún.")}
+        className="py-10"
+      />
     );
   }
 

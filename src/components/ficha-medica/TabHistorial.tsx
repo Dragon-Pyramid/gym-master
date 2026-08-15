@@ -9,6 +9,8 @@ import HistorialViewModal from '../modal/HistorialViewModal';
 import { formatFrontendDate } from '@/utils/dateFormat';
 import { ExternalLink, FileText, History } from 'lucide-react';
 import { useI18n } from '@/i18n/I18nProvider';
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
+import { CompactErrorState } from '@/components/ui/compact-error-state';
 
 type HistItem = {
   fecha_ultimo_control?: string;
@@ -42,6 +44,8 @@ export default function TabHistorial({
   const [histPage, setHistPage] = useState<number>(1);
   const [histLoading, setHistLoading] = useState<boolean>(false);
   const [histError, setHistError] = useState<string | null>(null);
+  const [histErrorRetryable, setHistErrorRetryable] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [histMeta, setHistMeta] = useState<{
     page: number;
     perPage: number;
@@ -55,6 +59,7 @@ export default function TabHistorial({
     if (!active) return;
     setHistLoading(true);
     setHistError(null);
+    setHistErrorRetryable(false);
     let cancelled = false;
     (async () => {
       try {
@@ -85,11 +90,13 @@ export default function TabHistorial({
         } else {
           setHistorial([]);
           setHistError(tx('No se pudo cargar historial', 'Could not load history'));
+          setHistErrorRetryable(true);
         }
       } catch {
         if (cancelled) return;
         setHistorial([]);
         setHistError(tx('No se pudo cargar historial', 'Could not load history'));
+        setHistErrorRetryable(true);
       } finally {
         if (cancelled) return;
         setHistLoading(false);
@@ -98,7 +105,11 @@ export default function TabHistorial({
     return () => {
       cancelled = true;
     };
-  }, [active, socioId, authUser?.id, histPage, tx]);
+  }, [active, socioId, authUser?.id, histPage, reloadKey, tx]);
+
+  const handleRetry = useCallback(() => {
+    setReloadKey((current) => current + 1);
+  }, []);
 
   const formatDate = (v: unknown) => {
     if (!v) return '—';
@@ -126,9 +137,20 @@ export default function TabHistorial({
       {histLoading ? (
         <div className='mt-4 rounded-xl border bg-muted/30 p-4 text-sm text-muted-foreground'>{tx('Cargando historial...', 'Loading history...')}</div>
       ) : histError ? (
-        <div className='mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/20 dark:text-red-300'>{histError}</div>
+        <CompactErrorState
+          message={histError}
+          onRetry={histErrorRetryable ? handleRetry : undefined}
+          className='mt-4'
+        />
       ) : historial.length === 0 ? (
-        <div className='mt-4 rounded-xl border border-dashed bg-muted/20 p-6 text-sm text-muted-foreground dark:border-slate-700 dark:bg-slate-900/40'>{tx('No se encontraron registros anteriores para este socio.', 'No previous records were found for this member.')}</div>
+        <CompactEmptyState
+          icon={History}
+          title={tx(
+            'No se encontraron registros anteriores para este socio.',
+            'No previous records were found for this member.',
+          )}
+          className='mt-4 py-6'
+        />
       ) : (
         <>
           <ul className='mt-4 grid w-full gap-3'>

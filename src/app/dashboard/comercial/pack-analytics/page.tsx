@@ -20,6 +20,7 @@ import { AppFooter } from "@/components/footer/AppFooter";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -356,9 +357,11 @@ export default function ComercialPackAnalyticsPage() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {dashboard.topPacks.length === 0 && (
-                    <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-                      {c('Todavía no hay packs vendidos para el período seleccionado.')}
-                    </p>
+                    <CompactEmptyState
+                      icon={PackageCheck}
+                      title={c('Todavía no hay packs vendidos para el período seleccionado.')}
+                      className="py-6"
+                    />
                   )}
                   {dashboard.topPacks.map((pack) => (
                     <div
@@ -398,9 +401,11 @@ export default function ComercialPackAnalyticsPage() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {dashboard.cupones.length === 0 && (
-                    <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-                      {c('No hay cupones aplicados a packs en el período.')}
-                    </p>
+                    <CompactEmptyState
+                      icon={Tags}
+                      title={c('No hay cupones aplicados a packs en el período.')}
+                      className="py-6"
+                    />
                   )}
                   {dashboard.cupones.map((cupon) => (
                     <div
