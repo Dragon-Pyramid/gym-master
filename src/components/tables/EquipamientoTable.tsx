@@ -2,6 +2,7 @@
 
 import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -95,9 +96,10 @@ export default function EquipamientoTable({
 
   if (equipos.length === 0) {
     return (
-      <div className="py-10 text-center text-muted-foreground">
-        {tx("No hay equipos registrados aún.", "No equipment has been registered yet.")}
-      </div>
+      <CompactEmptyState
+        title={tx("No hay equipos registrados aún.", "No equipment has been registered yet.")}
+        className="py-10"
+      />
     );
   }
 

@@ -21,6 +21,7 @@ import { AppFooter } from '@/components/footer/AppFooter';
 import { AppHeader } from '@/components/header/AppHeader';
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { Button } from '@/components/ui/button';
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -603,7 +604,11 @@ export default function SoporteDragonPyramidPage() {
                       {loading ? (
                         <div className='py-8 text-center text-muted-foreground'>{c('Cargando tickets...', 'Loading tickets...')}</div>
                       ) : tickets.length === 0 ? (
-                        <div className='rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground'>{c('No hay tickets para el filtro seleccionado.', 'There are no tickets for the selected filter.')}</div>
+                        <CompactEmptyState
+                          icon={LifeBuoy}
+                          title={c('No hay tickets para el filtro seleccionado.', 'There are no tickets for the selected filter.')}
+                          className='py-6'
+                        />
                       ) : (
                         tickets.map((ticket) => (
                           <button

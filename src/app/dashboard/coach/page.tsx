@@ -364,6 +364,7 @@ export default function CoachIaPage() {
   const [socios, setSocios] = useState<Socio[]>([]);
   const [sociosLoading, setSociosLoading] = useState(false);
   const [sociosError, setSociosError] = useState<string | null>(null);
+  const [sociosReloadKey, setSociosReloadKey] = useState(0);
   const [selectedSocioId, setSelectedSocioId] = useState('');
   const [socioSearch, setSocioSearch] = useState('');
   const [exportingPdfMessageId, setExportingPdfMessageId] = useState<string | null>(null);
@@ -445,7 +446,11 @@ export default function CoachIaPage() {
     return () => {
       isMounted = false;
     };
-  }, [c, isAdminSession, isAuthenticated, isInitialized]);
+  }, [c, isAdminSession, isAuthenticated, isInitialized, sociosReloadKey]);
+
+  const handleRetrySocios = useCallback(() => {
+    setSociosReloadKey((current) => current + 1);
+  }, []);
 
   useEffect(() => {
     if (!isInitialized || !isAuthenticated || messages.length > 0) return;
@@ -694,11 +699,25 @@ export default function CoachIaPage() {
                             ))}
                           </select>
                         </div>
-                        {sociosError && (
-                          <p className="mt-2 text-xs font-medium text-rose-600 dark:text-rose-300">
-                            {sociosError}
-                          </p>
-                        )}
+                        {sociosError ? (
+                          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                            <p className="font-medium text-rose-600 dark:text-rose-300">
+                              {sociosError}
+                            </p>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-7 rounded-lg px-2 text-xs"
+                              onClick={handleRetrySocios}
+                              disabled={sociosLoading}
+                            >
+                              {sociosLoading
+                                ? c('Cargando...', 'Loading...')
+                                : c('Reintentar', 'Try again')}
+                            </Button>
+                          </div>
+                        ) : null}
                       </div>
 
                       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-950/70 dark:text-slate-300 lg:min-w-[280px]">

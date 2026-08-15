@@ -6,6 +6,7 @@ import { AppFooter } from '@/components/footer/AppFooter';
 import { AppHeader } from '@/components/header/AppHeader';
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { Button } from '@/components/ui/button';
+import { CompactErrorState } from '@/components/ui/compact-error-state';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -162,7 +163,9 @@ export default function GimnasioParametrizacionPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [logoBroken, setLogoBroken] = useState(false);
 
@@ -171,7 +174,7 @@ export default function GimnasioParametrizacionPage() {
 
     async function load() {
       setLoading(true);
-      setError(null);
+      setLoadError(null);
       try {
         const response = await getGimnasioParametrizacion();
         if (!mounted) return;
@@ -179,7 +182,14 @@ export default function GimnasioParametrizacionPage() {
         setForm(formFromData(response));
       } catch (err) {
         if (!mounted) return;
-        setError(err instanceof Error ? err.message : c('No se pudo cargar la parametrización.', 'Could not load gym settings.'));
+        setLoadError(
+          err instanceof Error
+            ? err.message
+            : c(
+                'No se pudo cargar la parametrización.',
+                'Could not load gym settings.',
+              ),
+        );
       } finally {
         if (mounted) setLoading(false);
       }
@@ -189,7 +199,11 @@ export default function GimnasioParametrizacionPage() {
     return () => {
       mounted = false;
     };
-  }, [locale]);
+  }, [locale, reloadKey]);
+
+  const handleRetryLoad = () => {
+    setReloadKey((current) => current + 1);
+  };
 
   const logoPreview = useMemo(() => {
     const value = textValue(form.logo_url).trim();
@@ -239,7 +253,7 @@ export default function GimnasioParametrizacionPage() {
     if (!file) return;
 
     setUploadingLogo(true);
-    setError(null);
+    setActionError(null);
     setSuccessMessage(null);
 
     try {
@@ -247,7 +261,14 @@ export default function GimnasioParametrizacionPage() {
       updateField('logo_url', uploaded.secure_url || uploaded.url);
       setSuccessMessage(c('Logo subido a Cloudinary. Guardá la parametrización para persistirlo.', 'Logo uploaded to Cloudinary. Save the settings to persist the change.'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : c('No se pudo subir el logo a Cloudinary.', 'Could not upload the logo to Cloudinary.'));
+      setActionError(
+        err instanceof Error
+          ? err.message
+          : c(
+              'No se pudo subir el logo a Cloudinary.',
+              'Could not upload the logo to Cloudinary.',
+            ),
+      );
     } finally {
       setUploadingLogo(false);
     }
@@ -256,7 +277,7 @@ export default function GimnasioParametrizacionPage() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSaving(true);
-    setError(null);
+    setActionError(null);
     setSuccessMessage(null);
 
     try {
@@ -265,7 +286,14 @@ export default function GimnasioParametrizacionPage() {
       setForm(formFromData(saved));
       setSuccessMessage(c('Parametrización del gimnasio actualizada correctamente.', 'Gym settings updated successfully.'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : c('No se pudo guardar la parametrización.', 'Could not save gym settings.'));
+      setActionError(
+        err instanceof Error
+          ? err.message
+          : c(
+              'No se pudo guardar la parametrización.',
+              'Could not save gym settings.',
+            ),
+      );
     } finally {
       setSaving(false);
     }
@@ -306,11 +334,18 @@ export default function GimnasioParametrizacionPage() {
             ) : (
               <form onSubmit={handleSubmit} className='grid gap-6 xl:grid-cols-[1fr_360px]'>
                 <div className='space-y-6'>
-                  {error && (
+                  {loadError ? (
+                    <CompactErrorState
+                      message={loadError}
+                      onRetry={handleRetryLoad}
+                    />
+                  ) : null}
+
+                  {actionError ? (
                     <div className='rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200'>
-                      {error}
+                      {actionError}
                     </div>
-                  )}
+                  ) : null}
 
                   {successMessage && (
                     <div className='flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200'>

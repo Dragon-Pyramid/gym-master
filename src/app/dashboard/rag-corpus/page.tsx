@@ -21,6 +21,7 @@ import { AppFooter } from '@/components/footer/AppFooter';
 import { AppHeader } from '@/components/header/AppHeader';
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { Button } from '@/components/ui/button';
+import { CompactErrorState } from '@/components/ui/compact-error-state';
 import { Card } from '@/components/ui/card';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { useI18n } from '@/i18n/I18nProvider';
@@ -128,7 +129,8 @@ export default function RagCorpusPage() {
   const [loading, setLoading] = useState(true);
   const [runningAction, setRunningAction] = useState<RagCorpusBatchAction | null>(null);
   const [lastRun, setLastRun] = useState<RagCorpusBatchResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [limit, setLimit] = useState(10);
   const [delayMs, setDelayMs] = useState(1000);
 
@@ -147,12 +149,19 @@ export default function RagCorpusPage() {
 
   const loadStatus = async () => {
     setLoading(true);
-    setError(null);
+    setLoadError(null);
     try {
       const data = await getRagCorpusStatusClient();
       setStatus(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : c('No se pudo consultar estado del corpus.', 'Could not fetch corpus status.'));
+      setLoadError(
+        err instanceof Error
+          ? err.message
+          : c(
+              'No se pudo consultar estado del corpus.',
+              'Could not fetch corpus status.',
+            ),
+      );
     } finally {
       setLoading(false);
     }
@@ -165,7 +174,7 @@ export default function RagCorpusPage() {
 
   const runAction = async (action: RagCorpusBatchAction) => {
     setRunningAction(action);
-    setError(null);
+    setActionError(null);
     try {
       const result = await runRagCorpusBatchClient({
         action,
@@ -178,7 +187,14 @@ export default function RagCorpusPage() {
       if (result.status) setStatus(result.status);
       else await loadStatus();
     } catch (err) {
-      setError(err instanceof Error ? err.message : c('No se pudo ejecutar la tanda RAG.', 'Could not run the RAG batch.'));
+      setActionError(
+        err instanceof Error
+          ? err.message
+          : c(
+              'No se pudo ejecutar la tanda RAG.',
+              'Could not run the RAG batch.',
+            ),
+      );
     } finally {
       setRunningAction(null);
     }
@@ -221,11 +237,18 @@ export default function RagCorpusPage() {
               </div>
             </Card>
 
-            {error ? (
+            {loadError ? (
+              <CompactErrorState
+                message={loadError}
+                onRetry={loadStatus}
+              />
+            ) : null}
+
+            {actionError ? (
               <Card className="border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200">
                 <div className="flex items-center gap-2 font-semibold">
                   <ShieldAlert className="h-4 w-4" />
-                  {error}
+                  {actionError}
                 </div>
               </Card>
             ) : null}

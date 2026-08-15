@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Socio } from "@/interfaces/socio.interface";
 import { Dieta } from "@/interfaces/dieta.interface";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CompactEmptyState } from "@/components/ui/compact-empty-state";
 import SocioDietaCard from "./SocioDietaCard";
 import { getDietasPorSocio } from "@/services/apiClient";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -22,8 +23,7 @@ export default function SocioDietaGrid({
   socios,
   loading,
 }: SociosDietasGridProps) {
-  const { locale } = useI18n();
-  const isEnglish = locale === 'en';
+  const { t } = useI18n();
   const [sociosConDietas, setSociosConDietas] = useState<SocioConDieta[]>([]);
 
   const obtenerUltimaDieta = async (socioId: string): Promise<Dieta | null> => {
@@ -96,9 +96,10 @@ export default function SocioDietaGrid({
 
   if (sociosConDietas.length === 0) {
     return (
-      <div className="py-12 text-center text-muted-foreground">
-        {isEnglish ? 'No members have been registered yet.' : 'No hay socios registrados aún.'}
-      </div>
+      <CompactEmptyState
+        title={t('common.states.empty.members.title')}
+        description={t('common.states.empty.members.description')}
+      />
     );
   }
 

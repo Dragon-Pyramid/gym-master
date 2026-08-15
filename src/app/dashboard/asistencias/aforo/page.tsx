@@ -19,6 +19,7 @@ import { AppFooter } from "@/components/footer/AppFooter";
 import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   AforoAsistenciaResumen,
@@ -377,9 +378,11 @@ export default function AsistenciaAforoPage() {
                       </div>
                     ))
                   ) : (
-                    <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-                      {text("No hay socios dentro en este momento.", "There are no members inside right now.")}
-                    </p>
+                    <CompactEmptyState
+                      icon={Users}
+                      title={text("No hay socios dentro en este momento.", "There are no members inside right now.")}
+                      className="py-6"
+                    />
                   )}
                 </CardContent>
               </Card>
@@ -401,9 +404,11 @@ export default function AsistenciaAforoPage() {
                       />
                     ))
                   ) : (
-                    <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-                      {text("Todavía no hay movimientos registrados hoy.", "No movements have been recorded today yet.")}
-                    </p>
+                    <CompactEmptyState
+                      icon={Activity}
+                      title={text("Todavía no hay movimientos registrados hoy.", "No movements have been recorded today yet.")}
+                      className="py-6"
+                    />
                   )}
                 </CardContent>
               </Card>

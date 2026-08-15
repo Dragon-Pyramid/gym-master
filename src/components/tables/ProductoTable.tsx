@@ -2,6 +2,7 @@
 
 import { ClipboardList, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Producto } from "@/interfaces/producto.interface";
 import {
@@ -77,9 +78,10 @@ export default function ProductoTable({
 
   if (productos.length === 0 && !loading) {
     return (
-      <div className="py-10 text-center text-muted-foreground">
-        {c("No hay productos registrados aún.")}
-      </div>
+      <CompactEmptyState
+        title={c("No hay productos registrados aún.")}
+        className="py-10"
+      />
     );
   }
 

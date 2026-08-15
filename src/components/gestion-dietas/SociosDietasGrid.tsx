@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Socio } from "@/interfaces/socio.interface";
 import { Dieta } from "@/interfaces/dieta.interface";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CompactEmptyState } from "@/components/ui/compact-empty-state";
 import SocioDietaCard from "./SocioDietaCard";
 import { getDietasPorSocio } from "@/services/apiClient";
 import { useI18n } from '@/i18n/I18nProvider';
@@ -12,8 +13,7 @@ interface SociosDietasGridProps { socios: Socio[]; loading: boolean; }
 interface SocioConDieta extends Socio { ultimaDieta?: Dieta | null; loadingDieta?: boolean; }
 
 export default function SociosDietasGrid({ socios, loading }: SociosDietasGridProps) {
-  const { locale } = useI18n();
-  const tx = (es: string, en: string) => (locale === 'en' ? en : es);
+  const { t } = useI18n();
   const [sociosConDietas, setSociosConDietas] = useState<SocioConDieta[]>([]);
 
   const obtenerUltimaDieta = async (socioId: string): Promise<Dieta | null> => {
@@ -51,7 +51,12 @@ export default function SociosDietasGrid({ socios, loading }: SociosDietasGridPr
   }
 
   if (sociosConDietas.length === 0) {
-    return <div className="py-12 text-center text-muted-foreground">{tx('No hay socios registrados aún.', 'No members have been registered yet.')}</div>;
+    return (
+      <CompactEmptyState
+        title={t('common.states.empty.members.title')}
+        description={t('common.states.empty.members.description')}
+      />
+    );
   }
 
   return (

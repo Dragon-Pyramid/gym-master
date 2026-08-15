@@ -2,6 +2,7 @@
 
 import { Pencil, ReceiptText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -113,12 +114,13 @@ export default function PagoTable({
 
   if (pagos.length === 0 && !loading) {
     return (
-      <div className="py-10 text-center text-muted-foreground">
-        {tx(
+      <CompactEmptyState
+        title={tx(
           "No hay pagos registrados aún.",
           "No payments have been registered yet.",
         )}
-      </div>
+        className="py-10"
+      />
     );
   }
 

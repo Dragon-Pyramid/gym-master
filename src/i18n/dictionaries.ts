@@ -21,6 +21,31 @@ export const dictionaries: Record<GymMasterLocale, I18nDictionary> = {
       error: 'Error',
       success: 'Correcto',
       empty: 'Sin datos',
+      states: {
+        loading: {
+          description: 'Cargando contenido...',
+        },
+        empty: {
+          title: 'Todavía no hay información',
+          description: 'Cuando haya información disponible, aparecerá en esta sección.',
+          members: {
+            title: 'No hay socios registrados todavía',
+            description: 'Cuando se registren socios, aparecerán disponibles en esta sección.',
+          },
+        },
+        error: {
+          title: 'No pudimos cargar esta información',
+          description: 'Ocurrió un error inesperado. Podés intentar nuevamente.',
+        },
+        notFound: {
+          title: 'Página no encontrada',
+          description: 'La página que buscás no existe, fue movida o ya no está disponible.',
+        },
+        actions: {
+          retry: 'Reintentar',
+          backHome: 'Volver al inicio',
+        },
+      },
       spanish: 'Español',
       english: 'Inglés',
     },
@@ -875,6 +900,31 @@ export const dictionaries: Record<GymMasterLocale, I18nDictionary> = {
       error: 'Error',
       success: 'Success',
       empty: 'No data',
+      states: {
+        loading: {
+          description: 'Loading content...',
+        },
+        empty: {
+          title: 'No information yet',
+          description: 'When information becomes available, it will appear in this section.',
+          members: {
+            title: 'No members registered yet',
+            description: 'When members are registered, they will become available in this section.',
+          },
+        },
+        error: {
+          title: 'We could not load this information',
+          description: 'An unexpected error occurred. You can try again.',
+        },
+        notFound: {
+          title: 'Page not found',
+          description: 'The page you are looking for does not exist, was moved, or is no longer available.',
+        },
+        actions: {
+          retry: 'Try again',
+          backHome: 'Back to home',
+        },
+      },
       spanish: 'Spanish',
       english: 'English',
     },

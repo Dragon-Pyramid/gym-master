@@ -20,6 +20,7 @@ import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
 import { getToken } from '@/services/storageService';
 import { useAuthStore } from '@/stores/authStore';
 import { descargarPagoReciboPdf } from '@/utils/pagoReciboPdf';
@@ -310,13 +311,18 @@ export default function HistorialPagosSocioPage() {
                     <div className='flex items-center gap-2 rounded-2xl border border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground'>
                       <Loader2 className='h-4 w-4 animate-spin' />{t('Cargando historial...', 'Loading history...')}</div>
                   ) : pagosOrdenados.length === 0 ? (
-                    <div className='rounded-3xl border border-dashed border-border p-8 text-center'>
-                      <div className='mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted'>
-                        <ReceiptText className='h-6 w-6 text-muted-foreground' />
-                      </div>
-                      <p className='font-bold'>{t('Todavía no tenés pagos registrados.', 'You do not have registered payments yet.')}</p>
-                      <p className='mt-1 text-sm text-muted-foreground'>{t('Cuando se registre un pago, vas a poder consultar el recibo desde este historial.', 'When a payment is registered, you will be able to view its receipt from this history.')}</p>
-                    </div>
+                    <CompactEmptyState
+                      icon={ReceiptText}
+                      title={t(
+                        'Todavía no tenés pagos registrados.',
+                        'You do not have registered payments yet.',
+                      )}
+                      description={t(
+                        'Cuando se registre un pago, vas a poder consultar el recibo desde este historial.',
+                        'When a payment is registered, you will be able to view its receipt from this history.',
+                      )}
+                      className='rounded-3xl py-8'
+                    />
                   ) : (
                     <>
                       <div className='grid grid-cols-1 gap-3 md:hidden'>

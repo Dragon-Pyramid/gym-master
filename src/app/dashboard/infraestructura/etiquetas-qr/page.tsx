@@ -7,6 +7,8 @@ import { AppFooter } from '@/components/footer/AppFooter';
 import { AppHeader } from '@/components/header/AppHeader';
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { Button } from '@/components/ui/button';
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
+import { CompactErrorState } from '@/components/ui/compact-error-state';
 import { Card } from '@/components/ui/card';
 import { useI18n } from '@/i18n/I18nProvider';
 import { Input } from '@/components/ui/input';
@@ -144,7 +146,8 @@ export default function InfraestructuraEtiquetasQrPage() {
   const [dashboard, setDashboard] = useState<InfraestructuraQrLabelsDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [selectedCodes, setSelectedCodes] = useState<string[]>([]);
@@ -155,7 +158,7 @@ export default function InfraestructuraEtiquetasQrPage() {
 
   const loadDashboard = async () => {
     setLoading(true);
-    setError(null);
+    setLoadError(null);
     try {
       const data = await getInfraestructuraQrLabelsDashboardClient();
       setDashboard(data);
@@ -164,7 +167,14 @@ export default function InfraestructuraEtiquetasQrPage() {
         if (firstTarget) setTargetId(firstTarget.id);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : tx('No se pudieron consultar etiquetas QR.', 'QR labels could not be loaded.'));
+      setLoadError(
+        err instanceof Error
+          ? err.message
+          : tx(
+              'No se pudieron consultar etiquetas QR.',
+              'QR labels could not be loaded.',
+            ),
+      );
     } finally {
       setLoading(false);
     }
@@ -208,12 +218,17 @@ export default function InfraestructuraEtiquetasQrPage() {
 
   const createCode = async () => {
     if (!targetId) {
-      setError(tx('Seleccioná un destino para generar la etiqueta.', 'Select a destination to generate the label.'));
+      setActionError(
+        tx(
+          'Seleccioná un destino para generar la etiqueta.',
+          'Select a destination to generate the label.',
+        ),
+      );
       return;
     }
 
     setSaving(true);
-    setError(null);
+    setActionError(null);
     setSuccess(null);
     try {
       const payload: CreateInfraestructuraQrDTO = {
@@ -226,7 +241,14 @@ export default function InfraestructuraEtiquetasQrPage() {
       setSelectedCodes((current) => Array.from(new Set([...current, response.data.codigo])));
       setSuccess(`${tx('Etiqueta generada', 'Generated label')}: ${response.data.codigo}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : tx('No se pudo generar la etiqueta QR.', 'The QR label could not be generated.'));
+      setActionError(
+        err instanceof Error
+          ? err.message
+          : tx(
+              'No se pudo generar la etiqueta QR.',
+              'The QR label could not be generated.',
+            ),
+      );
     } finally {
       setSaving(false);
     }
@@ -257,11 +279,18 @@ export default function InfraestructuraEtiquetasQrPage() {
               </div>
             </Card>
 
-            {error ? (
+            {loadError ? (
+              <CompactErrorState
+                message={loadError}
+                onRetry={loadDashboard}
+              />
+            ) : null}
+
+            {actionError ? (
               <Card className="border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
                 <div className="flex gap-2">
                   <AlertTriangle className="mt-0.5 h-4 w-4" />
-                  <span>{error}</span>
+                  <span>{actionError}</span>
                 </div>
               </Card>
             ) : null}
@@ -403,9 +432,14 @@ export default function InfraestructuraEtiquetasQrPage() {
                   {tx('Cargando etiquetas...', 'Loading labels...')}
                 </div>
               ) : filteredCodes.length === 0 ? (
-                <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-                  {tx('Todavía no hay etiquetas QR generadas para imprimir.', 'No QR labels have been generated for printing yet.')}
-                </p>
+                <CompactEmptyState
+                  icon={QrCode}
+                  title={tx(
+                    'Todavía no hay etiquetas QR generadas para imprimir.',
+                    'No QR labels have been generated for printing yet.',
+                  )}
+                  className='py-6'
+                />
               ) : (
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {filteredCodes.map((qr) => {

@@ -63,6 +63,7 @@ export default function AsistenciaForm({
   const [socios, setSocios] = useState<Socio[]>([]);
   const [loadingSocios, setLoadingSocios] = useState(true);
   const [sociosLoadError, setSociosLoadError] = useState(false);
+  const [sociosReloadKey, setSociosReloadKey] = useState(0);
   const [socioPickerOpen, setSocioPickerOpen] = useState(false);
 
   useEffect(() => {
@@ -95,7 +96,11 @@ export default function AsistenciaForm({
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [sociosReloadKey]);
+
+  const handleRetrySocios = () => {
+    setSociosReloadKey((current) => current + 1);
+  };
 
   useEffect(() => {
     if (asistencia) {
@@ -398,12 +403,30 @@ export default function AsistenciaForm({
         </Popover>
 
         {sociosLoadError ? (
-          <p className="text-xs text-destructive">
-            {attendanceText(
-              "No se pudieron cargar los socios. Cerrá y volvé a abrir el formulario.",
-              "Members could not be loaded. Close and reopen the form."
-            )}
-          </p>
+          <div
+            className="flex flex-wrap items-center gap-2 text-xs"
+            role="alert"
+          >
+            <p className="text-destructive">
+              {attendanceText(
+                "No se pudieron cargar los socios.",
+                "Members could not be loaded."
+              )}
+            </p>
+
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 text-xs"
+              onClick={handleRetrySocios}
+              disabled={loadingSocios}
+            >
+              {loadingSocios
+                ? attendanceText("Cargando...", "Loading...")
+                : attendanceText("Reintentar", "Try again")}
+            </Button>
+          </div>
         ) : null}
       </div>
 

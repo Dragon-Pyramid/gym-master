@@ -2,6 +2,7 @@
 
 import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -59,9 +60,10 @@ export default function UsersTable({
 
   if (usuarios.length === 0 && !loading) {
     return (
-      <div className="py-10 text-center text-muted-foreground">
-        {c("No hay usuarios registrados aún.", "There are no registered users yet.")}
-      </div>
+      <CompactEmptyState
+        title={c("No hay usuarios registrados aún.", "There are no registered users yet.")}
+        className="py-10"
+      />
     );
   }
 

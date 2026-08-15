@@ -2,6 +2,7 @@
 
 import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -57,9 +58,10 @@ export default function ServicioTable({
 
   if (servicios.length === 0 && !loading) {
     return (
-      <div className="py-10 text-center text-muted-foreground">
-        {c("No hay servicios registrados aún.")}
-      </div>
+      <CompactEmptyState
+        title={c("No hay servicios registrados aún.")}
+        className="py-10"
+      />
     );
   }
 

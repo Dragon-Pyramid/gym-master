@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Empleado } from "@/interfaces/empleado.interface";
@@ -32,7 +33,12 @@ export default function EmpleadoTable({
   }
 
   if (empleados.length === 0 && !loading) {
-    return <div className="py-10 text-center text-muted-foreground">No hay empleados registrados.</div>;
+    return (
+      <CompactEmptyState
+        title="No hay empleados registrados."
+        className="py-10"
+      />
+    );
   }
 
   return (

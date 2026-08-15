@@ -15,6 +15,7 @@ import { AppFooter } from '@/components/footer/AppFooter';
 import { AppHeader } from '@/components/header/AppHeader';
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { Button } from '@/components/ui/button';
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -407,13 +408,18 @@ export default function MensajesSocioPage() {
                         {tx('Cargando mensajes...', 'Loading messages...')}
                       </div>
                     ) : mensajes.length === 0 ? (
-                      <div className='rounded-3xl border border-dashed p-8 text-center text-sm text-muted-foreground dark:border-slate-700'>
-                        <Inbox className='mx-auto mb-3 h-8 w-8 opacity-60' />
-                        {tx(
-                          'Todavía no enviaste mensajes. Cuando escribas a administración, tu historial aparecerá acá.',
-                          'You have not sent messages yet. When you write to administration, your history will appear here.',
+                      <CompactEmptyState
+                        icon={Inbox}
+                        title={tx(
+                          'Todavía no enviaste mensajes',
+                          'You have not sent messages yet',
                         )}
-                      </div>
+                        description={tx(
+                          'Cuando escribas a administración, tu historial aparecerá acá.',
+                          'When you write to administration, your history will appear here.',
+                        )}
+                        className='rounded-3xl py-8'
+                      />
                     ) : (
                       mensajes.map((mensaje) => <MensajeCard key={mensaje.id} mensaje={mensaje} locale={locale} />)
                     )}

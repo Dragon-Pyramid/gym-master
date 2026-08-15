@@ -36,6 +36,7 @@ import { toast } from "sonner";
 import { descargarRutinaPdf } from "@/utils/rutinaPdf";
 import { formatFrontendDate } from '@/utils/dateFormat';
 import { useI18n } from "@/i18n/I18nProvider";
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
 
 type EjerciciosPorDia = Record<string, any[]>;
 
@@ -1061,9 +1062,11 @@ export default function RutinaEjercicios({
 
   if (!loading && rutinas.length === 0) {
     return (
-      <div className="py-10 text-center text-muted-foreground">
-        {tx("No hay rutinas registradas aún.", "No routines have been registered yet.")}
-      </div>
+      <CompactEmptyState
+        icon={Dumbbell}
+        title={tx("No hay rutinas registradas aún.", "No routines have been registered yet.")}
+        className="py-10"
+      />
     );
   }
 

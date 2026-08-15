@@ -16,6 +16,7 @@ import {
   ReceiptText,
   WalletCards,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { getToken } from '@/services/storageService';
 import { formatFrontendDate } from '@/utils/dateFormat';
@@ -164,6 +165,7 @@ export default function SocioMobilePagosRecibosCard({
   const [payments, setPayments] = useState<PagoSocio[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
@@ -200,7 +202,11 @@ export default function SocioMobilePagosRecibosCard({
     return () => {
       cancelled = true;
     };
-  }, [t]);
+  }, [t, reloadKey]);
+
+  const handleRetryPayments = () => {
+    setReloadKey((current) => current + 1);
+  };
 
   const sortedPayments = useMemo(() => sortPayments(payments), [payments]);
   const latestPayment = sortedPayments[0];
@@ -331,8 +337,24 @@ export default function SocioMobilePagosRecibosCard({
       ) : null}
 
       {error ? (
-        <div className='mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200'>
-          {t('socioDashboard.payments.errorHelp', { error })}
+        <div
+          className='mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200'
+          role='alert'
+        >
+          <p>{t('socioDashboard.payments.errorHelp', { error })}</p>
+
+          <Button
+            type='button'
+            size='sm'
+            variant='outline'
+            className='mt-2 h-7 px-2 text-xs'
+            onClick={handleRetryPayments}
+            disabled={loadingPayments}
+          >
+            {loadingPayments
+              ? t('common.states.loading.description')
+              : t('common.states.actions.retry')}
+          </Button>
         </div>
       ) : null}
 

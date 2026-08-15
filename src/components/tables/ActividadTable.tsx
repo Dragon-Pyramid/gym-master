@@ -2,6 +2,7 @@
 
 import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -41,9 +42,10 @@ export default function ActividadTable({
 
   if (actividades.length === 0 && !loading) {
     return (
-      <div className="py-10 text-center text-muted-foreground">
-        No hay actividades registradas aún.
-      </div>
+      <CompactEmptyState
+        title="No hay actividades registradas aún."
+        className="py-10"
+      />
     );
   }
 

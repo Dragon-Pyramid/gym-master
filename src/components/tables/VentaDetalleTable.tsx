@@ -2,6 +2,7 @@
 
 import { Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { VentaDetalle } from '@/interfaces/venta_detalle.interface';
 import { formatCurrencyARS } from '@/lib/comercial/productos';
@@ -58,9 +59,10 @@ export default function VentaDetalleTable({
 
   if (detalles.length === 0 && !loading) {
     return (
-      <div className='py-10 text-center text-muted-foreground'>
-        {c("No hay detalles de venta registrados aún.")}
-      </div>
+      <CompactEmptyState
+        title={c("No hay detalles de venta registrados aún.")}
+        className="py-10"
+      />
     );
   }
 

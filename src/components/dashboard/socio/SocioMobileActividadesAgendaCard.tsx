@@ -13,6 +13,7 @@ import {
   MessageSquare,
   Users,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import type {
   ActividadTurno,
@@ -183,6 +184,7 @@ export default function SocioMobileActividadesAgendaCard() {
     useState<ActividadTurnosCuposDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -212,7 +214,11 @@ export default function SocioMobileActividadesAgendaCard() {
     return () => {
       cancelled = true;
     };
-  }, [t]);
+  }, [t, reloadKey]);
+
+  const handleRetry = () => {
+    setReloadKey((current) => current + 1);
+  };
 
   const turnosActivos = useMemo(() => {
     const turnos = dashboard?.turnos ?? [];
@@ -354,6 +360,21 @@ export default function SocioMobileActividadesAgendaCard() {
             <p className="mt-1 text-xs leading-5 opacity-80">
               {statusDescription}
             </p>
+
+            {error ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="mt-2 h-7 px-2 text-xs"
+                onClick={handleRetry}
+                disabled={loading}
+              >
+                {loading
+                  ? t("common.states.loading.description")
+                  : t("common.states.actions.retry")}
+              </Button>
+            ) : null}
           </div>
         </div>
       </div>

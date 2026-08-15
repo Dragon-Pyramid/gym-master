@@ -2,6 +2,7 @@
 
 import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -74,9 +75,10 @@ export default function AvisosTable({
 
   if (avisos.length === 0 && !loading) {
     return (
-      <div className="py-10 text-center text-muted-foreground">
-        {c("No hay avisos registrados aún.", "No notices have been registered yet.")}
-      </div>
+      <CompactEmptyState
+        title={c("No hay avisos registrados aún.", "No notices have been registered yet.")}
+        className="py-10"
+      />
     );
   }
 

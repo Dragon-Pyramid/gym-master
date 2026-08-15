@@ -21,6 +21,8 @@ import { AppFooter } from '@/components/footer/AppFooter';
 import { AppHeader } from '@/components/header/AppHeader';
 import { AppSidebar } from '@/components/sidebar/AppSidebar';
 import { Button } from '@/components/ui/button';
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
+import { CompactErrorState } from '@/components/ui/compact-error-state';
 import { useI18n } from '@/i18n/I18nProvider';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -314,7 +316,8 @@ export default function MantenimientoEdilicioPage() {
   const [dashboard, setDashboard] = useState<InfraestructuraMantenimientoDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   const [sectorForm, setSectorForm] = useState<CreateInfraestructuraSectorDTO>({ nombre: '', tipo: 'salon', descripcion: '' });
@@ -354,12 +357,19 @@ export default function MantenimientoEdilicioPage() {
 
   const loadDashboard = async () => {
     setLoading(true);
-    setError(null);
+    setLoadError(null);
     try {
       const data = await getInfraestructuraMantenimientoDashboardClient();
       setDashboard(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : tx('No se pudo cargar mantenimiento edilicio.', 'Building maintenance data could not be loaded.'));
+      setLoadError(
+        err instanceof Error
+          ? err.message
+          : tx(
+              'No se pudo cargar mantenimiento edilicio.',
+              'Building maintenance data could not be loaded.',
+            ),
+      );
     } finally {
       setLoading(false);
     }
@@ -414,13 +424,20 @@ export default function MantenimientoEdilicioPage() {
   const handleCreateSector = async (event: FormEvent) => {
     event.preventDefault();
     setSaving('sector');
-    setError(null);
+    setActionError(null);
     try {
       await createInfraestructuraSectorClient(sectorForm);
       setSectorForm({ nombre: '', tipo: 'salon', descripcion: '' });
       await registerSuccess(tx('Sector edilicio creado correctamente.', 'Building sector created successfully.'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : tx('No se pudo crear el sector.', 'The sector could not be created.'));
+      setActionError(
+        err instanceof Error
+          ? err.message
+          : tx(
+              'No se pudo crear el sector.',
+              'The sector could not be created.',
+            ),
+      );
     } finally {
       setSaving(null);
     }
@@ -429,7 +446,7 @@ export default function MantenimientoEdilicioPage() {
   const handleCreateActivo = async (event: FormEvent) => {
     event.preventDefault();
     setSaving('activo');
-    setError(null);
+    setActionError(null);
     try {
       await createInfraestructuraActivoClient({
         ...activoForm,
@@ -440,7 +457,14 @@ export default function MantenimientoEdilicioPage() {
       setActivoForm({ nombre: '', categoria_id: '', sector_id: '', criticidad: 'media', fecha_vencimiento: '', observaciones: '' });
       await registerSuccess(tx('Activo edilicio creado correctamente.', 'Building asset created successfully.'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : tx('No se pudo crear el activo edilicio.', 'The building asset could not be created.'));
+      setActionError(
+        err instanceof Error
+          ? err.message
+          : tx(
+              'No se pudo crear el activo edilicio.',
+              'The building asset could not be created.',
+            ),
+      );
     } finally {
       setSaving(null);
     }
@@ -449,7 +473,7 @@ export default function MantenimientoEdilicioPage() {
   const handleCreateOrden = async (event: FormEvent) => {
     event.preventDefault();
     setSaving('orden');
-    setError(null);
+    setActionError(null);
     try {
       await createMantenimientoEdilicioOrdenClient({
         ...ordenForm,
@@ -469,7 +493,14 @@ export default function MantenimientoEdilicioPage() {
       });
       await registerSuccess(tx('Orden de mantenimiento creada correctamente.', 'Maintenance order created successfully.'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : tx('No se pudo crear la orden.', 'The order could not be created.'));
+      setActionError(
+        err instanceof Error
+          ? err.message
+          : tx(
+              'No se pudo crear la orden.',
+              'The order could not be created.',
+            ),
+      );
     } finally {
       setSaving(null);
     }
@@ -479,7 +510,7 @@ export default function MantenimientoEdilicioPage() {
   const handleCreateChecklist = async (event: FormEvent) => {
     event.preventDefault();
     setSaving('checklist');
-    setError(null);
+    setActionError(null);
     try {
       await createInfraestructuraChecklistEjecucionClient({
         ...checklistForm,
@@ -491,7 +522,14 @@ export default function MantenimientoEdilicioPage() {
       setChecklistForm({ template_id: '', activo_id: '', sector_id: '', orden_id: '', resultado_general: 'ok', notas: '' });
       await registerSuccess(tx('Checklist edilicio registrado correctamente.', 'Building checklist registered successfully.'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : tx('No se pudo ejecutar el checklist.', 'The checklist could not be executed.'));
+      setActionError(
+        err instanceof Error
+          ? err.message
+          : tx(
+              'No se pudo ejecutar el checklist.',
+              'The checklist could not be executed.',
+            ),
+      );
     } finally {
       setSaving(null);
     }
@@ -500,7 +538,7 @@ export default function MantenimientoEdilicioPage() {
   const handleCreateQr = async (event: FormEvent) => {
     event.preventDefault();
     setSaving('qr');
-    setError(null);
+    setActionError(null);
     try {
       const response = await createInfraestructuraQrCodeClient({
         ...qrForm,
@@ -511,7 +549,14 @@ export default function MantenimientoEdilicioPage() {
       setQrForm({ target_type: qrForm.target_type || 'infra_activo', target_id: '', titulo: '' });
       await registerSuccess(tx('Código QR/barra generado correctamente.', 'QR/barcode generated successfully.'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : tx('No se pudo generar el código QR/barra.', 'The QR/barcode could not be generated.'));
+      setActionError(
+        err instanceof Error
+          ? err.message
+          : tx(
+              'No se pudo generar el código QR/barra.',
+              'The QR/barcode could not be generated.',
+            ),
+      );
     } finally {
       setSaving(null);
     }
@@ -519,12 +564,19 @@ export default function MantenimientoEdilicioPage() {
 
   const completeOrder = async (id: string) => {
     setSaving(id);
-    setError(null);
+    setActionError(null);
     try {
       await updateMantenimientoEdilicioOrdenClient(id, { estado: 'completada', resultado: 'Orden completada desde panel de infraestructura.' });
       await registerSuccess(tx('Orden marcada como completada.', 'Order marked as completed.'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : tx('No se pudo completar la orden.', 'The order could not be completed.'));
+      setActionError(
+        err instanceof Error
+          ? err.message
+          : tx(
+              'No se pudo completar la orden.',
+              'The order could not be completed.',
+            ),
+      );
     } finally {
       setSaving(null);
     }
@@ -571,14 +623,31 @@ export default function MantenimientoEdilicioPage() {
               </div>
             </Card>
 
-            {error ? (
+            {loadError ? (
+              <CompactErrorState
+                message={loadError}
+                onRetry={loadDashboard}
+              />
+            ) : null}
+
+            {actionError ? (
               <Card className="border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-500/30 dark:bg-red-950/30 dark:text-red-100">
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="mt-0.5 h-4 w-4" />
                   <div>
-                    <p className="font-semibold">{tx('No se pudo completar la operación.', 'The operation could not be completed.')}</p>
-                    <p>{error}</p>
-                    <p className="mt-1 text-xs">{tx('Si el mensaje indica que no existe una relación/tabla, aplicá primero el SQL privado de infraestructura en Supabase.', 'If the message indicates that a relation/table does not exist, apply the private infrastructure SQL in Supabase first.')}</p>
+                    <p className="font-semibold">
+                      {tx(
+                        'No se pudo completar la operación.',
+                        'The operation could not be completed.',
+                      )}
+                    </p>
+                    <p>{actionError}</p>
+                    <p className="mt-1 text-xs">
+                      {tx(
+                        'Si el mensaje indica que no existe una relación/tabla, aplicá primero el SQL privado de infraestructura en Supabase.',
+                        'If the message indicates that a relation/table does not exist, apply the private infrastructure SQL in Supabase first.',
+                      )}
+                    </p>
                   </div>
                 </div>
               </Card>
@@ -926,7 +995,14 @@ export default function MantenimientoEdilicioPage() {
                 </div>
                 <div className="space-y-3">
                   {(dashboard?.checklistEjecuciones ?? []).length === 0 ? (
-                    <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground dark:border-slate-800">{tx('Todavía no hay checklists ejecutados.', 'No checklists have been executed yet.')}</p>
+                    <CompactEmptyState
+                      icon={ClipboardCheck}
+                      title={tx(
+                        'Todavía no hay checklists ejecutados.',
+                        'No checklists have been executed yet.',
+                      )}
+                      className='py-6'
+                    />
                   ) : (
                     (dashboard?.checklistEjecuciones ?? []).slice(0, 6).map((ejecucion) => (
                       <div key={ejecucion.id} className="rounded-lg border p-3 dark:border-slate-800">
@@ -955,7 +1031,14 @@ export default function MantenimientoEdilicioPage() {
                 </div>
                 <div className="space-y-3">
                   {(dashboard?.qrCodes ?? []).length === 0 ? (
-                    <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground dark:border-slate-800">{tx('Todavía no hay códigos QR/barra generados.', 'No QR/barcode codes have been generated yet.')}</p>
+                    <CompactEmptyState
+                      icon={QrCode}
+                      title={tx(
+                        'Todavía no hay códigos QR/barra generados.',
+                        'No QR/barcode codes have been generated yet.',
+                      )}
+                      className='py-6'
+                    />
                   ) : (
                     (dashboard?.qrCodes ?? []).slice(0, 8).map((qr) => (
                       <div key={qr.id} className="rounded-lg border p-3 dark:border-slate-800">

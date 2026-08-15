@@ -2,6 +2,7 @@
 
 import { Eye, Pencil, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -47,9 +48,10 @@ export default function SociosTable({
 
   if (socios.length === 0 && !loading) {
     return (
-      <div className="py-10 text-center text-muted-foreground">
-        {tx("No hay socios registrados aún.", "No members have been registered yet.")}
-      </div>
+      <CompactEmptyState
+        title={tx("No hay socios registrados aún.", "No members have been registered yet.")}
+        className="py-10"
+      />
     );
   }
 

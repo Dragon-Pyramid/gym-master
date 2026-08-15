@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { fetchAsistenciasRecientes } from '@/services/qrService';
 import type { AsistenciaReciente as AsistenciaRecienteApi } from '@/services/qrService';
 import { Skeleton } from '@/components/ui/skeleton';
+import { CompactEmptyState } from '@/components/ui/compact-empty-state';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock, User } from 'lucide-react';
 import { formatFrontendDate } from '@/utils/dateFormat';
@@ -217,9 +218,10 @@ export default function AsistenciasRecientesTable({
 
       <CardContent className="space-y-3 sm:space-y-4">
         {asistencias.length === 0 ? (
-          <p className="py-6 text-base text-center sm:text-lg text-muted-foreground">
-            No hay asistencias recientes
-          </p>
+          <CompactEmptyState
+            title="No hay asistencias recientes"
+            className="py-6"
+          />
         ) : (
           asistencias.map((row) => {
             const nombre = row.socio?.nombre_completo ?? 'Socio';
