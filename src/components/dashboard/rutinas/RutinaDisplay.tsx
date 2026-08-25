@@ -37,6 +37,13 @@ import { descargarRutinaPdf } from "@/utils/rutinaPdf";
 import { formatFrontendDate } from '@/utils/dateFormat';
 import { useI18n } from "@/i18n/I18nProvider";
 import { CompactEmptyState } from '@/components/ui/compact-empty-state';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type EjerciciosPorDia = Record<string, any[]>;
 
@@ -1630,58 +1637,52 @@ export default function RutinaEjercicios({
         </div>
 
         {ayudaSeries && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 px-4 py-6 backdrop-blur-sm"
-            role="presentation"
-            onClick={() => setAyudaSeries(null)}
+          <Dialog
+            open
+            onOpenChange={(nextOpen) => {
+              if (!nextOpen) setAyudaSeries(null);
+            }}
           >
-            <div
-              className="w-full max-w-md rounded-2xl bg-white p-5 text-gray-900 shadow-2xl sm:p-6 dark:border dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100 dark:shadow-black/70"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="series-reps-help-title"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className="mb-4 flex items-start justify-between gap-4">
+            <DialogContent className="w-full bg-white p-5 text-gray-900 shadow-2xl sm:max-w-md sm:p-6 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100 dark:shadow-black/70">
+              <div className="mb-1 flex items-start justify-between gap-4 pr-8">
                 <div>
                   <p className="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-neutral-400">
                     {tx("Ayuda para principiantes", "Beginner help")}
                   </p>
-                  <h2
-                    id="series-reps-help-title"
-                    className="text-lg font-semibold tracking-wide text-gray-950 dark:text-neutral-50"
-                  >
+
+                  <DialogTitle className="text-lg font-semibold tracking-wide text-gray-950 dark:text-neutral-50">
                     {tx("Series y repeticiones", "Sets and repetitions")}
-                  </h2>
+                  </DialogTitle>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setAyudaSeries(null)}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:border-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-900 dark:hover:text-white"
-                  aria-label={tx("Cerrar ayuda", "Close help")}
-                >
-                  <X className="h-4 w-4" />
-                </button>
+                <DialogClose asChild>
+                  <button
+                    type="button"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:border-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-900 dark:hover:text-white"
+                    aria-label={tx("Cerrar ayuda", "Close help")}
+                  >
+                    <X className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </DialogClose>
               </div>
 
-              <p className="mb-3 text-sm font-medium text-gray-800 dark:text-neutral-200">
+              <p className="text-sm font-medium text-gray-800 dark:text-neutral-200">
                 {ayudaSeries.titulo}
               </p>
 
-              <div className="mb-4 inline-flex rounded-full bg-gray-900 px-4 py-2 text-sm font-semibold tracking-wide text-white dark:bg-neutral-100 dark:text-black">
+              <div className="inline-flex w-fit rounded-full bg-gray-900 px-4 py-2 text-sm font-semibold tracking-wide text-white dark:bg-neutral-100 dark:text-black">
                 {ayudaSeries.badge}
               </div>
 
-              <p className="text-sm leading-6 text-gray-700 sm:text-base dark:text-neutral-300">
+              <DialogDescription className="text-sm leading-6 text-gray-700 sm:text-base dark:text-neutral-300">
                 {traducirAyudaSeries(ayudaSeries.descripcion, isEnglish)}
-              </p>
+              </DialogDescription>
 
-              <p className="mt-4 rounded-xl bg-gray-50 p-3 text-xs leading-5 text-gray-500 dark:border dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-400">
+              <p className="rounded-xl bg-gray-50 p-3 text-xs leading-5 text-gray-500 dark:border dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-400">
                 {tx("Consejo: priorizá la técnica. Si no podés completar el rango indicado, bajá un poco el peso y consultá al entrenador.", "Tip: prioritize technique. If you cannot complete the indicated range, lower the weight a little and ask the trainer.")}
               </p>
-            </div>
-          </div>
+            </DialogContent>
+          </Dialog>
         )}
       </>
     );

@@ -424,8 +424,9 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
                 className='grid grid-cols-1 gap-3 rounded-lg border bg-muted/30 p-3 md:grid-cols-12'
               >
                 <div className='md:col-span-2'>
-                  <Label>{c("Tipo")}</Label>
+                  <Label htmlFor={`venta-detalle-${detalle.id}-tipo`}>{c("Tipo")}</Label>
                   <select
+                    id={`venta-detalle-${detalle.id}-tipo`}
                     value={detalle.item_tipo}
                     onChange={(e) =>
                       handleDetalleChange(detalle.id, 'item_tipo', e.target.value)
@@ -438,8 +439,11 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
                   </select>
                 </div>
                 <div className='md:col-span-4'>
-                  <Label>{c(detalle.item_tipo === 'producto' ? 'Producto' : 'Servicio')}</Label>
+                  <Label htmlFor={`venta-detalle-${detalle.id}-item`}>
+                    {c(detalle.item_tipo === 'producto' ? 'Producto' : 'Servicio')}
+                  </Label>
                   <select
+                    id={`venta-detalle-${detalle.id}-item`}
                     value={detalle.item_id}
                     onChange={(e) =>
                       handleDetalleChange(detalle.id, 'item_id', e.target.value)
@@ -460,8 +464,9 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
                   )}
                 </div>
                 <div className='md:col-span-2'>
-                  <Label>{c('Cantidad')}</Label>
+                  <Label htmlFor={`venta-detalle-${detalle.id}-cantidad`}>{c('Cantidad')}</Label>
                   <Input
+                    id={`venta-detalle-${detalle.id}-cantidad`}
                     value={detalle.cantidad}
                     onChange={(e) =>
                       handleDetalleChange(detalle.id, 'cantidad', e.target.value)
@@ -474,8 +479,9 @@ export default function VentaForm({ venta, onCreated }: VentaFormProps) {
                   />
                 </div>
                 <div className='md:col-span-1'>
-                  <Label>{c("Desc.")}</Label>
+                  <Label htmlFor={`venta-detalle-${detalle.id}-descuento`}>{c("Desc.")}</Label>
                   <Input
+                    id={`venta-detalle-${detalle.id}-descuento`}
                     value={detalle.descuento}
                     onChange={(e) =>
                       handleDetalleChange(detalle.id, 'descuento', e.target.value)

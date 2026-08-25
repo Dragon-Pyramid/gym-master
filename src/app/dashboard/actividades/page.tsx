@@ -1273,6 +1273,7 @@ export default function ActividadesPage() {
                   <div className="relative min-w-0">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
+                      aria-label={tx("Buscar actividad, turno, instructor o ubicación", "Search activity, shift, instructor, or location")}
                       value={turnoSearchTerm}
                       onChange={(event) =>
                         setTurnoSearchTerm(event.target.value)
@@ -1282,6 +1283,7 @@ export default function ActividadesPage() {
                     />
                   </div>
                   <select
+                    aria-label={tx("Filtrar por día", "Filter by day")}
                     className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm"
                     value={diaFilter}
                     onChange={(event) => setDiaFilter(event.target.value)}
@@ -1640,8 +1642,9 @@ export default function ActividadesPage() {
                   <form onSubmit={handleSubmitTurno} className="grid gap-3">
                     <div className="grid gap-2 md:grid-cols-2">
                       <div className="space-y-1.5 md:col-span-2">
-                        <Label>Actividad</Label>
+                        <Label htmlFor="actividades-turno-actividad">Actividad</Label>
                         <select
+                          id="actividades-turno-actividad"
                           className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm text-slate-950 dark:bg-slate-950/80 dark:text-slate-50"
                           value={turnoForm.actividad_id}
                           onChange={(event) =>
@@ -1661,8 +1664,9 @@ export default function ActividadesPage() {
                         </select>
                       </div>
                       <div className="space-y-1.5 md:col-span-2">
-                        <Label>Nombre del turno</Label>
+                        <Label htmlFor="actividades-turno-nombre">Nombre del turno</Label>
                         <Input
+                          id="actividades-turno-nombre"
                           value={turnoForm.nombre_turno}
                           onChange={(event) =>
                             setTurnoForm((prev) => ({
@@ -1675,8 +1679,9 @@ export default function ActividadesPage() {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label>Día</Label>
+                        <Label htmlFor="actividades-turno-dia">Día</Label>
                         <select
+                          id="actividades-turno-dia"
                           className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm text-slate-950 dark:bg-slate-950/80 dark:text-slate-50"
                           value={turnoForm.dia_semana}
                           onChange={(event) =>
@@ -1694,8 +1699,9 @@ export default function ActividadesPage() {
                         </select>
                       </div>
                       <div className="space-y-1.5">
-                        <Label>Estado</Label>
+                        <Label htmlFor="actividades-turno-estado">Estado</Label>
                         <select
+                          id="actividades-turno-estado"
                           className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm text-slate-950 dark:bg-slate-950/80 dark:text-slate-50"
                           value={turnoForm.estado}
                           onChange={(event) =>
@@ -1714,8 +1720,9 @@ export default function ActividadesPage() {
                         </select>
                       </div>
                       <div className="space-y-1.5">
-                        <Label>Inicio</Label>
+                        <Label htmlFor="actividades-turno-inicio">Inicio</Label>
                         <Input
+                          id="actividades-turno-inicio"
                           type="time"
                           value={turnoForm.hora_inicio}
                           onChange={(event) =>
@@ -1728,8 +1735,9 @@ export default function ActividadesPage() {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label>Fin</Label>
+                        <Label htmlFor="actividades-turno-fin">Fin</Label>
                         <Input
+                          id="actividades-turno-fin"
                           type="time"
                           value={turnoForm.hora_fin}
                           onChange={(event) =>
@@ -1742,8 +1750,9 @@ export default function ActividadesPage() {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label>Cupo máximo</Label>
+                        <Label htmlFor="actividades-turno-cupo-maximo">Cupo máximo</Label>
                         <Input
+                          id="actividades-turno-cupo-maximo"
                           type="number"
                           min={1}
                           value={turnoForm.cupo_maximo}
@@ -1757,8 +1766,9 @@ export default function ActividadesPage() {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label>Cupo mínimo</Label>
+                        <Label htmlFor="actividades-turno-cupo-minimo">Cupo mínimo</Label>
                         <Input
+                          id="actividades-turno-cupo-minimo"
                           type="number"
                           min={0}
                           value={turnoForm.cupo_minimo}
@@ -1771,8 +1781,9 @@ export default function ActividadesPage() {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label>Instructor</Label>
+                        <Label htmlFor="actividades-turno-instructor">Instructor</Label>
                         <select
+                          id="actividades-turno-instructor"
                           className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm text-slate-950 dark:bg-slate-950/80 dark:text-slate-50"
                           value={turnoForm.instructor_id}
                           onChange={(event) =>
@@ -1791,9 +1802,10 @@ export default function ActividadesPage() {
                         </select>
                       </div>
                       <div className="space-y-1.5">
-                        <Label>Ubicación</Label>
+                        <Label htmlFor="actividades-turno-ubicacion">Ubicación</Label>
                         {ubicacionesOptions.length ? (
                           <select
+                            id="actividades-turno-ubicacion"
                             className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm text-slate-950 dark:bg-slate-950/80 dark:text-slate-50"
                             value={turnoForm.ubicacion}
                             onChange={(event) =>
@@ -1815,6 +1827,7 @@ export default function ActividadesPage() {
                           </select>
                         ) : (
                           <Input
+                            id="actividades-turno-ubicacion"
                             value={turnoForm.ubicacion}
                             onChange={(event) =>
                               setTurnoForm((prev) => ({
@@ -1831,8 +1844,9 @@ export default function ActividadesPage() {
                         </p>
                       </div>
                       <div className="space-y-1.5">
-                        <Label>Vigencia desde</Label>
+                        <Label htmlFor="actividades-turno-vigencia-desde">Vigencia desde</Label>
                         <Input
+                          id="actividades-turno-vigencia-desde"
                           type="date"
                           value={turnoForm.fecha_inicio}
                           onChange={(event) =>
@@ -1844,8 +1858,9 @@ export default function ActividadesPage() {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label>Vigencia hasta</Label>
+                        <Label htmlFor="actividades-turno-vigencia-hasta">Vigencia hasta</Label>
                         <Input
+                          id="actividades-turno-vigencia-hasta"
                           type="date"
                           value={turnoForm.fecha_fin}
                           onChange={(event) =>
@@ -1857,8 +1872,9 @@ export default function ActividadesPage() {
                         />
                       </div>
                       <div className="space-y-1.5 md:col-span-2">
-                        <Label>Observaciones</Label>
+                        <Label htmlFor="actividades-turno-observaciones">Observaciones</Label>
                         <Input
+                          id="actividades-turno-observaciones"
                           value={turnoForm.observaciones}
                           onChange={(event) =>
                             setTurnoForm((prev) => ({
@@ -1914,6 +1930,7 @@ export default function ActividadesPage() {
                 </div>
                 <div className="grid w-full gap-2 sm:grid-cols-2 lg:flex lg:w-auto lg:flex-row lg:items-center">
                   <select
+                    aria-label={tx("Filtrar turnos por día", "Filter shifts by day")}
                     className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm lg:w-auto"
                     value={diaFilter}
                     onChange={(event) => setDiaFilter(event.target.value)}
@@ -1926,6 +1943,7 @@ export default function ActividadesPage() {
                     ))}
                   </select>
                   <select
+                    aria-label={tx("Filtrar turnos por estado", "Filter shifts by status")}
                     className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm lg:w-auto"
                     value={estadoFilter}
                     onChange={(event) => setEstadoFilter(event.target.value)}
@@ -1940,6 +1958,7 @@ export default function ActividadesPage() {
                   <div className="relative min-w-0 flex-grow lg:flex-grow-0">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
+                      aria-label={tx("Buscar turnos", "Search shifts")}
                       className="w-full pl-8 lg:w-[280px]"
                       value={turnoSearchTerm}
                       onChange={(event) =>
@@ -2300,8 +2319,9 @@ export default function ActividadesPage() {
                     className="grid gap-3"
                   >
                     <div className="space-y-1.5">
-                      <Label>Turno</Label>
+                      <Label htmlFor="actividades-inscripcion-turno">Turno</Label>
                       <select
+                        id="actividades-inscripcion-turno"
                         className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm text-slate-950 dark:bg-slate-950/80 dark:text-slate-50"
                         value={inscripcionForm.turno_id}
                         onChange={(event) =>
@@ -2325,11 +2345,12 @@ export default function ActividadesPage() {
                       </select>
                     </div>
                     <div className="space-y-1.5">
-                      <Label>Socio</Label>
+                      <Label htmlFor="actividades-inscripcion-socio-busqueda">Socio</Label>
                       <div className="rounded-lg border bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/70">
                         <div className="relative">
                           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                           <Input
+                            id="actividades-inscripcion-socio-busqueda"
                             value={socioSearchTerm}
                             onChange={(event) =>
                               setSocioSearchTerm(event.target.value)
@@ -2414,10 +2435,11 @@ export default function ActividadesPage() {
                         </div>
 
                         <div className="mt-2 space-y-1.5">
-                          <Label className="text-xs text-muted-foreground">
+                          <Label htmlFor="actividades-inscripcion-socio-selector" className="text-xs text-muted-foreground">
                             Selector rápido
                           </Label>
                           <select
+                            id="actividades-inscripcion-socio-selector"
                             className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm text-slate-950 dark:bg-slate-950/80 dark:text-slate-50"
                             value={inscripcionForm.socio_id}
                             onChange={(event) => {
@@ -2448,8 +2470,9 @@ export default function ActividadesPage() {
                       </div>
                     </div>
                     <div className="space-y-1.5">
-                      <Label>Observaciones</Label>
+                      <Label htmlFor="actividades-inscripcion-observaciones">Observaciones</Label>
                       <Input
+                        id="actividades-inscripcion-observaciones"
                         value={inscripcionForm.observaciones}
                         onChange={(event) =>
                           setInscripcionForm((prev) => ({
@@ -2704,6 +2727,7 @@ export default function ActividadesPage() {
                   <div className="relative min-w-0">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
+                      aria-label={tx("Buscar actividad", "Search activity")}
                       type="search"
                       placeholder="Buscar actividad..."
                       className="w-full pl-8 lg:w-[300px]"

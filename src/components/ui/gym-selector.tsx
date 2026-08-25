@@ -13,6 +13,7 @@ type Props = {
 const GymSelector: React.FC<Props> = ({ value, onChange }) => {
   return (
     <Input
+      aria-label="Gimnasio"
       value={value}
       onChange={(event) => onChange(event.target.value)}
       placeholder="Gimnasio"

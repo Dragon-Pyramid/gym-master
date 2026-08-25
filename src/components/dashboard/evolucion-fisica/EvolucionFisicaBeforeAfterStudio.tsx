@@ -703,7 +703,7 @@ function BodyPart({
           onSelect(groupId);
         }
       }}
-      className="cursor-pointer outline-none transition-all duration-300 hover:opacity-95"
+      className="cursor-pointer transition-all duration-300 hover:opacity-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       style={{
         filter: active ? getActiveGlow(state) : undefined,
       }}

@@ -415,8 +415,14 @@ export default function OtrosGastosForm({ gasto, onCreated }: OtrosGastosFormPro
               />
               {form.comprobante_url ? (
                 <Button type="button" variant="outline" asChild>
-                  <a href={form.comprobante_url} target="_blank" rel="noreferrer" title={c("Abrir comprobante")}>
-                    <LinkIcon className="h-4 w-4" />
+                  <a
+                    href={form.comprobante_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={c("Abrir comprobante")}
+                    aria-label={c("Abrir comprobante")}
+                  >
+                    <LinkIcon className="h-4 w-4" aria-hidden="true" />
                   </a>
                 </Button>
               ) : null}

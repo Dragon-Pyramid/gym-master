@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { Sidebar, useSidebar } from "../ui/sidebar";
 import { X } from "lucide-react";
 import { SidebarSection } from "./SidebarSection";
@@ -15,6 +15,8 @@ export const AppSidebar = () => {
   const isMobile = useIsMobile();
   const { openMobile, setOpenMobile } = useSidebar();
   const isOpen = isMobile ? openMobile : true;
+  const sidebarRef = useRef<HTMLDivElement | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const { user, isAuthenticated, isInitialized, initializeAuth } =
     useAuthStore();
   const userType = user?.rol;
@@ -27,13 +29,70 @@ export const AppSidebar = () => {
   useEffect(() => {
     if (!isMobile || !isOpen) return;
 
+    const previouslyFocused =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
-    return () => {
-      document.body.style.overflow = previousOverflow;
+    const focusFrame = window.requestAnimationFrame(() => {
+      closeButtonRef.current?.focus();
+    });
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOpenMobile(false);
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+
+      const sidebar = sidebarRef.current;
+      if (!sidebar) return;
+
+      const focusableElements = Array.from(
+        sidebar.querySelectorAll<HTMLElement>(
+          [
+            'a[href]',
+            'button:not([disabled])',
+            'input:not([disabled])',
+            'select:not([disabled])',
+            'textarea:not([disabled])',
+            '[tabindex]:not([tabindex="-1"])',
+          ].join(","),
+        ),
+      ).filter((element) => element.getClientRects().length > 0);
+
+      if (focusableElements.length === 0) {
+        event.preventDefault();
+        sidebar.focus();
+        return;
+      }
+
+      const first = focusableElements[0];
+      const last = focusableElements[focusableElements.length - 1];
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
-  }, [isMobile, isOpen]);
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previouslyFocused?.focus();
+    };
+  }, [isMobile, isOpen, setOpenMobile]);
 
   if (!isInitialized || !isAuthenticated || !user) {
     return null;
@@ -50,9 +109,13 @@ export const AppSidebar = () => {
       )}
 
       <Sidebar
-        role={isMobile ? "dialog" : undefined}
-        aria-modal={isMobile ? true : undefined}
+        ref={sidebarRef}
+        role={isMobile && isOpen ? "dialog" : undefined}
+        aria-modal={isMobile && isOpen ? true : undefined}
         aria-label={t('sidebar.aria.dashboardMenu')}
+        aria-hidden={isMobile && !isOpen ? true : undefined}
+        inert={isMobile && !isOpen ? true : undefined}
+        tabIndex={isMobile ? -1 : undefined}
         className={`transition-transform duration-300 transform ${
           isMobile
             ? `fixed inset-y-0 left-0 h-[100dvh] max-h-[100dvh] w-[20rem] max-w-[88vw] overflow-y-auto overscroll-contain pb-[calc(6rem+env(safe-area-inset-bottom))] text-sidebar-foreground z-[60] ${
@@ -64,12 +127,17 @@ export const AppSidebar = () => {
         {isMobile && (
           <div className="sticky top-0 z-[70] flex justify-end bg-[var(--color-sidebar)] px-4 py-3">
             <button
+              ref={closeButtonRef}
               type="button"
               aria-label={t('sidebar.aria.closeDashboardMenu')}
               onClick={() => setOpenMobile(false)}
               className="sidebar-close"
             >
-              <X size={24} className="text-black dark:text-white" />
+              <X
+                size={24}
+                className="text-black dark:text-white"
+                aria-hidden="true"
+              />
             </button>
           </div>
         )}

@@ -445,17 +445,26 @@ export default function EquipamientosPreventivosPage() {
                       <option value="critica">{tx('Crítica', 'Critical')}</option>
                     </SelectField>
                   </Field>
-                  <Field label={tx('Tareas técnicas', 'Technical tasks')}>
+                  <fieldset className="space-y-1">
+                    <legend className="text-sm font-medium text-slate-700">
+                      {tx('Tareas técnicas', 'Technical tasks')}
+                    </legend>
                     <div className="space-y-2">
                       {(planForm.tareas ?? ['']).map((tarea, index) => (
-                        <Input key={index} value={tarea} onChange={(e) => updatePlanTask(index, e.target.value)} placeholder={`${tx('Tarea', 'Task')} ${index + 1}`} />
+                        <Input
+                          key={index}
+                          aria-label={`${tx('Tarea', 'Task')} ${index + 1}`}
+                          value={tarea}
+                          onChange={(e) => updatePlanTask(index, e.target.value)}
+                          placeholder={`${tx('Tarea', 'Task')} ${index + 1}`}
+                        />
                       ))}
                       <Button type="button" variant="outline" size="sm" onClick={() => setPlanForm((prev) => ({ ...prev, tareas: [...(prev.tareas ?? []), ''] }))}>
                         <Plus className="mr-2 h-4 w-4" />
                         {tx('Agregar tarea', 'Add task')}
                       </Button>
                     </div>
-                  </Field>
+                  </fieldset>
                   <Field label={tx('Descripción', 'Description')}>
                     <textarea
                       value={planForm.descripcion ?? ''}

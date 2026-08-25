@@ -666,6 +666,7 @@ export default function NotificacionesPage() {
                       <div className='relative md:col-span-2'>
                         <Search className='absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground' />
                         <Input
+                          aria-label={c('Buscar notificaciones', 'Search notifications')}
                           type='search'
                           placeholder={c('Buscar por título, asunto, tipo, canal o mensaje...', 'Search by title, subject, type, channel or message...')}
                           className='pl-8'
@@ -674,6 +675,7 @@ export default function NotificacionesPage() {
                         />
                       </div>
                       <select
+                        aria-label={c('Filtrar por estado', 'Filter by status')}
                         value={estadoFilter}
                         onChange={(event) => setEstadoFilter(event.target.value as EstadoFilter)}
                         className='h-10 rounded-md border border-input bg-background px-3 text-sm'
@@ -685,6 +687,7 @@ export default function NotificacionesPage() {
                         ))}
                       </select>
                       <select
+                        aria-label={c('Filtrar por tipo', 'Filter by type')}
                         value={tipoFilter}
                         onChange={(event) => setTipoFilter(event.target.value as TipoFilter)}
                         className='h-10 rounded-md border border-input bg-background px-3 text-sm'
@@ -696,8 +699,8 @@ export default function NotificacionesPage() {
                         ))}
                       </select>
                       <div className='grid grid-cols-2 gap-2'>
-                        <Input type='date' value={fechaDesde} onChange={(event) => setFechaDesde(event.target.value)} />
-                        <Input type='date' value={fechaHasta} onChange={(event) => setFechaHasta(event.target.value)} />
+                        <Input aria-label={c('Fecha desde', 'Date from')} type='date' value={fechaDesde} onChange={(event) => setFechaDesde(event.target.value)} />
+                        <Input aria-label={c('Fecha hasta', 'Date to')} type='date' value={fechaHasta} onChange={(event) => setFechaHasta(event.target.value)} />
                       </div>
                     </div>
                   </div>

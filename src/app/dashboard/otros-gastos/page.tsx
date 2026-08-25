@@ -356,6 +356,7 @@ export default function OtrosGastosPage() {
                 </div>
                 <div className="flex w-full flex-wrap items-center gap-2 md:w-auto">
                   <select
+                    aria-label={locale === "en" ? "Filter expenses by status" : "Filtrar gastos por estado"}
                     value={estadoFilter}
                     onChange={(event) => setEstadoFilter(event.target.value as EstadoFilter)}
                     className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -401,6 +402,7 @@ export default function OtrosGastosPage() {
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                       type="search"
+                      aria-label={locale === "en" ? "Search expenses" : "Buscar gastos"}
                       placeholder={c("Buscar gasto, tipo, entidad, comprobante...")}
                       className="w-full pl-8 sm:w-[320px]"
                       value={searchTerm}

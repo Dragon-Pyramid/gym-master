@@ -21,7 +21,6 @@ export default function ProfileImage({
   size = 96,
   onUpload,
   showButton = true,
-  onClick,
   tone = "default",
 }: {
   foto?: string | null;
@@ -30,7 +29,6 @@ export default function ProfileImage({
   size?: number;
   onUpload?: (data: any) => void;
   showButton?: boolean;
-  onClick?: () => void;
   tone?: "default" | "onDark";
 }) {
   const [currentSrc, setCurrentSrc] = useState<string | null>(
@@ -338,7 +336,7 @@ export default function ProfileImage({
   const errorTextClass = tone === "onDark" ? "text-rose-300" : "text-red-500";
 
   return (
-    <div className="flex flex-col items-center gap-3" onClick={onClick}>
+    <div className="flex flex-col items-center gap-3">
       <div
         className="relative flex items-center justify-center flex-shrink-0 overflow-hidden rounded-full ring-1 ring-border/60 dark:ring-border/40 bg-muted"
         style={{ width: size, height: size }}

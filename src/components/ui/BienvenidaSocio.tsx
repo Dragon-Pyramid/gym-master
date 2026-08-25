@@ -136,13 +136,19 @@ export default function BienvenidaSocio({
         >
           <div className="flex flex-col items-center gap-6 p-8 md:flex-row md:p-12">
             <div className="flex items-center justify-center flex-shrink-0">
-              <ProfileImage
-                foto={displayFoto}
-                alt={displayNombre}
-                size={224}
-                showButton={false}
+              <button
+                type="button"
                 onClick={handleClose}
-              />
+                aria-label={tr("Cerrar bienvenida", "Close welcome")}
+                className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <ProfileImage
+                  foto={displayFoto}
+                  alt={displayNombre}
+                  size={224}
+                  showButton={false}
+                />
+              </button>
             </div>
             <div className="flex-1 text-center md:text-left">
               <span

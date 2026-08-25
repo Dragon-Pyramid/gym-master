@@ -254,6 +254,7 @@ export default function EntrenadorForm({
                 <div key={idx} className="flex items-center gap-2 mb-2">
                   <input
                     type="time"
+                    aria-label={`Hora desde ${diasSemana.find((d) => d.id === dia)?.label ?? dia}, bloque ${idx + 1}`}
                     value={bloque.hora_desde}
                     onChange={(e) =>
                       actualizarBloque(dia, idx, "hora_desde", e.target.value)
@@ -263,6 +264,7 @@ export default function EntrenadorForm({
                   <span>a</span>
                   <input
                     type="time"
+                    aria-label={`Hora hasta ${diasSemana.find((d) => d.id === dia)?.label ?? dia}, bloque ${idx + 1}`}
                     value={bloque.hora_hasta}
                     onChange={(e) =>
                       actualizarBloque(dia, idx, "hora_hasta", e.target.value)

@@ -206,6 +206,7 @@ export default function MensajesAdminPage() {
                     </div>
                     <form className='flex flex-wrap gap-2' onSubmit={handleSearchSubmit}>
                       <select
+                        aria-label={c('Filtrar mensajes por estado', 'Filter messages by status')}
                         value={estadoFilter}
                         onChange={(event) => setEstadoFilter(event.target.value as SocioMensajeEstado | 'todos')}
                         className='h-10 rounded-md border border-input bg-background px-3 text-sm dark:border-slate-700 dark:bg-slate-950'
@@ -218,6 +219,7 @@ export default function MensajesAdminPage() {
                         <Search className='absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground' />
                         <Input
                           type='search'
+                          aria-label={c('Buscar mensajes', 'Search messages')}
                           className='w-64 pl-8 dark:border-slate-700 dark:bg-slate-950'
                           placeholder={c('Buscar asunto o mensaje...', 'Search subject or message...')}
                           value={searchTerm}

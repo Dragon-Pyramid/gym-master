@@ -678,12 +678,14 @@ export default function CoachIaPage() {
                         </p>
                         <div className="grid gap-2 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
                           <input
+                            aria-label={c("Buscar socio", "Search member")}
                             value={socioSearch}
                             onChange={(event) => setSocioSearch(event.target.value)}
                             placeholder={c("Buscar socio por nombre, DNI o email...", "Search member by name, ID or email...")}
                             className="h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#02a8e1] focus:ring-2 focus:ring-cyan-100 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-cyan-500/20"
                           />
                           <select
+                            aria-label={c("Seleccionar socio", "Select member")}
                             value={selectedSocioId}
                             onChange={(event) => setSelectedSocioId(event.target.value)}
                             disabled={sociosLoading || filteredSocios.length === 0}
@@ -984,6 +986,7 @@ export default function CoachIaPage() {
 
                     <form onSubmit={handleSubmit} className="flex flex-col gap-2 sm:flex-row">
                       <textarea
+                        aria-label={c("Consulta al Coach IA", "AI Coach question")}
                         value={input}
                         onChange={(event) => setInput(event.target.value)}
                         placeholder={c('Escribí tu consulta: quiero rutina, dieta, revisar progreso...', 'Write your question: I want a routine, diet, or progress review...')}

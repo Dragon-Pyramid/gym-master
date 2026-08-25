@@ -435,6 +435,7 @@ export default function EmpleadosSueldosPage() {
             <CardContent className="space-y-4">
               <div className="grid gap-3 md:grid-cols-5">
                 <select
+                  aria-label={salaryText("Filtrar por estado", "Filter by status")}
                   value={estadoFilter}
                   onChange={(event) => setEstadoFilter(event.target.value as EstadoFilter)}
                   className="rounded-md border bg-background px-3 py-2 text-sm"
@@ -463,6 +464,7 @@ export default function EmpleadosSueldosPage() {
                   <Input
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}
+                    aria-label={salaryText("Buscar sueldos de empleados", "Search employee salaries")}
                     placeholder={salaryText("Buscar empleado, DNI, concepto, medio...", "Search employee, ID, concept, payment method...")}
                     className="pl-9"
                   />

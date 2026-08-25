@@ -385,23 +385,23 @@ export default function ComercialComprasReposicionPage() {
                 <CardContent>
                   <form onSubmit={handleSaveRelation} className='space-y-4'>
                     <div className='space-y-1.5'>
-                      <Label>{c('Producto')}</Label>
-                      <select className='h-10 w-full rounded-md border px-3 text-sm' value={relProductoId} onChange={(e) => setRelProductoId(e.target.value)} required>
+                      <Label htmlFor='comercial-rel-producto'>{c('Producto')}</Label>
+                      <select id='comercial-rel-producto' className='h-10 w-full rounded-md border px-3 text-sm' value={relProductoId} onChange={(e) => setRelProductoId(e.target.value)} required>
                         <option value=''>{c('Seleccionar producto')}</option>
                         {productosActivos.map((producto) => <option key={producto.id} value={producto.id}>{producto.nombre}</option>)}
                       </select>
                     </div>
                     <div className='space-y-1.5'>
-                      <Label>{c('Proveedor')}</Label>
-                      <select className='h-10 w-full rounded-md border px-3 text-sm' value={relProveedorId} onChange={(e) => setRelProveedorId(e.target.value)} required>
+                      <Label htmlFor='comercial-rel-proveedor'>{c('Proveedor')}</Label>
+                      <select id='comercial-rel-proveedor' className='h-10 w-full rounded-md border px-3 text-sm' value={relProveedorId} onChange={(e) => setRelProveedorId(e.target.value)} required>
                         <option value=''>{c('Seleccionar proveedor')}</option>
                         {proveedoresActivos.map((proveedor) => <option key={proveedor.id} value={proveedor.id}>{proveedor.nombre}</option>)}
                       </select>
                     </div>
                     <div className='grid grid-cols-1 gap-3 md:grid-cols-3'>
-                      <div className='space-y-1.5'><Label>{c('Costo')}</Label><Input type='number' min='0' step='0.01' value={relCosto} onChange={(e) => setRelCosto(e.target.value)} required /></div>
-                      <div className='space-y-1.5'><Label>{c('Compra mínima')}</Label><Input type='number' min='1' value={relCompraMinima} onChange={(e) => setRelCompraMinima(e.target.value)} /></div>
-                      <div className='space-y-1.5'><Label>{c('Lead time días')}</Label><Input type='number' min='0' value={relLeadTime} onChange={(e) => setRelLeadTime(e.target.value)} /></div>
+                      <div className='space-y-1.5'><Label htmlFor='comercial-rel-costo'>{c('Costo')}</Label><Input id='comercial-rel-costo' type='number' min='0' step='0.01' value={relCosto} onChange={(e) => setRelCosto(e.target.value)} required /></div>
+                      <div className='space-y-1.5'><Label htmlFor='comercial-rel-compra-minima'>{c('Compra mínima')}</Label><Input id='comercial-rel-compra-minima' type='number' min='1' value={relCompraMinima} onChange={(e) => setRelCompraMinima(e.target.value)} /></div>
+                      <div className='space-y-1.5'><Label htmlFor='comercial-rel-lead-time'>{c('Lead time días')}</Label><Input id='comercial-rel-lead-time' type='number' min='0' value={relLeadTime} onChange={(e) => setRelLeadTime(e.target.value)} /></div>
                     </div>
                     <label className='flex items-center gap-2 text-sm'>
                       <input type='checkbox' checked={relPrincipal} onChange={(e) => setRelPrincipal(e.target.checked)} />
@@ -422,34 +422,34 @@ export default function ComercialComprasReposicionPage() {
                 <form onSubmit={handleCreateOrder} className='space-y-5'>
                   <div className='grid grid-cols-1 gap-4 md:grid-cols-4'>
                     <div className='space-y-1.5'>
-                      <Label>{c('Proveedor')}</Label>
-                      <select className='h-10 w-full rounded-md border px-3 text-sm' value={ordenProveedorId} onChange={(e) => setOrdenProveedorId(e.target.value)} required>
+                      <Label htmlFor='comercial-orden-proveedor'>{c('Proveedor')}</Label>
+                      <select id='comercial-orden-proveedor' className='h-10 w-full rounded-md border px-3 text-sm' value={ordenProveedorId} onChange={(e) => setOrdenProveedorId(e.target.value)} required>
                         <option value=''>{c('Seleccionar proveedor')}</option>
                         {proveedoresActivos.map((proveedor) => <option key={proveedor.id} value={proveedor.id}>{proveedor.nombre}</option>)}
                       </select>
                     </div>
                     <div className='space-y-1.5'>
-                      <Label>{c('Ubicación destino')}</Label>
-                      <select className='h-10 w-full rounded-md border px-3 text-sm' value={ordenUbicacionId} onChange={(e) => setOrdenUbicacionId(e.target.value)}>
+                      <Label htmlFor='comercial-orden-ubicacion'>{c('Ubicación destino')}</Label>
+                      <select id='comercial-orden-ubicacion' className='h-10 w-full rounded-md border px-3 text-sm' value={ordenUbicacionId} onChange={(e) => setOrdenUbicacionId(e.target.value)}>
                         {dashboard.ubicaciones.map((ubicacion) => <option key={ubicacion.id} value={ubicacion.id}>{ubicacion.nombre}</option>)}
                       </select>
                     </div>
-                    <div className='space-y-1.5'><Label>{c('Fecha orden')}</Label><Input type='date' value={ordenFecha} onChange={(e) => setOrdenFecha(e.target.value)} /></div>
-                    <div className='space-y-1.5'><Label>{c('Recepción estimada')}</Label><Input type='date' value={ordenFechaEstimada} onChange={(e) => setOrdenFechaEstimada(e.target.value)} /></div>
+                    <div className='space-y-1.5'><Label htmlFor='comercial-orden-fecha'>{c('Fecha orden')}</Label><Input id='comercial-orden-fecha' type='date' value={ordenFecha} onChange={(e) => setOrdenFecha(e.target.value)} /></div>
+                    <div className='space-y-1.5'><Label htmlFor='comercial-orden-fecha-estimada'>{c('Recepción estimada')}</Label><Input id='comercial-orden-fecha-estimada' type='date' value={ordenFechaEstimada} onChange={(e) => setOrdenFechaEstimada(e.target.value)} /></div>
                   </div>
 
                   <div className='space-y-3'>
                     {ordenItems.map((item, index) => (
                       <div key={index} className='grid grid-cols-1 gap-3 rounded-lg border bg-muted/20 p-3 lg:grid-cols-[1.4fr_0.45fr_0.55fr_0.55fr_auto] lg:items-end'>
                         <div className='space-y-1.5'>
-                          <Label>{c('Producto')}</Label>
-                          <select className='h-10 w-full rounded-md border px-3 text-sm' value={item.producto_id} onChange={(e) => updateItem(index, { producto_id: e.target.value })} required>
+                          <Label htmlFor={`comercial-orden-item-${index}-producto`}>{c('Producto')}</Label>
+                          <select id={`comercial-orden-item-${index}-producto`} className='h-10 w-full rounded-md border px-3 text-sm' value={item.producto_id} onChange={(e) => updateItem(index, { producto_id: e.target.value })} required>
                             <option value=''>{c('Seleccionar producto')}</option>
                             {productosActivos.map((producto) => <option key={producto.id} value={producto.id}>{producto.nombre} · {c('Stock').toLowerCase()} {producto.stock ?? 0}</option>)}
                           </select>
                         </div>
-                        <div className='space-y-1.5'><Label>{c('Cantidad')}</Label><Input type='number' min='1' value={item.cantidad_solicitada} onChange={(e) => updateItem(index, { cantidad_solicitada: e.target.value })} required /></div>
-                        <div className='space-y-1.5'><Label>{c('Costo')}</Label><Input type='number' min='0' step='0.01' value={item.costo_unitario} onChange={(e) => updateItem(index, { costo_unitario: e.target.value })} required /></div>
+                        <div className='space-y-1.5'><Label htmlFor={`comercial-orden-item-${index}-cantidad`}>{c('Cantidad')}</Label><Input id={`comercial-orden-item-${index}-cantidad`} type='number' min='1' value={item.cantidad_solicitada} onChange={(e) => updateItem(index, { cantidad_solicitada: e.target.value })} required /></div>
+                        <div className='space-y-1.5'><Label htmlFor={`comercial-orden-item-${index}-costo`}>{c('Costo')}</Label><Input id={`comercial-orden-item-${index}-costo`} type='number' min='0' step='0.01' value={item.costo_unitario} onChange={(e) => updateItem(index, { costo_unitario: e.target.value })} required /></div>
                         <div className='text-sm font-semibold'>{formatCurrencyARS(toNumber(item.cantidad_solicitada) * toNumber(item.costo_unitario), locale)}</div>
                         <Button type='button' variant='ghost' onClick={() => setOrdenItems((prev) => prev.filter((_, idx) => idx !== index))} disabled={ordenItems.length === 1}>{c('Quitar')}</Button>
                       </div>
@@ -469,8 +469,8 @@ export default function ComercialComprasReposicionPage() {
                     </div>
                   </div>
                   <div className='space-y-1.5'>
-                    <Label>{c('Observaciones')}</Label>
-                    <Input value={ordenObservaciones} onChange={(e) => setOrdenObservaciones(e.target.value)} placeholder={c('Notas internas de compra o reposición')} />
+                    <Label htmlFor='comercial-orden-observaciones'>{c('Observaciones')}</Label>
+                    <Input id='comercial-orden-observaciones' value={ordenObservaciones} onChange={(e) => setOrdenObservaciones(e.target.value)} placeholder={c('Notas internas de compra o reposición')} />
                   </div>
                 </form>
               </CardContent>
@@ -511,6 +511,7 @@ export default function ComercialComprasReposicionPage() {
                               <div className='text-sm'>{formatCurrencyARS(detalle.costo_unitario, locale)}</div>
                               <div className='text-sm'>{formatCurrencyARS(detalle.subtotal_estimado, locale)}</div>
                               <Input
+                                aria-label={c('Cantidad a recibir')}
                                 type='number'
                                 min='0'
                                 max={pendiente}

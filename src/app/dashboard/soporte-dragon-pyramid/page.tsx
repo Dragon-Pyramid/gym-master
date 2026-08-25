@@ -573,6 +573,7 @@ export default function SoporteDragonPyramidPage() {
                       </div>
                       <form className='flex flex-col gap-2 sm:flex-row sm:flex-wrap' onSubmit={handleSearchSubmit}>
                         <select
+                          aria-label={c('Filtrar tickets por estado', 'Filter tickets by status')}
                           value={estadoFilter}
                           onChange={(event) => setEstadoFilter(event.target.value as SoporteTicketEstado | 'todos')}
                           className='h-10 rounded-md border border-input bg-background px-3 text-sm'
@@ -585,6 +586,7 @@ export default function SoporteDragonPyramidPage() {
                           <Search className='absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground' />
                           <Input
                             type='search'
+                            aria-label={c('Buscar tickets', 'Search tickets')}
                             className='w-full pl-8'
                             placeholder={c('Buscar ticket...', 'Search ticket...')}
                             value={searchTerm}
