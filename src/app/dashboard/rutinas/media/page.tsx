@@ -1307,7 +1307,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                                           event.target.checked,
                                         )
                                       }
-                                      aria-label={tx("Aplicar candidato", "Apply candidate")}
+                                      aria-label={`${tx("Aplicar candidato", "Apply candidate")}: ${row.nombre_ejercicio} · ${String(row.idioma).toUpperCase()}`}
                                     />
                                   )}
                                   <div className="min-w-0 flex-1">
@@ -1381,6 +1381,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                   </div>
                 </div>
                 <textarea
+                  aria-label={tx("Datos CSV de YouTube", "YouTube CSV data")}
                   value={youtubeCsvInput}
                   onChange={(event) => setYoutubeCsvInput(event.target.value)}
                   className="min-h-28 w-full rounded-md border px-3 py-2 text-xs font-mono"
@@ -1537,6 +1538,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                     <div className="relative">
                       <Search className="absolute w-4 h-4 text-slate-400 left-3 top-3" />
                       <Input
+                        aria-label={tx("Buscar ejercicio por nombre", "Search exercise by name")}
                         value={searchTerm}
                         onChange={(event) => {
                           setPage(1);
@@ -1547,6 +1549,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                       />
                     </div>
                     <select
+                      aria-label={tx("Filtrar por objetivo", "Filter by goal")}
                       value={objetivoFilter}
                       onChange={(event) => {
                         setPage(1);
@@ -1565,6 +1568,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                       ))}
                     </select>
                     <select
+                      aria-label={tx("Filtrar por nivel", "Filter by level")}
                       value={nivelFilter}
                       onChange={(event) => {
                         setPage(1);
@@ -1580,6 +1584,7 @@ export default function RutinasExerciseMediaCatalogPage() {
                       ))}
                     </select>
                     <select
+                      aria-label={tx("Filtrar por estado multimedia", "Filter by media status")}
                       value={mediaStatus}
                       onChange={(event) => {
                         setPage(1);
@@ -2093,8 +2098,15 @@ export default function RutinasExerciseMediaCatalogPage() {
                                 }
                                 target="_blank"
                                 rel="noreferrer"
+                                aria-label={tx(
+                                  "Abrir vista previa en YouTube",
+                                  "Open preview on YouTube",
+                                )}
                               >
-                                <ExternalLink className="w-4 h-4" />
+                                <ExternalLink
+                                  className="w-4 h-4"
+                                  aria-hidden="true"
+                                />
                               </a>
                             </Button>
                           )}

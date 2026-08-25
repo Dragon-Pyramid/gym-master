@@ -275,8 +275,8 @@ export default function ComercialCajaPage() {
                 <CardHeader><CardTitle className='flex items-center gap-2'><Banknote className='h-5 w-5 text-sky-600' />{c('Abrir caja')}</CardTitle></CardHeader>
                 <CardContent>
                   <form className='grid grid-cols-1 gap-4 md:grid-cols-[220px_1fr_auto]' onSubmit={handleAbrirCaja}>
-                    <div className='space-y-2'><Label>{c('Monto inicial')}</Label><Input type='number' min={0} value={montoInicial} onChange={(e) => setMontoInicial(e.target.value)} /></div>
-                    <div className='space-y-2'><Label>{c('Observaciones')}</Label><Input value={observacionesApertura} onChange={(e) => setObservacionesApertura(e.target.value)} placeholder={c('Ej: apertura turno mañana')} /></div>
+                    <div className='space-y-2'><Label htmlFor='caja-monto-inicial'>{c('Monto inicial')}</Label><Input id='caja-monto-inicial' type='number' min={0} value={montoInicial} onChange={(e) => setMontoInicial(e.target.value)} /></div>
+                    <div className='space-y-2'><Label htmlFor='caja-observaciones-apertura'>{c('Observaciones')}</Label><Input id='caja-observaciones-apertura' value={observacionesApertura} onChange={(e) => setObservacionesApertura(e.target.value)} placeholder={c('Ej: apertura turno mañana')} /></div>
                     <Button className='self-end bg-[#02a8e1] hover:bg-[#0288b1]' disabled={saving}>{saving ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <Unlock className='mr-2 h-4 w-4' />}{c('Abrir caja')}</Button>
                   </form>
                 </CardContent>
@@ -319,9 +319,9 @@ export default function ComercialCajaPage() {
                     <CardHeader><CardTitle>{c('Ingreso / retiro')}</CardTitle></CardHeader>
                     <CardContent>
                       <form className='space-y-3' onSubmit={handleMovimiento}>
-                        <div className='space-y-2'><Label>{c('Tipo')}</Label><select className='h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm' value={movimientoTipo} onChange={(e) => setMovimientoTipo(e.target.value as any)}><option value='ingreso'>{c('Ingreso')}</option><option value='retiro'>{c('Retiro')}</option></select></div>
-                        <div className='space-y-2'><Label>{c('Monto')}</Label><Input type='number' min={0} value={movimientoMonto} onChange={(e) => setMovimientoMonto(e.target.value)} /></div>
-                        <div className='space-y-2'><Label>{c('Concepto')}</Label><Input value={movimientoConcepto} onChange={(e) => setMovimientoConcepto(e.target.value)} placeholder={c('Ej: retiro para cambio, ingreso extra...')} /></div>
+                        <div className='space-y-2'><Label htmlFor='caja-movimiento-tipo'>{c('Tipo')}</Label><select id='caja-movimiento-tipo' className='h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm' value={movimientoTipo} onChange={(e) => setMovimientoTipo(e.target.value as any)}><option value='ingreso'>{c('Ingreso')}</option><option value='retiro'>{c('Retiro')}</option></select></div>
+                        <div className='space-y-2'><Label htmlFor='caja-movimiento-monto'>{c('Monto')}</Label><Input id='caja-movimiento-monto' type='number' min={0} value={movimientoMonto} onChange={(e) => setMovimientoMonto(e.target.value)} /></div>
+                        <div className='space-y-2'><Label htmlFor='caja-movimiento-concepto'>{c('Concepto')}</Label><Input id='caja-movimiento-concepto' value={movimientoConcepto} onChange={(e) => setMovimientoConcepto(e.target.value)} placeholder={c('Ej: retiro para cambio, ingreso extra...')} /></div>
                         <Button className='w-full' variant='outline' disabled={saving}>{c('Registrar movimiento')}</Button>
                       </form>
                     </CardContent>
@@ -332,8 +332,8 @@ export default function ComercialCajaPage() {
                     <CardContent>
                       <form className='space-y-3' onSubmit={handleCerrarCaja}>
                         <div className='rounded-lg bg-slate-50 p-3 text-sm dark:bg-slate-900/60'><div className='flex justify-between'><span>{c('Esperado')}</span><b>{formatCurrencyARS(caja.total_esperado, locale)}</b></div><div className={`mt-1 flex justify-between ${getDifferenceClass(diferenciaPreview)}`}><span>{c('Diferencia previa')}</span><b>{formatCurrencyARS(diferenciaPreview, locale)}</b></div></div>
-                        <div className='space-y-2'><Label>{c('Monto contado')}</Label><Input type='number' min={0} value={montoContado} onChange={(e) => setMontoContado(e.target.value)} /></div>
-                        <div className='space-y-2'><Label>{c('Observaciones cierre')}</Label><Input value={observacionesCierre} onChange={(e) => setObservacionesCierre(e.target.value)} placeholder={c('Ej: sin diferencias')} /></div>
+                        <div className='space-y-2'><Label htmlFor='caja-monto-contado'>{c('Monto contado')}</Label><Input id='caja-monto-contado' type='number' min={0} value={montoContado} onChange={(e) => setMontoContado(e.target.value)} /></div>
+                        <div className='space-y-2'><Label htmlFor='caja-observaciones-cierre'>{c('Observaciones cierre')}</Label><Input id='caja-observaciones-cierre' value={observacionesCierre} onChange={(e) => setObservacionesCierre(e.target.value)} placeholder={c('Ej: sin diferencias')} /></div>
                         <Button className='w-full bg-[#02a8e1] hover:bg-[#0288b1]' disabled={saving}>{saving ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <Lock className='mr-2 h-4 w-4' />}{c('Cerrar caja')}</Button>
                         <Button type='button' variant='outline' className='w-full' onClick={() => handlePrintReport(caja)}><Printer className='mr-2 h-4 w-4' />{c('Imprimir reporte X/Z')}</Button>
                       </form>

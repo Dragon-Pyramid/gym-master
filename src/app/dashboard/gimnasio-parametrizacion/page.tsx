@@ -478,21 +478,33 @@ export default function GimnasioParametrizacionPage() {
                         <Label htmlFor='color_primario'>{c('Color primario', 'Primary color')}</Label>
                         <div className='flex gap-2'>
                           <Input id='color_primario' type='color' value={textValue(form.color_primario) || '#0EA5E9'} onChange={(e) => updateField('color_primario', e.target.value)} className='h-10 w-16 p-1' />
-                          <Input value={textValue(form.color_primario)} onChange={(e) => updateField('color_primario', e.target.value)} />
+                          <Input
+                            aria-label={c('Valor del color primario', 'Primary color value')}
+                            value={textValue(form.color_primario)}
+                            onChange={(e) => updateField('color_primario', e.target.value)}
+                          />
                         </div>
                       </div>
                       <div className='space-y-2'>
                         <Label htmlFor='color_secundario'>{c('Color secundario', 'Secondary color')}</Label>
                         <div className='flex gap-2'>
                           <Input id='color_secundario' type='color' value={textValue(form.color_secundario) || '#111827'} onChange={(e) => updateField('color_secundario', e.target.value)} className='h-10 w-16 p-1' />
-                          <Input value={textValue(form.color_secundario)} onChange={(e) => updateField('color_secundario', e.target.value)} />
+                          <Input
+                            aria-label={c('Valor del color secundario', 'Secondary color value')}
+                            value={textValue(form.color_secundario)}
+                            onChange={(e) => updateField('color_secundario', e.target.value)}
+                          />
                         </div>
                       </div>
                       <div className='space-y-2'>
                         <Label htmlFor='color_acento'>{c('Color de acento', 'Accent color')}</Label>
                         <div className='flex gap-2'>
                           <Input id='color_acento' type='color' value={textValue(form.color_acento) || '#22C55E'} onChange={(e) => updateField('color_acento', e.target.value)} className='h-10 w-16 p-1' />
-                          <Input value={textValue(form.color_acento)} onChange={(e) => updateField('color_acento', e.target.value)} />
+                          <Input
+                            aria-label={c('Valor del color de acento', 'Accent color value')}
+                            value={textValue(form.color_acento)}
+                            onChange={(e) => updateField('color_acento', e.target.value)}
+                          />
                         </div>
                       </div>
                     </CardContent>

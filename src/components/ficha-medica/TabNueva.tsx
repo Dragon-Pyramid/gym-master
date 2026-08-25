@@ -356,8 +356,8 @@ export default function TabNueva({
           </div>
           <div className='grid grid-cols-1 gap-4 md:grid-cols-4'>
             <div>
-              <label className='text-xs font-medium'>{tx('Altura (cm)', 'Height (cm)')}</label>
-              <input
+              <label htmlFor='ficha-medica-altura' className='text-xs font-medium'>{tx('Altura (cm)', 'Height (cm)')}</label>
+              <input id='ficha-medica-altura'
                 type='number'
                 step='0.1'
                 name='altura'
@@ -369,8 +369,8 @@ export default function TabNueva({
               {formik.touched.altura && formik.errors.altura ? <div className='mt-1 text-xs text-red-600'>{formik.errors.altura as string}</div> : null}
             </div>
             <div>
-              <label className='text-xs font-medium'>{tx('Peso (kg)', 'Weight (kg)')}</label>
-              <input
+              <label htmlFor='ficha-medica-peso' className='text-xs font-medium'>{tx('Peso (kg)', 'Weight (kg)')}</label>
+              <input id='ficha-medica-peso'
                 type='number'
                 step='0.1'
                 name='peso'
@@ -382,8 +382,8 @@ export default function TabNueva({
               {formik.touched.peso && formik.errors.peso ? <div className='mt-1 text-xs text-red-600'>{formik.errors.peso as string}</div> : null}
             </div>
             <div>
-              <label className='text-xs font-medium'>IMC</label>
-              <input
+              <label htmlFor='ficha-medica-imc' className='text-xs font-medium'>IMC</label>
+              <input id='ficha-medica-imc'
                 type='number'
                 step='0.01'
                 name='imc'
@@ -394,8 +394,8 @@ export default function TabNueva({
               {imcStatus ? <div className='mt-1 text-xs text-muted-foreground'>{imcStatus}</div> : null}
             </div>
             <div>
-              <label className='text-xs font-medium'>{tx('Grupo sanguíneo', 'Blood type')}</label>
-              <select
+              <label htmlFor='ficha-medica-grupo-sanguineo' className='text-xs font-medium'>{tx('Grupo sanguíneo', 'Blood type')}</label>
+              <select id='ficha-medica-grupo-sanguineo'
                 name='grupo_sanguineo'
                 value={formik.values.grupo_sanguineo}
                 onChange={formik.handleChange}
@@ -412,8 +412,8 @@ export default function TabNueva({
           </div>
           <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
             <div>
-              <label className='text-xs font-medium'>{tx('Presión arterial', 'Blood pressure')}</label>
-              <input
+              <label htmlFor='ficha-medica-presion-arterial' className='text-xs font-medium'>{tx('Presión arterial', 'Blood pressure')}</label>
+              <input id='ficha-medica-presion-arterial'
                 type='text'
                 name='presion_arterial'
                 placeholder='120/80'
@@ -425,8 +425,8 @@ export default function TabNueva({
               {formik.touched.presion_arterial && formik.errors.presion_arterial ? <div className='mt-1 text-xs text-red-600'>{formik.errors.presion_arterial as string}</div> : null}
             </div>
             <div>
-              <label className='text-xs font-medium'>{tx('Frecuencia cardíaca (bpm)', 'Heart rate (bpm)')}</label>
-              <input
+              <label htmlFor='ficha-medica-frecuencia-cardiaca' className='text-xs font-medium'>{tx('Frecuencia cardíaca (bpm)', 'Heart rate (bpm)')}</label>
+              <input id='ficha-medica-frecuencia-cardiaca'
                 type='number'
                 name='frecuencia_cardiaca'
                 value={formik.values.frecuencia_cardiaca ?? ''}
@@ -446,26 +446,26 @@ export default function TabNueva({
           </div>
           <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
             <div>
-              <label className='text-xs font-medium'>{tx('Alergias', 'Allergies')}</label>
-              <input type='text' name='alergias' value={formik.values.alergias ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950' />
+              <label htmlFor='ficha-medica-alergias' className='text-xs font-medium'>{tx('Alergias', 'Allergies')}</label>
+              <input id='ficha-medica-alergias' type='text' name='alergias' value={formik.values.alergias ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950' />
             </div>
             <div>
-              <label className='text-xs font-medium'>{tx('Medicación actual', 'Current medication')}</label>
-              <input type='text' name='medicacion_actual' value={formik.values.medicacion_actual ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950' />
+              <label htmlFor='ficha-medica-medicacion-actual' className='text-xs font-medium'>{tx('Medicación actual', 'Current medication')}</label>
+              <input id='ficha-medica-medicacion-actual' type='text' name='medicacion_actual' value={formik.values.medicacion_actual ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950' />
             </div>
           </div>
           <div className='grid grid-cols-1 gap-4 md:grid-cols-3'>
             <div>
-              <label className='text-xs font-medium'>{tx('Lesiones previas', 'Previous injuries')}</label>
-              <textarea name='lesiones_previas' value={formik.values.lesiones_previas ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 min-h-24 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950' />
+              <label htmlFor='ficha-medica-lesiones-previas' className='text-xs font-medium'>{tx('Lesiones previas', 'Previous injuries')}</label>
+              <textarea id='ficha-medica-lesiones-previas' name='lesiones_previas' value={formik.values.lesiones_previas ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 min-h-24 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950' />
             </div>
             <div>
-              <label className='text-xs font-medium'>{tx('Enfermedades crónicas', 'Chronic diseases')}</label>
-              <textarea name='enfermedades_cronicas' value={formik.values.enfermedades_cronicas ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 min-h-24 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950' />
+              <label htmlFor='ficha-medica-enfermedades-cronicas' className='text-xs font-medium'>{tx('Enfermedades crónicas', 'Chronic diseases')}</label>
+              <textarea id='ficha-medica-enfermedades-cronicas' name='enfermedades_cronicas' value={formik.values.enfermedades_cronicas ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 min-h-24 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950' />
             </div>
             <div>
-              <label className='text-xs font-medium'>{tx('Cirugías previas', 'Previous surgeries')}</label>
-              <textarea name='cirugias_previas' value={formik.values.cirugias_previas ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 min-h-24 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950' />
+              <label htmlFor='ficha-medica-cirugias-previas' className='text-xs font-medium'>{tx('Cirugías previas', 'Previous surgeries')}</label>
+              <textarea id='ficha-medica-cirugias-previas' name='cirugias_previas' value={formik.values.cirugias_previas ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 min-h-24 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950' />
             </div>
           </div>
           <div className='grid grid-cols-1 gap-3 md:grid-cols-3'>
@@ -491,12 +491,12 @@ export default function TabNueva({
           </div>
           <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
             <div>
-              <label className='text-xs font-medium'>{tx('Fecha de último control médico', 'Date of last medical check')}</label>
-              <input type='date' name='fecha_ultimo_control' value={formik.values.fecha_ultimo_control ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950' />
+              <label htmlFor='ficha-medica-fecha-ultimo-control' className='text-xs font-medium'>{tx('Fecha de último control médico', 'Date of last medical check')}</label>
+              <input id='ficha-medica-fecha-ultimo-control' type='date' name='fecha_ultimo_control' value={formik.values.fecha_ultimo_control ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950' />
             </div>
             <div>
-              <label className='text-xs font-medium'>{tx('Próxima fecha de revisión', 'Next review date')}</label>
-              <input type='date' name='proxima_revision' value={formik.values.proxima_revision ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950' />
+              <label htmlFor='ficha-medica-proxima-revision' className='text-xs font-medium'>{tx('Próxima fecha de revisión', 'Next review date')}</label>
+              <input id='ficha-medica-proxima-revision' type='date' name='proxima_revision' value={formik.values.proxima_revision ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950' />
             </div>
           </div>
           <FileDropZone
@@ -518,12 +518,12 @@ export default function TabNueva({
           />
           <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
             <div>
-              <label className='text-xs font-medium'>{tx('Observaciones del entrenador', 'Trainer notes')}</label>
-              <textarea name='observaciones_entrenador' value={formik.values.observaciones_entrenador ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 min-h-24 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950' />
+              <label htmlFor='ficha-medica-observaciones-entrenador' className='text-xs font-medium'>{tx('Observaciones del entrenador', 'Trainer notes')}</label>
+              <textarea id='ficha-medica-observaciones-entrenador' name='observaciones_entrenador' value={formik.values.observaciones_entrenador ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 min-h-24 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950' />
             </div>
             <div>
-              <label className='text-xs font-medium'>{tx('Observaciones médicas', 'Medical notes')}</label>
-              <textarea name='observaciones_medico' value={formik.values.observaciones_medico ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 min-h-24 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950' />
+              <label htmlFor='ficha-medica-observaciones-medico' className='text-xs font-medium'>{tx('Observaciones médicas', 'Medical notes')}</label>
+              <textarea id='ficha-medica-observaciones-medico' name='observaciones_medico' value={formik.values.observaciones_medico ?? ''} onChange={formik.handleChange} onBlur={formik.handleBlur} className='mt-1 min-h-24 w-full rounded-md border bg-background px-3 py-2 dark:border-slate-700 dark:bg-slate-950' />
             </div>
           </div>
         </section>

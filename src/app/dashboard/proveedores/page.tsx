@@ -434,6 +434,7 @@ export default function ProveedoresPage() {
                     <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                       type="search"
+                      aria-label={locale === "en" ? "Search suppliers" : "Buscar proveedores"}
                       placeholder={c("Buscar proveedor...")}
                       className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] w-full"
                       value={searchTerm}
@@ -441,6 +442,7 @@ export default function ProveedoresPage() {
                     />
                   </div>
                   <select
+                    aria-label={locale === "en" ? "Filter suppliers by status" : "Filtrar proveedores por estado"}
                     value={estadoFiltro}
                     onChange={(e) => setEstadoFiltro(e.target.value as EstadoFiltro)}
                     className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"

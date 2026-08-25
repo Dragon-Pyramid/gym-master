@@ -215,6 +215,7 @@ export default function FichaMedicaPage() {
                         <Search className='pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
                         <input
                           type='search'
+                          aria-label={tx('Buscar socio', 'Search member')}
                           value={searchTerm}
                           onChange={(event) => setSearchTerm(event.target.value)}
                           placeholder={tx('Buscar socio...', 'Search member...')}
@@ -222,6 +223,7 @@ export default function FichaMedicaPage() {
                         />
                       </div>
                       <select
+                        aria-label={tx('Seleccionar socio para revisar', 'Select member to review')}
                         value={selectedSocioId}
                         onChange={(event) => setSelectedSocioId(event.target.value)}
                         disabled={sociosLoading || filteredSocios.length === 0}

@@ -275,9 +275,10 @@ const TextEditor = forwardRef<HTMLDivElement, TextEditorProps>(
                   onClick={button.action}
                   className="p-1.5 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-800 rounded transition-colors"
                   title={button.title}
+                  aria-label={button.title}
                   type="button"
                 >
-                  <button.icon size={16} />
+                  <button.icon size={16} aria-hidden="true" />
                 </button>
               ))}
             </div>

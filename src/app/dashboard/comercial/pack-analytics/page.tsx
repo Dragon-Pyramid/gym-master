@@ -189,16 +189,18 @@ export default function ComercialPackAnalyticsPage() {
             <Card>
               <CardContent className="grid gap-4 p-5 md:grid-cols-[1fr_1fr_auto] md:items-end">
                 <div className="space-y-2">
-                  <Label>{c('Desde')}</Label>
+                  <Label htmlFor="pack-analytics-desde">{c('Desde')}</Label>
                   <Input
+                    id="pack-analytics-desde"
                     type="date"
                     value={desde}
                     onChange={(event) => setDesde(event.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>{c('Hasta')}</Label>
+                  <Label htmlFor="pack-analytics-hasta">{c('Hasta')}</Label>
                   <Input
+                    id="pack-analytics-hasta"
                     type="date"
                     value={hasta}
                     onChange={(event) => setHasta(event.target.value)}

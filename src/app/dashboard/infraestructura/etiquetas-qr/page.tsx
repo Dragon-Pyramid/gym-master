@@ -369,6 +369,7 @@ export default function InfraestructuraEtiquetasQrPage() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <select
+                      aria-label={tx('Columnas de impresión A4', 'A4 print columns')}
                       className="h-10 rounded-md border bg-white px-3 text-sm"
                       value={columns}
                       onChange={(event) => setColumns(Number(event.target.value))}
@@ -418,6 +419,7 @@ export default function InfraestructuraEtiquetasQrPage() {
                 <div className="relative w-full max-w-md">
                   <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
+                    aria-label={tx('Buscar códigos QR disponibles', 'Search available QR codes')}
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
                     placeholder={tx('Buscar por título, código, tipo...', 'Search by title, code, type...')}

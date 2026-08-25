@@ -797,8 +797,9 @@ export default function AsistenciaTerminalDisplay() {
               onClick={requestFullscreen}
               className="border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white"
               title={terminalText("Pantalla completa", "Fullscreen")}
+              aria-label={terminalText("Pantalla completa", "Fullscreen")}
             >
-              <Maximize2 className="h-5 w-5" />
+              <Maximize2 className="h-5 w-5" aria-hidden="true" />
             </Button>
           </div>
         </header>

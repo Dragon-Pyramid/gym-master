@@ -265,15 +265,31 @@ export default function ComercialCodigosEtiquetasPage() {
               <div className='grid grid-cols-1 gap-3 md:grid-cols-[1fr_180px_160px]'>
                 <div className='relative'>
                   <Search className='absolute left-3 top-3 h-4 w-4 text-muted-foreground' />
-                  <Input className='pl-9' value={search} onChange={(event) => setSearch(event.target.value)} placeholder={c('Buscar por nombre, SKU, código de barras o QR')} />
+                  <Input
+                    className='pl-9'
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    aria-label={c('Buscar por nombre, SKU, código de barras o QR')}
+                    placeholder={c('Buscar por nombre, SKU, código de barras o QR')}
+                  />
                 </div>
-                <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as any)} className='h-10 rounded-md border border-input bg-background px-3 text-sm'>
+                <select
+                  aria-label={`${c('Productos')} / ${c('Servicios')} / ${c('Packs')}`}
+                  value={typeFilter}
+                  onChange={(event) => setTypeFilter(event.target.value as any)}
+                  className='h-10 rounded-md border border-input bg-background px-3 text-sm'
+                >
                   <option value='todos'>{c('Todos')}</option>
                   <option value='producto'>{c('Productos')}</option>
                   <option value='servicio'>{c('Servicios')}</option>
                   <option value='pack'>{c('Packs')}</option>
                 </select>
-                <select value={columns} onChange={(event) => setColumns(Number(event.target.value))} className='h-10 rounded-md border border-input bg-background px-3 text-sm'>
+                <select
+                  aria-label={commercialLabelsPrintTx(locale, 'Columnas de impresión', 'Print columns')}
+                  value={columns}
+                  onChange={(event) => setColumns(Number(event.target.value))}
+                  className='h-10 rounded-md border border-input bg-background px-3 text-sm'
+                >
                   <option value={3}>{c('A4 · 3 columnas')}</option>
                   <option value={2}>{c('A4 · 2 columnas')}</option>
                 </select>
@@ -295,7 +311,13 @@ export default function ComercialCodigosEtiquetasPage() {
                   const code = item.codigo_principal || item.qr_codigo || item.sku || item.codigo_barras || '';
                   return (
                     <article key={key} className={`grid grid-cols-1 gap-4 p-4 md:grid-cols-[36px_1fr_260px_220px] md:items-center ${selected ? 'bg-sky-50/60 dark:bg-sky-950/20' : ''}`}>
-                      <input type='checkbox' checked={selected} onChange={() => toggleSelected(item)} className='h-4 w-4' />
+                      <input
+                        type='checkbox'
+                        checked={selected}
+                        onChange={() => toggleSelected(item)}
+                        aria-label={`${c('Etiqueta')}: ${item.nombre}`}
+                        className='h-4 w-4'
+                      />
                       <div>
                         <div className='flex flex-wrap items-center gap-2'>
                           <p className='font-semibold'>{item.nombre}</p>

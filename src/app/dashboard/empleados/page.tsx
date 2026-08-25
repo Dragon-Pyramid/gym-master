@@ -338,18 +338,35 @@ export default function EmpleadosPage() {
                   </div>
                 </div>
                 <div className="flex w-full flex-wrap items-center gap-2 md:w-auto">
-                  <select value={estadoFilter} onChange={(e) => setEstadoFilter(e.target.value as EstadoFilter)} className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm">
+                  <select
+                    aria-label={empleadosExportTx(locale, "Filtrar por estado", "Filter by status")}
+                    value={estadoFilter}
+                    onChange={(e) => setEstadoFilter(e.target.value as EstadoFilter)}
+                    className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
                     <option value="todos">Todos</option>
                     <option value="activos">Activos</option>
                     <option value="inactivos">Inactivos</option>
                   </select>
-                  <select value={tipoFilter} onChange={(e) => setTipoFilter(e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm">
+                  <select
+                    aria-label={empleadosExportTx(locale, "Filtrar por tipo de empleado", "Filter by employee type")}
+                    value={tipoFilter}
+                    onChange={(e) => setTipoFilter(e.target.value)}
+                    className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
                     <option value="todos">Todos los tipos</option>
                     {tipos.map((tipo) => <option key={tipo.id} value={tipo.id}>{tipo.nombre}</option>)}
                   </select>
                   <div className="relative flex-grow md:flex-grow-0">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} type="search" placeholder="Buscar empleado, DNI, tipo, área..." className="w-full pl-8 sm:w-[300px]" />
+                    <Input
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      type="search"
+                      aria-label={empleadosExportTx(locale, "Buscar empleados", "Search employees")}
+                      placeholder="Buscar empleado, DNI, tipo, área..."
+                      className="w-full pl-8 sm:w-[300px]"
+                    />
                   </div>
                   <Button onClick={handleDownloadPdf} variant="outline" className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"><FileText className="h-4 w-4" />Descargar PDF</Button>
                   <Button onClick={handleExportExcel} variant="outline" className="flex items-center gap-2 bg-white border-[#02a8e1] text-[#02a8e1] hover:bg-[#e6f7fd]"><FileSpreadsheet className="h-4 w-4" />Exportar</Button>

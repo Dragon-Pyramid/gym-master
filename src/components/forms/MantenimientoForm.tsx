@@ -93,6 +93,7 @@ export default function MantenimientoForm({
       <QaFileNameBadge file="src/components/forms/MantenimientoForm.tsx" />
       <div>
         <select
+          aria-label="Tipo de mantenimiento"
           className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
           value={id_tipo_mantenimiento || tiposMantenimiento.find((item) => item.codigo === tipo_mantenimiento)?.id || ""}
           onChange={(e) => handleTipoChange(e.target.value)}
@@ -109,6 +110,7 @@ export default function MantenimientoForm({
       </div>
       <div>
         <Input
+          aria-label="Descripción"
           value={descripcion}
           onChange={(e) => setDescripcion(e.target.value)}
           placeholder="Descripción"
@@ -117,6 +119,7 @@ export default function MantenimientoForm({
       </div>
       <div>
         <Input
+          aria-label="Fecha de mantenimiento"
           type="date"
           value={fecha_mantenimiento}
           onChange={(e) => setFechaMantenimiento(e.target.value)}
@@ -125,6 +128,7 @@ export default function MantenimientoForm({
       </div>
       <div>
         <Input
+          aria-label="Técnico responsable"
           value={tecnico_responsable}
           onChange={(e) => setTecnicoResponsable(e.target.value)}
           placeholder="Técnico responsable"
@@ -133,6 +137,7 @@ export default function MantenimientoForm({
       </div>
       <div>
         <Input
+          aria-label="Costo"
           type="number"
           value={costo}
           onChange={(e) => setCosto(Number(e.target.value))}
@@ -143,6 +148,7 @@ export default function MantenimientoForm({
       </div>
       <div className="md:col-span-2">
         <Input
+          aria-label="Observaciones"
           value={observaciones}
           onChange={(e) => setObservaciones(e.target.value)}
           placeholder="Observaciones"

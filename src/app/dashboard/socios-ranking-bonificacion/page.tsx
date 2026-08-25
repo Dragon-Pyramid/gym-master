@@ -794,8 +794,11 @@ export default function SociosRankingBonificacionPage() {
                 <CardContent className="space-y-4 p-4">
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label>{rbTx(locale, "Año", "Year")}</Label>
+                      <Label htmlFor="ranking-bonificacion-anio">
+                        {rbTx(locale, "Año", "Year")}
+                      </Label>
                       <Input
+                        id="ranking-bonificacion-anio"
                         type="number"
                         min={2020}
                         max={2100}
@@ -806,8 +809,11 @@ export default function SociosRankingBonificacionPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>{rbTx(locale, "Mes", "Month")}</Label>
+                      <Label htmlFor="ranking-bonificacion-mes">
+                        {rbTx(locale, "Mes", "Month")}
+                      </Label>
                       <Input
+                        id="ranking-bonificacion-mes"
                         type="number"
                         min={1}
                         max={12}
@@ -818,10 +824,11 @@ export default function SociosRankingBonificacionPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>
+                    <Label htmlFor="ranking-bonificacion-buscar-socio">
                       {rbTx(locale, "Buscar socio", "Search member")}
                     </Label>
                     <Input
+                      id="ranking-bonificacion-buscar-socio"
                       placeholder={rbTx(
                         locale,
                         "Nombre, DNI o email...",

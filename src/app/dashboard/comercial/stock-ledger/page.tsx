@@ -563,10 +563,10 @@ export default function ComercialStockLedgerPage() {
                 <CardContent>
                   <form className='space-y-4' onSubmit={handleSubmit}>
                     <div className='space-y-2'>
-                      <Label>{c('Producto')}</Label>
+                      <Label htmlFor='stock-ledger-producto'>{c('Producto')}</Label>
                       <select
                         className='h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm'
-                        value={form.producto_id}
+                        id='stock-ledger-producto' value={form.producto_id}
                         onChange={(event) => setForm((prev) => ({ ...prev, producto_id: event.target.value }))}
                         required
                       >
@@ -580,10 +580,10 @@ export default function ComercialStockLedgerPage() {
                     </div>
 
                     <div className='space-y-2'>
-                      <Label>{c('Tipo de movimiento')}</Label>
+                      <Label htmlFor='stock-ledger-tipo'>{c('Tipo de movimiento')}</Label>
                       <select
                         className='h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm'
-                        value={form.tipo}
+                        id='stock-ledger-tipo' value={form.tipo}
                         onChange={(event) =>
                           setForm((prev) => ({ ...prev, tipo: event.target.value as ComercialStockMovimientoTipo }))
                         }
@@ -599,10 +599,10 @@ export default function ComercialStockLedgerPage() {
 
                     {needsOrigin && (
                       <div className='space-y-2'>
-                        <Label>{c('Ubicación origen')}</Label>
+                        <Label htmlFor='stock-ledger-origen'>{c('Ubicación origen')}</Label>
                         <select
                           className='h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm'
-                          value={form.ubicacion_origen_id || ''}
+                          id='stock-ledger-origen' value={form.ubicacion_origen_id || ''}
                           onChange={(event) => setForm((prev) => ({ ...prev, ubicacion_origen_id: event.target.value }))}
                           required={needsOrigin}
                         >
@@ -618,10 +618,10 @@ export default function ComercialStockLedgerPage() {
 
                     {needsDestination && (
                       <div className='space-y-2'>
-                        <Label>{c('Ubicación destino')}</Label>
+                        <Label htmlFor='stock-ledger-destino'>{c('Ubicación destino')}</Label>
                         <select
                           className='h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm'
-                          value={form.ubicacion_destino_id || ''}
+                          id='stock-ledger-destino' value={form.ubicacion_destino_id || ''}
                           onChange={(event) => setForm((prev) => ({ ...prev, ubicacion_destino_id: event.target.value }))}
                           required={needsDestination}
                         >
@@ -638,11 +638,11 @@ export default function ComercialStockLedgerPage() {
                     <div className='grid grid-cols-1 gap-3 md:grid-cols-2'>
                       {!isConteo && (
                         <div className='space-y-2'>
-                          <Label>{c('Cantidad')}</Label>
+                          <Label htmlFor='stock-ledger-cantidad'>{c('Cantidad')}</Label>
                           <Input
                             type='number'
                             min={1}
-                            value={form.cantidad ?? 1}
+                            id='stock-ledger-cantidad' value={form.cantidad ?? 1}
                             onChange={(event) => setForm((prev) => ({ ...prev, cantidad: Number(event.target.value) }))}
                             required
                           />
@@ -650,11 +650,11 @@ export default function ComercialStockLedgerPage() {
                       )}
                       {isConteo && (
                         <div className='space-y-2'>
-                          <Label>{c('Stock real')}</Label>
+                          <Label htmlFor='stock-ledger-stock-real'>{c('Stock real')}</Label>
                           <Input
                             type='number'
                             min={0}
-                            value={form.stock_real ?? ''}
+                            id='stock-ledger-stock-real' value={form.stock_real ?? ''}
                             onChange={(event) => setForm((prev) => ({ ...prev, stock_real: Number(event.target.value) }))}
                             required
                           />
@@ -663,9 +663,9 @@ export default function ComercialStockLedgerPage() {
                     </div>
 
                     <div className='space-y-2'>
-                      <Label>{c('Motivo')}</Label>
+                      <Label htmlFor='stock-ledger-motivo'>{c('Motivo')}</Label>
                       <Input
-                        value={form.motivo}
+                        id='stock-ledger-motivo' value={form.motivo}
                         placeholder={c('Ej: Compra a proveedor, ajuste por conteo, merma por vencimiento...')}
                         onChange={(event) => setForm((prev) => ({ ...prev, motivo: event.target.value }))}
                         required
@@ -687,7 +687,7 @@ export default function ComercialStockLedgerPage() {
                     <div className='flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center'>
                       <select
                         className='h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm md:w-44'
-                        value={stockAlertFilter}
+                        aria-label={c('Filtrar por estado de stock')} value={stockAlertFilter}
                         onChange={(event) => setStockAlertFilter(event.target.value as StockAlertFilter)}
                       >
                         {stockAlertFilters.map((filter) => (
@@ -697,6 +697,7 @@ export default function ComercialStockLedgerPage() {
                       <div className='relative w-full md:w-80'>
                         <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
                         <Input
+                          aria-label={c('Buscar producto, SKU o código de barras')}
                           className='pl-9'
                           value={searchTerm}
                           placeholder={c('Buscar producto, SKU o barcode...')}

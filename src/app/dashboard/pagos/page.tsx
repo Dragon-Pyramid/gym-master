@@ -495,6 +495,7 @@ export default function PagosPage() {
                     <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                       type="search"
+                      aria-label={tx("Buscar pagos", "Search payments")}
                       placeholder={tx(
                         "Buscar por socio, cuota, método...",
                         "Search by member, fee, method...",
@@ -505,6 +506,7 @@ export default function PagosPage() {
                     />
                   </div>
                   <select
+                    aria-label={tx("Filtrar por período", "Filter by period")}
                     value={periodFilter}
                     onChange={(e) => setPeriodFilter(e.target.value)}
                     className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -525,6 +527,7 @@ export default function PagosPage() {
                   </select>
                   <Input
                     type="date"
+                    aria-label={tx("Fecha desde", "Date from")}
                     value={fechaDesde}
                     onChange={(e) => setFechaDesde(e.target.value)}
                     className="w-[150px]"
@@ -532,6 +535,7 @@ export default function PagosPage() {
                   />
                   <Input
                     type="date"
+                    aria-label={tx("Fecha hasta", "Date to")}
                     value={fechaHasta}
                     onChange={(e) => setFechaHasta(e.target.value)}
                     className="w-[150px]"

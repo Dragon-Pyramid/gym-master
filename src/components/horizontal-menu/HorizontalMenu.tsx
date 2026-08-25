@@ -29,9 +29,8 @@ function MenuDropdown({ item }: { item: any }) {
     }
   };
 
-  const handleItemClick = (subItem: any, e: React.MouseEvent) => {
+  const handleItemClick = (subItem: any) => {
     if (subItem.hasChildren) {
-      e.preventDefault();
       setHoveredItem(hoveredItem === subItem.title ? null : subItem.title);
     }
   };
@@ -50,32 +49,35 @@ function MenuDropdown({ item }: { item: any }) {
               className="relative"
               onMouseEnter={() => handleItemHover(subItem)}
             >
-              <div
-                className={`flex items-center justify-between select-none rounded-md p-3 leading-none no-underline outline-none transition-colors cursor-pointer ${
-                  hoveredItem === subItem.title
-                    ? "bg-muted text-foreground"
-                    : "hover:text-foreground"
-                }`}
-                onClick={(e) => handleItemClick(subItem, e)}
-              >
-                {subItem.hasChildren ? (
-                  <span className="text-sm font-medium leading-none text-foreground flex-1">
+              {subItem.hasChildren ? (
+                <button
+                  type="button"
+                  className={`flex w-full items-center justify-between select-none rounded-md p-3 text-left leading-none no-underline transition-colors ${
+                    hoveredItem === subItem.title
+                      ? "bg-muted text-foreground"
+                      : "hover:text-foreground"
+                  } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`}
+                  onClick={() => handleItemClick(subItem)}
+                  aria-expanded={hoveredItem === subItem.title}
+                >
+                  <span className="flex-1 text-sm font-medium leading-none text-foreground">
                     {subItem.title}
                   </span>
-                ) : (
-                  <NavigationMenuLink asChild>
-                    <Link
-                      href={subItem.href}
-                      className="text-sm font-medium leading-none text-foreground flex-1"
-                    >
-                      {subItem.title}
-                    </Link>
-                  </NavigationMenuLink>
-                )}
-                {subItem.hasChildren && (
-                  <ChevronRight className="h-4 w-4 text-foreground" />
-                )}
-              </div>
+                  <ChevronRight
+                    className="h-4 w-4 text-foreground"
+                    aria-hidden="true"
+                  />
+                </button>
+              ) : (
+                <NavigationMenuLink asChild>
+                  <Link
+                    href={subItem.href}
+                    className="flex w-full items-center rounded-md p-3 text-sm font-medium leading-none text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    {subItem.title}
+                  </Link>
+                </NavigationMenuLink>
+              )}
             </div>
           ))}
         </div>

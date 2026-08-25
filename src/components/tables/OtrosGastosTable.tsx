@@ -119,8 +119,14 @@ export default function OtrosGastosTable({
             <TableCell>
               {g.comprobante_url ? (
                 <Button size="sm" variant="outline" asChild>
-                  <a href={g.comprobante_url} target="_blank" rel="noreferrer" title={c("Abrir comprobante")}>
-                    <ExternalLink className="h-4 w-4" />
+                  <a
+                    href={g.comprobante_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={c("Abrir comprobante")}
+                    aria-label={c("Abrir comprobante")}
+                  >
+                    <ExternalLink className="h-4 w-4" aria-hidden="true" />
                   </a>
                 </Button>
               ) : (

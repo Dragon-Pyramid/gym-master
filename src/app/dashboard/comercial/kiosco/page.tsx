@@ -770,15 +770,15 @@ export default function ComercialKioscoPosPage() {
                   <CardHeader>
                     <div className='grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_240px] lg:items-end'>
                       <div className='space-y-2'>
-                        <Label>{c('Buscar producto, servicio o pack')}</Label>
+                        <Label htmlFor='kiosco-busqueda-producto'>{c('Buscar producto, servicio o pack')}</Label>
                         <div className='relative'>
                           <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                          <Input className='pl-9' value={searchTerm} placeholder={c('Nombre, SKU, código de barras, servicio o pack...')} onChange={(event) => setSearchTerm(event.target.value)} />
+                          <Input id='kiosco-busqueda-producto' className='pl-9' value={searchTerm} placeholder={c('Nombre, SKU, código de barras, servicio o pack...')} onChange={(event) => setSearchTerm(event.target.value)} />
                         </div>
                       </div>
                       <div className='space-y-2'>
-                        <Label>{c('Ubicación de venta')}</Label>
-                        <select className='h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm' value={ubicacionId} onChange={(event) => setUbicacionId(event.target.value)}>
+                        <Label htmlFor='kiosco-ubicacion-venta'>{c('Ubicación de venta')}</Label>
+                        <select id='kiosco-ubicacion-venta' className='h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm' value={ubicacionId} onChange={(event) => setUbicacionId(event.target.value)}>
                           {dashboard.ubicaciones.map((ubicacion) => <option key={ubicacion.id} value={ubicacion.id}>{c(ubicacion.nombre)}</option>)}
                         </select>
                       </div>
@@ -788,7 +788,7 @@ export default function ComercialKioscoPosPage() {
                     <form className='mb-4 flex flex-col gap-2 sm:flex-row' onSubmit={handleBarcodeSubmit}>
                       <div className='relative flex-1'>
                         <Barcode className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                        <Input className='pl-9' value={barcodeTerm} placeholder={c('Escanear o pegar código/SKU/servicio/pack y presionar Enter')} onChange={(event) => setBarcodeTerm(event.target.value)} />
+                        <Input aria-label={c('Escanear o ingresar código, SKU, servicio o pack')} className='pl-9' value={barcodeTerm} placeholder={c('Escanear o pegar código/SKU/servicio/pack y presionar Enter')} onChange={(event) => setBarcodeTerm(event.target.value)} />
                       </div>
                       <Button type='submit' variant='outline' className='sm:w-auto'>{c('Agregar')}</Button>
                     </form>
@@ -893,23 +893,23 @@ export default function ComercialKioscoPosPage() {
                 <CardContent className='space-y-4 p-4 sm:p-6'>
                   <div className='grid grid-cols-1 gap-3'>
                     <div className='space-y-2'>
-                      <Label>{c('Tipo cliente')}</Label>
-                      <select className='h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm' value={clienteTipo} onChange={(event) => setClienteTipo(event.target.value as any)}>
+                      <Label htmlFor='kiosco-cliente-tipo'>{c('Tipo cliente')}</Label>
+                      <select id='kiosco-cliente-tipo' className='h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm' value={clienteTipo} onChange={(event) => setClienteTipo(event.target.value as any)}>
                         <option value='consumidor_final'>{c('Consumidor final')}</option>
                         <option value='visitante'>{c('Visitante')}</option>
                       </select>
                     </div>
-                    <div className='space-y-2'><Label>{c('Nombre opcional')}</Label><Input value={clienteNombre} onChange={(event) => setClienteNombre(event.target.value)} placeholder={c('Consumidor Final')} /></div>
-                    <div className='space-y-2'><Label>{c('Documento opcional')}</Label><Input value={clienteDocumento} onChange={(event) => setClienteDocumento(event.target.value)} placeholder='DNI / CUIT' /></div>
+                    <div className='space-y-2'><Label htmlFor='kiosco-cliente-nombre'>{c('Nombre opcional')}</Label><Input id='kiosco-cliente-nombre' value={clienteNombre} onChange={(event) => setClienteNombre(event.target.value)} placeholder={c('Consumidor Final')} /></div>
+                    <div className='space-y-2'><Label htmlFor='kiosco-cliente-documento'>{c('Documento opcional')}</Label><Input id='kiosco-cliente-documento' value={clienteDocumento} onChange={(event) => setClienteDocumento(event.target.value)} placeholder='DNI / CUIT' /></div>
                     <div className='space-y-2'>
-                      <Label>{c('Método de pago')}</Label>
-                      <select className='h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm' value={metodoPago} onChange={(event) => setMetodoPago(event.target.value)}>
+                      <Label htmlFor='kiosco-metodo-pago'>{c('Método de pago')}</Label>
+                      <select id='kiosco-metodo-pago' className='h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm' value={metodoPago} onChange={(event) => setMetodoPago(event.target.value)}>
                         {metodoPagoOptions.map((option) => <option key={option.value} value={option.value}>{c(option.label)}</option>)}
                       </select>
                     </div>
                     <div className='space-y-2'>
-                      <Label>{c('Cupón / promo opcional')}</Label>
-                      <Input value={cuponCodigo} onChange={(event) => setCuponCodigo(event.target.value.toUpperCase())} placeholder='PROMO10' />
+                      <Label htmlFor='kiosco-cupon'>{c('Cupón / promo opcional')}</Label>
+                      <Input id='kiosco-cupon' value={cuponCodigo} onChange={(event) => setCuponCodigo(event.target.value.toUpperCase())} placeholder='PROMO10' />
                     </div>
                   </div>
 
@@ -918,12 +918,12 @@ export default function ComercialKioscoPosPage() {
                       <div key={item.key} className='rounded-2xl border bg-slate-50/70 p-3 dark:bg-slate-950/40'>
                         <div className='flex items-start justify-between gap-2'>
                           <div><p className='font-medium'>{item.nombre}</p><p className='text-xs text-muted-foreground'>{c(getCartTypeLabel(item.item_tipo))}{item.item_tipo === 'producto' ? ` · ${c('Disponible')}: ${item.stockDisponible}` : ' POS'}</p></div>
-                          <Button size='icon' variant='ghost' onClick={() => removeFromCart(item.key)}><Trash2 className='h-4 w-4' /></Button>
+                          <Button size='icon' variant='ghost' aria-label={`${c('Quitar')} ${item.nombre}`} onClick={() => removeFromCart(item.key)}><Trash2 className='h-4 w-4' aria-hidden='true' /></Button>
                         </div>
                         <div className='mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3'>
-                          <Input type='number' min={1} max={item.stockDisponible} value={item.cantidad} onChange={(event) => updateCartQuantity(item.key, Number(event.target.value))} />
-                          <Input type='number' min={0} value={item.precio_unitario} onChange={(event) => setCart((current) => current.map((cartItem) => cartItem.key === item.key ? { ...cartItem, precio_unitario: Number(event.target.value) } : cartItem))} />
-                          <Input type='number' min={0} value={item.descuento} onChange={(event) => setCart((current) => current.map((cartItem) => cartItem.key === item.key ? { ...cartItem, descuento: Number(event.target.value) } : cartItem))} />
+                          <Input aria-label={`${c('Cantidad')} · ${item.nombre}`} type='number' min={1} max={item.stockDisponible} value={item.cantidad} onChange={(event) => updateCartQuantity(item.key, Number(event.target.value))} />
+                          <Input aria-label={`${c('Precio unitario')} · ${item.nombre}`} type='number' min={0} value={item.precio_unitario} onChange={(event) => setCart((current) => current.map((cartItem) => cartItem.key === item.key ? { ...cartItem, precio_unitario: Number(event.target.value) } : cartItem))} />
+                          <Input aria-label={`${c('Descuento')} · ${item.nombre}`} type='number' min={0} value={item.descuento} onChange={(event) => setCart((current) => current.map((cartItem) => cartItem.key === item.key ? { ...cartItem, descuento: Number(event.target.value) } : cartItem))} />
                         </div>
                         <p className='mt-2 text-right text-sm font-semibold'>{formatCurrencyARS(item.cantidad * item.precio_unitario - item.descuento, locale)}</p>
                       </div>

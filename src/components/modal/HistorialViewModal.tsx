@@ -3,6 +3,13 @@ import { QaFileNameBadge } from "@/components/qa/QaFileNameBadge";
 import React from 'react';
 import { formatFrontendDateTime } from '@/utils/dateFormat';
 import { useI18n } from '@/i18n/I18nProvider';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 type HistItem = {
   fecha_ultimo_control?: string;
@@ -82,27 +89,37 @@ export default function HistorialViewModal({
   };
 
   return (
-    <div className='fixed inset-0 z-50 flex items-center justify-center p-4'>
-      <div className='absolute inset-0 backdrop-blur-sm' onClick={onClose} />
-      <div className='relative w-full max-w-3xl rounded-2xl border bg-background p-4 shadow-lg dark:border-slate-800 dark:bg-slate-950'>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) onClose();
+      }}
+    >
+      <DialogContent className='w-full sm:max-w-3xl'>
         <QaFileNameBadge file="src/components/modal/HistorialViewModal.tsx" />
+
         <div className='relative rounded-xl border bg-background p-6 dark:border-slate-800 dark:bg-slate-950'>
           <div className='flex items-start justify-between gap-4'>
             <div>
-              <h3 className='text-lg font-semibold'>{tx('Detalle de registro', 'Record details')}</h3>
-              <div className='mt-1 text-sm'>
+              <DialogTitle className='text-lg font-semibold'>
+                {tx('Detalle de registro', 'Record details')}
+              </DialogTitle>
+
+              <DialogDescription className='mt-1 text-sm text-foreground'>
                 {formatDate(
                   item.fecha_ultimo_control ?? item.created_at ?? item.fecha
                 )}
-              </div>
+              </DialogDescription>
             </div>
-            <button
-              type='button'
-              onClick={onClose}
-              className='rounded-md border px-3 py-1 text-sm dark:border-slate-700 dark:bg-slate-900'
-            >
-              {tx('Cerrar', 'Close')}
-            </button>
+
+            <DialogClose asChild>
+              <button
+                type='button'
+                className='rounded-md border px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:border-slate-700 dark:bg-slate-900'
+              >
+                {tx('Cerrar', 'Close')}
+              </button>
+            </DialogClose>
           </div>
           <div className='grid grid-cols-1 gap-3 mt-4 sm:grid-cols-3'>
             <div>
@@ -187,7 +204,7 @@ export default function HistorialViewModal({
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

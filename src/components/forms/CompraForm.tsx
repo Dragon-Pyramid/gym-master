@@ -237,8 +237,9 @@ export default function CompraForm({
             return (
               <div key={index} className="grid grid-cols-1 gap-3 rounded-lg border bg-muted/20 p-3 lg:grid-cols-[1.4fr_0.5fr_0.7fr_0.7fr_auto]">
                 <div className="space-y-1.5">
-                  <Label>{c("Producto")}</Label>
+                  <Label htmlFor={`compra-item-${index}-producto`}>{c("Producto")}</Label>
                   <select
+                    id={`compra-item-${index}-producto`}
                     className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     value={item.producto_id}
                     onChange={(event) => updateItem(index, { producto_id: event.target.value })}
@@ -258,8 +259,9 @@ export default function CompraForm({
                   )}
                 </div>
                 <div className="space-y-1.5">
-                  <Label>{c("Cantidad")}</Label>
+                  <Label htmlFor={`compra-item-${index}-cantidad`}>{c("Cantidad")}</Label>
                   <Input
+                    id={`compra-item-${index}-cantidad`}
                     type="number"
                     min={1}
                     step={1}
@@ -269,8 +271,9 @@ export default function CompraForm({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>{c("Costo unitario")}</Label>
+                  <Label htmlFor={`compra-item-${index}-costo-unitario`}>{c("Costo unitario")}</Label>
                   <Input
+                    id={`compra-item-${index}-costo-unitario`}
                     type="number"
                     min={1}
                     step={1}

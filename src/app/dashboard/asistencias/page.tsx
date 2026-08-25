@@ -544,6 +544,7 @@ export default function AsistenciasPage() {
                     <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                       type="search"
+                      aria-label={attendanceText("Buscar asistencias", "Search attendance")}
                       placeholder={attendanceText("Buscar...", "Search...")}
                       className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px] w-full"
                       value={searchTerm}
@@ -551,6 +552,7 @@ export default function AsistenciasPage() {
                     />
                   </div>
                   <select
+                    aria-label={attendanceText("Filtrar por período", "Filter by period")}
                     value={periodFilter}
                     onChange={(e) => setPeriodFilter(e.target.value)}
                     className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -563,6 +565,7 @@ export default function AsistenciasPage() {
                   </select>
                   <Input
                     type="date"
+                    aria-label={attendanceText("Fecha desde", "Date from")}
                     value={fechaDesde}
                     onChange={(e) => setFechaDesde(e.target.value)}
                     className="w-[150px]"
@@ -570,6 +573,7 @@ export default function AsistenciasPage() {
                   />
                   <Input
                     type="date"
+                    aria-label={attendanceText("Fecha hasta", "Date to")}
                     value={fechaHasta}
                     onChange={(e) => setFechaHasta(e.target.value)}
                     className="w-[150px]"

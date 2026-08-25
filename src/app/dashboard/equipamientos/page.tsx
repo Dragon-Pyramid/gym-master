@@ -1285,6 +1285,7 @@ export default function EquipamientosPage() {
                       <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
                       <Input
                         type="search"
+                        aria-label={tx("Buscar equipamientos", "Search equipment")}
                         placeholder={tx("Buscar nombre, marca, modelo, tipo, ubicación...", "Search name, brand, model, type, location...")}
                         className="pl-8 sm:w-[320px] md:w-[260px] lg:w-[360px] w-full"
                         value={searchTerm}
@@ -1364,6 +1365,7 @@ export default function EquipamientosPage() {
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         <select
+                          aria-label={tx("Cantidad de equipamientos por página", "Equipment items per page")}
                           className="h-9 rounded-md border border-input bg-background px-3 text-sm"
                           value={pageSize}
                           onChange={(e) => setPageSize(Number(e.target.value))}
