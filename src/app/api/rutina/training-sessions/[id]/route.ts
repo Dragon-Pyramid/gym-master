@@ -27,7 +27,7 @@ export async function PATCH(
     const user = await authorizePersonalOrDashboardRequest(
       req,
       ['/dashboard/rutinas/asistente', '/dashboard/gestor-rutinas'],
-      ['admin', 'usuario'],
+      ['admin'],
       ['socio'],
     );
 

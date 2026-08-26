@@ -22,7 +22,7 @@ export async function GET(req: Request) {
     const user = await authorizePersonalOrDashboardRequest(
       req,
       ['/dashboard/rutinas/asistente', '/dashboard/gestor-rutinas'],
-      ['admin', 'usuario'],
+      ['admin'],
       ['socio'],
     );
 
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
     const user = await authorizePersonalOrDashboardRequest(
       req,
       ['/dashboard/rutinas/asistente', '/dashboard/gestor-rutinas'],
-      ['admin', 'usuario'],
+      ['admin'],
       ['socio'],
     );
 
