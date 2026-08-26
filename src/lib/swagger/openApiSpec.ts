@@ -542,6 +542,20 @@ const endpointDefinitions: EndpointDefinition[] = [
     source: "src/app/api/admin/socios-mensajes/[id]/route.ts",
   },
   {
+    path: "/api/admin/socios-mensajes/resumen",
+    methods: ["GET"],
+    tag: "Mensajería",
+    summary: "Resumen administrativo de mensajes de socios",
+    description:
+      "Devuelve totales de mensajes de socios para administración, incluyendo total, nuevos y sin responder. Requiere rol admin o usuario con permiso sobre Mensajes Socios.",
+    auth: true,
+    admin: true,
+    notImplemented: false,
+    statuses: [200, 401, 403, 500],
+    queryParams: [],
+    source: "src/app/api/admin/socios-mensajes/resumen/route.ts",
+  },
+  {
     path: "/api/notificaciones",
     methods: ["GET", "POST"],
     tag: "Notificaciones",
@@ -598,6 +612,34 @@ const endpointDefinitions: EndpointDefinition[] = [
     source: "src/app/api/notificaciones/plantillas/route.ts",
   },
 
+  {
+    path: "/api/notificaciones/header",
+    methods: ["GET"],
+    tag: "Notificaciones",
+    summary: "Resumen de notificaciones del header",
+    description:
+      "Devuelve las notificaciones visibles en el header para el usuario autenticado.",
+    auth: true,
+    admin: false,
+    notImplemented: false,
+    statuses: [200, 401, 500],
+    queryParams: [],
+    source: "src/app/api/notificaciones/header/route.ts",
+  },
+  {
+    path: "/api/notificaciones/terminal",
+    methods: ["GET"],
+    tag: "Notificaciones",
+    summary: "Notificaciones activas para Terminal",
+    description:
+      "Devuelve notificaciones activas para la Terminal de asistencias. Admite sesión autenticada o sesión Terminal válida y exige permiso sobre la Terminal de asistencias.",
+    auth: true,
+    admin: false,
+    notImplemented: false,
+    statuses: [200, 401, 403, 500],
+    queryParams: [],
+    source: "src/app/api/notificaciones/terminal/route.ts",
+  },
   {
     path: "/api/auth/change-password",
     methods: ["POST"],
@@ -795,7 +837,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     summary: "Operación sobre actividades por identificador",
     description:
       "Consulta datos de actividades. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: getActividadById.",
-    auth: false,
+    auth: true,
     admin: false,
     notImplemented: false,
     statuses: [200, 500],
@@ -809,7 +851,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     summary: "Operaciones de actividades",
     description:
       "Consulta datos de actividades. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: createActividad, deleteActividad, fetchAllActividades, updateActividad.",
-    auth: false,
+    auth: true,
     admin: false,
     notImplemented: false,
     statuses: [200, 201, 400, 500],
@@ -1168,27 +1210,13 @@ const endpointDefinitions: EndpointDefinition[] = [
     source: "src/app/api/asistencias/route.ts",
   },
   {
-    path: "/api/auth/{nextauth}",
-    methods: ["GET", "POST"],
-    tag: "Autenticación",
-    summary: "NextAuth credentials",
-    description:
-      "Endpoint interno de NextAuth para autenticación por credenciales y gestión de sesión.",
-    auth: true,
-    admin: false,
-    notImplemented: false,
-    statuses: [],
-    queryParams: [],
-    source: "src/app/api/auth/[...nextauth]/route.ts",
-  },
-  {
     path: "/api/avisos/{id}",
     methods: ["GET", "PUT", "DELETE"],
     tag: "Catálogos y operación",
     summary: "Operación sobre avisos por identificador",
     description:
       "Consulta datos de avisos. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: getAvisoById, updateAviso, deleteAviso.",
-    auth: false,
+    auth: true,
     admin: false,
     notImplemented: false,
     statuses: [404, 500],
@@ -1202,7 +1230,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     summary: "Operaciones de avisos",
     description:
       "Consulta datos de avisos. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: getAllAvisos, createAviso.",
-    auth: false,
+    auth: true,
     admin: false,
     notImplemented: false,
     statuses: [201, 500],
@@ -1216,7 +1244,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     summary: "Operación sobre cuotas por identificador",
     description:
       "Consulta datos de cuotas. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: getCuotaById.",
-    auth: false,
+    auth: true,
     admin: false,
     notImplemented: false,
     statuses: [200],
@@ -1230,7 +1258,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     summary: "Operaciones de cuotas",
     description:
       "Consulta datos de cuotas. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: createCuota, deleteCuota, getAllCuotas, updateCuota.",
-    auth: false,
+    auth: true,
     admin: false,
     notImplemented: false,
     statuses: [200, 201, 400, 500],
@@ -1382,7 +1410,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     summary: "Alertas de mantenimiento de equipamiento",
     description:
       "Devuelve el tablero operativo de alertas de mantenimiento calculado a partir de la próxima revisión, el estado del equipamiento y un umbral configurable en días. Permite detectar equipos vencidos, próximos a revisión, en mantenimiento, fuera de servicio o sin fecha de revisión. Se usa en el módulo de Equipamientos para mostrar alertas anticipadas y priorizar tareas.",
-    auth: false,
+    auth: true,
     admin: false,
     notImplemented: false,
     statuses: [200, 500],
@@ -1396,7 +1424,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     summary: "BI de mantenimiento de equipamiento",
     description:
       "Devuelve métricas, reportes y datos gráficos para mantenimiento de equipamiento: estado del parque, costos mensuales, distribución por tipo/ubicación, ranking por costo/frecuencia, historial reciente de mantenimiento y recomendaciones para evaluar venta o reemplazo de equipos con mantenimiento repetido o costoso.",
-    auth: false,
+    auth: true,
     admin: false,
     notImplemented: false,
     statuses: [200, 500],
@@ -1410,7 +1438,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     summary: "Operación sobre equipamientos por identificador",
     description:
       "Actualiza datos de equipamientos. Normalmente requiere un identificador y un objeto con los campos a modificar. Implementación relacionada: deleteEquipamiento, updateEquipamiento.",
-    auth: false,
+    auth: true,
     admin: false,
     notImplemented: false,
     statuses: [200, 201, 400, 500],
@@ -1424,7 +1452,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     summary: "Operaciones de equipamientos",
     description:
       "Consulta datos de equipamientos. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: createEquipamiento, getAllEquipamientos.",
-    auth: false,
+    auth: true,
     admin: false,
     notImplemented: false,
     statuses: [200, 201, 400, 500],
@@ -1520,7 +1548,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     summary: "Operación sobre mantenimientos por identificador",
     description:
       "Consulta datos de mantenimientos. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: getMantenimientoByIdEquipamiento.",
-    auth: false,
+    auth: true,
     admin: false,
     notImplemented: false,
     statuses: [200, 400, 500],
@@ -1534,7 +1562,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     summary: "Operación sobre mantenimientos por identificador",
     description:
       "Actualiza datos de mantenimientos. Normalmente requiere un identificador y un objeto con los campos a modificar. Implementación relacionada: mantenimientoCompletado.",
-    auth: false,
+    auth: true,
     admin: false,
     notImplemented: false,
     statuses: [200, 400, 500],
@@ -1548,7 +1576,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     summary: "Operaciones de mantenimientos",
     description:
       "Consulta datos de mantenimientos. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: createMantenimiento, getAllMantenimientos, updateMantenimiento.",
-    auth: false,
+    auth: true,
     admin: false,
     notImplemented: false,
     statuses: [200, 201, 400, 500],
@@ -1661,12 +1689,40 @@ const endpointDefinitions: EndpointDefinition[] = [
     summary: "Operación sobre pagos por identificador",
     description:
       "Consulta datos de pagos. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: getPagoById.",
-    auth: false,
+    auth: true,
     admin: false,
     notImplemented: false,
     statuses: [200],
     queryParams: [],
     source: "src/app/api/pagos/[id]/route.ts",
+  },
+  {
+    path: "/api/pagos/{id}/verificar",
+    methods: ["GET"],
+    tag: "Cuotas y pagos",
+    summary: "Verificar comprobante de pago",
+    description:
+      "Endpoint público para verificar un comprobante mediante el identificador del pago y un código HMAC V2 firmado por el servidor. No requiere sesión Gym Master y el código de verificación no puede derivarse del ID del pago.",
+    auth: false,
+    admin: false,
+    notImplemented: false,
+    statuses: [200, 400, 404, 500],
+    queryParams: ["codigo"],
+    source: "src/app/api/pagos/[id]/verificar/route.ts",
+  },
+  {
+    path: "/api/pagos/{id}/verification-credentials",
+    methods: ["GET"],
+    tag: "Cuotas y pagos",
+    summary: "Credenciales de verificación de comprobante",
+    description:
+      "Genera las credenciales seguras para verificar un comprobante de pago. Admin y usuario requieren permiso sobre Pagos; el socio solo puede obtener credenciales de un pago que le pertenezca.",
+    auth: true,
+    admin: false,
+    notImplemented: false,
+    statuses: [200, 400, 401, 403, 404, 500],
+    queryParams: [],
+    source: "src/app/api/pagos/[id]/verification-credentials/route.ts",
   },
   {
     path: "/api/pagos",
@@ -1703,7 +1759,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     summary: "Catálogos parametrizables",
     description:
       "Consulta, crea y actualiza registros de catálogos parametrizables. GET lista tipos de empleado, medios de pago, gastos, ingresos, categorías de producto, tipos/ubicaciones de equipamiento, ubicaciones globales del gimnasio y tipos de mantenimiento. POST crea nuevos registros con código, nombre, descripción, orden y campos específicos. PATCH edita, activa o desactiva registros sin hard delete.",
-    auth: false,
+    auth: true,
     admin: false,
     notImplemented: false,
     statuses: [200, 201, 400, 409, 500],
@@ -1717,7 +1773,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     summary: "Operación sobre productos por identificador",
     description:
       "Consulta datos de productos. Si el endpoint usa parámetros dinámicos, el identificador forma parte de la URL. Implementación relacionada: getProductoById.",
-    auth: false,
+    auth: true,
     admin: false,
     notImplemented: false,
     statuses: [200],
@@ -1863,7 +1919,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     summary: "Operaciones de productos",
     description:
       "Gestiona productos del kiosco/comercial, incluyendo costo, stock mínimo e historial de precio/costo cuando se modifica el valor comercial. Implementación relacionada: createProducto, deleteProducto, getAllProductos, updateProducto.",
-    auth: false,
+    auth: true,
     admin: false,
     notImplemented: false,
     statuses: [200, 201, 400, 500],
@@ -1877,7 +1933,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     summary: "Operación sobre proveedores por identificador",
     description:
       "Consulta el perfil comercial ampliado de un proveedor por identificador, incluyendo datos fiscales, contacto, ubicación, estado y datos bancarios opcionales. Implementación relacionada: getProveedorById.",
-    auth: false,
+    auth: true,
     admin: false,
     notImplemented: false,
     statuses: [200],
@@ -1891,7 +1947,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     summary: "Operaciones de proveedores comerciales",
     description:
       "Gestiona proveedores con perfil comercial ampliado: nombre comercial, razón social, identificación fiscal, condición fiscal, contacto, teléfono, WhatsApp, email, ubicación, rubro, estado, observaciones y datos bancarios opcionales. DELETE realiza desactivación lógica para preservar histórico comercial. Implementación relacionada: getAllProveedores, createProveedor, updateProveedor, deleteProveedor.",
-    auth: false,
+    auth: true,
     admin: false,
     notImplemented: false,
     statuses: [200, 201, 400, 500],
@@ -1972,7 +2028,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     tag: "Rutinas",
     summary: "Historial de sesiones de entrenamiento",
     description:
-      "GET devuelve sesiones de entrenamiento por rutina para el socio autenticado; POST inicia una nueva sesión formal con snapshot de ejercicios.",
+      "GET devuelve sesiones de entrenamiento por rutina para el socio autenticado; POST inicia una nueva sesión formal con snapshot de ejercicios. Acceso permitido para socio sobre sus propias rutinas y para admin; el rol usuario no está habilitado.",
     auth: true,
     admin: false,
     notImplemented: false,
@@ -1986,7 +2042,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     tag: "Rutinas",
     summary: "Actualizar sesión de entrenamiento",
     description:
-      "Actualiza ejercicios completados o finaliza/cancela una sesión de entrenamiento activa. Acciones soportadas: update_exercise, finish y cancel.",
+      "Actualiza ejercicios completados o finaliza/cancela una sesión de entrenamiento activa. Acceso permitido para socio sobre sus propias sesiones y para admin; el rol usuario no está habilitado. Acciones soportadas: update_exercise, finish y cancel.",
     auth: true,
     admin: false,
     notImplemented: false,
@@ -2001,7 +2057,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     summary: "Operación sobre servicios por identificador",
     description:
       "Consulta el detalle de un servicio adicional por identificador, incluyendo categoría, modalidad, duración, reserva, cupo, disponibilidad online y estado. Implementación relacionada: getServicioById.",
-    auth: false,
+    auth: true,
     admin: false,
     notImplemented: false,
     statuses: [200],
@@ -2015,7 +2071,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     summary: "Operaciones de servicios",
     description:
       "Gestiona servicios adicionales del gimnasio: personal trainer, evaluaciones, nutrición, clases especiales, pases, alquileres y servicios premium. Incluye categoría, modalidad, duración, reserva, cupo, disponibilidad online y observaciones. Implementación relacionada: createServicio, deleteServicio, getAllServicios, updateServicio.",
-    auth: false,
+    auth: true,
     admin: false,
     notImplemented: false,
     statuses: [200, 201, 400, 500],
@@ -2127,7 +2183,7 @@ const endpointDefinitions: EndpointDefinition[] = [
     summary: "Validacion interna de alertas de deuda",
     description:
       "Endpoint interno para validar alertas o desactivacion de socios con deuda en ambientes controlados.",
-    auth: false,
+    auth: true,
     admin: false,
     notImplemented: false,
     statuses: [200, 500],
@@ -2461,7 +2517,7 @@ const tags = [
   },
   {
     name: "Autenticación",
-    description: "Inicio de sesión, NextAuth y control de sesión.",
+    description: "Inicio de sesión, recuperación de contraseña y control de sesión.",
   },
   {
     name: "Usuarios",
@@ -2695,10 +2751,7 @@ function getRequestBody(endpoint: EndpointDefinition, method: string) {
     };
   }
 
-  if (
-    endpoint.path === "/api/auth/{nextauth}" ||
-    endpoint.path === "/api/custom-login"
-  ) {
+  if (endpoint.path === "/api/custom-login") {
     return {
       required: true,
       content: {
