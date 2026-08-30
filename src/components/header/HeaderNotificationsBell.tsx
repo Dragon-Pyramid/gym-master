@@ -143,6 +143,16 @@ function translateNotificationSummary(summary: string, isEnglish: boolean) {
   return summaryMap[normalized] ?? summary;
 }
 
+const HEADER_REFRESH_INTERVAL_MS = 60_000;
+
+type HeaderNotificationsCacheEntry = {
+  token: string;
+  payload: HeaderNotificationsResponse;
+  fetchedAt: number;
+};
+
+let headerNotificationsCache: HeaderNotificationsCacheEntry | null = null;
+
 export function HeaderNotificationsBell() {
   const router = useRouter();
   const { locale } = useI18n();
@@ -156,14 +166,55 @@ export function HeaderNotificationsBell() {
     items: [],
     generated_at: new Date().toISOString(),
   });
+  const requestTokenRef = React.useRef<string | null>(null);
+  const currentTokenRef = React.useRef(token);
+  const lastRequestRef = React.useRef<{ token: string | null; at: number }>({
+    token: null,
+    at: 0,
+  });
 
-  const loadNotifications = React.useCallback(async () => {
+  currentTokenRef.current = token;
+
+  const loadNotifications = React.useCallback(async (force = false) => {
     if (!isAuthenticated || !token) {
+      headerNotificationsCache = null;
+      requestTokenRef.current = null;
+      lastRequestRef.current = { token: null, at: 0 };
       setPayload({ total: 0, items: [], generated_at: new Date().toISOString() });
       return;
     }
 
+    const now = Date.now();
+    const cached = headerNotificationsCache;
+
+    if (
+      !force &&
+      cached?.token === token &&
+      now - cached.fetchedAt < HEADER_REFRESH_INTERVAL_MS
+    ) {
+      lastRequestRef.current = { token, at: cached.fetchedAt };
+      setPayload(cached.payload);
+      return;
+    }
+
+    if (cached && cached.token !== token) {
+      headerNotificationsCache = null;
+    }
+
+    if (requestTokenRef.current === token) return;
+
+    if (
+      !force &&
+      lastRequestRef.current.token === token &&
+      now - lastRequestRef.current.at < HEADER_REFRESH_INTERVAL_MS
+    ) {
+      return;
+    }
+
+    requestTokenRef.current = token;
+    lastRequestRef.current = { token, at: now };
     setLoading(true);
+
     try {
       const response = await fetch('/api/notificaciones/header', {
         headers: {
@@ -175,23 +226,60 @@ export function HeaderNotificationsBell() {
       const json = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(json?.error || tx('No se pudieron cargar notificaciones', 'Notifications could not be loaded'));
 
-      setPayload(json?.data ?? { total: 0, items: [], generated_at: new Date().toISOString() });
+      if (currentTokenRef.current !== token) return;
+
+      const nextPayload =
+        json?.data ?? { total: 0, items: [], generated_at: new Date().toISOString() };
+      const fetchedAt = Date.now();
+
+      headerNotificationsCache = {
+        token,
+        payload: nextPayload,
+        fetchedAt,
+      };
+      lastRequestRef.current = { token, at: fetchedAt };
+      setPayload(nextPayload);
     } catch {
-      setPayload({ total: 0, items: [], generated_at: new Date().toISOString() });
+      if (currentTokenRef.current === token) {
+        setPayload({ total: 0, items: [], generated_at: new Date().toISOString() });
+      }
     } finally {
-      setLoading(false);
+      if (requestTokenRef.current === token) {
+        requestTokenRef.current = null;
+      }
+
+      if (currentTokenRef.current === token) {
+        setLoading(false);
+      }
     }
   }, [isAuthenticated, token, isEnglish]);
 
   React.useEffect(() => {
-    loadNotifications();
-    const interval = window.setInterval(loadNotifications, 60_000);
-    return () => window.clearInterval(interval);
+    void loadNotifications();
+
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        void loadNotifications();
+      }
+    }, HEADER_REFRESH_INTERVAL_MS);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void loadNotifications();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [loadNotifications]);
 
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen);
-    if (nextOpen) loadNotifications();
+    if (nextOpen) void loadNotifications();
   };
 
   const handleNavigate = (route: string) => {
@@ -270,7 +358,7 @@ export function HeaderNotificationsBell() {
           <button
             type='button'
             className='flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground'
-            onClick={loadNotifications}
+            onClick={() => void loadNotifications(true)}
           >
             <AlertCircle className='h-3.5 w-3.5' />
             {tx('Actualizar', 'Refresh')}

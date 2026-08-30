@@ -122,6 +122,46 @@ export async function createMensajeSocio(
   return data as SocioMensaje;
 }
 
+export type MensajesAdminResumen = {
+  total: number;
+  nuevos: number;
+  sin_responder: number;
+};
+
+export async function getMensajesAdminResumen(
+  user: JwtUser
+): Promise<MensajesAdminResumen> {
+  assertAdminOrUsuario(user);
+  const supabase = getSupabaseServerClient();
+
+  const [totalResult, nuevosResult, sinResponderResult] = await Promise.all([
+    supabase
+      .from('socio_mensaje')
+      .select('id', { count: 'exact', head: true })
+      .eq('activo', true),
+    supabase
+      .from('socio_mensaje')
+      .select('id', { count: 'exact', head: true })
+      .eq('activo', true)
+      .eq('estado', 'pendiente'),
+    supabase
+      .from('socio_mensaje')
+      .select('id', { count: 'exact', head: true })
+      .eq('activo', true)
+      .in('estado', ['pendiente', 'leido']),
+  ]);
+
+  if (totalResult.error) throw new Error(totalResult.error.message);
+  if (nuevosResult.error) throw new Error(nuevosResult.error.message);
+  if (sinResponderResult.error) throw new Error(sinResponderResult.error.message);
+
+  return {
+    total: totalResult.count ?? 0,
+    nuevos: nuevosResult.count ?? 0,
+    sin_responder: sinResponderResult.count ?? 0,
+  };
+}
+
 export async function getMensajesAdmin(
   user: JwtUser,
   params?: { estado?: string | null; q?: string | null }

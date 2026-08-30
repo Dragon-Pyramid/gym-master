@@ -201,6 +201,7 @@ export default function ComercialKioscoPosPage() {
   const [scannerEvents, setScannerEvents] = useState<ComercialScannerEvent[]>([]);
   const scannerPollFailuresRef = useRef(0);
   const scannerPollWarningShownRef = useRef(false);
+  const scannerPollInFlightRef = useRef(false);
 
   useEffect(() => {
     initializeAuth();
@@ -588,6 +589,10 @@ export default function ComercialKioscoPosPage() {
 
   async function pollScannerEvents() {
     if (!scannerSession?.id || scannerSession.estado !== 'activa') return;
+    if (scannerPollInFlightRef.current) return;
+
+    scannerPollInFlightRef.current = true;
+
     try {
       const state = await getComercialMobileScannerState(scannerSession.id);
       scannerPollFailuresRef.current = 0;
@@ -604,6 +609,8 @@ export default function ComercialKioscoPosPage() {
         scannerPollWarningShownRef.current = true;
         toast.warning(c('Scanner móvil con conexión intermitente; seguimos reintentando en segundo plano.'));
       }
+    } finally {
+      scannerPollInFlightRef.current = false;
     }
   }
 
