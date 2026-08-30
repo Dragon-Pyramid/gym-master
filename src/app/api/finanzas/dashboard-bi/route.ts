@@ -164,7 +164,13 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const [pagosResult, ventasResult, comprasResult, gastosResult] = await Promise.all([
+    const [
+      pagosResult,
+      ventasResult,
+      comprasResult,
+      gastosResult,
+      detallesServiciosResult,
+    ] = await Promise.all([
       supabase
         .from('pago')
         .select('id, fecha_pago, monto_pagado, total, estado, activo, metodo_pago')
@@ -185,6 +191,12 @@ export async function GET(req: NextRequest) {
         .select('id, descripcion, monto, fecha, estado, activo, medio_pago, tipo_gasto:id_tipo_gasto(nombre)')
         .gte('fecha', desde)
         .lte('fecha', hasta),
+      supabase
+        .from('venta_detalle')
+        .select('id, item_tipo, subtotal, total_linea, venta!inner(fecha, estado, activo)')
+        .eq('item_tipo', 'servicio')
+        .gte('venta.fecha', desde)
+        .lte('venta.fecha', hasta),
     ]);
 
     if (pagosResult.error) throw new Error(pagosResult.error.message);
@@ -198,12 +210,6 @@ export async function GET(req: NextRequest) {
     const gastos = (gastosResult.data ?? []) as BasicRow[];
 
     let detallesServicios: BasicRow[] = [];
-    const detallesServiciosResult = await supabase
-      .from('venta_detalle')
-      .select('id, item_tipo, subtotal, total_linea, venta!inner(fecha, estado, activo)')
-      .eq('item_tipo', 'servicio')
-      .gte('venta.fecha', desde)
-      .lte('venta.fecha', hasta);
 
     if (!detallesServiciosResult.error) {
       detallesServicios = (detallesServiciosResult.data ?? []) as BasicRow[];
