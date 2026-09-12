@@ -29,7 +29,7 @@ export async function resolveFichaMedicaSocioId(user: JwtUser, requestedId: stri
     .maybeSingle();
 
   if (error && !isPgrstNoRows(error)) {
-    console.log(error);
+    console.error(error);
     throw new Error('Error al resolver el socio de la ficha médica');
   }
 
@@ -121,7 +121,7 @@ export const createFichaMedicaSocio = async (
   const { data, error } = await supabase.rpc('insert_ficha_medica', payload);
 
   if (error) {
-    console.log(error);
+    console.error(error);
     throw new Error('Error al crear la ficha médica');
   }
 
@@ -137,7 +137,7 @@ export const FindFichaMedicaSocio = async (user: JwtUser, id_socio: string) => {
 
   if (error) {
     if (isPgrstNoRows(error)) return null;
-    console.log(error);
+    console.error(error);
     throw new Error('Error al buscar la ficha médica');
   }
 
@@ -155,7 +155,7 @@ export const FindAllFichaMedicaSocio = async (
   });
 
   if (error) {
-    console.log(error);
+    console.error(error);
     throw new Error('Error al buscar la ficha médica');
   }
 
@@ -177,7 +177,7 @@ export const FindOneFichaMedicaSocio = async (
     .single();
 
   if (error) {
-    console.log(error);
+    console.error(error);
     throw new Error('Error al buscar la ficha médica');
   }
 
@@ -195,7 +195,7 @@ export const FindAllUrlFotoFichaMedica = async (
     .eq('id_socio', id_socio);
 
   if (error) {
-    console.log(error);
+    console.error(error);
     throw new Error('Error al buscar las fotos de la ficha médica');
   }
 

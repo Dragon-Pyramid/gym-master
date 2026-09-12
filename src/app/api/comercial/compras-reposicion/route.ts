@@ -1,3 +1,4 @@
+import { comercialErrorResponse, readComercialJson } from '@/lib/comercial/comercialErrorBoundary';
 import { NextRequest, NextResponse } from 'next/server';
 import {
   createComercialOrdenCompra,
@@ -6,10 +7,7 @@ import {
   upsertComercialProveedorProducto,
 } from '@/services/server/comercialComprasReposicionServerService';
 
-import {
-  authorizeDashboardRequest,
-  authorizationErrorResponse,
-} from '@/lib/auth/serverAuthorization';
+import { authorizationErrorResponse, authorizeDashboardRequest } from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,19 +16,17 @@ export async function GET(req: NextRequest) {
     await authorizeDashboardRequest(req, '/dashboard/comercial/compras-reposicion', ['admin', 'usuario']);
     const dashboard = await getComercialComprasReposicionDashboard();
     return NextResponse.json({ data: dashboard }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    const message = error?.message || 'Error al obtener compras y reposición comercial';
-    const status = message.includes('Token') || message.includes('JWT') ? 401 : 500;
-    return NextResponse.json({ error: message }, { status });
+    return comercialErrorResponse(error, "Error al obtener compras y reposición comercial");
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const user = await authorizeDashboardRequest(req, '/dashboard/comercial/compras-reposicion', ['admin', 'usuario']);
-    const body = await req.json();
+    const body = await readComercialJson(req);
 
     if (body?.action === 'proveedor_producto') {
       const data = await upsertComercialProveedorProducto(body, user ?? null);
@@ -48,11 +44,9 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ error: 'Acción de compras/reposición inválida' }, { status: 400 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    const message = error?.message || 'Error al operar compras y reposición comercial';
-    const status = message.includes('Token') || message.includes('JWT') ? 401 : 400;
-    return NextResponse.json({ error: message }, { status });
+    return comercialErrorResponse(error, "Error al operar compras y reposición comercial");
   }
 }

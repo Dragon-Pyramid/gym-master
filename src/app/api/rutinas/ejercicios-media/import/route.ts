@@ -5,39 +5,27 @@ import {
   authorizeDashboardRequest,
   authorizationErrorResponse,
 } from '@/lib/auth/serverAuthorization';
+import {
+  ejercicioMediaHttpErrorResponse,
+} from '@/lib/rutinas/ejercicioMediaHttpBoundary';
+import {
+  readJsonBody,
+} from '@/lib/security/httpRuntimeSecurity';
 
 export const dynamic = 'force-dynamic';
-
-function getStatusFromError(error: any) {
-  const message = error?.message ?? '';
-
-  if (message.includes('Token no proporcionado') || message.includes('Token inválido')) {
-    return 401;
-  }
-
-  if (message.includes('No autorizado')) {
-    return 403;
-  }
-
-  if (
-    message.includes('URL') ||
-    message.includes('imagen') ||
-    message.includes('Cloudinary') ||
-    message.includes('máximo permitido') ||
-    message.includes('protocolo') ||
-    message.includes('privadas') ||
-    message.includes('id_ejercicio')
-  ) {
-    return 400;
-  }
-
-  return 500;
-}
 
 export async function POST(request: Request) {
   try {
     const user = await authorizeDashboardRequest(request, '/dashboard/rutinas/media', ['admin', 'usuario']);
-    const payload = await request.json();
+    const payload =
+      await readJsonBody<
+        Parameters<
+          typeof importExerciseMediaFromRemoteUrl
+        >[1]
+      >(
+        request,
+        64 * 1024,
+      );
 
     if (!payload?.id_ejercicio || !Number.isInteger(Number(payload.id_ejercicio))) {
       return NextResponse.json(
@@ -58,18 +46,33 @@ export async function POST(request: Request) {
       },
       { status: 200 }
     );
-  } catch (error: any) {
-    const authResponse = authorizationErrorResponse(error);
-    if (authResponse) return authResponse;
-    const status = getStatusFromError(error);
+  } catch (error: unknown) {
+    const authResponse =
+      authorizationErrorResponse(error);
 
-    if (status === 500) {
-      console.error('Error al importar media remota de ejercicio:', error);
+    if (authResponse) return authResponse;
+
+    const response =
+      ejercicioMediaHttpErrorResponse(
+        error,
+        'Error al importar media remota de ejercicio.',
+        {
+          allowImportValidation: true,
+        },
+      );
+
+    if (response.status >= 500) {
+      console.error(
+        'Error al importar media remota de ejercicio:',
+        {
+          name:
+            error instanceof Error
+              ? error.name
+              : 'UnknownError',
+        },
+      );
     }
 
-    return NextResponse.json(
-      { error: error?.message ?? 'Error al importar media remota de ejercicio.' },
-      { status }
-    );
+    return response;
   }
 }

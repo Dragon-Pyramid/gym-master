@@ -3,6 +3,11 @@ import {
   authorizePersonalOrDashboardRequest,
 } from "@/lib/auth/serverAuthorization";
 import { dataGeneracionRutina } from "@/services/rutinaService";
+import {
+  HttpRuntimeError,
+  readJsonBody,
+  runtimeErrorResponse,
+} from "@/lib/security/httpRuntimeSecurity";
 import { NextResponse } from "next/server";
 
 
@@ -18,7 +23,13 @@ export async function POST(req: Request) {
         );
 
 
-        const body = await req.json();
+        const body =
+            await readJsonBody<
+                Parameters<typeof dataGeneracionRutina>[1]
+            >(
+                req,
+                64 * 1024,
+            );
 
         const generacionRutina = await dataGeneracionRutina(user, body);
 
@@ -27,10 +38,26 @@ export async function POST(req: Request) {
         }
 
         return NextResponse.json({ message: "Rutina generada correctamente", data: generacionRutina }, { status: 200 });
-    } catch (error: any) {
+    } catch (error: unknown) {
         const authResponse = authorizationErrorResponse(error);
         if (authResponse) return authResponse;
-        console.error("Error en la generación de rutina:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+
+        if (error instanceof HttpRuntimeError) {
+            return runtimeErrorResponse(
+                error,
+                "Error en la generación de rutina",
+            );
+        }
+
+        console.error("Error en la generación de rutina:", {
+            name: error instanceof Error
+                ? error.name
+                : "UnknownError",
+        });
+
+        return NextResponse.json(
+            { error: "Error en la generación de rutina" },
+            { status: 500 },
+        );
     }
 }

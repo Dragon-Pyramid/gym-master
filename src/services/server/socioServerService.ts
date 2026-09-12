@@ -78,7 +78,7 @@ export const updateSocioServer = async (
     .update(sanitizedPayload)
     .eq('id_socio', id_socio)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) throw new Error(error.message);
   if (!data) throw new Error('No se encontró el socio con ese ID');
@@ -117,7 +117,7 @@ export const setSocioActivoServer = async (
     })
     .eq('id_socio', id_socio)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) throw new Error(error.message);
   if (!data) throw new Error('No se encontró el socio con ese ID');
@@ -185,7 +185,7 @@ export const getSocioByIdServer = async (
     `
     )
     .eq('id_socio', id_socio)
-    .single();
+    .maybeSingle();
 
   if (error) throw new Error(error.message);
   if (!data) throw new Error('No se encontró el socio con ese ID');

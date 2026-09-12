@@ -38,6 +38,14 @@ import { AppSidebar } from "@/components/sidebar/AppSidebar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -281,6 +289,9 @@ export default function SociosRankingBonificacionPage() {
   const [soloBonificados, setSoloBonificados] = useState(false);
   const [page, setPage] = useState(1);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [bonificacionDialogItem, setBonificacionDialogItem] =
+    useState<SocioRankingBonificacionItem | null>(null);
+  const [bonificacionDialogValue, setBonificacionDialogValue] = useState("10");
 
   useEffect(() => {
     initializeAuth();
@@ -356,6 +367,7 @@ export default function SociosRankingBonificacionPage() {
 
   const handleToggleBonificacion = async (
     item: SocioRankingBonificacionItem,
+    descuentoSolicitado?: number,
   ) => {
     if (!data?.schema_ready) {
       toast.error(
@@ -381,13 +393,17 @@ export default function SociosRankingBonificacionPage() {
     }
 
     const nextValue = !item.bonificado;
+
+    if (nextValue && descuentoSolicitado === undefined) {
+      setBonificacionDialogValue(
+        String(item.descuento_porcentaje || 10),
+      );
+      setBonificacionDialogItem(item);
+      return;
+    }
+
     const descuento = nextValue
-      ? Number(
-          window.prompt(
-            rbTx(locale, "Porcentaje de bonificación", "Bonus percentage"),
-            String(item.descuento_porcentaje || 10),
-          ) || 0,
-        )
+      ? Number(descuentoSolicitado)
       : 0;
     if (
       nextValue &&
@@ -440,6 +456,34 @@ export default function SociosRankingBonificacionPage() {
     } finally {
       setSavingId(null);
     }
+  };
+
+  const handleConfirmBonificacion = async () => {
+    if (!bonificacionDialogItem) return;
+
+    const descuento = Number(bonificacionDialogValue);
+
+    if (
+      Number.isNaN(descuento) ||
+      descuento < 0 ||
+      descuento > 100
+    ) {
+      toast.error(
+        rbTx(
+          locale,
+          "El descuento debe estar entre 0 y 100.",
+          "The discount must be between 0 and 100.",
+        ),
+      );
+      return;
+    }
+
+    await handleToggleBonificacion(
+      bonificacionDialogItem,
+      descuento,
+    );
+
+    setBonificacionDialogItem(null);
   };
 
   const handleExportExcel = async () => {
@@ -1206,6 +1250,90 @@ export default function SociosRankingBonificacionPage() {
               </CardContent>
             </Card>
           </main>
+
+          <Dialog
+            open={Boolean(bonificacionDialogItem)}
+            onOpenChange={(open) => {
+              if (!open && savingId === null) {
+                setBonificacionDialogItem(null);
+              }
+            }}
+          >
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>
+                  {rbTx(
+                    locale,
+                    "Bonificar socio",
+                    "Bonus member",
+                  )}
+                </DialogTitle>
+                <DialogDescription>
+                  {rbTx(
+                    locale,
+                    "Ingresá el porcentaje de bonificación mensual. Debe estar entre 0 y 100.",
+                    "Enter the monthly bonus percentage. It must be between 0 and 100.",
+                  )}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-2">
+                <Label htmlFor="bonificacion-descuento-porcentaje">
+                  {rbTx(
+                    locale,
+                    "Porcentaje de bonificación",
+                    "Bonus percentage",
+                  )}
+                </Label>
+                <Input
+                  id="bonificacion-descuento-porcentaje"
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={bonificacionDialogValue}
+                  onChange={(event) =>
+                    setBonificacionDialogValue(event.target.value)
+                  }
+                  autoFocus
+                />
+              </div>
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={savingId !== null}
+                  onClick={() =>
+                    setBonificacionDialogItem(null)
+                  }
+                >
+                  {rbTx(locale, "Cancelar", "Cancel")}
+                </Button>
+                <Button
+                  type="button"
+                  disabled={savingId !== null}
+                  onClick={() =>
+                    void handleConfirmBonificacion()
+                  }
+                >
+                  {savingId !== null
+                    ? rbTx(
+                        locale,
+                        "Guardando...",
+                        "Saving...",
+                      )
+                    : rbTx(
+                        locale,
+                        "Aplicar bonificación",
+                        "Apply bonus",
+                      )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           <AppFooter />
         </SidebarInset>
       </div>

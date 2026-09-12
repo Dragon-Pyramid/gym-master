@@ -24,8 +24,11 @@ return NextResponse.json({message:"Mantenimiento creado",data: mantenimiento}, {
 }catch(error:any){
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    console.log(error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Error al crear el mantenimiento:', error);
+    return NextResponse.json(
+      { error: 'Error al crear el mantenimiento' },
+      { status: 500 }
+    );
 }
 }
 
@@ -37,8 +40,11 @@ export async function GET(req: Request) {
     } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-        console.log(error.message);
-        return NextResponse.json({ error: error.message }, { status: 500 });        
+        console.error('Error al obtener los mantenimientos:', error);
+        return NextResponse.json(
+            { error: 'Error al obtener los mantenimientos' },
+            { status: 500 }
+        );
     }
 }
 
@@ -57,7 +63,7 @@ export async function PUT(req: NextRequest) {
     } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-       console.log(error.message);
+       console.error(error.message);
         return NextResponse.json({ error: "error al modificar el mantenimiento"}, { status: 500 })
     }
 }

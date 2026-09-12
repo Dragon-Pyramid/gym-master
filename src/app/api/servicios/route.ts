@@ -25,7 +25,11 @@ export async function GET(req: Request) {
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    return NextResponse.json({ error: "Error al obtener los servicios" }, { status: 500 });
+    console.error("Error al obtener los servicios:", error);
+    return NextResponse.json(
+      { error: "Error al obtener los servicios" },
+      { status: 500 },
+    );
   }
 }
 
@@ -41,7 +45,18 @@ export async function POST(req: Request) {
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    return NextResponse.json({ error: error.message || "Error al crear el servicio" }, { status: 500 });
+    if (error?.message === "El código del servicio ya está asociado a otro servicio.") {
+      return NextResponse.json(
+        { error: "El código del servicio ya está asociado a otro servicio." },
+        { status: 409 },
+      );
+    }
+
+    console.error("Error al crear el servicio:", error);
+    return NextResponse.json(
+      { error: "Error al crear el servicio" },
+      { status: 500 },
+    );
   }
 }
 
@@ -57,7 +72,25 @@ export async function PUT(req: Request) {
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    return NextResponse.json({ error: error.message || "Error al actualizar servicio" }, { status: 500 });
+    if (error?.message === "El código del servicio ya está asociado a otro servicio.") {
+      return NextResponse.json(
+        { error: "El código del servicio ya está asociado a otro servicio." },
+        { status: 409 },
+      );
+    }
+
+    if (error?.message === "No se encontró el servicio con ese id") {
+      return NextResponse.json(
+        { error: "Servicio no encontrado" },
+        { status: 404 },
+      );
+    }
+
+    console.error("Error al actualizar el servicio:", error);
+    return NextResponse.json(
+      { error: "Error al actualizar el servicio" },
+      { status: 500 },
+    );
   }
 }
 
@@ -69,10 +102,24 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: "ID inválido para eliminar" }, { status: 400 });
     }
     await deleteServicio(id);
-    return NextResponse.json({ message: "Servicio eliminado con éxito" }, { status: 200 });
+    return NextResponse.json(
+      { message: "Estado del servicio actualizado con éxito" },
+      { status: 200 },
+    );
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    return NextResponse.json({ error: error.message || "Error al eliminar servicio" }, { status: 500 });
+    if (error?.message === "No se encontró el servicio con ese id") {
+      return NextResponse.json(
+        { error: "Servicio no encontrado" },
+        { status: 404 },
+      );
+    }
+
+    console.error("Error al actualizar estado del servicio:", error);
+    return NextResponse.json(
+      { error: "Error al actualizar estado del servicio" },
+      { status: 500 },
+    );
   }
 }

@@ -1,3 +1,4 @@
+import { comercialErrorResponse } from '@/lib/comercial/comercialErrorBoundary';
 import { NextRequest, NextResponse } from 'next/server';
 import {
   closeComercialMobileScannerSession,
@@ -6,21 +7,11 @@ import {
   markComercialMobileScannerEventProcessed,
 } from '@/services/server/comercialMobileScannerServerService';
 
-import {
-  authorizeDashboardRequest,
-  authorizationErrorResponse,
-} from '@/lib/auth/serverAuthorization';
+import { authorizationErrorResponse, authorizeDashboardRequest } from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
 
-function sanitizeScannerRouteError(value: unknown, fallback: string) {
-  const message = String(value ?? '').trim();
-  if (!message) return fallback;
-  if (message.includes('<html') || message.includes('<body') || message.includes('cloudflare') || message.length > 220) {
-    return fallback;
-  }
-  return message;
-}
+
 
 export async function GET(req: NextRequest) {
   try {
@@ -29,12 +20,10 @@ export async function GET(req: NextRequest) {
     const sessionId = searchParams.get('session_id');
     const state = await getComercialMobileScannerState(sessionId);
     return NextResponse.json({ data: state }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    const message = sanitizeScannerRouteError(error?.message, 'Error transitorio al obtener scanner móvil comercial');
-    const status = message.includes('Token') || message.includes('JWT') ? 401 : 500;
-    return NextResponse.json({ error: message }, { status });
+    return comercialErrorResponse(error, "Error transitorio al obtener scanner móvil comercial");
   }
 }
 
@@ -60,11 +49,9 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ error: 'Acción de scanner no soportada' }, { status: 400 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    const message = sanitizeScannerRouteError(error?.message, 'Error al operar scanner móvil comercial');
-    const status = message.includes('Token') || message.includes('JWT') ? 401 : 400;
-    return NextResponse.json({ error: message }, { status });
+    return comercialErrorResponse(error, "Error al operar scanner móvil comercial");
   }
 }

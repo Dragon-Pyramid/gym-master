@@ -17,7 +17,11 @@ export async function GET(req: Request) {
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Error al obtener avisos:', error);
+    return NextResponse.json(
+      { error: 'Error al obtener avisos' },
+      { status: 500 },
+    );
   }
 }
 
@@ -30,6 +34,10 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Error al crear aviso:', error);
+    return NextResponse.json(
+      { error: 'Error al crear aviso' },
+      { status: 500 },
+    );
   }
 }

@@ -15,7 +15,7 @@ export async function GET(req: Request) {
     if (authResponse) return authResponse;
     console.error('Error al obtener notificaciones del header:', error);
     return NextResponse.json(
-      { error: error.message || 'Error al obtener notificaciones del header' },
+      { error: 'Error al obtener notificaciones del header' },
       { status: 500 }
     );
   }

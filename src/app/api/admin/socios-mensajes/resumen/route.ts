@@ -15,8 +15,14 @@ export async function GET(req: Request) {
   } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    const message = error instanceof Error ? error.message : 'Error interno del servidor';
-    const status = message.includes('No autorizado') ? 403 : 500;
-    return NextResponse.json({ error: message }, { status });
+    const message = error instanceof Error ? error.message : '';
+    if (message === "No autorizado para administrar mensajes de socios") {
+      return NextResponse.json({ error: message }, { status: 403 });
+    }
+    console.error("Error al obtener resumen de mensajes de socios:", error);
+    return NextResponse.json(
+      { error: "Error al obtener resumen de mensajes de socios" },
+      { status: 500 }
+    );
   }
 }

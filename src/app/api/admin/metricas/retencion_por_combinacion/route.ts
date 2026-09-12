@@ -33,7 +33,7 @@ try {
 } catch (error) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    console.log("Error en la obtención de métricas:", error);
+    console.error("Error en la obtención de métricas:", error);
     return NextResponse.json({error: "Error en la obtención de métricas"}, {status: 500});
 }
 

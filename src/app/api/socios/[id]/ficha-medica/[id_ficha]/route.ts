@@ -47,11 +47,31 @@ export async function GET(
     const ficha = await FindOneFichaMedicaSocio(user, resolvedSocioId, id_ficha);
 
     return NextResponse.json({ data: ficha }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    console.log(error);
-    const status = getFichaMedicaErrorStatus(error?.message);
-    return NextResponse.json({ error: error.message }, { status });
+
+    const message =
+      error instanceof Error ? error.message : '';
+
+    const status =
+      getFichaMedicaErrorStatus(message);
+
+    if (status >= 500) {
+      console.error('Error al obtener ficha médica:', {
+        name: error instanceof Error
+          ? error.name
+          : 'UnknownError',
+      });
+    }
+
+    return NextResponse.json(
+      {
+        error: status >= 500
+          ? 'No se pudo obtener la ficha médica'
+          : message || 'Solicitud inválida',
+      },
+      { status },
+    );
   }
 }

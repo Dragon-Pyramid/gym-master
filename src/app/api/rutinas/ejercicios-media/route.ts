@@ -8,22 +8,14 @@ import {
   authorizeDashboardRequest,
   authorizationErrorResponse,
 } from '@/lib/auth/serverAuthorization';
+import {
+  ejercicioMediaHttpErrorResponse,
+} from '@/lib/rutinas/ejercicioMediaHttpBoundary';
+import {
+  readJsonBody,
+} from '@/lib/security/httpRuntimeSecurity';
 
 export const dynamic = 'force-dynamic';
-
-function getAuthStatus(error: any) {
-  const message = error?.message ?? '';
-
-  if (message.includes('Token no proporcionado') || message.includes('Token inválido')) {
-    return 401;
-  }
-
-  if (message.includes('No autorizado')) {
-    return 403;
-  }
-
-  return 500;
-}
 
 export async function GET(request: Request) {
   try {
@@ -32,26 +24,46 @@ export async function GET(request: Request) {
     const catalog = await getExerciseMediaCatalog(user, url.searchParams);
 
     return NextResponse.json(catalog, { status: 200 });
-  } catch (error: any) {
-    const authResponse = authorizationErrorResponse(error);
-    if (authResponse) return authResponse;
-    const status = getAuthStatus(error);
+  } catch (error: unknown) {
+    const authResponse =
+      authorizationErrorResponse(error);
 
-    if (status === 500) {
-      console.error('Error al obtener catálogo de media de ejercicios:', error);
+    if (authResponse) return authResponse;
+
+    const response =
+      ejercicioMediaHttpErrorResponse(
+        error,
+        'Error al obtener catálogo de media de ejercicios.',
+      );
+
+    if (response.status >= 500) {
+      console.error(
+        'Error al obtener catálogo de media de ejercicios:',
+        {
+          name:
+            error instanceof Error
+              ? error.name
+              : 'UnknownError',
+        },
+      );
     }
 
-    return NextResponse.json(
-      { error: error?.message ?? 'Error al obtener catálogo de media de ejercicios.' },
-      { status }
-    );
+    return response;
   }
 }
 
 export async function PATCH(request: Request) {
   try {
     const user = await authorizeDashboardRequest(request, '/dashboard/rutinas/media', ['admin', 'usuario']);
-    const payload = await request.json();
+    const payload =
+      await readJsonBody<
+        Parameters<
+          typeof updateExerciseMediaCatalogItem
+        >[1]
+      >(
+        request,
+        64 * 1024,
+      );
 
     if (!payload?.id_ejercicio || !Number.isInteger(Number(payload.id_ejercicio))) {
       return NextResponse.json(
@@ -72,18 +84,30 @@ export async function PATCH(request: Request) {
       },
       { status: 200 }
     );
-  } catch (error: any) {
-    const authResponse = authorizationErrorResponse(error);
-    if (authResponse) return authResponse;
-    const status = getAuthStatus(error);
+  } catch (error: unknown) {
+    const authResponse =
+      authorizationErrorResponse(error);
 
-    if (status === 500) {
-      console.error('Error al actualizar media de ejercicio:', error);
+    if (authResponse) return authResponse;
+
+    const response =
+      ejercicioMediaHttpErrorResponse(
+        error,
+        'Error al actualizar media de ejercicio.',
+      );
+
+    if (response.status >= 500) {
+      console.error(
+        'Error al actualizar media de ejercicio:',
+        {
+          name:
+            error instanceof Error
+              ? error.name
+              : 'UnknownError',
+        },
+      );
     }
 
-    return NextResponse.json(
-      { error: error?.message ?? 'Error al actualizar media de ejercicio.' },
-      { status }
-    );
+    return response;
   }
 }

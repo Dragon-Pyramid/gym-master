@@ -1,3 +1,4 @@
+import { ComercialValidationError } from '@/lib/comercial/comercialErrorBoundary';
 import 'server-only';
 
 import { getSupabaseServerClient } from '@/services/supabaseServerClient';
@@ -132,9 +133,9 @@ export async function generateComercialQrCode(payload: GenerateComercialQrCodeDT
   const targetId = String(payload.target_id ?? '').trim();
 
   if (!['producto', 'servicio'].includes(targetType)) {
-    throw new Error('Solo productos y servicios requieren QR interno. Los packs usan su código comercial.');
+    throw new ComercialValidationError('Solo productos y servicios requieren QR interno. Los packs usan su código comercial.');
   }
-  if (!targetId) throw new Error('Seleccioná un producto o servicio para generar QR.');
+  if (!targetId) throw new ComercialValidationError('Seleccioná un producto o servicio para generar QR.');
 
   const supabase = getSupabaseServerClient();
   const table = targetType === 'producto' ? 'producto' : 'servicio';
@@ -145,7 +146,7 @@ export async function generateComercialQrCode(payload: GenerateComercialQrCodeDT
     .maybeSingle();
 
   if (targetError) throw new Error(targetError.message);
-  if (!target) throw new Error('No se encontró el ítem comercial seleccionado.');
+  if (!target) throw new ComercialValidationError('No se encontró el ítem comercial seleccionado.');
 
   const codigo = normalizeQrCode(payload.codigo || buildGeneratedCode(targetType, targetId));
   const route = targetType === 'producto' ? '/dashboard/productos' : '/dashboard/servicios';

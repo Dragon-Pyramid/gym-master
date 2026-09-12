@@ -18,7 +18,7 @@ export async function GET(req: Request) {
     if (authResponse) return authResponse;
     console.error('Error al consultar etiquetas QR:', error?.message ?? error);
     return NextResponse.json(
-      { error: error?.message || 'Error al consultar etiquetas QR.' },
+      { error: 'Error al consultar etiquetas QR.' },
       { status: 500 },
     );
   }

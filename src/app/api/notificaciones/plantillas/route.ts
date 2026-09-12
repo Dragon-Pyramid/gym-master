@@ -11,7 +11,10 @@ export async function GET(req: Request) {
   } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    const message = error instanceof Error ? error.message : 'Error interno del servidor';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("Error al obtener plantillas de notificaciones:", error);
+    return NextResponse.json(
+      { error: "Error al obtener plantillas de notificaciones" },
+      { status: 500 }
+    );
   }
 }

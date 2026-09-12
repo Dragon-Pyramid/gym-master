@@ -55,7 +55,7 @@ export async function deleteServicio(id: string): Promise<Servicio[]> {
       method: 'DELETE',
       body: JSON.stringify({ id }),
     },
-    'Error al eliminar servicio'
+    'Error al actualizar estado del servicio'
   );
   return [];
 }

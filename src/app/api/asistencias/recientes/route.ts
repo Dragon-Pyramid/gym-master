@@ -173,8 +173,22 @@ export async function GET(req: Request) {
       );
     }
 
-    const errorMessage =
-      error instanceof Error ? error.message : "Error desconocido";
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    console.error(
+      "Error al obtener asistencias recientes:",
+      {
+        name:
+          error instanceof Error
+            ? error.name
+            : "UnknownError",
+      },
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          "Error al obtener asistencias recientes",
+      },
+      { status: 500 },
+    );
   }
 }

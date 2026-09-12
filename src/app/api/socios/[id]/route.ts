@@ -24,8 +24,25 @@ export async function GET(
   } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    const message = error instanceof Error ? error.message : 'Error al obtener el socio';
-    const status = message.includes('No se encontró') ? 404 : message.includes('No autorizado') ? 403 : 500;
-    return NextResponse.json({ error: message }, { status });
+    const message =
+      error instanceof Error ? error.message : '';
+
+    if (message === 'No se encontró el socio con ese ID') {
+      return NextResponse.json(
+        { error: message },
+        { status: 404 },
+      );
+    }
+
+    console.error('Error al obtener el socio:', {
+      name: error instanceof Error
+        ? error.name
+        : 'UnknownError',
+    });
+
+    return NextResponse.json(
+      { error: 'Error al obtener el socio' },
+      { status: 500 },
+    );
   }
 }

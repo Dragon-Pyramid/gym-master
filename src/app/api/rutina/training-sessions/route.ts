@@ -7,15 +7,77 @@ import {
   listTrainingSessions,
   startTrainingSession,
 } from '@/services/server/rutinaTrainingSessionService';
+import {
+  HttpRuntimeError,
+  readJsonBody,
+  runtimeErrorResponse,
+} from '@/lib/security/httpRuntimeSecurity';
 
 export const dynamic = 'force-dynamic';
 
 const resolveStatus = (message: string): number => {
-  if (message.includes('obligatorio') || message.includes('válido')) return 400;
-  if (message.includes('permisos')) return 403;
-  if (message.includes('No se encontró')) return 404;
+  if (
+    message.includes('obligatorio') ||
+    message.includes('válido')
+  ) {
+    return 400;
+  }
+
+  if (message.includes('permisos')) {
+    return 403;
+  }
+
+  if (message.includes('No se encontró')) {
+    return 404;
+  }
+
   return 500;
 };
+
+type StartTrainingSessionRequestBody =
+  Parameters<typeof startTrainingSession>[1];
+
+function trainingSessionErrorResponse(
+  error: unknown,
+  fallback: string,
+) {
+  if (error instanceof HttpRuntimeError) {
+    return runtimeErrorResponse(
+      error,
+      fallback,
+    );
+  }
+
+  const message =
+    error instanceof Error
+      ? error.message
+      : '';
+
+  const status = resolveStatus(message);
+
+  if (status < 500) {
+    return NextResponse.json(
+      {
+        error:
+          message ||
+          'Solicitud inválida',
+      },
+      { status },
+    );
+  }
+
+  console.error(fallback, {
+    name:
+      error instanceof Error
+        ? error.name
+        : 'UnknownError',
+  });
+
+  return NextResponse.json(
+    { error: fallback },
+    { status: 500 },
+  );
+}
 
 export async function GET(req: Request) {
   try {
@@ -47,11 +109,16 @@ export async function GET(req: Request) {
         },
       },
     );
-  } catch (error) {
-    const authResponse = authorizationErrorResponse(error);
+  } catch (error: unknown) {
+    const authResponse =
+      authorizationErrorResponse(error);
+
     if (authResponse) return authResponse;
-    const message = error instanceof Error ? error.message : 'Error interno del servidor';
-    return NextResponse.json({ error: message }, { status: resolveStatus(message) });
+
+    return trainingSessionErrorResponse(
+      error,
+      'Error al obtener sesiones de entrenamiento',
+    );
   }
 }
 
@@ -64,14 +131,30 @@ export async function POST(req: Request) {
       ['socio'],
     );
 
-    const body = await req.json();
-    const data = await startTrainingSession(user, body);
+    const body =
+      await readJsonBody<
+        StartTrainingSessionRequestBody
+      >(
+        req,
+        64 * 1024,
+      );
+
+    const data =
+      await startTrainingSession(
+        user,
+        body,
+      );
 
     return NextResponse.json({ data }, { status: 201 });
-  } catch (error) {
-    const authResponse = authorizationErrorResponse(error);
+  } catch (error: unknown) {
+    const authResponse =
+      authorizationErrorResponse(error);
+
     if (authResponse) return authResponse;
-    const message = error instanceof Error ? error.message : 'Error interno del servidor';
-    return NextResponse.json({ error: message }, { status: resolveStatus(message) });
+
+    return trainingSessionErrorResponse(
+      error,
+      'Error al iniciar la sesión de entrenamiento',
+    );
   }
 }

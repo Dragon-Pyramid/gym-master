@@ -18,6 +18,41 @@ type SocioRecipient = {
   activo: boolean | null;
 };
 
+export class NotificacionNoEncontradaError extends Error {
+  constructor() {
+    super('Notificación no encontrada');
+    this.name = 'NotificacionNoEncontradaError';
+  }
+}
+
+const NOTIFICACION_ERROR_PUBLICO =
+  'No se pudo completar la operación de notificación.';
+
+const NOTIFICACION_SIN_DESTINATARIOS =
+  'No se encontraron socios con email para el segmento seleccionado.';
+
+function sanitizeNotificacionEnvio(envio: NotificacionEnvio): NotificacionEnvio {
+  return {
+    ...envio,
+    error: envio.error == null ? envio.error : NOTIFICACION_ERROR_PUBLICO,
+  };
+}
+
+function sanitizeNotificacion(notificacion: Notificacion): Notificacion {
+  const error = notificacion.error;
+
+  return {
+    ...notificacion,
+    error:
+      error == null || error === NOTIFICACION_SIN_DESTINATARIOS
+        ? error
+        : NOTIFICACION_ERROR_PUBLICO,
+    ...(Array.isArray(notificacion.envios)
+      ? { envios: notificacion.envios.map(sanitizeNotificacionEnvio) }
+      : {}),
+  };
+}
+
 const notificacionSelect = '*';
 
 const nullableString = (value: unknown): string | null => {
@@ -33,20 +68,56 @@ const toPositiveInt = (value: unknown, fallback: number): number => {
   return Math.max(1, Math.round(parsed));
 };
 
-const normalizeDateTime = (value: unknown): string | null => {
-  const raw = nullableString(value);
+type NotificacionFechaCampo =
+  | 'fecha_programada'
+  | 'fecha_vigencia_hasta';
+
+export class NotificacionFechaInvalidaError extends Error {
+  constructor(public readonly campo: NotificacionFechaCampo) {
+    super(`Fecha inválida: ${campo}`);
+    this.name = 'NotificacionFechaInvalidaError';
+  }
+}
+
+const normalizeDateTime = (
+  value: unknown,
+  campo: NotificacionFechaCampo
+): string | null => {
+  if (value === null || value === undefined || value === '') return null;
+  if (typeof value !== 'string') {
+    throw new NotificacionFechaInvalidaError(campo);
+  }
+
+  const raw = value.trim();
   if (!raw) return null;
 
-  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(raw)) {
-    return new Date(raw).toISOString();
+  // Evitar que Date normalice una fecha calendario imposible.
+  const calendar = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+  if (calendar) {
+    const year = Number(calendar[1]);
+    const month = Number(calendar[2]);
+    const day = Number(calendar[3]);
+    const lastDay = new Date(0);
+    lastDay.setUTCFullYear(year, month, 0);
+
+    if (
+      month < 1 || month > 12 ||
+      day < 1 || day > lastDay.getUTCDate()
+    ) {
+      throw new NotificacionFechaInvalidaError(campo);
+    }
   }
 
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
-    return new Date(`${raw}T00:00:00`).toISOString();
+  const candidate = /^\d{4}-\d{2}-\d{2}$/.test(raw)
+    ? `${raw}T00:00:00`
+    : raw;
+  const parsed = new Date(candidate);
+
+  if (Number.isNaN(parsed.getTime())) {
+    throw new NotificacionFechaInvalidaError(campo);
   }
 
-  const parsed = new Date(raw);
-  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  return parsed.toISOString();
 };
 
 const normalizePayload = (payload: CreateNotificacionDto | UpdateNotificacionDto): NotificacionPayload => {
@@ -62,8 +133,8 @@ const normalizePayload = (payload: CreateNotificacionDto | UpdateNotificacionDto
   if (payload.destinatario_segmento !== undefined) {
     normalized.destinatario_segmento = nullableString(payload.destinatario_segmento) ?? 'socios_activos';
   }
-  if (payload.fecha_programada !== undefined) normalized.fecha_programada = normalizeDateTime(payload.fecha_programada);
-  if (payload.fecha_vigencia_hasta !== undefined) normalized.fecha_vigencia_hasta = normalizeDateTime(payload.fecha_vigencia_hasta);
+  if (payload.fecha_programada !== undefined) normalized.fecha_programada = normalizeDateTime(payload.fecha_programada, 'fecha_programada');
+  if (payload.fecha_vigencia_hasta !== undefined) normalized.fecha_vigencia_hasta = normalizeDateTime(payload.fecha_vigencia_hasta, 'fecha_vigencia_hasta');
   if (payload.mostrar_terminal !== undefined) normalized.mostrar_terminal = Boolean(payload.mostrar_terminal);
   if (payload.terminal_visible !== undefined) normalized.terminal_visible = Boolean(payload.terminal_visible);
   if (payload.terminal_imagen_url !== undefined) normalized.terminal_imagen_url = nullableString(payload.terminal_imagen_url);
@@ -99,7 +170,7 @@ export const getNotificaciones = async (_user: JwtUser): Promise<Notificacion[]>
     .order('creado_en', { ascending: false });
 
   if (error) throw new Error(error.message);
-  return (data ?? []) as Notificacion[];
+  return ((data ?? []) as Notificacion[]).map(sanitizeNotificacion);
 };
 
 export const getNotificacionById = async (id: string, _user: JwtUser): Promise<Notificacion> => {
@@ -108,21 +179,24 @@ export const getNotificacionById = async (id: string, _user: JwtUser): Promise<N
     .from('notificacion')
     .select(notificacionSelect)
     .eq('id', id)
-    .single();
+    .maybeSingle();
 
   if (error) throw new Error(error.message);
+  if (!data) throw new NotificacionNoEncontradaError();
 
-  const { data: envios } = await supabase
+  const { data: envios, error: enviosError } = await supabase
     .from('notificacion_envio')
     .select('*')
     .eq('notificacion_id', id)
     .order('creado_en', { ascending: false })
     .limit(100);
 
-  return {
+  if (enviosError) throw new Error(enviosError.message);
+
+  return sanitizeNotificacion({
     ...(data as Notificacion),
     envios: (envios ?? []) as NotificacionEnvio[],
-  };
+  });
 };
 
 export const createNotificacion = async (
@@ -151,7 +225,7 @@ export const createNotificacion = async (
     .single();
 
   if (error) throw new Error(error.message);
-  return data as Notificacion;
+  return sanitizeNotificacion(data as Notificacion);
 };
 
 export const updateNotificacion = async (
@@ -167,10 +241,11 @@ export const updateNotificacion = async (
     .update({ ...normalized, actualizado_en: new Date().toISOString() })
     .eq('id', id)
     .select(notificacionSelect)
-    .single();
+    .maybeSingle();
 
   if (error) throw new Error(error.message);
-  return data as Notificacion;
+  if (!data) throw new NotificacionNoEncontradaError();
+  return sanitizeNotificacion(data as Notificacion);
 };
 
 export const cancelarNotificacion = async (id: string, user: JwtUser): Promise<Notificacion> => {
@@ -222,7 +297,7 @@ export const getNotificacionesTerminalActivas = async (_user: JwtUser): Promise<
     if (hasta && !Number.isNaN(hasta.getTime()) && hasta < now) return false;
 
     return true;
-  });
+  }).map(sanitizeNotificacion);
 };
 
 export const enviarNotificacion = async (id: string, user: JwtUser): Promise<Notificacion> => {
@@ -251,7 +326,7 @@ export const enviarNotificacion = async (id: string, user: JwtUser): Promise<Not
       .single();
 
     if (error) throw new Error(error.message);
-    return data as Notificacion;
+    return sanitizeNotificacion(data as Notificacion);
   }
 
   const payload = recipients.map((recipient) => ({
@@ -283,5 +358,5 @@ export const enviarNotificacion = async (id: string, user: JwtUser): Promise<Not
     .single();
 
   if (error) throw new Error(error.message);
-  return data as Notificacion;
+  return sanitizeNotificacion(data as Notificacion);
 };

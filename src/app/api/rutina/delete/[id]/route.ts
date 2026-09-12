@@ -44,14 +44,17 @@ export async function GET(
         "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    console.error("Error al obtener rutinas:", error);
+
+    console.error("Error al obtener rutinas:", {
+      name: error instanceof Error ? error.name : "UnknownError",
+    });
 
     return NextResponse.json(
-      { error: error.message || "Error al obtener rutinas" },
-      { status: 500 }
+      { error: "Error al obtener rutinas" },
+      { status: 500 },
     );
   }
 }
@@ -83,20 +86,32 @@ export async function DELETE(
         },
       }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    console.error("Error al eliminar rutina:", error);
 
-    const message = error.message || "Error al eliminar la rutina";
-    const status = message.includes("No se encontró")
-      ? 404
-      : message.includes("permisos")
-        ? 403
-        : message.includes("no es válido")
-          ? 400
-          : 500;
+    const message =
+      error instanceof Error ? error.message : '';
 
-    return NextResponse.json({ error: message }, { status });
+    if (message === "El id de rutina no es válido") {
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+
+    if (message === "No se encontró la rutina") {
+      return NextResponse.json({ error: message }, { status: 404 });
+    }
+
+    if (message === "No tenés permisos para eliminar esta rutina") {
+      return NextResponse.json({ error: message }, { status: 403 });
+    }
+
+    console.error("Error al eliminar rutina:", {
+      name: error instanceof Error ? error.name : "UnknownError",
+    });
+
+    return NextResponse.json(
+      { error: "Error al eliminar la rutina" },
+      { status: 500 },
+    );
   }
 }

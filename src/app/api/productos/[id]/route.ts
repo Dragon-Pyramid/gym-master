@@ -32,6 +32,17 @@ export async function GET(
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    return NextResponse.json({ error: error.message });
+    if (error?.message === "No se encontró el producto con ese id") {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 404 },
+      );
+    }
+
+    console.error("Error al obtener el producto:", error);
+    return NextResponse.json(
+      { error: "Error al obtener el producto" },
+      { status: 500 },
+    );
   }
 }

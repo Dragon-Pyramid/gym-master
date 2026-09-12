@@ -31,7 +31,7 @@ export async function GET(req: Request) {
 
     console.error('Error en el histograma de pagos:', error);
     return NextResponse.json(
-      { error: error.message || 'Error en el histograma de pagos' },
+      { error: "Error en el histograma de pagos" },
       { status: 500 },
     );
   }

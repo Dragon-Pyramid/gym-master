@@ -75,7 +75,7 @@ export const getAllAsistencias = async (
     .order("fecha", { ascending: false })
     .order("hora_ingreso", { ascending: false });
   if (error) {
-    console.log(error.message);
+    console.error(error.message);
     throw new Error("hubo un error al traer las asistencias");
   }
   return data;
@@ -106,8 +106,6 @@ export const createAsistencia = async (
   return data as Asistencia;
 };
 
-//TODO: Agregar validacion que el id del socio sea el id que se encuentra en la sesion
-// o que el id de la sesion tenga rol de administradors
 export const updateAsistencia = async (
   user: JwtUser,
   id: string,
@@ -127,15 +125,13 @@ export const updateAsistencia = async (
     .update(normalizedUpdateData)
     .eq("id", id)
     .select()
-    .single();
+    .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data || data.length === 0)
     throw new Error("No se encontró asistencia con ese id");
   return data as Asistencia;
 };
 
-//TODO: Agregar validacion que el id del socio sea el id que se encuentra en la sesion
-// o que el id de la sesion tenga rol de administradors
 export const deleteAsistencia = async (
   user: JwtUser,
   id: string,

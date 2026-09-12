@@ -37,8 +37,9 @@ export async function GET(
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
+    console.error('Error al obtener el equipamiento:', error);
     return NextResponse.json(
-      { error: error?.message || 'Error al obtener el equipamiento' },
+      { error: 'Error al obtener el equipamiento' },
       { status: 500 }
     );
   }
@@ -51,7 +52,6 @@ export async function PUT(
   try {
     await authorizeDashboardRequest(req, '/dashboard/equipamientos', ['admin', 'usuario']);
     const { id } = await params;
-    console.log(id);
 
     const { updateData } = await req.json();
 
@@ -70,8 +70,11 @@ export async function PUT(
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    console.log(error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Error al modificar el equipamiento:', error);
+    return NextResponse.json(
+      { error: 'Error al modificar el equipamiento' },
+      { status: 500 }
+    );
   }
 }
 
@@ -82,7 +85,6 @@ export async function DELETE(
   try {
     await authorizeDashboardRequest(req, '/dashboard/equipamientos', ['admin', 'usuario']);
     const { id } = await params;
-    console.log(id);
 
     if (!id || id === '') {
       return NextResponse.json(
@@ -98,7 +100,10 @@ export async function DELETE(
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    console.log(error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Error al eliminar el equipamiento:', error);
+    return NextResponse.json(
+      { error: 'Error al eliminar el equipamiento' },
+      { status: 500 }
+    );
   }
 }

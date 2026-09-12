@@ -1330,7 +1330,8 @@ export async function importExerciseYoutubeVideos(
           id_ejercicio: Number(exercise.id_ejercicio),
           nombre_ejercicio: exercise.nombre_ejercicio ?? null,
           action: "error",
-          message: error.message,
+          message:
+            "No se pudo actualizar el video del ejercicio.",
         });
         continue;
       }
@@ -1974,9 +1975,15 @@ export async function autoDiscoverExerciseYoutubeVideos(
       }
 
       candidates.push(candidate);
-    } catch (error: any) {
+    } catch (error: unknown) {
       errors += 1;
-      const message = error?.message ?? "Error consultando YouTube Data API.";
+
+      const quotaExceededNow =
+        isYoutubeQuotaExceededError(error);
+
+      const message = quotaExceededNow
+        ? "Se agotó la cuota diaria de YouTube. Reintentá cuando se renueve."
+        : "No se pudo consultar YouTube para este ejercicio.";
 
       candidates.push({
         id_ejercicio: Number(exercise.id_ejercicio),
@@ -1988,9 +1995,10 @@ export async function autoDiscoverExerciseYoutubeVideos(
         message,
       });
 
-      if (isYoutubeQuotaExceededError(error)) {
+      if (quotaExceededNow) {
         quotaExceeded = true;
-        quotaExceededMessage = message;
+        quotaExceededMessage =
+          "Se agotó la cuota diaria de YouTube. Reintentá cuando se renueve.";
         break;
       }
     }

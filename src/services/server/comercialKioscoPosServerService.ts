@@ -1,3 +1,4 @@
+import { ComercialValidationError } from '@/lib/comercial/comercialErrorBoundary';
 import 'server-only';
 
 import { getSupabaseServerClient } from '@/services/supabaseServerClient';
@@ -25,7 +26,7 @@ function roundMoney(value: number) {
 function parsePositiveInteger(value: unknown, label: string) {
   const numeric = Number(value);
   if (!Number.isInteger(numeric) || numeric <= 0) {
-    throw new Error(`${label} debe ser un número entero mayor a 0`);
+    throw new ComercialValidationError("El número ingresado debe ser un entero mayor a 0.", `${label} debe ser un número entero mayor a 0`);
   }
   return numeric;
 }
@@ -33,7 +34,7 @@ function parsePositiveInteger(value: unknown, label: string) {
 function parseMoney(value: unknown, label: string) {
   const numeric = Number(value ?? 0);
   if (!Number.isFinite(numeric) || numeric < 0) {
-    throw new Error(`${label} debe ser un importe mayor o igual a 0`);
+    throw new ComercialValidationError("El importe ingresado debe ser mayor o igual a 0.", `${label} debe ser un importe mayor o igual a 0`);
   }
   return roundMoney(numeric);
 }
@@ -76,7 +77,7 @@ async function getDefaultLocation(supabase: ReturnType<typeof getSupabaseServerC
 
     if (error) throw new Error(error.message);
     if (data) return data as ComercialPosUbicacion;
-    throw new Error('La ubicación de stock seleccionada no está activa o no existe');
+    throw new ComercialValidationError('La ubicación de stock seleccionada no está activa o no existe');
   }
 
   const { data: kiosco, error: kioscoError } = await supabase
@@ -98,7 +99,7 @@ async function getDefaultLocation(supabase: ReturnType<typeof getSupabaseServerC
     .maybeSingle();
 
   if (error) throw new Error(error.message);
-  if (!data) throw new Error('No hay ubicaciones de stock activas para operar POS/Kiosco');
+  if (!data) throw new ComercialValidationError('No hay ubicaciones de stock activas para operar POS/Kiosco');
   return data as ComercialPosUbicacion;
 }
 
@@ -383,19 +384,19 @@ async function resolveCoupon(supabase: ReturnType<typeof getSupabaseServerClient
     .maybeSingle();
 
   if (error) throw new Error(error.message);
-  if (!data) throw new Error('Cupón no encontrado o inactivo');
+  if (!data) throw new ComercialValidationError('Cupón no encontrado o inactivo');
   if (data.fecha_expiracion && String(data.fecha_expiracion).slice(0, 10) < new Date().toISOString().slice(0, 10)) {
-    throw new Error('El cupón está vencido');
+    throw new ComercialValidationError('El cupón está vencido');
   }
   if (data.max_usos && Number(data.usos_actuales ?? 0) >= Number(data.max_usos)) {
-    throw new Error('El cupón ya alcanzó su máximo de usos');
+    throw new ComercialValidationError('El cupón ya alcanzó su máximo de usos');
   }
   const promo = data.promocion;
   if (!promo || promo.activo === false || !isDateActive(promo.fecha_inicio, promo.fecha_fin)) {
-    throw new Error('La promoción asociada al cupón no está vigente');
+    throw new ComercialValidationError('La promoción asociada al cupón no está vigente');
   }
   if (!['descuento_porcentaje', 'descuento_fijo'].includes(promo.tipo)) {
-    throw new Error('Este cupón pertenece a una promoción informativa/combo y no puede aplicarse como descuento automático en POS');
+    throw new ComercialValidationError('Este cupón pertenece a una promoción informativa/combo y no puede aplicarse como descuento automático en POS');
   }
   return data;
 }
@@ -408,14 +409,14 @@ export async function createComercialKioscoPosVenta(
   const metodoPago = normalizeMetodoPago(payload.metodo_pago);
   const items = Array.isArray(payload.items) ? payload.items : [];
 
-  if (!items.length) throw new Error('La venta debe tener al menos un ítem');
-  if (clienteTipo === 'socio') throw new Error('La venta POS v1 opera consumidor final o visitante. La venta a socio queda para la etapa de POS avanzado.');
+  if (!items.length) throw new ComercialValidationError('La venta debe tener al menos un ítem');
+  if (clienteTipo === 'socio') throw new ComercialValidationError('La venta POS v1 opera consumidor final o visitante. La venta a socio queda para la etapa de POS avanzado.');
 
   const directProductoIds = Array.from(new Set(items.map((item) => normalizeItemTipo(item.item_tipo) === 'producto' ? String(item.producto_id ?? '').trim() : '').filter(Boolean)));
   const directServicioIds = Array.from(new Set(items.map((item) => normalizeItemTipo(item.item_tipo) === 'servicio' ? String(item.servicio_id ?? '').trim() : '').filter(Boolean)));
   const packIds = Array.from(new Set(items.map((item) => normalizeItemTipo(item.item_tipo) === 'pack' ? String(item.pack_id ?? '').trim() : '').filter(Boolean)));
 
-  if (!directProductoIds.length && !directServicioIds.length && !packIds.length) throw new Error('Debe seleccionar productos, servicios o packs válidos');
+  if (!directProductoIds.length && !directServicioIds.length && !packIds.length) throw new ComercialValidationError('Debe seleccionar productos, servicios o packs válidos');
 
   const supabase = getSupabaseServerClient();
   const ubicacion = await getDefaultLocation(supabase, payload.ubicacion_stock_id ?? null);
@@ -467,17 +468,17 @@ export async function createComercialKioscoPosVenta(
     if (itemTipo === 'producto') {
       const productoId = String(item.producto_id ?? '').trim();
       const producto = productosById.get(productoId);
-      if (!producto || producto.activo === false) throw new Error('Uno de los productos no existe o está inactivo');
+      if (!producto || producto.activo === false) throw new ComercialValidationError('Uno de los productos no existe o está inactivo');
 
       const precio = parseMoney(item.precio_unitario ?? producto.precio, `Precio de ${producto.nombre}`);
       const descuento = parseMoney(item.descuento ?? 0, `Descuento de ${producto.nombre}`);
       const subtotal = cantidad * precio;
-      if (descuento > subtotal) throw new Error(`El descuento no puede superar el subtotal de ${producto.nombre}`);
+      if (descuento > subtotal) throw new ComercialValidationError("El descuento no puede superar el subtotal del producto.", `El descuento no puede superar el subtotal de ${producto.nombre}`);
 
       const stockRow = await getLocationStockRow(supabase, productoId, ubicacion.id);
       const stockUbicacion = Number(stockRow?.cantidad ?? 0);
       if (!stockRow || stockUbicacion < cantidad) {
-        throw new Error(`Stock insuficiente para ${producto.nombre} en ${ubicacion.nombre}. Disponible: ${stockUbicacion}`);
+        throw new ComercialValidationError("Stock insuficiente en la ubicación seleccionada.", `Stock insuficiente para ${producto.nombre} en ${ubicacion.nombre}. Disponible: ${stockUbicacion}`);
       }
 
       normalizedItems.push({
@@ -499,11 +500,11 @@ export async function createComercialKioscoPosVenta(
     if (itemTipo === 'servicio') {
       const servicioId = String(item.servicio_id ?? '').trim();
       const servicio = serviciosById.get(servicioId);
-      if (!servicio || servicio.activo === false) throw new Error('Uno de los servicios no existe o está inactivo');
+      if (!servicio || servicio.activo === false) throw new ComercialValidationError('Uno de los servicios no existe o está inactivo');
       const precio = parseMoney(item.precio_unitario ?? servicio.precio, `Precio de ${servicio.nombre}`);
       const descuento = parseMoney(item.descuento ?? 0, `Descuento de ${servicio.nombre}`);
       const subtotal = cantidad * precio;
-      if (descuento > subtotal) throw new Error(`El descuento no puede superar el subtotal de ${servicio.nombre}`);
+      if (descuento > subtotal) throw new ComercialValidationError("El descuento no puede superar el subtotal del servicio.", `El descuento no puede superar el subtotal de ${servicio.nombre}`);
 
       normalizedItems.push({
         ...item,
@@ -523,16 +524,16 @@ export async function createComercialKioscoPosVenta(
 
     const packId = String(item.pack_id ?? '').trim();
     const pack = packsById.get(packId);
-    if (!pack || pack.activo === false || pack.disponible_pos === false) throw new Error('Uno de los packs no existe, está inactivo o no está disponible para POS');
+    if (!pack || pack.activo === false || pack.disponible_pos === false) throw new ComercialValidationError('Uno de los packs no existe, está inactivo o no está disponible para POS');
     const packItems = Array.isArray(pack.items) ? pack.items : [];
-    if (!packItems.length) throw new Error(`El pack ${pack.nombre} no tiene ítems configurados`);
+    if (!packItems.length) throw new ComercialValidationError("El pack seleccionado no tiene ítems configurados.", `El pack ${pack.nombre} no tiene ítems configurados`);
 
     const packUnitPrice = parseMoney(item.precio_unitario ?? pack.precio, `Precio del pack ${pack.nombre}`);
     const packDiscount = parseMoney(item.descuento ?? 0, `Descuento del pack ${pack.nombre}`);
     const packTargetTotal = Math.max(roundMoney(cantidad * packUnitPrice - packDiscount), 0);
     const componentLines = packItems.map((packItem: any) => getPackReferenceLine(packItem, cantidad));
     const referenceTotal = componentLines.reduce((sum: number, line: any) => sum + line.cantidad * line.precioReferencia, 0);
-    if (referenceTotal <= 0) throw new Error(`El pack ${pack.nombre} no tiene precios de referencia válidos`);
+    if (referenceTotal <= 0) throw new ComercialValidationError("El pack seleccionado no tiene precios de referencia válidos.", `El pack ${pack.nombre} no tiene precios de referencia válidos`);
 
     let accumulated = 0;
     const componentesSnapshot = componentLines.map((line: any) => ({
@@ -552,7 +553,7 @@ export async function createComercialKioscoPosVenta(
       accumulated = roundMoney(accumulated + targetLineTotal);
       const precioFinal = roundMoney(targetLineTotal / line.cantidad);
       const source = line.item_tipo === 'servicio' ? serviciosById.get(String(line.servicio_id)) : productosById.get(String(line.producto_id));
-      if (!source || source.activo === false) throw new Error(`El pack ${pack.nombre} contiene un ítem inactivo o inexistente`);
+      if (!source || source.activo === false) throw new ComercialValidationError("El pack seleccionado contiene un ítem inactivo o inexistente.", `El pack ${pack.nombre} contiene un ítem inactivo o inexistente`);
 
       normalizedItems.push({
         item_tipo: line.item_tipo,
@@ -661,14 +662,14 @@ export async function createComercialKioscoPosVenta(
     }
 
     const stockRow = await getLocationStockRow(supabase, item.producto_id, ubicacion.id);
-    if (!stockRow) throw new Error(`No se encontró stock de ${item.item_nombre} en ${ubicacion.nombre}`);
+    if (!stockRow) throw new ComercialValidationError("No se encontró stock del ítem en la ubicación seleccionada.", `No se encontró stock de ${item.item_nombre} en ${ubicacion.nombre}`);
 
     const stockAnteriorTotal = await getProductTotalStock(supabase, item.producto_id);
     const stockUbicacionAnterior = Number(stockRow.cantidad ?? 0);
     const stockUbicacionNuevo = stockUbicacionAnterior - item.cantidad;
 
     if (stockUbicacionNuevo < 0) {
-      throw new Error(`Stock insuficiente para ${item.item_nombre} al confirmar venta`);
+      throw new ComercialValidationError("Stock insuficiente al confirmar la venta.", `Stock insuficiente para ${item.item_nombre} al confirmar venta`);
     }
 
     const { error: stockUpdateError } = await supabase

@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
-import { getMensajeAdminById, updateMensajeAdmin } from '@/services/socioMensajeService';
+import {
+  getMensajeAdminById,
+  updateMensajeAdmin,
+  SocioMensajeNoEncontradoError,
+} from '@/services/socioMensajeService';
 import {
   authorizationErrorResponse,
   authorizeDashboardRequest,
@@ -15,9 +19,21 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    const message = error instanceof Error ? error.message : 'Error interno del servidor';
-    const status = message.includes('No autorizado') ? 403 : 500;
-    return NextResponse.json({ error: message }, { status });
+    if (error instanceof SocioMensajeNoEncontradoError) {
+      return NextResponse.json(
+        { error: 'Mensaje de socio no encontrado' },
+        { status: 404 }
+      );
+    }
+    const message = error instanceof Error ? error.message : '';
+    if (message === "No autorizado para administrar mensajes de socios") {
+      return NextResponse.json({ error: message }, { status: 403 });
+    }
+    console.error("Error al obtener el mensaje de socio:", error);
+    return NextResponse.json(
+      { error: "Error al obtener el mensaje de socio" },
+      { status: 500 }
+    );
   }
 }
 
@@ -29,8 +45,23 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    const message = error instanceof Error ? error.message : 'Error interno del servidor';
-    const status = message.includes('No autorizado') ? 403 : 500;
-    return NextResponse.json({ error: message }, { status });
+    if (error instanceof SocioMensajeNoEncontradoError) {
+      return NextResponse.json(
+        { error: 'Mensaje de socio no encontrado' },
+        { status: 404 }
+      );
+    }
+    const message = error instanceof Error ? error.message : '';
+    if (message === "No autorizado para administrar mensajes de socios") {
+      return NextResponse.json({ error: message }, { status: 403 });
+    }
+    if (message === "No hay cambios para aplicar") {
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+    console.error("Error al actualizar el mensaje de socio:", error);
+    return NextResponse.json(
+      { error: "Error al actualizar el mensaje de socio" },
+      { status: 500 }
+    );
   }
 }

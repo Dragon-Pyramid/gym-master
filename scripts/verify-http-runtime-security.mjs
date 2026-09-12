@@ -195,11 +195,13 @@ assert(
   'Authorization failures must be no-store and redact server-side configuration details.',
 );
 
-const nextAuth = read('src/app/api/auth/[...nextauth]/route.ts');
+const legacyNextAuthRoute = path.join(
+  root,
+  'src/app/api/auth/[...nextauth]/route.ts',
+);
 assert(
-  nextAuth.includes("useSecureCookies: process.env.NODE_ENV === 'production'") &&
-    nextAuth.includes('debug: false'),
-  'NextAuth must explicitly enable secure production cookies and keep debug output disabled.',
+  !fs.existsSync(legacyNextAuthRoute),
+  'Legacy NextAuth route must remain absent; Gym Master uses the custom JWT/Bearer authentication flow.',
 );
 
 const storageService = read('src/services/storageService.ts');

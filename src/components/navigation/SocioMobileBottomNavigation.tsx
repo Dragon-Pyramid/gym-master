@@ -41,8 +41,7 @@ const socioBottomNavItems: SocioBottomNavItem[] = [
     href: '/dashboard/dietas',
     icon: Utensils,
     isActive: (pathname) =>
-      pathname.startsWith('/dashboard/dietas') ||
-      pathname.startsWith('/dashboard/gestion-dietas'),
+      pathname.startsWith('/dashboard/dietas'),
   },
   {
     labelKey: 'socioDashboard.bottomNav.payments',

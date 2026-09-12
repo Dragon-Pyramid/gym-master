@@ -32,11 +32,20 @@ export async function GET(req: Request) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
 
-    console.error('ERROR al obtener resumen de cuotas admin:', error.message || error);
-    const message = error.message || 'Error al obtener resumen de cuotas';
-    const status =
-      message.includes('Token') || message.includes('No autorizado') ? 403 : 500;
+    if (
+      error instanceof Error &&
+      error.message === 'No autorizado para consultar estados de cuota administrativos'
+    ) {
+      return NextResponse.json(
+        { error: 'No autorizado para consultar estados de cuota administrativos' },
+        { status: 403 }
+      );
+    }
 
-    return NextResponse.json({ error: message }, { status });
+    console.error('ERROR al obtener resumen de cuotas admin:', error);
+    return NextResponse.json(
+      { error: 'Error al obtener resumen de cuotas' },
+      { status: 500 }
+    );
   }
 }

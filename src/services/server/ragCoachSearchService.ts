@@ -100,9 +100,27 @@ export async function getRagHealth(user: JwtUser): Promise<RagHealthResponse> {
   const status = getRagProviderStatus();
   const warnings: string[] = [];
 
-  if (!status.enabled) warnings.push('RAG_ENABLED=false. La base RAG está configurada pero no activa.');
-  if (status.provider === 'github' && !status.githubConfigured) warnings.push('Falta GITHUB_TOKEN.');
-  if (status.provider === 'openai' && !status.openaiConfigured) warnings.push('Falta OPENAI_API_KEY.');
+  if (!status.enabled) {
+    warnings.push(
+      'La base RAG está configurada pero no está activa.',
+    );
+  }
+  if (
+    status.provider === 'github' &&
+    !status.githubConfigured
+  ) {
+    warnings.push(
+      'El proveedor RAG de GitHub no está configurado.',
+    );
+  }
+  if (
+    status.provider === 'openai' &&
+    !status.openaiConfigured
+  ) {
+    warnings.push(
+      'El proveedor RAG de OpenAI no está configurado.',
+    );
+  }
 
   try {
     const [documents, chunks, exerciseDocuments, dietDocuments, activeChunks, embeddedChunks, pendingEmbeddingChunks] =
@@ -134,13 +152,13 @@ export async function getRagHealth(user: JwtUser): Promise<RagHealthResponse> {
       },
       warnings,
     };
-  } catch (error: any) {
+  } catch {
     return {
       ok: false,
       status,
       warnings: [
         ...warnings,
-        `No se pudo leer la base RAG. Verificar migración: ${error?.message ?? 'error desconocido'}`,
+        'No se pudo leer el estado de la base RAG.',
       ],
     };
   }

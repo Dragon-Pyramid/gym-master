@@ -9,6 +9,9 @@ import {
   UpdateProveedorDto,
 } from "../interfaces/proveedor.interface";
 
+const PROVEEDOR_NOT_FOUND_ERROR = "No se encontró el proveedor con ese id";
+const PROVEEDOR_NAME_REQUIRED_ERROR = "El nombre comercial del proveedor es obligatorio";
+
 
 type ProveedorPayload = Partial<Record<keyof CreateProveedorDto, string | null>>;
 
@@ -87,7 +90,7 @@ export const createProveedor = async (payload: CreateProveedorDto): Promise<Prov
   const normalizedPayload = normalizeCreatePayload(payload);
 
   if (!normalizedPayload.nombre) {
-    throw new Error("El nombre comercial del proveedor es obligatorio");
+    throw new Error(PROVEEDOR_NAME_REQUIRED_ERROR);
   }
 
   const { data, error } = await supabase
@@ -105,7 +108,7 @@ export const updateProveedor = async (id: string, updateData: UpdateProveedorDto
   const normalizedPayload = normalizeUpdatePayload(updateData);
 
   if (Object.prototype.hasOwnProperty.call(normalizedPayload, "nombre") && !normalizedPayload.nombre) {
-    throw new Error("El nombre comercial del proveedor es obligatorio");
+    throw new Error(PROVEEDOR_NAME_REQUIRED_ERROR);
   }
 
   const { data, error } = await supabase
@@ -113,10 +116,10 @@ export const updateProveedor = async (id: string, updateData: UpdateProveedorDto
     .update(normalizedPayload)
     .eq("id", id)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) throw new Error(error.message);
-  if (!data) throw new Error("No se encontró proveedor con ese id");
+  if (!data) throw new Error(PROVEEDOR_NOT_FOUND_ERROR);
   return data as Proveedor;
 };
 
@@ -127,10 +130,10 @@ export const deleteProveedor = async (id: string): Promise<Proveedor> => {
     .update({ estado: "inactivo" })
     .eq("id", id)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) throw new Error(error.message);
-  if (!data) throw new Error("No se encontró proveedor con ese id");
+  if (!data) throw new Error(PROVEEDOR_NOT_FOUND_ERROR);
   return data as Proveedor;
 };
 
@@ -152,11 +155,14 @@ export const getProveedorById = async (id: string): Promise<Proveedor> => {
     .from("proveedor")
     .select()
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
   if (error) {
-    console.log(error.message);
-    throw new Error("No se encontró el proveedor con ese id");
+    throw new Error(error.message);
+  }
+
+  if (!data) {
+    throw new Error(PROVEEDOR_NOT_FOUND_ERROR);
   }
 
   return data as Proveedor;

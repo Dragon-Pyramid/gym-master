@@ -19,9 +19,17 @@ export async function GET(
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
+    if (error?.message === "No se encontró la actividad con ese id") {
+      return NextResponse.json(
+        { error: "Actividad no encontrada" },
+        { status: 404 },
+      );
+    }
+
+    console.error("Error al obtener la actividad:", error);
     return NextResponse.json(
-      { error: error?.message ?? String(error) },
-      { status: 500 }
+      { error: "Error al obtener la actividad" },
+      { status: 500 },
     );
   }
 }

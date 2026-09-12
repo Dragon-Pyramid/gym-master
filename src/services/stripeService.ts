@@ -99,7 +99,7 @@ async function buildPagoCuotaContext(
     .single();
 
   if (cuotaError || !cuota) {
-    console.log(cuotaError?.message);
+    console.error(cuotaError?.message);
     throw new Error("Error al traer la cuota vigente");
   }
 
@@ -116,7 +116,7 @@ async function buildPagoCuotaContext(
     .limit(1);
 
   if (ultimoPagoError) {
-    console.log(ultimoPagoError.message);
+    console.error(ultimoPagoError.message);
     throw new Error("Error al traer el último pago");
   }
 

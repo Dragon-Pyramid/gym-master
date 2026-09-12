@@ -23,7 +23,10 @@ export async function POST(req: Request) {
   } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    const message = error instanceof Error ? error.message : 'Error interno del servidor';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("Error al generar rutina personalizada:", error);
+    return NextResponse.json(
+      { error: "Error al generar rutina personalizada" },
+      { status: 500 }
+    );
   }
 }

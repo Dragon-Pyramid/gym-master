@@ -8,16 +8,85 @@ import {
   finishTrainingSession,
   updateTrainingSessionExercise,
 } from '@/services/server/rutinaTrainingSessionService';
+import {
+  HttpRuntimeError,
+  readJsonBody,
+  runtimeErrorResponse,
+} from '@/lib/security/httpRuntimeSecurity';
 
 export const dynamic = 'force-dynamic';
 
 const resolveStatus = (message: string): number => {
-  if (message.includes('obligatorio') || message.includes('válido')) return 400;
-  if (message.includes('permisos')) return 403;
-  if (message.includes('No se encontró')) return 404;
-  if (message.includes('activa')) return 409;
+  if (
+    message.includes('obligatorio') ||
+    message.includes('válido')
+  ) {
+    return 400;
+  }
+
+  if (message.includes('permisos')) {
+    return 403;
+  }
+
+  if (message.includes('No se encontró')) {
+    return 404;
+  }
+
+  if (message.includes('activa')) {
+    return 409;
+  }
+
   return 500;
 };
+
+type TrainingSessionActionRequestBody =
+  Parameters<
+    typeof updateTrainingSessionExercise
+  >[2] & {
+    action?: unknown;
+  };
+
+function trainingSessionItemErrorResponse(
+  error: unknown,
+  fallback: string,
+) {
+  if (error instanceof HttpRuntimeError) {
+    return runtimeErrorResponse(
+      error,
+      fallback,
+    );
+  }
+
+  const message =
+    error instanceof Error
+      ? error.message
+      : '';
+
+  const status = resolveStatus(message);
+
+  if (status < 500) {
+    return NextResponse.json(
+      {
+        error:
+          message ||
+          'Solicitud inválida',
+      },
+      { status },
+    );
+  }
+
+  console.error(fallback, {
+    name:
+      error instanceof Error
+        ? error.name
+        : 'UnknownError',
+  });
+
+  return NextResponse.json(
+    { error: fallback },
+    { status: 500 },
+  );
+}
 
 export async function PATCH(
   req: Request,
@@ -31,8 +100,17 @@ export async function PATCH(
       ['socio'],
     );
 
-    const body = await req.json();
-    const action = String(body?.action ?? 'update_exercise');
+    const body =
+      await readJsonBody<
+        TrainingSessionActionRequestBody
+      >(
+        req,
+        64 * 1024,
+      );
+
+    const action = String(
+      body?.action ?? 'update_exercise',
+    );
 
     if (action === 'finish') {
       const data = await finishTrainingSession(user, params.id);
@@ -50,10 +128,15 @@ export async function PATCH(
     }
 
     return NextResponse.json({ error: 'Acción no soportada' }, { status: 400 });
-  } catch (error) {
-    const authResponse = authorizationErrorResponse(error);
+  } catch (error: unknown) {
+    const authResponse =
+      authorizationErrorResponse(error);
+
     if (authResponse) return authResponse;
-    const message = error instanceof Error ? error.message : 'Error interno del servidor';
-    return NextResponse.json({ error: message }, { status: resolveStatus(message) });
+
+    return trainingSessionItemErrorResponse(
+      error,
+      'Error al actualizar la sesión de entrenamiento',
+    );
   }
 }

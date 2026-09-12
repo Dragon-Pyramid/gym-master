@@ -514,9 +514,11 @@ export async function ingestExercisesForRag(
       const result = await upsertExerciseDocument(exercise, Boolean(payload.force), maxRetries, retryDelayMs);
       if (result.indexed) response.indexed += 1;
       if (result.skipped) response.skipped += 1;
-    } catch (error: any) {
+    } catch {
       response.failed += 1;
-      response.errors.push(`${exercise.nombre_ejercicio}: ${error?.message ?? 'error desconocido'}`);
+      response.errors.push(
+        `${exercise.nombre_ejercicio}: No se pudo indexar el ejercicio en el corpus RAG.`,
+      );
     }
 
     if (delayMs > 0 && index < exercises.length - 1) {
@@ -554,9 +556,11 @@ export async function ingestDietRulesForRag(
       const result = await upsertDietRuleDocument(dietRule, Boolean(payload.force), maxRetries, retryDelayMs);
       if (result.indexed) response.indexed += 1;
       if (result.skipped) response.skipped += 1;
-    } catch (error: any) {
+    } catch {
       response.failed += 1;
-      response.errors.push(`${dietRule.tipo_comida ?? dietRule.id}: ${error?.message ?? 'error desconocido'}`);
+      response.errors.push(
+        `${dietRule.tipo_comida ?? dietRule.id}: No se pudo indexar la regla nutricional en el corpus RAG.`,
+      );
     }
 
     if (delayMs > 0 && index < dietRules.length - 1) {
@@ -633,9 +637,11 @@ export async function vectorizePendingRagChunks(
       }
 
       response.vectorized += 1;
-    } catch (error: any) {
+    } catch {
       response.failed += 1;
-      response.errors.push(`${chunk.id}: ${error?.message ?? 'error desconocido'}`);
+      response.errors.push(
+        `${chunk.id}: No se pudo vectorizar el chunk RAG.`,
+      );
     }
 
     if (delayMs > 0 && index < chunksToVectorize.length - 1) {

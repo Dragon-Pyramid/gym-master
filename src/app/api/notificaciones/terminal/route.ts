@@ -11,16 +11,6 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-function isAuthSessionError(error: unknown) {
-  const message = error instanceof Error ? error.message.toLowerCase() : '';
-  return (
-    message.includes('token') ||
-    message.includes('jwt') ||
-    message.includes('authorization') ||
-    message.includes('unauthorized')
-  );
-}
-
 export async function GET(req: Request) {
   try {
     const { user } = await authMiddleware(req, { allowTerminalSession: true });
@@ -35,7 +25,7 @@ export async function GET(req: Request) {
       );
     }
 
-    if (error instanceof AuthMiddlewareError || isAuthSessionError(error)) {
+    if (error instanceof AuthMiddlewareError) {
       return NextResponse.json(
         {
           error: 'La sesión de Terminal expiró. Iniciá sesión nuevamente o renová la sesión.',
@@ -45,7 +35,10 @@ export async function GET(req: Request) {
       );
     }
 
-    const message = error instanceof Error ? error.message : 'Error interno del servidor';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('Error al obtener notificaciones de Terminal:', error);
+    return NextResponse.json(
+      { error: 'Error al obtener notificaciones de Terminal' },
+      { status: 500 }
+    );
   }
 }

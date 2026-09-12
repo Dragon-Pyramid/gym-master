@@ -22,13 +22,13 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: "Unauthorized: User no tiene rol de admin" }, { status: 403 });
         }
 
-        //TODO IMPLEMENTAR LÓGICA DE PREDICCIÓN DE ABANDONO
+        // Endpoint reservado para futura lógica predictiva; el release actual responde 501 de forma explícita.
 
         return NextResponse.json({ error: "Endpoint no implementado" }, { status: 501 });
     } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
         console.error("Error en la predicción de abandono:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: "Error en la predicción de abandono" }, { status: 500 });
     }
 }

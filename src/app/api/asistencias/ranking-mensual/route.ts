@@ -7,6 +7,10 @@ import {
   authorizeDashboardRequest,
   authorizationErrorResponse,
 } from '@/lib/auth/serverAuthorization';
+import {
+  readJsonBody,
+  runtimeErrorResponse,
+} from '@/lib/security/httpRuntimeSecurity';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,17 +21,42 @@ export async function POST(req : Request){
         return NextResponse.json({message: 'Unauthorized'}, {status: 401});
     }
 
-    //console.log(await req.json());
-    const body = await req.json();
+    const body =
+      await readJsonBody<
+        Parameters<typeof rankingMensualAsistencia>[0]
+      >(
+        req,
+        64 * 1024,
+      );
     
 
     const rankingMensual = await rankingMensualAsistencia(body, user);
 
     return NextResponse.json(rankingMensual);
-    }catch(error:any){
-    const authResponse = authorizationErrorResponse(error);
-    if (authResponse) return authResponse;
-        console.log(error);
-       return NextResponse.json({message: error.message}, {status: 500});
-   }
+    } catch (error: unknown) {
+      const authResponse =
+        authorizationErrorResponse(error);
+
+      if (authResponse) return authResponse;
+
+      const response =
+        runtimeErrorResponse(
+          error,
+          'Error al calcular el ranking mensual',
+        );
+
+      if (response.status >= 500) {
+        console.error(
+          'Error al calcular el ranking mensual:',
+          {
+            name:
+              error instanceof Error
+                ? error.name
+                : 'UnknownError',
+          },
+        );
+      }
+
+      return response;
+    }
 }

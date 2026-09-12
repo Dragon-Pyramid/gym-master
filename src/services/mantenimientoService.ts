@@ -127,7 +127,7 @@ export const mantenimientoCompletado = async (id: string): Promise<Mantenimiento
     .single();
 
   if (error) {
-    console.log("Error al completar el mantenimiento:", error.message);
+    console.error("Error al completar el mantenimiento:", error.message);
     throw new Error("Hubo un error al completar el mantenimiento. Por favor, inténtalo de nuevo más tarde.");
   }
 
@@ -145,6 +145,5 @@ export const mantenimientoCompletado = async (id: string): Promise<Mantenimiento
     observaciones,
   });
 
-  console.log("Equipamiento actualizado:", equipamientoActualizado);
   return data;
 };

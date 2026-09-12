@@ -138,8 +138,3 @@ export const dataAnalisisCostoBeneficio = async (user: any) => {
     if (error) throw new Error(error.message);
     return data;
 }
-
-export const dataPrediccionFallo = async (user: any) => {
-    //TODO IMPLEMENTAR LÓGICA DE PREDICCIÓN DE FALLOS DE EQUIPAMIENTO
-    throw new Error("Funcionalidad no implementada");
-}

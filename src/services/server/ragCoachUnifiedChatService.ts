@@ -502,15 +502,19 @@ function mapRagSources(results?: RagContextResultLike[] | null): RagCoachChatSou
 function buildFailedAction(
   type: RagCoachChatActionResult['type'],
   title: string,
-  error: unknown,
+  _error: unknown,
   locale: AiGeneratedContentLocale = 'es',
 ): RagCoachChatActionResult {
-  const message = error instanceof Error ? translateAiGeneratedTechnicalText(error.message, locale) : translateAiGeneratedTechnicalText('Error desconocido.', locale);
+  const message = aiGeneratedContentTx(
+    locale,
+    'No pude completar esta acción automáticamente.',
+    'I could not complete this action automatically.',
+  );
   return {
     type,
     ok: false,
     title,
-    message: aiGeneratedContentTx(locale, `No pude completar esta acción automáticamente. Motivo: ${message}`, `I could not complete this action automatically. Reason: ${message}`),
+    message,
     warnings: [message],
     safetyNotes: [aiGeneratedContentTx(locale, 'Podés intentar nuevamente o revisar el módulo correspondiente desde el menú.', 'You can try again or review the corresponding module from the menu.')],
   };
@@ -551,10 +555,16 @@ async function generateRoutineAction(user: JwtUser, socioId: string, message: st
     mensajeSocio: message,
     restricciones,
     id_socio: socioId,
-  }).catch((error) => ({
+  }).catch(() => ({
     summary: aiGeneratedContentTx(locale, 'No se pudo recuperar contexto RAG de rutinas. Se usa generación formal segura.', 'Routine RAG context could not be retrieved. Safe formal generation is used.'),
     results: [],
-    warnings: [error instanceof Error ? translateAiGeneratedTechnicalText(error.message, locale) : translateAiGeneratedTechnicalText('Error desconocido al consultar RAG de rutinas.', locale)],
+    warnings: [
+      aiGeneratedContentTx(
+        locale,
+        'No se pudo recuperar el contexto RAG de rutinas.',
+        'Routine RAG context could not be retrieved.',
+      ),
+    ],
   }));
 
   const rutinaGenerada = await dataGeneracionRutina(user, {
@@ -615,11 +625,17 @@ async function generateDietAction(user: JwtUser, socioId: string, message: strin
     mensajeSocio: message,
     restricciones,
     preferencias: '',
-  }).catch((error) => ({
+  }).catch(() => ({
     summary: aiGeneratedContentTx(locale, 'No se pudo recuperar contexto RAG de dietas. Se usa generación formal segura.', 'Diet RAG context could not be retrieved. Safe formal generation is used.'),
     results: [],
     disclaimers: [],
-    warnings: [error instanceof Error ? translateAiGeneratedTechnicalText(error.message, locale) : translateAiGeneratedTechnicalText('Error desconocido al consultar RAG de dietas.', locale)],
+    warnings: [
+      aiGeneratedContentTx(
+        locale,
+        'No se pudo recuperar el contexto RAG de dietas.',
+        'Diet RAG context could not be retrieved.',
+      ),
+    ],
   }));
 
   const dietaGenerada = await createDietaSocio(

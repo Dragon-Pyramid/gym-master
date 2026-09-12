@@ -36,11 +36,49 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
 
     return NextResponse.json({ ...salida, aforo }, { status: 200 });
   } catch (error: unknown) {
-    const authResponse = authorizationErrorResponse(error);
+    const authResponse =
+      authorizationErrorResponse(error);
+
     if (authResponse) return authResponse;
+
     const message =
-      error instanceof Error ? error.message : "Error al registrar salida";
-    const status = message.toLowerCase().includes("no autorizado") ? 403 : 500;
-    return NextResponse.json({ error: message }, { status });
+      error instanceof Error
+        ? error.message
+        : "";
+
+    if (
+      message ===
+      "No autorizado para registrar salidas administrativas"
+    ) {
+      return NextResponse.json(
+        { error: message },
+        { status: 403 },
+      );
+    }
+
+    if (
+      message ===
+      "No se encontró la asistencia indicada"
+    ) {
+      return NextResponse.json(
+        { error: message },
+        { status: 404 },
+      );
+    }
+
+    console.error(
+      "Error al registrar salida:",
+      {
+        name:
+          error instanceof Error
+            ? error.name
+            : "UnknownError",
+      },
+    );
+
+    return NextResponse.json(
+      { error: "Error al registrar salida" },
+      { status: 500 },
+    );
   }
 }

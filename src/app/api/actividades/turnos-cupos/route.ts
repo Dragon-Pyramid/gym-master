@@ -180,7 +180,7 @@ export async function GET(req: Request) {
 
     if (ubicacionesResult.missing) {
       warnings.push(
-        "El catálogo global de ubicaciones todavía no existe. Aplicá la migración de ubicaciones para usar el selector parametrizable.",
+        "El catálogo de ubicaciones no está disponible temporalmente.",
       );
     }
 
@@ -206,7 +206,7 @@ export async function GET(req: Request) {
 
     if (turnosResult.missing || inscripcionesResult.missing) {
       warnings.push(
-        "Las tablas actividad_turno y/o actividad_turno_inscripcion todavía no existen. Aplicá la migración privada de turnos/cupos para habilitar gestión completa.",
+        "La gestión de turnos y cupos no está disponible temporalmente.",
       );
 
       return NextResponse.json(
@@ -359,6 +359,10 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Sesión expirada o no autorizada" }, { status: 401 });
     }
 
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("Error al obtener actividades, turnos y cupos:", error);
+    return NextResponse.json(
+      { error: "Error al obtener actividades, turnos y cupos" },
+      { status: 500 },
+    );
   }
 }

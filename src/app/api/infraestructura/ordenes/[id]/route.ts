@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
-import { updateMantenimientoEdilicioOrden } from '@/services/server/infraestructuraMantenimientoService';
+import {
+  MANTENIMIENTO_EDILICIO_ORDEN_NOT_FOUND_ERROR,
+  updateMantenimientoEdilicioOrden,
+} from '@/services/server/infraestructuraMantenimientoService';
 
 import {
   authorizationErrorResponse,
@@ -25,8 +28,23 @@ export async function PATCH(
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
+    if (
+      error?.message ===
+      MANTENIMIENTO_EDILICIO_ORDEN_NOT_FOUND_ERROR
+    ) {
+      return NextResponse.json(
+        { error: 'Orden de mantenimiento edilicio no encontrada.' },
+        { status: 404 },
+      );
+    }
+
+    console.error(
+      'Error al actualizar orden de mantenimiento edilicio:',
+      error,
+    );
+
     return NextResponse.json(
-      { error: error?.message || 'Error al actualizar orden de mantenimiento edilicio.' },
+      { error: 'Error al actualizar orden de mantenimiento edilicio.' },
       { status: 500 },
     );
   }

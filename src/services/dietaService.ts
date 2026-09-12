@@ -55,7 +55,7 @@ export const createDietaSocio = async (
   });
 
   if (error) {
-    console.log('Error al generar la dieta:', error.message);
+    console.error('Error al generar la dieta:', error.message);
     throw new Error('Error al generar la dieta: ' + error.message);
   }
 
@@ -75,7 +75,7 @@ export const getAllDietasSocio = async (
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.log('Error al obtener las dietas:', error.message);
+    console.error('Error al obtener las dietas:', error.message);
     throw new Error('Error al obtener las dietas: ' + error.message);
   }
 
@@ -94,7 +94,7 @@ export const getAllDietas = async (user: JwtUser): Promise<Dieta[]> => {
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.log('Error al obtener las dietas:', error.message);
+    console.error('Error al obtener las dietas:', error.message);
     throw new Error('Error al obtener las dietas: ' + error.message);
   }
 
@@ -120,7 +120,7 @@ export const getDietaById = async (
     .maybeSingle();
 
   if (error) {
-    console.log('Error al obtener la dieta:', error.message);
+    console.error('Error al obtener la dieta:', error.message);
     throw new Error('Error al obtener la dieta: ' + error.message);
   }
 

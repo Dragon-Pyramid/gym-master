@@ -14,8 +14,10 @@ import {
   aiGeneratedContentTx,
   normalizeAiGeneratedContentLocale,
   translateAiGeneratedTechnicalList,
-  translateAiGeneratedTechnicalText,
 } from '@/utils/aiGeneratedContentI18n';
+import {
+  readJsonBody,
+} from '@/lib/security/httpRuntimeSecurity';
 
 export const dynamic = 'force-dynamic';
 
@@ -138,7 +140,13 @@ export async function POST(req: Request) {
     );
 
 
-    const body = (await req.json().catch(() => ({}))) as RagRutinasAssistantRequest;
+    const body =
+      await readJsonBody<
+        RagRutinasAssistantRequest
+      >(
+        req,
+        64 * 1024,
+      );
 
     const baseObjetivo = toPositiveInteger(body.objetivo, 1);
     const baseNivel = toPositiveInteger(body.nivel, 1);
@@ -184,11 +192,28 @@ export async function POST(req: Request) {
         restricciones,
         id_socio: body.id_socio,
       });
-    } catch (error) {
-    const authResponse = authorizationErrorResponse(error);
-    if (authResponse) return authResponse;
-      internalRagError = error instanceof Error ? translateAiGeneratedTechnicalText(error.message, idioma) : translateAiGeneratedTechnicalText('Error desconocido al consultar RAG interno', idioma);
-      console.warn('RAG interno de rutinas no disponible. Se usa fallback local:', internalRagError);
+    } catch (error: unknown) {
+      const authResponse =
+        authorizationErrorResponse(error);
+
+      if (authResponse) return authResponse;
+
+      internalRagError =
+        aiGeneratedContentTx(
+          idioma,
+          'No se pudo consultar el contexto RAG interno. Se utilizó el generador local.',
+          'The internal RAG context could not be queried. The local generator was used.',
+        );
+
+      console.warn(
+        'RAG interno de rutinas no disponible. Se usa fallback local:',
+        {
+          name:
+            error instanceof Error
+              ? error.name
+              : 'UnknownError',
+        },
+      );
     }
 
     let ragRespuesta: RagCoachResponse | undefined;
@@ -198,11 +223,28 @@ export async function POST(req: Request) {
     if (ragConfigurado) {
       try {
         ragRespuesta = await callRagCoach(ragPayload);
-      } catch (error) {
-    const authResponse = authorizationErrorResponse(error);
-    if (authResponse) return authResponse;
-        ragError = error instanceof Error ? translateAiGeneratedTechnicalText(error.message, idioma) : translateAiGeneratedTechnicalText('Error desconocido del RAG Coach', idioma);
-        console.warn('RAG Coach no disponible. Se usa fallback local:', ragError);
+      } catch (error: unknown) {
+        const authResponse =
+          authorizationErrorResponse(error);
+
+        if (authResponse) return authResponse;
+
+        ragError =
+          aiGeneratedContentTx(
+            idioma,
+            'El RAG Coach externo no está disponible. Se utilizó el generador local.',
+            'The external RAG Coach is unavailable. The local generator was used.',
+          );
+
+        console.warn(
+          'RAG Coach no disponible. Se usa fallback local:',
+          {
+            name:
+              error instanceof Error
+                ? error.name
+                : 'UnknownError',
+          },
+        );
       }
     }
 
@@ -262,20 +304,29 @@ export async function POST(req: Request) {
       },
       { status: 200 }
     );
-  } catch (error) {
-    const authResponse = authorizationErrorResponse(error);
-    if (authResponse) return authResponse;
-    const message = error instanceof Error ? error.message : translateAiGeneratedTechnicalText('Error inesperado', 'es');
-    const status = message.toLowerCase().includes('token') ? 401 : 500;
+  } catch (error: unknown) {
+    const authResponse =
+      authorizationErrorResponse(error);
 
-    console.error('Error en asistente RAG de rutinas:', error);
+    if (authResponse) return authResponse;
+
+    console.error(
+      'Error en asistente RAG de rutinas:',
+      {
+        name:
+          error instanceof Error
+            ? error.name
+            : 'UnknownError',
+      },
+    );
 
     return NextResponse.json(
       {
         ok: false,
-        error: message,
+        error:
+          'No se pudo generar la rutina desde el asistente.',
       },
-      { status }
+      { status: 500 },
     );
   }
 }

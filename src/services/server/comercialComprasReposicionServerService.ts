@@ -1,3 +1,4 @@
+import { ComercialValidationError } from '@/lib/comercial/comercialErrorBoundary';
 import 'server-only';
 
 import { getSupabaseServerClient } from '@/services/supabaseServerClient';
@@ -21,7 +22,7 @@ function asNumber(value: unknown, fallback = 0) {
 function parsePositiveInteger(value: unknown, field: string): number {
   const numeric = Number(value);
   if (!Number.isInteger(numeric) || numeric <= 0) {
-    throw new Error(`${field} debe ser un número entero mayor a 0`);
+    throw new ComercialValidationError("El número ingresado debe ser un entero mayor a 0.", `${field} debe ser un número entero mayor a 0`);
   }
   return numeric;
 }
@@ -29,7 +30,7 @@ function parsePositiveInteger(value: unknown, field: string): number {
 function parseNonNegativeInteger(value: unknown, field: string): number {
   const numeric = Number(value);
   if (!Number.isInteger(numeric) || numeric < 0) {
-    throw new Error(`${field} debe ser un número entero mayor o igual a 0`);
+    throw new ComercialValidationError("El número ingresado debe ser un entero mayor o igual a 0.", `${field} debe ser un número entero mayor o igual a 0`);
   }
   return numeric;
 }
@@ -37,7 +38,7 @@ function parseNonNegativeInteger(value: unknown, field: string): number {
 function parseMoney(value: unknown, field: string): number {
   const numeric = Number(value);
   if (!Number.isFinite(numeric) || numeric < 0) {
-    throw new Error(`${field} debe ser un importe mayor o igual a 0`);
+    throw new ComercialValidationError("El importe ingresado debe ser mayor o igual a 0.", `${field} debe ser un importe mayor o igual a 0`);
   }
   return Math.round(numeric * 100) / 100;
 }
@@ -174,8 +175,8 @@ export async function upsertComercialProveedorProducto(
 ): Promise<ComercialProveedorProducto> {
   const productoId = String(payload.producto_id ?? '').trim();
   const proveedorId = String(payload.proveedor_id ?? '').trim();
-  if (!productoId) throw new Error('Debe seleccionar un producto');
-  if (!proveedorId) throw new Error('Debe seleccionar un proveedor');
+  if (!productoId) throw new ComercialValidationError('Debe seleccionar un producto');
+  if (!proveedorId) throw new ComercialValidationError('Debe seleccionar un proveedor');
 
   const costoUnitario = parseMoney(payload.costo_unitario, 'El costo unitario');
   const compraMinima = payload.compra_minima == null ? 1 : parsePositiveInteger(payload.compra_minima, 'La compra mínima');
@@ -189,11 +190,13 @@ export async function upsertComercialProveedorProducto(
     supabase.from('proveedor').select('id, nombre, estado').eq('id', proveedorId).single(),
   ]);
 
-  if (productoError || !producto) throw new Error('Producto no encontrado');
-  if (producto.activo === false) throw new Error('No se puede asociar proveedor a un producto inactivo');
-  if (proveedorError || !proveedor) throw new Error('Proveedor no encontrado');
+  if (productoError) throw new Error(productoError.message);
+  if (!producto) throw new ComercialValidationError('Producto no encontrado');
+  if (producto.activo === false) throw new ComercialValidationError('No se puede asociar proveedor a un producto inactivo');
+  if (proveedorError) throw new Error(proveedorError.message);
+  if (!proveedor) throw new ComercialValidationError('Proveedor no encontrado');
   if (proveedor.estado === 'inactivo' || proveedor.estado === 'discontinuado') {
-    throw new Error('No se puede asociar un proveedor inactivo o discontinuado');
+    throw new ComercialValidationError('No se puede asociar un proveedor inactivo o discontinuado');
   }
 
   if (principal) {
@@ -242,10 +245,10 @@ export async function createComercialOrdenCompra(
   user?: JwtUser | null
 ): Promise<ComercialOrdenCompra> {
   const proveedorId = String(payload.proveedor_id ?? '').trim();
-  if (!proveedorId) throw new Error('Debe seleccionar un proveedor');
+  if (!proveedorId) throw new ComercialValidationError('Debe seleccionar un proveedor');
 
   const detallesInput = Array.isArray(payload.detalles) ? payload.detalles : [];
-  if (!detallesInput.length) throw new Error('La orden debe tener al menos un producto');
+  if (!detallesInput.length) throw new ComercialValidationError('La orden debe tener al menos un producto');
 
   const supabase = getSupabaseServerClient();
 
@@ -254,14 +257,15 @@ export async function createComercialOrdenCompra(
     .select('id, nombre, estado')
     .eq('id', proveedorId)
     .single();
-  if (proveedorError || !proveedor) throw new Error('Proveedor no encontrado');
+  if (proveedorError) throw new Error(proveedorError.message);
+  if (!proveedor) throw new ComercialValidationError('Proveedor no encontrado');
   if (proveedor.estado === 'inactivo' || proveedor.estado === 'discontinuado') {
-    throw new Error('No se puede crear una orden para proveedor inactivo o discontinuado');
+    throw new ComercialValidationError('No se puede crear una orden para proveedor inactivo o discontinuado');
   }
 
   const normalized = detallesInput.map((detalle, index) => {
     const productoId = String(detalle.producto_id ?? '').trim();
-    if (!productoId) throw new Error(`Debe seleccionar producto en el ítem ${index + 1}`);
+    if (!productoId) throw new ComercialValidationError("Debe seleccionar un producto en el ítem.", `Debe seleccionar producto en el ítem ${index + 1}`);
     const cantidadSolicitada = parsePositiveInteger(detalle.cantidad_solicitada, `Cantidad solicitada del ítem ${index + 1}`);
     const costoUnitario = parseMoney(detalle.costo_unitario, `Costo unitario del ítem ${index + 1}`);
     return {
@@ -281,8 +285,8 @@ export async function createComercialOrdenCompra(
   const productoMap = new Map((productos ?? []).map((producto) => [producto.id, producto]));
   for (const detalle of normalized) {
     const producto = productoMap.get(detalle.producto_id);
-    if (!producto) throw new Error('Uno de los productos seleccionados no existe');
-    if (producto.activo === false) throw new Error(`El producto ${producto.nombre} está inactivo`);
+    if (!producto) throw new ComercialValidationError('Uno de los productos seleccionados no existe');
+    if (producto.activo === false) throw new ComercialValidationError("El producto seleccionado está inactivo.", `El producto ${producto.nombre} está inactivo`);
   }
 
   const totalEstimado = normalized.reduce((acc, detalle) => acc + detalle.subtotal_estimado, 0);
@@ -337,20 +341,20 @@ export async function recibirComercialOrdenCompra(
   user?: JwtUser | null
 ): Promise<ComercialOrdenCompra> {
   const ordenId = String(payload.orden_compra_id ?? '').trim();
-  if (!ordenId) throw new Error('Debe seleccionar una orden de compra');
+  if (!ordenId) throw new ComercialValidationError('Debe seleccionar una orden de compra');
 
   const supabase = getSupabaseServerClient();
 
   const orden = await fetchOrdenById(supabase, ordenId);
   if (orden.estado === 'recibida' || orden.estado === 'anulada') {
-    throw new Error('La orden no admite recepción en su estado actual');
+    throw new ComercialValidationError('La orden no admite recepción en su estado actual');
   }
 
   const ubicacionDestinoId = payload.ubicacion_destino_id || orden.ubicacion_destino_id;
-  if (!ubicacionDestinoId) throw new Error('Debe seleccionar una ubicación destino para recibir stock');
+  if (!ubicacionDestinoId) throw new ComercialValidationError('Debe seleccionar una ubicación destino para recibir stock');
 
   const detallesPayload = Array.isArray(payload.detalles) ? payload.detalles : [];
-  if (!detallesPayload.length) throw new Error('Debe indicar al menos un producto a recibir');
+  if (!detallesPayload.length) throw new ComercialValidationError('Debe indicar al menos un producto a recibir');
 
   const detallesById = new Map((orden.detalles ?? []).map((detalle) => [detalle.id, detalle]));
   let huboRecepcion = false;
@@ -361,11 +365,11 @@ export async function recibirComercialOrdenCompra(
     if (cantidadRecibir <= 0) continue;
 
     const detalle = detallesById.get(detalleId);
-    if (!detalle) throw new Error('Uno de los detalles no pertenece a la orden seleccionada');
+    if (!detalle) throw new ComercialValidationError('Uno de los detalles no pertenece a la orden seleccionada');
 
     const pendiente = Number(detalle.cantidad_solicitada ?? 0) - Number(detalle.cantidad_recibida ?? 0);
     if (cantidadRecibir > pendiente) {
-      throw new Error(`No se puede recibir más de lo pendiente para ${detalle.producto?.nombre ?? 'producto'}`);
+      throw new ComercialValidationError("No se puede recibir más de la cantidad pendiente.", `No se puede recibir más de lo pendiente para ${detalle.producto?.nombre ?? 'producto'}`);
     }
 
     const { data: producto, error: productoError } = await supabase
@@ -373,7 +377,8 @@ export async function recibirComercialOrdenCompra(
       .select('id, nombre, costo, precio, proveedor_id')
       .eq('id', detalle.producto_id)
       .single();
-    if (productoError || !producto) throw new Error('Producto no encontrado al recibir orden');
+    if (productoError) throw new Error(productoError.message);
+  if (!producto) throw new ComercialValidationError('Producto no encontrado al recibir orden');
 
     await createComercialStockMovimiento(
       {
@@ -448,7 +453,7 @@ export async function recibirComercialOrdenCompra(
     huboRecepcion = true;
   }
 
-  if (!huboRecepcion) throw new Error('Debe recibir al menos una unidad');
+  if (!huboRecepcion) throw new ComercialValidationError('Debe recibir al menos una unidad');
 
   const { data: detallesActualizados, error: detallesError } = await supabase
     .from('comercial_orden_compra_detalle')

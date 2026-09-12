@@ -14,7 +14,7 @@ export async function GET(req: Request) {
       ['admin', 'usuario'],
     );
 
-    // TODO: implementar lógica de proyección de ingresos.
+    // Endpoint reservado para futura proyección de ingresos; el release actual responde 501 de forma explícita.
     return NextResponse.json({ error: 'Endpoint no implementado' }, { status: 501 });
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
@@ -22,7 +22,7 @@ export async function GET(req: Request) {
 
     console.error('Error en la proyección de ingresos:', error);
     return NextResponse.json(
-      { error: error.message || 'Error en la proyección de ingresos' },
+      { error: 'Error en la proyección de ingresos' },
       { status: 500 },
     );
   }

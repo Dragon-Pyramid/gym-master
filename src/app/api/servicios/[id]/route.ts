@@ -30,6 +30,17 @@ export async function GET(
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    return NextResponse.json({ error: error.message });
+    if (error?.message === "No se encontró el servicio con ese id") {
+      return NextResponse.json(
+        { error: "Servicio no encontrado" },
+        { status: 404 },
+      );
+    }
+
+    console.error("Error al obtener el servicio:", error);
+    return NextResponse.json(
+      { error: "Error al obtener el servicio" },
+      { status: 500 },
+    );
   }
 }

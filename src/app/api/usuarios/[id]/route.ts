@@ -25,6 +25,10 @@ export async function GET(
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    return NextResponse.json({ error: error.message });
+    console.error("Error al obtener el usuario:", error);
+    return NextResponse.json(
+      { error: "Error al obtener el usuario" },
+      { status: 500 },
+    );
   }
 }

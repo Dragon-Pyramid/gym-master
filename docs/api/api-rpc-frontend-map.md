@@ -91,7 +91,7 @@ Notas:
 |---|---|---|---|---|---|
 | `sp_analisis_conducta_pagos` | `dataAnalisisConductaPagos` | `GET /api/admin/metricas/pagos/histograma` | `getHistogramaPagos` | Gráfico de barras en dashboard | ✅ Parcialmente visualizado |
 | `sp_analisis_conducta_pagos` | `dataAnalisisConductaPagos` | `GET /api/admin/metricas/pagos/segmentacion` | `getSegmentacionPagos` | Pie chart en dashboard | ✅ Parcialmente visualizado |
-| Proyección de ingresos | `dataProyeccionIngresos` TODO | `GET /api/admin/metricas/pagos/proyeccion-ingresos` | `getProyeccionIngresos` | No visualizado | 🔴 Endpoint devuelve 501; falta RPC o lógica |
+| Proyección de ingresos | Sin servicio activo; endpoint reservado | `GET /api/admin/metricas/pagos/proyeccion-ingresos` | `getProyeccionIngresos` | No visualizado | 🟡 Endpoint reservado; responde 501 explícitamente en el release actual |
 | Pago manual | `createPago` | `POST /api/pagos` | Formularios/módulo pagos | ABM operativo a revisar | 🟡 Funcionalidad operativa, no BI |
 | Stripe checkout | `pagarCuotaConStripe` / `stripeService` | `POST /api/pagar-cuota`, `POST /api/stripe-webhook` | `pagarCuotaConStripe` | Flujo pago socio | 🟡 Requiere validación integral |
 
@@ -110,7 +110,7 @@ Notas:
 | `sp_estado_equipamiento_semaforo` | `dataEstadoEquipamientoSemaforo` | `GET /api/admin/metricas/equipamiento/estado-actual` | `getEstadoActualEquipamiento` | Pie chart en dashboard | ✅ Visualizado, pero mejorable |
 | `sp_ranking_fallos_equipamiento` | `dataRankingFallosEquipamiento` | `GET /api/admin/metricas/equipamiento/top-fallos` | `getTopFallosEquipamiento` | Bar chart en dashboard | ✅ Visualizado |
 | `sp_analisis_costo_beneficio` | `dataAnalisisCostoBeneficio` | `GET /api/admin/metricas/equipamiento/costo-beneficio` | `getCostoBeneficioEquipamiento` | No detectado en dashboard | 🟡 API lista / visual pendiente |
-| Predicción de fallos | `dataPrediccionFallo` TODO | `GET /api/admin/metricas/equipamiento/prediccion-fallo` | `getPrediccionFalloEquipamiento` | No visualizado | 🔴 Endpoint devuelve 501; falta modelo/RPC |
+| Predicción de fallos | Sin servicio activo; endpoint reservado | `GET /api/admin/metricas/equipamiento/prediccion-fallo` | `getPrediccionFalloEquipamiento` | No visualizado | 🟡 Endpoint reservado; responde 501 explícitamente en el release actual |
 | Tablas `equipamiento` / `mantenimiento` | Servicios ABM | `/api/equipamientos`, `/api/mantenimientos` | Páginas y tablas del módulo | ABM a validar | 🟡 Funcionalidad operativa, revisar UX y datos |
 
 Notas:

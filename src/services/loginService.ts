@@ -93,7 +93,6 @@ export const signIn = async (login: SignInDto) => {
     );
   }
   if (data.activo === false) {
-    console.log('Usuario inactivo');
     throw new LoginBusinessError('Usuario inactivo', {
       code: 'LOGIN_USER_INACTIVE',
       status: 403,
@@ -116,7 +115,6 @@ export const signIn = async (login: SignInDto) => {
     const socio = await getSocioByIdUsuario(data.id);
 
     if (!socio) {
-      console.log('No se encontró el socio asociado al usuario');
       throw new LoginBusinessError('No se encontró el socio asociado al usuario', {
         code: 'LOGIN_SOCIO_NOT_FOUND',
         status: 404,
@@ -134,9 +132,6 @@ export const signIn = async (login: SignInDto) => {
         data.id
       );
       socio.activo = false;
-      console.log(
-        `Socio ${socio.id_socio} desactivado por morosidad (${estadoCuota?.estado_cuota}, ${estadoCuota?.dias_vencido} días vencido).`
-      );
     }
 
     if (!debeDesactivarsePorMora && !socio.activo && estadoCuota?.estado_cuota === 'al_dia') {
@@ -148,9 +143,6 @@ export const signIn = async (login: SignInDto) => {
         data.id
       );
       socio.activo = true;
-      console.log(
-        `Socio ${socio.id_socio} reactivado en login porque registra cuota al día.`
-      );
     }
 
     if (!socio.activo || debeDesactivarsePorMora) {

@@ -282,7 +282,7 @@ export const getProductoById = async (id: string): Promise<Producto> => {
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase.from("producto").select().eq("id", id).single();
   if (error) {
-    console.log(error.message);
+    console.error(error.message);
     throw new Error("No se encontró el producto con ese id");
   }
   return data as Producto;

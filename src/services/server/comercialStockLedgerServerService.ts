@@ -1,3 +1,4 @@
+import { ComercialValidationError } from '@/lib/comercial/comercialErrorBoundary';
 import 'server-only';
 
 import { getSupabaseServerClient } from '@/services/supabaseServerClient';
@@ -19,7 +20,7 @@ function asNumber(value: unknown, fallback = 0) {
 function parsePositiveInteger(value: unknown, field: string): number {
   const numeric = Number(value);
   if (!Number.isInteger(numeric) || numeric <= 0) {
-    throw new Error(`${field} debe ser un número entero mayor a 0`);
+    throw new ComercialValidationError("El número ingresado debe ser un entero mayor a 0.", `${field} debe ser un número entero mayor a 0`);
   }
   return numeric;
 }
@@ -27,7 +28,7 @@ function parsePositiveInteger(value: unknown, field: string): number {
 function parseNonNegativeInteger(value: unknown, field: string): number {
   const numeric = Number(value);
   if (!Number.isInteger(numeric) || numeric < 0) {
-    throw new Error(`${field} debe ser un número entero mayor o igual a 0`);
+    throw new ComercialValidationError("El número ingresado debe ser un entero mayor o igual a 0.", `${field} debe ser un número entero mayor o igual a 0`);
   }
   return numeric;
 }
@@ -194,23 +195,23 @@ export async function createComercialStockMovimiento(
   const tipo = payload.tipo;
   const motivo = String(payload.motivo ?? '').trim();
 
-  if (!productoId) throw new Error('Debe seleccionar un producto');
-  if (!tipo) throw new Error('Debe seleccionar un tipo de movimiento');
-  if (motivo.length < 5) throw new Error('Debe indicar un motivo claro de al menos 5 caracteres');
+  if (!productoId) throw new ComercialValidationError('Debe seleccionar un producto');
+  if (!tipo) throw new ComercialValidationError('Debe seleccionar un tipo de movimiento');
+  if (motivo.length < 5) throw new ComercialValidationError('Debe indicar un motivo claro de al menos 5 caracteres');
 
   const ubicacionOrigenId = payload.ubicacion_origen_id || null;
   const ubicacionDestinoId = payload.ubicacion_destino_id || null;
 
   if (movementRequiresOrigin(tipo) && !ubicacionOrigenId) {
-    throw new Error('El movimiento requiere ubicación de origen');
+    throw new ComercialValidationError('El movimiento requiere ubicación de origen');
   }
 
   if (movementRequiresDestination(tipo) && !ubicacionDestinoId) {
-    throw new Error('El movimiento requiere ubicación de destino');
+    throw new ComercialValidationError('El movimiento requiere ubicación de destino');
   }
 
   if (tipo === 'transferencia' && ubicacionOrigenId === ubicacionDestinoId) {
-    throw new Error('La ubicación de origen y destino deben ser distintas');
+    throw new ComercialValidationError('La ubicación de origen y destino deben ser distintas');
   }
 
   const stockReal = tipo === 'conteo_fisico'
@@ -229,8 +230,9 @@ export async function createComercialStockMovimiento(
     .eq('id', productoId)
     .single();
 
-  if (productoError || !producto) throw new Error('Producto no encontrado');
-  if (producto.activo === false) throw new Error('No se puede operar stock de un producto inactivo');
+  if (productoError) throw new Error(productoError.message);
+  if (!producto) throw new ComercialValidationError('Producto no encontrado');
+  if (producto.activo === false) throw new ComercialValidationError('No se puede operar stock de un producto inactivo');
 
   const stockAnteriorTotal = await getProductTotalStock(supabase, productoId);
 
@@ -248,7 +250,7 @@ export async function createComercialStockMovimiento(
     const source = await getLocationStock(supabase, productoId, ubicacionOrigenId!);
     const currentQty = Number(source.cantidad ?? 0);
     if (currentQty < cantidadMovimiento) {
-      throw new Error(`La ubicación de origen no tiene stock suficiente. Stock actual: ${currentQty}`);
+      throw new ComercialValidationError("La ubicación de origen no tiene stock suficiente.", `La ubicación de origen no tiene stock suficiente. Stock actual: ${currentQty}`);
     }
     const { error } = await supabase
       .from('comercial_producto_stock_ubicacion')
@@ -262,7 +264,7 @@ export async function createComercialStockMovimiento(
     const target = await getLocationStock(supabase, productoId, ubicacionDestinoId!);
     const sourceQty = Number(source.cantidad ?? 0);
     if (sourceQty < cantidadMovimiento) {
-      throw new Error(`La ubicación de origen no tiene stock suficiente. Stock actual: ${sourceQty}`);
+      throw new ComercialValidationError("La ubicación de origen no tiene stock suficiente.", `La ubicación de origen no tiene stock suficiente. Stock actual: ${sourceQty}`);
     }
 
     const { error: sourceError } = await supabase
@@ -283,7 +285,7 @@ export async function createComercialStockMovimiento(
     const currentQty = Number(target.cantidad ?? 0);
     cantidadMovimiento = Math.abs(stockReal - currentQty);
     if (cantidadMovimiento === 0) {
-      throw new Error('El conteo físico no modifica la cantidad de la ubicación');
+      throw new ComercialValidationError('El conteo físico no modifica la cantidad de la ubicación');
     }
     const { error } = await supabase
       .from('comercial_producto_stock_ubicacion')

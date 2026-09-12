@@ -120,12 +120,11 @@ export const updateUsuarios = async (
     .select()
     .single();
   if (error) {
-    console.log(error.message);
+    console.error(error.message);
       throw new Error(error.message)};
   if (!data || data.length === 0) {
     throw new Error('No se encontró el usuario con ese ID');
   }
-  console.log(data);
   
   return data as Usuario;
 };
@@ -153,7 +152,7 @@ export const getUsuarioById = async(_user: JwtUser | undefined, id:string): Prom
   .single();
 
 if(error) {
-  console.log(error.message);
+  console.error(error.message);
   throw new Error ("Hubo un error al obtener el usuario")
 };
 const response : ResponseUsuario = {
@@ -178,7 +177,7 @@ const supabase = conexionBD();
     .select()
     .single();
   if (error) {
-    console.log(error.message);
+    console.error(error.message);
     throw new Error(error.message);
   }
   if (!data || data.length === 0) {
@@ -188,7 +187,6 @@ const supabase = conexionBD();
   if (user.rol === 'socio' && user.id_socio) {
     await updateFotoSocioById(user.id_socio, url);
   }
-console.log("profile_photo_updated: Foto de usuario actualizada:");
 
   return data;
 };
