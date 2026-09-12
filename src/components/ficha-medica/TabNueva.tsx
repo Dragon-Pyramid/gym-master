@@ -158,6 +158,7 @@ export default function TabNueva({
   const tx = useCallback((es: string, en: string) => (locale === 'en' ? en : es), [locale]);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const schema = useMemo(() => yup.object().shape({
     altura: yup
@@ -242,6 +243,7 @@ export default function TabNueva({
       if (!socioId) return;
       setSubmitting(true);
       setSuccessMessage(null);
+      setErrorMessage(null);
 
       const payload: Record<string, unknown> = {
         altura: values.altura,
@@ -285,10 +287,16 @@ export default function TabNueva({
           setSuccessMessage(tx('Ficha médica guardada correctamente.', 'Medical record saved successfully.'));
           if (onSaved) onSaved();
         } else {
-          alert(res.data?.message || res.data?.error || tx('Error al guardar ficha', 'Error saving medical record'));
+          setErrorMessage(
+            res.data?.message ||
+              res.data?.error ||
+              tx('Error al guardar ficha', 'Error saving medical record'),
+          );
         }
       } catch {
-        alert(tx('Error al guardar ficha', 'Error saving medical record'));
+        setErrorMessage(
+          tx('Error al guardar ficha', 'Error saving medical record'),
+        );
       } finally {
         setSubmitting(false);
       }
@@ -340,6 +348,16 @@ export default function TabNueva({
           </div>
         </div>
       </div>
+
+      {errorMessage ? (
+        <div
+          role='alert'
+          className='mt-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/20 dark:text-red-300'
+        >
+          <AlertTriangle className='h-4 w-4 shrink-0' />
+          {errorMessage}
+        </div>
+      ) : null}
 
       {successMessage ? (
         <div className='mt-4 flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700 dark:border-green-900 dark:bg-green-950/20 dark:text-green-300'>

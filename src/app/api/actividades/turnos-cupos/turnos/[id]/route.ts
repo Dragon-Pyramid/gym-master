@@ -10,6 +10,33 @@ export const dynamic = "force-dynamic";
 
 const VALID_ESTADOS = new Set(["activo", "pausado", "cancelado"]);
 
+const TURNO_NOT_FOUND_ERROR = "No se encontró el turno con ese id";
+
+function turnoValidationErrorResponse(message: string) {
+  switch (message) {
+    case "El día de semana debe estar entre 1 y 7":
+      return NextResponse.json(
+        { error: "El día de semana debe estar entre 1 y 7" },
+        { status: 400 },
+      );
+
+    case "El cupo máximo debe ser mayor a cero":
+      return NextResponse.json(
+        { error: "El cupo máximo debe ser mayor a cero" },
+        { status: 400 },
+      );
+
+    case "Estado de turno inválido":
+      return NextResponse.json(
+        { error: "Estado de turno inválido" },
+        { status: 400 },
+      );
+
+    default:
+      return null;
+  }
+}
+
 function cleanString(value: unknown) {
   const text = String(value ?? "").trim();
   return text.length ? text : null;
@@ -63,9 +90,10 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
       .update(payload)
       .eq("id", id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw new Error(error.message);
+    if (!data) throw new Error(TURNO_NOT_FOUND_ERROR);
 
     return NextResponse.json({ message: "Turno actualizado correctamente", data }, { status: 200 });
   } catch (error) {
@@ -73,7 +101,22 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
     if (authResponse) return authResponse;
 
     const message = error instanceof Error ? error.message : "Error al actualizar turno";
-    return NextResponse.json({ error: message }, { status: message.includes("invál") ? 400 : 500 });
+
+    const validationResponse = turnoValidationErrorResponse(message);
+    if (validationResponse) return validationResponse;
+
+    if (message === TURNO_NOT_FOUND_ERROR) {
+      return NextResponse.json(
+        { error: "Turno no encontrado" },
+        { status: 404 },
+      );
+    }
+
+    console.error("Error al actualizar turno:", error);
+    return NextResponse.json(
+      { error: "Error al actualizar turno" },
+      { status: 500 },
+    );
   }
 }
 
@@ -83,9 +126,15 @@ export async function DELETE(req: Request, context: { params: Promise<{ id: stri
     const { id } = await context.params;
     const supabase = getSupabaseServerClient();
 
-    const { error } = await supabase.from("actividad_turno").delete().eq("id", id);
+    const { data, error } = await supabase
+      .from("actividad_turno")
+      .delete()
+      .eq("id", id)
+      .select("id")
+      .maybeSingle();
 
     if (error) throw new Error(error.message);
+    if (!data) throw new Error(TURNO_NOT_FOUND_ERROR);
 
     return NextResponse.json({ message: "Turno eliminado correctamente" }, { status: 200 });
   } catch (error) {
@@ -93,6 +142,18 @@ export async function DELETE(req: Request, context: { params: Promise<{ id: stri
     if (authResponse) return authResponse;
 
     const message = error instanceof Error ? error.message : "Error al eliminar turno";
-    return NextResponse.json({ error: message }, { status: 500 });
+
+    if (message === TURNO_NOT_FOUND_ERROR) {
+      return NextResponse.json(
+        { error: "Turno no encontrado" },
+        { status: 404 },
+      );
+    }
+
+    console.error("Error al eliminar turno:", error);
+    return NextResponse.json(
+      { error: "Error al eliminar turno" },
+      { status: 500 },
+    );
   }
 }

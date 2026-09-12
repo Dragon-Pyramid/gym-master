@@ -11,21 +11,14 @@ import {
   authorizeDashboardRequest,
   authorizationErrorResponse,
 } from '@/lib/auth/serverAuthorization';
+import {
+  ejercicioMediaHttpErrorResponse,
+} from '@/lib/rutinas/ejercicioMediaHttpBoundary';
 
 export const dynamic = 'force-dynamic';
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 const MAX_REQUEST_BODY_BYTES = MAX_FILE_SIZE_BYTES + 512 * 1024;
-
-function getStatusFromError(error: any) {
-  const message = error?.message ?? '';
-
-  if (message.includes('Token no proporcionado') || message.includes('Token inválido')) {
-    return 401;
-  }
-
-  return 500;
-}
 
 function normalizeRole(role?: string | null) {
   return role?.trim().toLowerCase() ?? '';
@@ -113,20 +106,30 @@ export async function POST(request: Request) {
       },
       { status: 200 }
     );
-  } catch (error: any) {
-    const authResponse = authorizationErrorResponse(error);
-    if (authResponse) return authResponse;
-    const status = getStatusFromError(error);
+  } catch (error: unknown) {
+    const authResponse =
+      authorizationErrorResponse(error);
 
-    if (status === 500) {
-      console.error('Error al subir media de ejercicio:', {
-        name: error instanceof Error ? error.name : 'UnknownError',
-      });
+    if (authResponse) return authResponse;
+
+    const response =
+      ejercicioMediaHttpErrorResponse(
+        error,
+        'No se pudo subir la media del ejercicio.',
+      );
+
+    if (response.status >= 500) {
+      console.error(
+        'Error al subir media de ejercicio:',
+        {
+          name:
+            error instanceof Error
+              ? error.name
+              : 'UnknownError',
+        },
+      );
     }
 
-    return NextResponse.json(
-      { error: status >= 500 ? 'No se pudo subir la media del ejercicio.' : 'Solicitud no autorizada.' },
-      { status }
-    );
+    return response;
   }
 }

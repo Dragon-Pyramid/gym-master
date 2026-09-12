@@ -3,6 +3,9 @@ import 'server-only';
 import { getSupabaseServerClient } from "./supabaseServerClient";
 import { Servicio, CreateServicioDto, UpdateServicioDto } from "../interfaces/servicio.interface";
 
+const SERVICIO_NOT_FOUND_ERROR = "No se encontró el servicio con ese id";
+const SERVICIO_CODE_CONFLICT_ERROR = "El código del servicio ya está asociado a otro servicio.";
+
 
 function normalizeServicioCode(value: unknown) {
   const text = String(value ?? '').trim();
@@ -61,7 +64,7 @@ export const createServicio = async (payload: CreateServicioDto): Promise<Servic
     .single();
   if (error) {
     if (error.message?.includes('servicio_codigo_unique')) {
-      throw new Error('El código del servicio ya está asociado a otro servicio.');
+      throw new Error(SERVICIO_CODE_CONFLICT_ERROR);
     }
     throw new Error(error.message);
   }
@@ -75,14 +78,14 @@ export const updateServicio = async (id: string, updateData: UpdateServicioDto):
     .update(normalizeServicioPayload(updateData))
     .eq("id", id)
     .select()
-    .single();
+    .maybeSingle();
   if (error) {
     if (error.message?.includes('servicio_codigo_unique')) {
-      throw new Error('El código del servicio ya está asociado a otro servicio.');
+      throw new Error(SERVICIO_CODE_CONFLICT_ERROR);
     }
     throw new Error(error.message);
   }
-  if (!data) throw new Error("No se encontró servicio con ese id");
+  if (!data) throw new Error(SERVICIO_NOT_FOUND_ERROR);
   return data as Servicio;
 };
 
@@ -96,7 +99,7 @@ export const deleteServicio = async (id: string): Promise<Servicio[]> => {
     .select();
   if (error) throw new Error(error.message);
   if (!data || data.length === 0) {
-    throw new Error('No se encontró el servicio con ese ID');
+    throw new Error(SERVICIO_NOT_FOUND_ERROR);
   }
 
   return data as Servicio[];
@@ -108,10 +111,15 @@ export const getServicioById = async (id: string): Promise<Servicio> => {
     .from("servicio")
     .select()
     .eq("id", id)
-    .single();
+    .maybeSingle();
+
   if (error) {
-    console.log(error.message);
-    throw new Error("No se encontró el servicio con ese id");
+    throw new Error(error.message);
   }
+
+  if (!data) {
+    throw new Error(SERVICIO_NOT_FOUND_ERROR);
+  }
+
   return data as Servicio;
 };

@@ -94,7 +94,6 @@ export const getAllPagos = async (): Promise<ResponsePago[]> => {
     `)
     .order("fecha_pago", { ascending: false });
 
-  console.log(error, data);
 
   if (error) throw new Error(error.message);
 
@@ -202,7 +201,7 @@ export const createPago = async (payload: CreatePagoDto): Promise<Pago> => {
         .single();
 
   if (cuotaError) {
-    console.log(cuotaError.message);
+    console.error(cuotaError.message);
     throw new Error("Error al traer la cuota");
   }
 
@@ -262,7 +261,7 @@ export const createPago = async (payload: CreatePagoDto): Promise<Pago> => {
     .single();
 
   if (error) {
-    console.log(error.message);
+    console.error(error.message);
     throw new Error("Error al crear el pago");
   }
 
@@ -360,7 +359,7 @@ export const getPagoById = async (id: string): Promise<ResponsePago> => {
     .single();
 
   if (error) {
-    console.log(error.message);
+    console.error(error.message);
     throw new Error("No se encontró el pago con ese id");
   }
 
@@ -376,9 +375,4 @@ export const dataAnalisisConductaPagos = async (user: any) => {
   if (error) throw new Error(error.message);
 
   return data;
-};
-
-export const dataProyeccionIngresos = async (user: any) => {
-  // TODO IMPLEMENTAR LÓGICA DE PROYECCIÓN DE INGRESOS
-  throw new Error("Funcionalidad no implementada");
 };

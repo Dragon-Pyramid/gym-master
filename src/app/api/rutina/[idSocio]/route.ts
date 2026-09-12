@@ -39,21 +39,18 @@ export async function GET(
     }
 
     return NextResponse.json(rutinas, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    const message = error?.message ?? 'Error al obtener las rutinas del socio';
 
-    if (
-      message.includes('Token no proporcionado') ||
-      message.includes('Token inválido') ||
-      message.includes('JWT_SECRET')
-    ) {
-      return NextResponse.json({ error: message }, { status: 401 });
-    }
+    console.error('Error al obtener las rutinas del socio:', {
+      name: error instanceof Error ? error.name : 'UnknownError',
+    });
 
-    console.error('Error al obtener las rutinas del socio:', error);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Error al obtener las rutinas del socio' },
+      { status: 500 },
+    );
   }
 }
 
@@ -79,33 +76,28 @@ export async function DELETE(
       },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    console.error('Error al eliminar rutina:', error);
 
-    const message = error?.message ?? 'Error al eliminar rutina';
+    const message =
+      error instanceof Error ? error.message : '';
 
-    if (
-      message.includes('Token no proporcionado') ||
-      message.includes('Token inválido') ||
-      message.includes('JWT_SECRET')
-    ) {
-      return NextResponse.json({ error: message }, { status: 401 });
-    }
-
-    if (message.includes('no es válido')) {
+    if (message === 'El id de rutina no es válido') {
       return NextResponse.json({ error: message }, { status: 400 });
     }
 
-    if (message.includes('No autorizado')) {
-      return NextResponse.json({ error: message }, { status: 403 });
-    }
-
-    if (message.includes('no encontrada') || message.includes('no encontrado')) {
+    if (message === 'Rutina no encontrada') {
       return NextResponse.json({ error: message }, { status: 404 });
     }
 
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('Error al eliminar rutina:', {
+      name: error instanceof Error ? error.name : 'UnknownError',
+    });
+
+    return NextResponse.json(
+      { error: 'Error al eliminar rutina' },
+      { status: 500 },
+    );
   }
 }

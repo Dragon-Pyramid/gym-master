@@ -14,8 +14,11 @@ export async function GET(req: Request){
     } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-        console.log(error.message);
-        return NextResponse.json({ error: error.message }, { status: 500 });        
+        console.error('Error al obtener los equipamientos:', error);
+        return NextResponse.json(
+            { error: 'Error al obtener los equipamientos' },
+            { status: 500 }
+        );
     }
 }
 
@@ -32,8 +35,11 @@ if (!body || !body.nombre || !body.tipo || !body.marca || !body.modelo || !body.
 } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-        console.log(error.message);
-        return NextResponse.json({ error: error.message }, { status: 500 });        
+        console.error('Error al crear el equipamiento:', error);
+        return NextResponse.json(
+            { error: 'Error al crear el equipamiento' },
+            { status: 500 }
+        );
 }
 }
 

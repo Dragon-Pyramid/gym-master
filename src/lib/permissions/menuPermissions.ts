@@ -559,6 +559,8 @@ export const DASHBOARD_ROUTE_PERMISSIONS: DashboardRoutePermission[] = [
     exact: true,
   },
   {
+    // Ruta heredada que redirige al Gestor de Dietas. Se conserva con el
+    // mismo permiso para mantener compatibilidad con enlaces guardados.
     path: "/dashboard/gestion-dietas",
     permissionKey: "Gestión de Dietas",
     roles: ["admin", "usuario"],

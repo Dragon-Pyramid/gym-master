@@ -30,7 +30,18 @@ export async function GET(
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error?.message === 'No se encontró el aviso con ese id') {
+      return NextResponse.json(
+        { error: 'Aviso no encontrado' },
+        { status: 404 },
+      );
+    }
+
+    console.error('Error al obtener aviso:', error);
+    return NextResponse.json(
+      { error: 'Error al obtener aviso' },
+      { status: 500 },
+    );
   }
 }
 
@@ -47,7 +58,18 @@ export async function PUT(
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error?.message === 'No se encontró el aviso con ese id') {
+      return NextResponse.json(
+        { error: 'Aviso no encontrado' },
+        { status: 404 },
+      );
+    }
+
+    console.error('Error al actualizar aviso:', error);
+    return NextResponse.json(
+      { error: 'Error al actualizar aviso' },
+      { status: 500 },
+    );
   }
 }
 
@@ -63,6 +85,17 @@ export async function DELETE(
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error?.message === 'No se encontró el aviso con ese id') {
+      return NextResponse.json(
+        { error: 'Aviso no encontrado' },
+        { status: 404 },
+      );
+    }
+
+    console.error('Error al eliminar aviso:', error);
+    return NextResponse.json(
+      { error: 'Error al eliminar aviso' },
+      { status: 500 },
+    );
   }
 }

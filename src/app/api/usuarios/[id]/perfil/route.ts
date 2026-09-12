@@ -25,8 +25,10 @@ export async function GET(
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
 
-    const message =
-      error instanceof Error ? error.message : 'Error al obtener el perfil';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('Error al obtener el perfil:', error);
+    return NextResponse.json(
+      { error: 'Error al obtener el perfil' },
+      { status: 500 }
+    );
   }
 }

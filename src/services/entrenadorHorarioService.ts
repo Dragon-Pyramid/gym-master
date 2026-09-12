@@ -16,10 +16,10 @@ const validarEInsertarBloque = async (dia_semana: string, bloque: { hora_desde: 
         const { data: horarioExistente, error: errorVerificacion } = await supabase
             .from("entrenador_horarios")
             .select("*")
+            .eq("entrenador_id", entrenador_id)
             .eq("dia_semana", dia_semana)
             .eq("hora_desde", bloque.hora_desde)
             .eq("hora_hasta", bloque.hora_hasta)
-            //.eq("activo", true)
             .single();
 
         if (errorVerificacion && errorVerificacion.code !== "PGRST116") {
@@ -29,7 +29,6 @@ const validarEInsertarBloque = async (dia_semana: string, bloque: { hora_desde: 
         }
 
         if (horarioExistente) {
-            console.log(`El horario ya existe para el día ${dia_semana}, desde ${bloque.hora_desde} hasta ${bloque.hora_hasta}.`);
             return; // Ignorar este bloque y continuar con los demás
         }
 

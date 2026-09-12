@@ -23,6 +23,10 @@ import type {
 
 const ALERT_THRESHOLD_DAYS = 30;
 
+export const MANTENIMIENTO_EDILICIO_ORDEN_NOT_FOUND_ERROR =
+  'No se encontró la orden de mantenimiento edilicio con ese id';
+
+
 
 function normalizeCode(value: string) {
   return value
@@ -546,9 +550,12 @@ export async function updateMantenimientoEdilicioOrden(
     .update(updatePayload)
     .eq('id', id)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) throw new Error(error.message);
+  if (!data) {
+    throw new Error(MANTENIMIENTO_EDILICIO_ORDEN_NOT_FOUND_ERROR);
+  }
 
   const orden = data as MantenimientoEdilicioOrden;
   if (orden.activo_id && payload.estado === 'completada') {

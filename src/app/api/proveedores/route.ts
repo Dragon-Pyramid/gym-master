@@ -27,7 +27,11 @@ export async function GET(req: Request) {
   } catch (error) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    return NextResponse.json({ error: "Error al obtener los proveedores" }, { status: 500 });
+    console.error("Error al obtener los proveedores:", error);
+    return NextResponse.json(
+      { error: "Error al obtener los proveedores" },
+      { status: 500 },
+    );
   }
 }
 
@@ -44,7 +48,18 @@ export async function POST(req: Request) {
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    return NextResponse.json({ error: error.message || "Error al crear el proveedor" }, { status: 500 });
+    if (error?.message === "El nombre comercial del proveedor es obligatorio") {
+      return NextResponse.json(
+        { error: "El nombre comercial del proveedor es obligatorio" },
+        { status: 400 },
+      );
+    }
+
+    console.error("Error al crear el proveedor:", error);
+    return NextResponse.json(
+      { error: "Error al crear el proveedor" },
+      { status: 500 },
+    );
   }
 }
 
@@ -61,7 +76,25 @@ export async function PUT(req: Request) {
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    return NextResponse.json({ error: error.message || "Error al actualizar el proveedor" }, { status: 500 });
+    if (error?.message === "El nombre comercial del proveedor es obligatorio") {
+      return NextResponse.json(
+        { error: "El nombre comercial del proveedor es obligatorio" },
+        { status: 400 },
+      );
+    }
+
+    if (error?.message === "No se encontró el proveedor con ese id") {
+      return NextResponse.json(
+        { error: "Proveedor no encontrado" },
+        { status: 404 },
+      );
+    }
+
+    console.error("Error al actualizar el proveedor:", error);
+    return NextResponse.json(
+      { error: "Error al actualizar el proveedor" },
+      { status: 500 },
+    );
   }
 }
 
@@ -78,6 +111,17 @@ export async function DELETE(req: Request) {
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    return NextResponse.json({ error: error.message || "Error al desactivar el proveedor" }, { status: 500 });
+    if (error?.message === "No se encontró el proveedor con ese id") {
+      return NextResponse.json(
+        { error: "Proveedor no encontrado" },
+        { status: 404 },
+      );
+    }
+
+    console.error("Error al desactivar el proveedor:", error);
+    return NextResponse.json(
+      { error: "Error al desactivar el proveedor" },
+      { status: 500 },
+    );
   }
 }

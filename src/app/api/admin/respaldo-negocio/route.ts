@@ -23,8 +23,17 @@ export async function GET(req: Request) {
   } catch (error) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    const message = error instanceof Error ? error.message : 'Error interno del servidor';
-    const status = message.includes('No autorizado') || message.includes('Token') ? 403 : 500;
-    return NextResponse.json({ error: message }, { status });
+    const message = error instanceof Error ? error.message : '';
+    if (message === "No autorizado: solo administradores pueden exportar respaldos del negocio") {
+      return NextResponse.json(
+        { error: "No autorizado: solo administradores pueden exportar respaldos del negocio" },
+        { status: 403 }
+      );
+    }
+    console.error("Error al obtener respaldo de negocio:", error);
+    return NextResponse.json(
+      { error: "Error al obtener respaldo de negocio" },
+      { status: 500 }
+    );
   }
 }

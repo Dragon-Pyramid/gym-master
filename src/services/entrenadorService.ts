@@ -95,14 +95,12 @@ export const getEntrenadorById = async (
   return entrenador;
 };
 
-//TODO, NO FUNCIONA BIEN, HAY QUE MODIFICARLA
 export const updateEntrenador = async (
   id: string,
   updateData: UpdateEntrenadorDTO,
   user: JwtUser
 ): Promise<Entrenador> => {
   const supabase = conexionBD();
-  console.log(updateData);
 
   const { horarios, ...updateEntrenador } = updateData;
 

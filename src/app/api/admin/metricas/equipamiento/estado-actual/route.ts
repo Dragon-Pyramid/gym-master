@@ -34,6 +34,6 @@ export async function GET(req: Request) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
         console.error("Error en el estado actual del equipamiento:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: "Error al obtener el estado actual del equipamiento" }, { status: 500 });
     }
 }

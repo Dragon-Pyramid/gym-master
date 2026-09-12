@@ -31,7 +31,10 @@ export async function GET(
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    console.log(error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Error al obtener los mantenimientos del equipamiento:', error);
+    return NextResponse.json(
+      { error: 'Error al obtener los mantenimientos del equipamiento' },
+      { status: 500 }
+    );
   }
 }

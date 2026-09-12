@@ -9,6 +9,28 @@ import {
 import { getSupabaseServerClient } from '@/services/supabaseServerClient';
 import { sendEmail } from '@/lib/brevo';
 
+const EMAIL_RESPUESTA_ERROR_PUBLICO =
+  'No se pudo enviar el email de respuesta.';
+
+export class SocioMensajeNoEncontradoError extends Error {
+  constructor() {
+    super('Mensaje de socio no encontrado');
+    this.name = 'SocioMensajeNoEncontradoError';
+  }
+}
+
+function sanitizeSocioMensaje(mensaje: SocioMensaje): SocioMensaje {
+  const error = mensaje.email_respuesta_error;
+
+  return {
+    ...mensaje,
+    email_respuesta_error:
+      error == null || error === 'El socio no tiene email registrado.'
+        ? error
+        : EMAIL_RESPUESTA_ERROR_PUBLICO,
+  };
+}
+
 const mensajeSelect = `
   *,
   socio:socio_id(id_socio,nombre_completo,email,dni),
@@ -88,7 +110,7 @@ export async function getMensajesSocio(user: JwtUser): Promise<SocioMensaje[]> {
     .order('creado_en', { ascending: false });
 
   if (error) throw new Error(error.message);
-  return (data ?? []) as SocioMensaje[];
+  return ((data ?? []) as SocioMensaje[]).map(sanitizeSocioMensaje);
 }
 
 export async function createMensajeSocio(
@@ -119,7 +141,7 @@ export async function createMensajeSocio(
     .single();
 
   if (error) throw new Error(error.message);
-  return data as SocioMensaje;
+  return sanitizeSocioMensaje(data as SocioMensaje);
 }
 
 export type MensajesAdminResumen = {
@@ -189,7 +211,7 @@ export async function getMensajesAdmin(
   const { data, error } = await query;
 
   if (error) throw new Error(error.message);
-  return (data ?? []) as SocioMensaje[];
+  return ((data ?? []) as SocioMensaje[]).map(sanitizeSocioMensaje);
 }
 
 export async function getMensajeAdminById(
@@ -202,10 +224,24 @@ export async function getMensajeAdminById(
     .from('socio_mensaje')
     .select(mensajeSelect)
     .eq('id', id)
-    .single();
+    .maybeSingle();
 
   if (error) throw new Error(error.message);
-  return data as SocioMensaje;
+  if (!data) throw new SocioMensajeNoEncontradoError();
+  return sanitizeSocioMensaje(data as SocioMensaje);
+}
+
+function escapeSocioMensajeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function socioMensajeHtmlLines(value: string): string {
+  return escapeSocioMensajeHtml(value).replace(/\r\n|\r|\n/g, '<br/>');
 }
 
 function buildRespuestaEmailHtml(mensaje: SocioMensaje, respuesta: string) {
@@ -213,14 +249,14 @@ function buildRespuestaEmailHtml(mensaje: SocioMensaje, respuesta: string) {
   return `
     <div style="font-family: Arial, sans-serif; color: #111827; line-height: 1.5;">
       <h2 style="margin: 0 0 16px;">Respuesta de administración - Gym Master</h2>
-      <p>Hola ${socioNombre},</p>
+      <p>Hola ${escapeSocioMensajeHtml(socioNombre)},</p>
       <p>La administración respondió tu mensaje:</p>
       <div style="border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin:16px 0;background:#f9fafb;">
-        <p style="margin:0 0 8px;"><strong>Asunto:</strong> ${mensaje.asunto}</p>
-        <p style="margin:0;"><strong>Tu consulta:</strong><br/>${mensaje.mensaje.replace(/\n/g, '<br/>')}</p>
+        <p style="margin:0 0 8px;"><strong>Asunto:</strong> ${escapeSocioMensajeHtml(mensaje.asunto)}</p>
+        <p style="margin:0;"><strong>Tu consulta:</strong><br/>${socioMensajeHtmlLines(mensaje.mensaje)}</p>
       </div>
       <div style="border:1px solid #bfdbfe;border-radius:10px;padding:16px;margin:16px 0;background:#eff6ff;">
-        <p style="margin:0;"><strong>Respuesta:</strong><br/>${respuesta.replace(/\n/g, '<br/>')}</p>
+        <p style="margin:0;"><strong>Respuesta:</strong><br/>${socioMensajeHtmlLines(respuesta)}</p>
       </div>
       <p>También podés ver esta respuesta desde tu panel de socio.</p>
       <p style="margin-top:24px;">Saludos,<br/>Equipo Gym Master</p>
@@ -245,9 +281,10 @@ async function notifySocioResponse(mensaje: SocioMensaje, respuesta: string) {
     });
     return { sent: true, error: null };
   } catch (error) {
+    console.error('Error al enviar respuesta de mensaje de socio:', error);
     return {
       sent: false,
-      error: error instanceof Error ? error.message : 'Error enviando email',
+      error: EMAIL_RESPUESTA_ERROR_PUBLICO,
     };
   }
 }
@@ -292,9 +329,10 @@ export async function updateMensajeAdmin(
     .update(updatePayload)
     .eq('id', id)
     .select(mensajeSelect)
-    .single();
+    .maybeSingle();
 
   if (error) throw new Error(error.message);
+  if (!data) throw new SocioMensajeNoEncontradoError();
 
   const updated = data as SocioMensaje;
 
@@ -309,11 +347,12 @@ export async function updateMensajeAdmin(
       })
       .eq('id', id)
       .select(mensajeSelect)
-      .single();
+      .maybeSingle();
 
     if (finalError) throw new Error(finalError.message);
-    return finalData as SocioMensaje;
+    if (!finalData) throw new SocioMensajeNoEncontradoError();
+    return sanitizeSocioMensaje(finalData as SocioMensaje);
   }
 
-  return updated;
+  return sanitizeSocioMensaje(updated);
 }

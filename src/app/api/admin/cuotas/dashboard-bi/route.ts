@@ -172,7 +172,7 @@ export async function GET(req: Request) {
     if (authResponse) return authResponse;
     console.error("ERROR dashboard BI cuotas/pagos:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Error al obtener dashboard BI de cuotas y pagos" },
+      { error: "Error al obtener dashboard BI de cuotas y pagos" },
       { status: 500 }
     );
   }

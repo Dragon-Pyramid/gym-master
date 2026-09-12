@@ -17,9 +17,31 @@ export async function POST(req: Request) {
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
+
+    const message =
+      error?.message || 'Error al crear activo edilicio.';
+
+    if (
+      message ===
+      'El nombre del activo edilicio es obligatorio.'
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'El nombre del activo edilicio es obligatorio.',
+        },
+        { status: 400 },
+      );
+    }
+
+    console.error(
+      'Error al crear activo edilicio:',
+      error,
+    );
+
     return NextResponse.json(
-      { error: error?.message || 'Error al crear activo edilicio.' },
-      { status: error?.message?.includes('obligatorio') ? 400 : 500 },
+      { error: 'Error al crear activo edilicio.' },
+      { status: 500 },
     );
   }
 }

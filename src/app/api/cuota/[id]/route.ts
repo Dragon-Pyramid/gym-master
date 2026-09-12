@@ -21,6 +21,17 @@ export async function GET(
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    return NextResponse.json({ error: error.message });
+    if (error?.message === "No se encontró la cuota con ese id") {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 404 },
+      );
+    }
+
+    console.error("Error al obtener la cuota:", error);
+    return NextResponse.json(
+      { error: "Error al obtener la cuota" },
+      { status: 500 },
+    );
   }
 }

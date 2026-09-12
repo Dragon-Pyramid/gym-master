@@ -1,3 +1,4 @@
+import { comercialErrorResponse, readComercialJson } from '@/lib/comercial/comercialErrorBoundary';
 import { NextRequest, NextResponse } from 'next/server';
 import {
   createComercialCupon,
@@ -6,10 +7,7 @@ import {
   getComercialServiciosPromocionesDashboard,
 } from '@/services/server/comercialServiciosPromocionesServerService';
 
-import {
-  authorizeDashboardRequest,
-  authorizationErrorResponse,
-} from '@/lib/auth/serverAuthorization';
+import { authorizationErrorResponse, authorizeDashboardRequest } from '@/lib/auth/serverAuthorization';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,19 +16,17 @@ export async function GET(req: NextRequest) {
     await authorizeDashboardRequest(req, '/dashboard/comercial/servicios-promociones', ['admin', 'usuario']);
     const dashboard = await getComercialServiciosPromocionesDashboard();
     return NextResponse.json({ data: dashboard }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    const message = error?.message || 'Error al obtener servicios, packs y promociones';
-    const status = message.includes('Token') || message.includes('JWT') ? 401 : 500;
-    return NextResponse.json({ error: message }, { status });
+    return comercialErrorResponse(error, "Error al obtener servicios, packs y promociones");
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     await authorizeDashboardRequest(req, '/dashboard/comercial/servicios-promociones', ['admin', 'usuario']);
-    const body = await req.json();
+    const body = await readComercialJson(req);
 
     if (body?.action === 'crear_pack') {
       const data = await createComercialPack(body);
@@ -48,11 +44,9 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ error: 'Acción comercial inválida' }, { status: 400 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    const message = error?.message || 'Error al operar servicios, packs y promociones';
-    const status = message.includes('Token') || message.includes('JWT') ? 401 : 400;
-    return NextResponse.json({ error: message }, { status });
+    return comercialErrorResponse(error, "Error al operar servicios, packs y promociones");
   }
 }

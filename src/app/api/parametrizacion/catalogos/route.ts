@@ -347,7 +347,10 @@ export async function GET(req: Request) {
     console.error("Error al obtener catálogos de parametrización:", error);
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Error al obtener catálogos" },
+      {
+        error:
+          "Error al obtener catálogos de parametrización.",
+      },
       { status: 500 }
     );
   }
@@ -373,8 +376,28 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      const status = error.code === "23505" ? 409 : 500;
-      return NextResponse.json({ error: error.message }, { status });
+      if (error.code === "23505") {
+        return NextResponse.json(
+          {
+            error:
+              "Ya existe un registro con esos datos.",
+          },
+          { status: 409 }
+        );
+      }
+
+      console.error(
+        "Error de base de datos al crear catálogo de parametrización:",
+        error
+      );
+
+      return NextResponse.json(
+        {
+          error:
+            "Error al crear registro de parametrización.",
+        },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json(
@@ -387,10 +410,32 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    console.error("Error al crear catálogo de parametrización:", error);
+    const message =
+      error instanceof Error
+        ? error.message
+        : "";
+
+    if (
+      message === "El nombre es obligatorio" ||
+      message === "El código es obligatorio" ||
+      message === "El código no tiene un formato válido"
+    ) {
+      return NextResponse.json(
+        { error: message },
+        { status: 400 }
+      );
+    }
+
+    console.error(
+      "Error al crear catálogo de parametrización:",
+      error
+    );
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Error al crear registro" },
+      {
+        error:
+          "Error al crear registro de parametrización.",
+      },
       { status: 500 }
     );
   }
@@ -419,11 +464,41 @@ export async function PATCH(request: NextRequest) {
       .update(payload)
       .eq("id", id)
       .select("*")
-      .single();
+      .maybeSingle();
 
     if (error) {
-      const status = error.code === "23505" ? 409 : 500;
-      return NextResponse.json({ error: error.message }, { status });
+      if (error.code === "23505") {
+        return NextResponse.json(
+          {
+            error:
+              "Ya existe un registro con esos datos.",
+          },
+          { status: 409 }
+        );
+      }
+
+      console.error(
+        "Error de base de datos al actualizar catálogo de parametrización:",
+        error
+      );
+
+      return NextResponse.json(
+        {
+          error:
+            "Error al actualizar registro de parametrización.",
+        },
+        { status: 500 }
+      );
+    }
+
+    if (!data) {
+      return NextResponse.json(
+        {
+          error:
+            "No se encontró el registro de parametrización.",
+        },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json({
@@ -433,10 +508,30 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    console.error("Error al actualizar catálogo de parametrización:", error);
+    const message =
+      error instanceof Error
+        ? error.message
+        : "";
+
+    if (
+      message === "El código no tiene un formato válido"
+    ) {
+      return NextResponse.json(
+        { error: message },
+        { status: 400 }
+      );
+    }
+
+    console.error(
+      "Error al actualizar catálogo de parametrización:",
+      error
+    );
 
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Error al actualizar registro" },
+      {
+        error:
+          "Error al actualizar registro de parametrización.",
+      },
       { status: 500 }
     );
   }

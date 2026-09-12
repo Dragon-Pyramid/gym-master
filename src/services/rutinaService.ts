@@ -131,7 +131,7 @@ export const dataGeneracionRutina = async (
     .single();
 
   if (error) {
-    console.log("Error en la generación de rutina:", error);
+    console.error("Error en la generación de rutina:", error);
     throw new Error(error.message);
   }
 
@@ -157,8 +157,6 @@ export const dataGeneracionRutinaPersonalizada = async (
     }
   );
 
-  console.log("Datos de generación de sp_generar_rutina_personalizada:", rutina);
-  console.log(data);
 
   if (error) throw new Error(error.message);
 
@@ -196,7 +194,7 @@ export const historialRutinasAdmin = async (
     .order("creado_en", { ascending: false });
 
   if (error) {
-    console.log("Error al obtener rutinas del administrador:", error.message);
+    console.error("Error al obtener rutinas del administrador:", error.message);
     throw new Error("Error al obtener las rutinas asignadas a socios");
   }
 
@@ -240,7 +238,7 @@ export const historialRutinaSocioLogueado = async (
     .order("creado_en", { ascending: false });
 
   if (error) {
-    console.log("Error al obtener el historial de rutinas:", error.message);
+    console.error("Error al obtener el historial de rutinas:", error.message);
     throw new Error("Error al obtener el historial de rutinas del socio");
   }
 
@@ -276,7 +274,7 @@ export const historialRutinaSocio = async (
     .order("creado_en", { ascending: false });
 
   if (error) {
-    console.log("Error al obtener el historial de rutinas:", error.message);
+    console.error("Error al obtener el historial de rutinas:", error.message);
     throw new Error("Error al obtener el historial de rutinas del socio");
   }
 
@@ -297,7 +295,7 @@ export const eliminarRutina = async (
     .maybeSingle();
 
   if (findError) {
-    console.log("Error al buscar la rutina:", findError.message);
+    console.error("Error al buscar la rutina:", findError.message);
     throw new Error("Error al buscar la rutina");
   }
 
@@ -322,7 +320,7 @@ export const eliminarRutina = async (
     .single();
 
   if (error) {
-    console.log("Error al eliminar rutina:", error.message);
+    console.error("Error al eliminar rutina:", error.message);
     throw new Error("Error al eliminar la rutina");
   }
 
@@ -337,7 +335,7 @@ export const dataRetencionPorCombinacion = async (user: JwtUser) => {
   );
 
   if (error) {
-    console.log("Error en la obtención de retención por combinación:", error.message);
+    console.error("Error en la obtención de retención por combinación:", error.message);
     throw new Error(error.message);
   }
 

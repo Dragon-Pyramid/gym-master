@@ -73,12 +73,26 @@ export default function CuotasForm({ cuota, onCreated }: CuotasFormProps) {
       onCreated();
     } catch (error: any) {
       let msg = error.message || tx("Error al guardar cuota", "Error saving fee");
-      if (msg.includes("value too long")) {
+
+      if (msg === "Las fechas de la cuota no son válidas") {
+        msg = tx(
+          "Las fechas de la cuota no son válidas",
+          "The fee dates are invalid",
+        );
+      } else if (
+        msg === "La fecha de fin no puede ser anterior a la fecha de inicio"
+      ) {
+        msg = tx(
+          "La fecha de fin no puede ser anterior a la fecha de inicio",
+          "The end date cannot be earlier than the start date",
+        );
+      } else if (msg.includes("value too long")) {
         msg = tx(
           "Uno de los campos excede la cantidad máxima de caracteres permitidos.",
           "One of the fields exceeds the maximum allowed number of characters.",
         );
       }
+
       toast.error(msg);
     } finally {
       setLoading(false);

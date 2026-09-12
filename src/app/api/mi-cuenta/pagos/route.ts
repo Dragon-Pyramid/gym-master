@@ -113,7 +113,7 @@ export async function GET(req: Request) {
 
     console.error('ERROR al obtener historial de pagos del socio:', error);
     return NextResponse.json(
-      { error: error.message || 'Error al obtener historial de pagos' },
+      { error: 'Error al obtener historial de pagos' },
       { status: 500 }
     );
   }

@@ -60,6 +60,10 @@ export async function POST(req: Request) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
 
+    if (error instanceof RangeError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
     console.error('Error al crear la cuota:', error);
     return NextResponse.json(
       { error: 'Error al crear la cuota' },
@@ -89,9 +93,15 @@ export async function PUT(req: Request) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
 
-    const message =
-      error instanceof Error ? error.message : 'Error al actualizar cuota';
-    return NextResponse.json({ error: message }, { status: 500 });
+    if (error instanceof RangeError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    console.error('Error al actualizar cuota:', error);
+    return NextResponse.json(
+      { error: 'Error al actualizar cuota' },
+      { status: 500 },
+    );
   }
 }
 
@@ -116,8 +126,10 @@ export async function DELETE(req: Request) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
 
-    const message =
-      error instanceof Error ? error.message : 'Error al eliminar cuota';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('Error al eliminar cuota:', error);
+    return NextResponse.json(
+      { error: 'Error al eliminar cuota' },
+      { status: 500 },
+    );
   }
 }

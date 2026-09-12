@@ -15,7 +15,6 @@ import {
   buildAiDietBaseDisclaimers,
   normalizeAiGeneratedContentLocale,
   translateAiGeneratedTechnicalList,
-  translateAiGeneratedTechnicalText,
 } from '@/utils/aiGeneratedContentI18n';
 
 export const dynamic = 'force-dynamic';
@@ -59,6 +58,8 @@ function validatePayload(body: Partial<RagDietasAssistantRequest>, fallbackSocio
 }
 
 export async function POST(req: Request) {
+  let responseIdioma: RagDietasIdioma = 'es';
+
   try {
     const user = await authorizePersonalOrDashboardRequest(
       req,
@@ -69,6 +70,8 @@ export async function POST(req: Request) {
 
 
     const body = (await req.json().catch(() => ({}))) as Partial<RagDietasAssistantRequest>;
+    responseIdioma = normalizeIdioma(body.idioma);
+
     const payload = validatePayload(body, user.id_socio);
 
     let ragContext: RagDietasContextSummary | undefined;
@@ -79,8 +82,16 @@ export async function POST(req: Request) {
     } catch (error) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-      ragError = error instanceof Error ? translateAiGeneratedTechnicalText(error.message, payload.idioma) : translateAiGeneratedTechnicalText('Error desconocido al consultar RAG de dietas', payload.idioma);
-      console.warn('RAG interno de dietas no disponible. Se usa fallback local:', ragError);
+      ragError = aiGeneratedContentTx(
+        payload.idioma,
+        'No se pudo recuperar contexto RAG de dietas. Se usa generación formal segura.',
+        'Diet RAG context could not be retrieved. Safe formal generation is used.',
+      );
+
+      console.error(
+        'Error al consultar RAG interno de dietas:',
+        error,
+      );
     }
 
     const dietaGenerada = await createDietaSocio(
@@ -127,21 +138,61 @@ export async function POST(req: Request) {
       { status: 201 },
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : translateAiGeneratedTechnicalText('Error inesperado', 'es');
-    const status = message.includes('No autorizado')
-      ? 403
-      : (message.includes('Debe enviar') || message.toLowerCase().includes('must send'))
-        ? 400
-        : 500;
+    const authResponse =
+      authorizationErrorResponse(error);
 
-    console.error('Error en asistente RAG de dietas:', error);
+    if (authResponse) {
+      return authResponse;
+    }
+
+    const message =
+      error instanceof Error
+        ? error.message
+        : '';
+
+    if (
+      message ===
+      'Debe enviar socio_id, objetivo, fecha_inicio y fecha_fin.'
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            'Debe enviar socio_id, objetivo, fecha_inicio y fecha_fin.',
+        },
+        { status: 400 },
+      );
+    }
+
+    if (
+      message ===
+      'You must send socio_id, goal, start date, and end date.'
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            'You must send socio_id, goal, start date, and end date.',
+        },
+        { status: 400 },
+      );
+    }
+
+    console.error(
+      'Error en asistente RAG de dietas:',
+      error,
+    );
 
     return NextResponse.json(
       {
         ok: false,
-        error: message,
+        error: aiGeneratedContentTx(
+          responseIdioma,
+          'No se pudo generar la dieta con el asistente.',
+          'The diet could not be generated with the assistant.',
+        ),
       },
-      { status },
+      { status: 500 },
     );
   }
 }

@@ -9,6 +9,44 @@ import {
 export const dynamic = "force-dynamic";
 
 const VALID_ESTADOS = new Set(["inscripto", "lista_espera", "asistio", "ausente", "cancelado"]);
+const TURNO_NOT_FOUND_ERROR = "No se encontró el turno con ese id";
+
+function inscripcionCreateErrorResponse(message: string) {
+  switch (message) {
+    case "El turno es obligatorio":
+      return NextResponse.json(
+        { error: "El turno es obligatorio" },
+        { status: 400 },
+      );
+
+    case "El socio es obligatorio":
+      return NextResponse.json(
+        { error: "El socio es obligatorio" },
+        { status: 400 },
+      );
+
+    case "Estado de inscripción inválido":
+      return NextResponse.json(
+        { error: "Estado de inscripción inválido" },
+        { status: 400 },
+      );
+
+    case "Ya existe una inscripción o solicitud activa para este turno":
+      return NextResponse.json(
+        { error: "Ya existe una inscripción o solicitud activa para este turno" },
+        { status: 409 },
+      );
+
+    case TURNO_NOT_FOUND_ERROR:
+      return NextResponse.json(
+        { error: "Turno no encontrado" },
+        { status: 404 },
+      );
+
+    default:
+      return null;
+  }
+}
 
 function cleanString(value: unknown) {
   const text = String(value ?? "").trim();
@@ -16,21 +54,35 @@ function cleanString(value: unknown) {
 }
 
 async function resolveEstadoByCupo(supabase: ReturnType<typeof getSupabaseServerClient>, turnoId: string, requestedEstado: string) {
-  if (requestedEstado !== "inscripto") return requestedEstado;
+  const turnoResult = await supabase
+    .from("actividad_turno")
+    .select("cupo_maximo")
+    .eq("id", turnoId)
+    .maybeSingle();
 
-  const [turnoResult, inscripcionesResult] = await Promise.all([
-    supabase.from("actividad_turno").select("cupo_maximo").eq("id", turnoId).single(),
-    supabase
-      .from("actividad_turno_inscripcion")
-      .select("id")
-      .eq("turno_id", turnoId)
-      .in("estado", ["inscripto", "asistio"]),
-  ]);
+  if (turnoResult.error) {
+    throw new Error(turnoResult.error.message);
+  }
 
-  if (turnoResult.error) throw new Error(turnoResult.error.message);
-  if (inscripcionesResult.error) throw new Error(inscripcionesResult.error.message);
+  if (!turnoResult.data) {
+    throw new Error(TURNO_NOT_FOUND_ERROR);
+  }
 
-  const cupoMaximo = Number(turnoResult.data?.cupo_maximo ?? 0);
+  if (requestedEstado !== "inscripto") {
+    return requestedEstado;
+  }
+
+  const inscripcionesResult = await supabase
+    .from("actividad_turno_inscripcion")
+    .select("id")
+    .eq("turno_id", turnoId)
+    .in("estado", ["inscripto", "asistio"]);
+
+  if (inscripcionesResult.error) {
+    throw new Error(inscripcionesResult.error.message);
+  }
+
+  const cupoMaximo = Number(turnoResult.data.cupo_maximo ?? 0);
   const ocupados = inscripcionesResult.data?.length ?? 0;
 
   return ocupados >= cupoMaximo ? "lista_espera" : "inscripto";
@@ -89,12 +141,14 @@ export async function POST(req: Request) {
     if (authResponse) return authResponse;
 
     const message = error instanceof Error ? error.message : "Error al inscribir socio";
-    const status = message.includes("oblig") || message.includes("invál")
-      ? 400
-      : message.includes("Ya existe")
-        ? 409
-        : 500;
 
-    return NextResponse.json({ error: message }, { status });
+    const knownResponse = inscripcionCreateErrorResponse(message);
+    if (knownResponse) return knownResponse;
+
+    console.error("Error al inscribir socio:", error);
+    return NextResponse.json(
+      { error: "Error al inscribir socio" },
+      { status: 500 },
+    );
   }
 }

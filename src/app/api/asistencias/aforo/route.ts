@@ -30,10 +30,10 @@ export async function GET(req: Request) {
     const aforo = await getAforoAsistencia(user);
     return NextResponse.json(aforo, { status: 200 });
   } catch (error: unknown) {
-    const authResponse = authorizationErrorResponse(error);
+    const authResponse =
+      authorizationErrorResponse(error);
+
     if (authResponse) return authResponse;
-    const message =
-      error instanceof Error ? error.message : "Error al obtener aforo";
 
     if (isAuthError(error)) {
       return NextResponse.json(
@@ -46,6 +46,19 @@ export async function GET(req: Request) {
       );
     }
 
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error(
+      "Error al obtener aforo:",
+      {
+        name:
+          error instanceof Error
+            ? error.name
+            : "UnknownError",
+      },
+    );
+
+    return NextResponse.json(
+      { error: "Error al obtener aforo" },
+      { status: 500 },
+    );
   }
 }

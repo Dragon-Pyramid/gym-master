@@ -17,9 +17,31 @@ export async function POST(req: Request) {
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
+
+    const message =
+      error?.message || 'Error al crear sector edilicio.';
+
+    if (
+      message ===
+      'El nombre del sector es obligatorio.'
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'El nombre del sector es obligatorio.',
+        },
+        { status: 400 },
+      );
+    }
+
+    console.error(
+      'Error al crear sector edilicio:',
+      error,
+    );
+
     return NextResponse.json(
-      { error: error?.message || 'Error al crear sector edilicio.' },
-      { status: error?.message?.includes('obligatorio') ? 400 : 500 },
+      { error: 'Error al crear sector edilicio.' },
+      { status: 500 },
     );
   }
 }

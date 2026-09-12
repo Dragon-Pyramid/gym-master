@@ -24,8 +24,14 @@ export async function POST(req: Request) {
   } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    const message = error instanceof Error ? error.message : 'Error al generar la dieta';
-    const status = message.includes('No autorizado') ? 403 : 500;
-    return NextResponse.json({ error: message }, { status });
+    console.error(
+      'Error al generar dieta:',
+      error,
+    );
+
+    return NextResponse.json(
+      { error: 'Error al generar la dieta.' },
+      { status: 500 },
+    );
   }
 }

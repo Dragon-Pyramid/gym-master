@@ -1,3 +1,4 @@
+import { ComercialValidationError } from '@/lib/comercial/comercialErrorBoundary';
 import 'server-only';
 
 import { getSupabaseServerClient } from '@/services/supabaseServerClient';
@@ -20,7 +21,7 @@ function asNumber(value: unknown, fallback = 0) {
 function parseMoney(value: unknown, label: string) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric) || numeric < 0) {
-    throw new Error(`${label} debe ser un importe mayor o igual a 0`);
+    throw new ComercialValidationError("El importe ingresado debe ser mayor o igual a 0.", `${label} debe ser un importe mayor o igual a 0`);
   }
   return Math.round(numeric * 100) / 100;
 }
@@ -172,7 +173,7 @@ export async function getComercialCajaDashboard(): Promise<ComercialCajaDashboar
 export async function abrirCaja(payload: AbrirCajaDTO, user?: JwtUser | null) {
   const supabase = getSupabaseServerClient();
   const cajaExistente = await getOpenSession(supabase);
-  if (cajaExistente) throw new Error(`Ya existe una caja abierta: ${cajaExistente.codigo}`);
+  if (cajaExistente) throw new ComercialValidationError("Ya existe una caja abierta.", `Ya existe una caja abierta: ${cajaExistente.codigo}`);
 
   const montoInicial = parseMoney(payload.monto_inicial, 'Monto inicial');
   const codigo = buildCodigoCaja();
@@ -206,16 +207,16 @@ export async function abrirCaja(payload: AbrirCajaDTO, user?: JwtUser | null) {
 export async function registrarMovimientoCaja(payload: RegistrarMovimientoCajaDTO, user?: JwtUser | null) {
   const supabase = getSupabaseServerClient();
   const caja = await getOpenSession(supabase);
-  if (!caja) throw new Error('No hay caja abierta para registrar movimientos');
+  if (!caja) throw new ComercialValidationError('No hay caja abierta para registrar movimientos');
 
   if (payload.tipo !== 'ingreso' && payload.tipo !== 'retiro') {
-    throw new Error('Tipo de movimiento inválido');
+    throw new ComercialValidationError('Tipo de movimiento inválido');
   }
 
   const monto = parseMoney(payload.monto, 'Monto');
-  if (monto <= 0) throw new Error('El monto debe ser mayor a 0');
+  if (monto <= 0) throw new ComercialValidationError('El monto debe ser mayor a 0');
   const concepto = payload.concepto?.trim();
-  if (!concepto || concepto.length < 4) throw new Error('Debe indicar un concepto claro');
+  if (!concepto || concepto.length < 4) throw new ComercialValidationError('Debe indicar un concepto claro');
 
   const { error } = await supabase.from('comercial_caja_movimiento').insert({
     caja_sesion_id: caja.id,
@@ -233,7 +234,7 @@ export async function registrarMovimientoCaja(payload: RegistrarMovimientoCajaDT
 export async function cerrarCaja(payload: CerrarCajaDTO, user?: JwtUser | null) {
   const supabase = getSupabaseServerClient();
   const caja = await getOpenSession(supabase);
-  if (!caja) throw new Error('No hay caja abierta para cerrar');
+  if (!caja) throw new ComercialValidationError('No hay caja abierta para cerrar');
 
   const ventas = await getVentasByCaja(supabase, caja.id);
   const movimientos = await getMovimientosByCaja(supabase, caja.id);

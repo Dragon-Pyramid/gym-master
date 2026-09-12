@@ -23,7 +23,18 @@ export async function POST(req: Request) {
   } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    const message = error instanceof Error ? error.message : 'Error interno del servidor';
-    return NextResponse.json({ error: message }, { status: 500 });
+    const message = error instanceof Error ? error.message : '';
+    if (message === "No se pudo determinar el id_socio para generar rutina. Un gestor autorizado debe indicar el socio destino.") {
+      return NextResponse.json(
+        { error: message },
+        { status: 400 }
+      );
+    }
+
+    console.error("Error al generar rutina:", error);
+    return NextResponse.json(
+      { error: "Error al generar rutina" },
+      { status: 500 }
+    );
   }
 }

@@ -7,16 +7,14 @@ import {
   authorizeDashboardRequest,
   authorizationErrorResponse,
 } from '@/lib/auth/serverAuthorization';
+import {
+  ragHttpErrorResponse,
+} from '@/lib/rag/ragHttpBoundary';
+import {
+  readJsonBody,
+} from '@/lib/security/httpRuntimeSecurity';
 
 export const dynamic = 'force-dynamic';
-
-function getStatusFromError(message: string) {
-  const normalized = message.toLowerCase();
-  if (normalized.includes('token') || normalized.includes('unauthorized')) return 401;
-  if (normalized.includes('no autorizado')) return 403;
-  if (normalized.includes('debe') || normalized.includes('mensaje')) return 400;
-  return 500;
-}
 
 export async function POST(req: Request) {
   try {
@@ -25,7 +23,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = (await req.json().catch(() => ({}))) as Partial<RagCoachChatRequest>;
+    const body =
+      await readJsonBody<
+        Partial<RagCoachChatRequest>
+      >(
+        req,
+        64 * 1024,
+      );
     const message = typeof body.message === 'string' ? body.message : '';
     const rawBody = body as Partial<RagCoachChatRequest> & { idioma?: unknown };
     const locale = normalizeAiGeneratedContentLocale(rawBody.locale ?? rawBody.idioma);
@@ -45,19 +49,42 @@ export async function POST(req: Request) {
       },
       { status: 200 },
     );
-  } catch (error) {
-    const authResponse = authorizationErrorResponse(error);
+  } catch (error: unknown) {
+    const authResponse =
+      authorizationErrorResponse(error);
+
     if (authResponse) return authResponse;
-    const message = error instanceof Error ? error.message : 'Error inesperado';
 
-    console.error('Error en chat unificado RAG Coach:', error);
+    const response =
+      ragHttpErrorResponse(
+        error,
+        'No se pudo procesar el mensaje del Coach IA.',
+        [
+          {
+            message:
+              'El mensaje debe tener al menos 2 caracteres.',
+            status: 400,
+          },
+          {
+            message:
+              'The message must be at least 2 characters long.',
+            status: 400,
+          },
+        ],
+      );
 
-    return NextResponse.json(
-      {
-        ok: false,
-        error: message,
-      },
-      { status: getStatusFromError(message) },
-    );
+    if (response.status >= 500) {
+      console.error(
+        'Error en chat unificado RAG Coach:',
+        {
+          name:
+            error instanceof Error
+              ? error.name
+              : 'UnknownError',
+        },
+      );
+    }
+
+    return response;
   }
 }

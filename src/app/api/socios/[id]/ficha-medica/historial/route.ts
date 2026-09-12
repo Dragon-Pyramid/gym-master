@@ -50,14 +50,34 @@ export async function GET(
       { data: paginated, meta: { page, perPage, total, totalPages } },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    console.log(error);
-    const status = getFichaMedicaErrorStatus(error?.message);
+
+    const message =
+      error instanceof Error ? error.message : '';
+
+    const status =
+      getFichaMedicaErrorStatus(message);
+
+    if (status >= 500) {
+      console.error(
+        'Error al obtener historial de fichas médicas:',
+        {
+          name: error instanceof Error
+            ? error.name
+            : 'UnknownError',
+        },
+      );
+    }
+
     return NextResponse.json(
-      { error: error?.message || 'Error interno' },
-      { status }
+      {
+        error: status >= 500
+          ? 'No se pudo obtener el historial de fichas médicas'
+          : message || 'Solicitud inválida',
+      },
+      { status },
     );
   }
 }

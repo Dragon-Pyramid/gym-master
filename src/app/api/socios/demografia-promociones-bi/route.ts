@@ -58,13 +58,33 @@ function firstDayOfCurrentYearISO() {
   return `${new Date().getFullYear()}-01-01`;
 }
 
-function normalizeDateParam(value: string | null, fallback: string, label: string) {
+function normalizeDateParam(
+  value: string | null,
+  fallback: string,
+  label: string,
+) {
   if (!value) return fallback;
+
   const clean = value.trim();
+
   if (!DATE_RE.test(clean)) {
-    throw new Error(`${label} debe tener formato YYYY-MM-DD`);
+    throw new Error(
+      `${label} debe tener formato YYYY-MM-DD`,
+    );
   }
+
   return clean;
+}
+
+function isDemografiaValidationMessage(
+  message: string,
+) {
+  return (
+    message ===
+      "Fecha desde debe tener formato YYYY-MM-DD" ||
+    message ===
+      "Fecha hasta debe tener formato YYYY-MM-DD"
+  );
 }
 
 function normalizeGenero(value?: string | null): GeneroBi {
@@ -504,14 +524,41 @@ export async function GET(request: NextRequest) {
     };
 
     return NextResponse.json({ data: response }, { status: 200 });
-  } catch (error: any) {
-    const authResponse = authorizationErrorResponse(error);
+  } catch (error: unknown) {
+    const authResponse =
+      authorizationErrorResponse(error);
+
     if (authResponse) return authResponse;
 
-    console.error('ERROR en BI demográfico de socios:', error.message || error);
+    const message =
+      error instanceof Error
+        ? error.message
+        : "";
+
+    if (
+      isDemografiaValidationMessage(message)
+    ) {
+      return NextResponse.json(
+        { error: message },
+        { status: 400 },
+      );
+    }
+
+    console.error(
+      "Error en BI demográfico de socios:",
+      {
+        name: error instanceof Error
+          ? error.name
+          : "UnknownError",
+      },
+    );
+
     return NextResponse.json(
-      { error: error.message || 'Error al obtener BI demográfico de socios' },
-      { status: 500 }
+      {
+        error:
+          "Error al obtener BI demográfico de socios",
+      },
+      { status: 500 },
     );
   }
 }

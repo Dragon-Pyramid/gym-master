@@ -71,6 +71,7 @@ export type RespaldoExportResult = {
 };
 
 const MAX_ROWS_PER_MODULE = 50000;
+const RESPALDO_ERROR_PUBLICO = 'No se pudo completar el respaldo de negocio.';
 
 
 // BUSINESS_BACKUP_EXPORTABLES_I18N_V3
@@ -877,7 +878,11 @@ export async function getRespaldoNegocioHistory(user: JwtUser): Promise<Respaldo
     throw new Error(`No se pudo consultar historial de exportaciones: ${error.message}`);
   }
 
-  return (data ?? []) as RespaldoHistorialItem[];
+  const historial = (data ?? []) as RespaldoHistorialItem[];
+  return historial.map((item) => ({
+    ...item,
+    error: item.error == null ? null : RESPALDO_ERROR_PUBLICO,
+  }));
 }
 
 export async function exportRespaldoNegocio(user: JwtUser, input: CreateRespaldoExportInput): Promise<RespaldoExportResult> {
@@ -910,8 +915,8 @@ export async function exportRespaldoNegocio(user: JwtUser, input: CreateRespaldo
       buffer,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Error desconocido al exportar respaldo';
-    await finishAudit(auditId, 'error', 0, message);
+    console.error('Error al exportar respaldo de negocio:', error);
+    await finishAudit(auditId, 'error', 0, RESPALDO_ERROR_PUBLICO);
     throw error;
   }
 }

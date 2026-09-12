@@ -27,7 +27,6 @@ export async function obtenerSociosDeudores() : Promise<Socio[]> {
       .single();
 
     if (errorPago || !ultimoPago) {
-      console.log(`Socio ${socio.nombre_completo} (${socio.id_socio}) no tiene pagos registrados.`);
       continue;
     } /* SI ES UN SOCIO QUE AUN NO REALIZO PAGO, SE CONTINUA CON EL SIGUIENTE */
 
@@ -37,7 +36,6 @@ export async function obtenerSociosDeudores() : Promise<Socio[]> {
     if (dayjs(ultimoPago.fecha_vencimiento).isBefore(dayjs(hoy))) {
       // Solo envia email si enviar_email es true
       if (ultimoPago.enviar_email === true ) {   //LA IDEA ES Q MANDE TODOS LOS DIAS. HASTA QUE EL SOCIO PAGUE O LO SUSPENDAN
-        console.log(`Socio ${socio.nombre_completo} (${socio.id_socio}) tiene un pago vencido.`);
         sociosDeudores.push(socio); /* SI SU ULTIMO PAGO SE VENCE, LO AÑADO AL ARRAY */
 
         // Enviar email de aviso de deuda
@@ -55,12 +53,9 @@ export async function obtenerSociosDeudores() : Promise<Socio[]> {
               subject,
               htmlContent,
             });
-            console.log(`Email aviso de deuda enviado a ${socio.email}`);
-          } catch (error) {
-            console.error(`Error enviando email a ${socio.email}:`, error);
+          } catch {
+            // sendEmail registra el error del proveedor de forma sanitizada.
           }
-        } else { //si el socio no tiene email registrado, se informa por consola
-          console.log(`Socio ${socio.nombre_completo} no tiene email registrado.`);
         }
       }
     }
@@ -108,7 +103,6 @@ export const desactivarSociosPorDeuda = async () => {
         .from('pago')
         .update({ enviar_email: false })
         .eq('id', ultimoPago.id);
-      console.log(`Socio ${socio.nombre_completo} (${socio.id_socio}) desactivado por deuda > 7 días.`);
       // Enviar email de notificación de desactivación
       if (socio.email) {
         const subject = "Membresía suspendida por falta de pago - Gym Master";
@@ -122,9 +116,8 @@ export const desactivarSociosPorDeuda = async () => {
             subject,
             htmlContent,
           });
-          console.log(`Email de suspensión enviado a ${socio.email}`);
-        } catch (error) {
-          console.error(`Error enviando email de suspensión a ${socio.email}:`, error);
+        } catch {
+          // sendEmail registra el error del proveedor de forma sanitizada.
         }
       }
     }

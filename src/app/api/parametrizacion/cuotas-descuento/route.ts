@@ -12,12 +12,6 @@ import {
 
 export const dynamic = "force-dynamic";
 
-function assertAdminRole(rol?: string | null) {
-  if (rol !== "admin") {
-    throw new Error("No autorizado para parametrizar descuentos de cuotas");
-  }
-}
-
 function toBoolean(value: unknown): boolean {
   return value === true || value === "true";
 }
@@ -42,8 +36,11 @@ function toNullableString(value: unknown): string | null {
 
 export async function GET(req: NextRequest) {
   try {
-    const user = await authorizeDashboardRequest(req, '/dashboard/parametrizacion', ['admin']);
-    assertAdminRole(user?.rol);
+    await authorizeDashboardRequest(
+      req,
+      '/dashboard/parametrizacion',
+      ['admin']
+    );
 
     const supabase = getSupabaseServerClient();
     const config = await fetchCuotaDescuentoConfig(supabase);
@@ -52,17 +49,28 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
+    console.error(
+      "Error al obtener descuento por pago adelantado:",
+      error
+    );
+
     return NextResponse.json(
-      { error: error.message || "Error al obtener descuento por pago adelantado" },
-      { status: error.message?.includes("No autorizado") ? 403 : 500 }
+      {
+        error:
+          "Error al obtener descuento por pago adelantado.",
+      },
+      { status: 500 }
     );
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
-    const user = await authorizeDashboardRequest(req, '/dashboard/parametrizacion', ['admin']);
-    assertAdminRole(user?.rol);
+    await authorizeDashboardRequest(
+      req,
+      '/dashboard/parametrizacion',
+      ['admin']
+    );
 
     const body = await req.json();
     const supabase = getSupabaseServerClient();
@@ -84,9 +92,17 @@ export async function PATCH(req: NextRequest) {
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
+    console.error(
+      "Error al actualizar descuento por pago adelantado:",
+      error
+    );
+
     return NextResponse.json(
-      { error: error.message || "Error al actualizar descuento por pago adelantado" },
-      { status: error.message?.includes("No autorizado") ? 403 : 500 }
+      {
+        error:
+          "Error al actualizar descuento por pago adelantado.",
+      },
+      { status: 500 }
     );
   }
 }

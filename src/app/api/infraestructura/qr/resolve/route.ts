@@ -18,9 +18,31 @@ export async function GET(req: Request) {
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
+    const message =
+      error?.message ||
+      'Error al resolver código QR/barra.';
+
+    if (
+      message ===
+      'Ingresá o escaneá un código QR/barra válido.'
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'Ingresá o escaneá un código QR/barra válido.',
+        },
+        { status: 400 },
+      );
+    }
+
+    console.error(
+      'Error al resolver código QR/barra:',
+      error,
+    );
+
     return NextResponse.json(
-      { error: error?.message || 'Error al resolver código QR/barra.' },
-      { status: error?.message?.includes('Ingresá') ? 400 : 500 },
+      { error: 'Error al resolver código QR/barra.' },
+      { status: 500 },
     );
   }
 }

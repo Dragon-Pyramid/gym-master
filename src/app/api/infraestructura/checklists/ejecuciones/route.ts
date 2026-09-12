@@ -17,8 +17,57 @@ export async function POST(req: Request) {
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    const message = error?.message || 'Error al ejecutar checklist edilicio.';
-    const status = message.includes('Seleccioná') || message.includes('asociada') || message.includes('No se encontró') ? 400 : 500;
-    return NextResponse.json({ error: message }, { status });
+    const message =
+      error?.message ||
+      'Error al ejecutar checklist edilicio.';
+
+    if (
+      message ===
+      'Seleccioná un checklist para ejecutar.'
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'Seleccioná un checklist para ejecutar.',
+        },
+        { status: 400 },
+      );
+    }
+
+    if (
+      message ===
+      'La ejecución debe estar asociada a un activo, sector u orden edilicia.'
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'La ejecución debe estar asociada a un activo, sector u orden edilicia.',
+        },
+        { status: 400 },
+      );
+    }
+
+    if (
+      message ===
+      'No se encontró el checklist seleccionado.'
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'No se encontró el checklist seleccionado.',
+        },
+        { status: 404 },
+      );
+    }
+
+    console.error(
+      'Error al ejecutar checklist edilicio:',
+      error,
+    );
+
+    return NextResponse.json(
+      { error: 'Error al ejecutar checklist edilicio.' },
+      { status: 500 },
+    );
   }
 }

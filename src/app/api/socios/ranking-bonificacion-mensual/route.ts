@@ -3,6 +3,11 @@ import {
   authorizationErrorResponse,
   authorizeDashboardRequest,
 } from "@/lib/auth/serverAuthorization";
+import {
+  HttpRuntimeError,
+  readJsonBody,
+  runtimeErrorResponse,
+} from "@/lib/security/httpRuntimeSecurity";
 import { getSupabaseServerClient } from "@/services/supabaseServerClient";
 import type {
   SocioRankingBonificacionItem,
@@ -40,6 +45,48 @@ type PagoRow = {
 };
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function isRankingPeriodValidationMessage(
+  message: string,
+) {
+  return (
+    message === "El año debe ser válido" ||
+    message === "El mes debe estar entre 1 y 12"
+  );
+}
+
+function rankingErrorResponse(
+  error: unknown,
+  fallback: string,
+) {
+  if (error instanceof HttpRuntimeError) {
+    return runtimeErrorResponse(
+      error,
+      fallback,
+    );
+  }
+
+  const message =
+    error instanceof Error ? error.message : "";
+
+  if (isRankingPeriodValidationMessage(message)) {
+    return NextResponse.json(
+      { error: message },
+      { status: 400 },
+    );
+  }
+
+  console.error(fallback, {
+    name: error instanceof Error
+      ? error.name
+      : "UnknownError",
+  });
+
+  return NextResponse.json(
+    { error: fallback },
+    { status: 500 },
+  );
+}
 
 function getPeriod(anioParam?: string | null, mesParam?: string | null) {
   const now = new Date();
@@ -194,15 +241,38 @@ function calculateKpis(ranking: SocioRankingBonificacionItem[]): SociosRankingBo
   };
 }
 
-async function tableExists(supabase: ReturnType<typeof getSupabaseServerClient>) {
+async function tableExists(
+  supabase: ReturnType<
+    typeof getSupabaseServerClient
+  >,
+) {
   const { error } = await supabase
     .from("socio_ranking_bonificacion_mensual")
     .select("id")
     .limit(1);
 
   if (!error) return true;
-  if (error.code === "42P01" || /does not exist|schema cache/i.test(error.message ?? "")) return false;
-  return false;
+
+  if (
+    error.code === "42P01" ||
+    /does not exist|schema cache/i.test(
+      error.message ?? "",
+    )
+  ) {
+    return false;
+  }
+
+  console.error(
+    "Error al verificar bonificaciones mensuales:",
+    {
+      code: error.code ?? "unknown",
+    },
+  );
+
+  throw new Error(
+    "No se pudo verificar la disponibilidad "
+      + "de las bonificaciones mensuales",
+  );
 }
 
 async function buildResponse(anio: number, mes: number): Promise<SociosRankingBonificacionResponse> {
@@ -241,12 +311,25 @@ async function buildResponse(anio: number, mes: number): Promise<SociosRankingBo
       .eq("mes", mes);
 
     if (error) {
-      warnings.push(`No se pudo leer bonificaciones guardadas: ${error.message}`);
+      console.error(
+        "Error al leer bonificaciones guardadas:",
+        {
+          code: error.code ?? "unknown",
+        },
+      );
+
+      warnings.push(
+        "No se pudieron leer las "
+          + "bonificaciones guardadas.",
+      );
     } else {
       bonificaciones = data ?? [];
     }
   } else {
-    warnings.push("La tabla socio_ranking_bonificacion_mensual todavía no está disponible. Aplicar migración para guardar bonificaciones.");
+    warnings.push(
+      "Las bonificaciones mensuales "
+        + "no están disponibles en este entorno.",
+    );
   }
 
   const ranking = calculateRanking(
@@ -290,11 +373,16 @@ export async function GET(req: NextRequest) {
     const response = await buildResponse(anio, mes);
 
     return NextResponse.json(response);
-  } catch (error: any) {
-    const authResponse = authorizationErrorResponse(error);
+  } catch (error: unknown) {
+    const authResponse =
+      authorizationErrorResponse(error);
+
     if (authResponse) return authResponse;
 
-    return NextResponse.json({ error: error?.message || "Error al calcular ranking mensual" }, { status: 500 });
+    return rankingErrorResponse(
+      error,
+      "Error al calcular ranking mensual",
+    );
   }
 }
 
@@ -306,7 +394,13 @@ export async function PATCH(req: NextRequest) {
       ["admin", "usuario"],
     );
 
-    const payload = (await req.json()) as SocioRankingBonificacionMutationPayload;
+    const payload =
+      await readJsonBody<
+        SocioRankingBonificacionMutationPayload
+      >(
+        req,
+        64 * 1024,
+      );
     const { anio, mes } = getPeriod(String(payload.anio), String(payload.mes));
 
     if (!payload.socio_id) {
@@ -322,7 +416,11 @@ export async function PATCH(req: NextRequest) {
     const schemaReady = await tableExists(supabase);
     if (!schemaReady) {
       return NextResponse.json(
-        { error: "La tabla de bonificaciones mensuales todavía no está disponible. Aplicar migración." },
+        {
+          error:
+            "Las bonificaciones mensuales "
+            + "no están disponibles en este entorno.",
+        },
         { status: 409 },
       );
     }
@@ -378,10 +476,15 @@ export async function PATCH(req: NextRequest) {
 
     const refreshed = await buildResponse(anio, mes);
     return NextResponse.json(refreshed);
-  } catch (error: any) {
-    const authResponse = authorizationErrorResponse(error);
+  } catch (error: unknown) {
+    const authResponse =
+      authorizationErrorResponse(error);
+
     if (authResponse) return authResponse;
 
-    return NextResponse.json({ error: error?.message || "Error al actualizar bonificación mensual" }, { status: 500 });
+    return rankingErrorResponse(
+      error,
+      "Error al actualizar bonificación mensual",
+    );
   }
 }

@@ -61,6 +61,6 @@ export async function GET(
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
     console.error('Error en la concurrencia de asistencia:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Error al obtener la concurrencia de asistencia" }, { status: 500 });
   }
 }

@@ -10,6 +10,58 @@ export const dynamic = "force-dynamic";
 
 const VALID_ESTADOS = new Set(["activo", "pausado", "cancelado"]);
 
+function turnoCreateValidationErrorResponse(message: string) {
+  switch (message) {
+    case "La actividad es obligatoria":
+      return NextResponse.json(
+        { error: "La actividad es obligatoria" },
+        { status: 400 },
+      );
+
+    case "El nombre del turno es obligatorio":
+      return NextResponse.json(
+        { error: "El nombre del turno es obligatorio" },
+        { status: 400 },
+      );
+
+    case "El día de semana debe estar entre 1 y 7":
+      return NextResponse.json(
+        { error: "El día de semana debe estar entre 1 y 7" },
+        { status: 400 },
+      );
+
+    case "La hora de inicio y fin son obligatorias":
+      return NextResponse.json(
+        { error: "La hora de inicio y fin son obligatorias" },
+        { status: 400 },
+      );
+
+    case "El cupo máximo debe ser mayor a cero":
+      return NextResponse.json(
+        { error: "El cupo máximo debe ser mayor a cero" },
+        { status: 400 },
+      );
+
+    case "El cupo mínimo debe ser mayor o igual a cero y no superar el cupo máximo":
+      return NextResponse.json(
+        {
+          error:
+            "El cupo mínimo debe ser mayor o igual a cero y no superar el cupo máximo",
+        },
+        { status: 400 },
+      );
+
+    case "Estado de turno inválido":
+      return NextResponse.json(
+        { error: "Estado de turno inválido" },
+        { status: 400 },
+      );
+
+    default:
+      return null;
+  }
+}
+
 function cleanString(value: unknown) {
   const text = String(value ?? "").trim();
   return text.length ? text : null;
@@ -73,6 +125,14 @@ export async function POST(req: Request) {
     if (authResponse) return authResponse;
 
     const message = error instanceof Error ? error.message : "Error al crear turno";
-    return NextResponse.json({ error: message }, { status: message.includes("oblig") || message.includes("invál") ? 400 : 500 });
+
+    const validationResponse = turnoCreateValidationErrorResponse(message);
+    if (validationResponse) return validationResponse;
+
+    console.error("Error al crear turno:", error);
+    return NextResponse.json(
+      { error: "Error al crear turno" },
+      { status: 500 },
+    );
   }
 }

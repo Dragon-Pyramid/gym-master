@@ -22,6 +22,11 @@ export async function POST(req: Request) {
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    return NextResponse.json({ error: error.message }, { status: 500 });
+
+    console.error('Error en validación interna de alertas:', error);
+    return NextResponse.json(
+      { error: 'No se pudo completar la validación interna de alertas.' },
+      { status: 500 }
+    );
   }
 }

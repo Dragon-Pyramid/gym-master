@@ -24,8 +24,14 @@ export async function GET(
   } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    const message = error instanceof Error ? error.message : 'Error al obtener historial de rutinas';
-    const status = message.includes('No autorizado') ? 403 : 500;
-    return NextResponse.json({ error: message }, { status });
+
+    console.error('Error al obtener historial de rutinas:', {
+      name: error instanceof Error ? error.name : 'UnknownError',
+    });
+
+    return NextResponse.json(
+      { error: 'Error al obtener historial de rutinas' },
+      { status: 500 },
+    );
   }
 }

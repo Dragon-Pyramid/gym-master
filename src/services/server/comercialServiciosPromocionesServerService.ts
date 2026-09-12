@@ -1,3 +1,4 @@
+import { ComercialValidationError } from '@/lib/comercial/comercialErrorBoundary';
 import 'server-only';
 
 import { getSupabaseServerClient } from '@/services/supabaseServerClient';
@@ -13,14 +14,14 @@ import type {
 
 function parseMoney(value: unknown, field: string) {
   const numeric = Number(value ?? 0);
-  if (!Number.isFinite(numeric) || numeric < 0) throw new Error(`${field} debe ser un importe mayor o igual a 0`);
+  if (!Number.isFinite(numeric) || numeric < 0) throw new ComercialValidationError("El importe ingresado debe ser mayor o igual a 0.", `${field} debe ser un importe mayor o igual a 0`);
   return Math.round(numeric * 100) / 100;
 }
 
 function parsePositiveInteger(value: unknown, field: string, optional = false) {
   if (optional && (value === null || value === undefined || value === '')) return null;
   const numeric = Number(value);
-  if (!Number.isInteger(numeric) || numeric <= 0) throw new Error(`${field} debe ser un entero mayor a 0`);
+  if (!Number.isInteger(numeric) || numeric <= 0) throw new ComercialValidationError("El número ingresado debe ser un entero mayor a 0.", `${field} debe ser un entero mayor a 0`);
   return numeric;
 }
 
@@ -132,17 +133,17 @@ export async function getComercialServiciosPromocionesDashboard(): Promise<Comer
 
 export async function createComercialPack(payload: CreateComercialPackDTO): Promise<ComercialPack> {
   const nombre = String(payload.nombre ?? '').trim();
-  if (nombre.length < 3) throw new Error('El nombre del pack debe tener al menos 3 caracteres');
+  if (nombre.length < 3) throw new ComercialValidationError('El nombre del pack debe tener al menos 3 caracteres');
   const precio = parseMoney(payload.precio, 'El precio del pack');
   const items = Array.isArray(payload.items) ? payload.items : [];
-  if (!items.length) throw new Error('El pack debe tener al menos un ítem');
+  if (!items.length) throw new ComercialValidationError('El pack debe tener al menos un ítem');
 
   const normalizedItems = items.map((item, index) => {
     const itemTipo = item.item_tipo === 'servicio' ? 'servicio' : 'producto';
     const productoId = itemTipo === 'producto' ? String(item.producto_id ?? '').trim() : null;
     const servicioId = itemTipo === 'servicio' ? String(item.servicio_id ?? '').trim() : null;
-    if (itemTipo === 'producto' && !productoId) throw new Error(`Debe seleccionar producto en el ítem ${index + 1}`);
-    if (itemTipo === 'servicio' && !servicioId) throw new Error(`Debe seleccionar servicio en el ítem ${index + 1}`);
+    if (itemTipo === 'producto' && !productoId) throw new ComercialValidationError("Debe seleccionar un producto en el ítem.", `Debe seleccionar producto en el ítem ${index + 1}`);
+    if (itemTipo === 'servicio' && !servicioId) throw new ComercialValidationError("Debe seleccionar un servicio en el ítem.", `Debe seleccionar servicio en el ítem ${index + 1}`);
     const cantidad = parsePositiveInteger(item.cantidad, `Cantidad del ítem ${index + 1}`) ?? 1;
     const precioReferencia = parseMoney(item.precio_referencia ?? 0, `Precio referencia del ítem ${index + 1}`);
     return { item_tipo: itemTipo, producto_id: productoId, servicio_id: servicioId, cantidad, precio_referencia: precioReferencia };
@@ -190,10 +191,10 @@ export async function createComercialPack(payload: CreateComercialPackDTO): Prom
 
 export async function createComercialPromocion(payload: CreateComercialPromocionDTO): Promise<ComercialPromocion> {
   const nombre = String(payload.nombre ?? '').trim();
-  if (nombre.length < 3) throw new Error('El nombre de la promoción debe tener al menos 3 caracteres');
+  if (nombre.length < 3) throw new ComercialValidationError('El nombre de la promoción debe tener al menos 3 caracteres');
   const tipo = normalizePromoType(payload.tipo);
   const valor = parseMoney(payload.valor, 'El valor de la promoción');
-  if (tipo === 'descuento_porcentaje' && valor > 100) throw new Error('El descuento porcentual no puede superar 100%');
+  if (tipo === 'descuento_porcentaje' && valor > 100) throw new ComercialValidationError('El descuento porcentual no puede superar 100%');
   const codigo = String(payload.codigo ?? '').trim() || slugify(nombre, 'PROMO');
   const fechaInicio = normalizeDate(payload.fecha_inicio);
   const fechaFin = normalizeDate(payload.fecha_fin);
@@ -230,8 +231,8 @@ export async function createComercialPromocion(payload: CreateComercialPromocion
 export async function createComercialCupon(payload: CreateComercialCuponDTO): Promise<ComercialCupon> {
   const promocionId = String(payload.promocion_id ?? '').trim();
   const codigo = String(payload.codigo ?? '').trim().toUpperCase();
-  if (!promocionId) throw new Error('Debe seleccionar una promoción');
-  if (codigo.length < 3) throw new Error('El código de cupón debe tener al menos 3 caracteres');
+  if (!promocionId) throw new ComercialValidationError('Debe seleccionar una promoción');
+  if (codigo.length < 3) throw new ComercialValidationError('El código de cupón debe tener al menos 3 caracteres');
 
   const maxUsos = parsePositiveInteger(
     payload.max_usos,
@@ -246,8 +247,9 @@ export async function createComercialCupon(payload: CreateComercialCuponDTO): Pr
     .select('id, activo')
     .eq('id', promocionId)
     .single();
-  if (promoError || !promocion) throw new Error('Promoción no encontrada');
-  if (promocion.activo === false) throw new Error('No se puede crear cupón sobre promoción inactiva');
+  if (promoError) throw new Error(promoError.message);
+  if (!promocion) throw new ComercialValidationError('Promoción no encontrada');
+  if (promocion.activo === false) throw new ComercialValidationError('No se puede crear cupón sobre promoción inactiva');
 
   const { data, error } = await supabase
     .from('comercial_cupon')

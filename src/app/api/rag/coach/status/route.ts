@@ -5,29 +5,48 @@ import {
   authorizeDashboardRequest,
   authorizationErrorResponse,
 } from '@/lib/auth/serverAuthorization';
+import {
+  ragHttpErrorResponse,
+} from '@/lib/rag/ragHttpBoundary';
 
 export const dynamic = 'force-dynamic';
-
-function getAuthStatus(error: any) {
-  const message = error?.message ?? '';
-  if (message.includes('Token no proporcionado') || message.includes('Token inválido')) return 401;
-  if (message.includes('No autorizado')) return 403;
-  return 500;
-}
 
 export async function GET(request: Request) {
   try {
     const user = await authorizeDashboardRequest(request, '/dashboard/coach', ['admin', 'socio']);
     const status = await getRagHealth(user);
     return NextResponse.json(status, { status: 200 });
-  } catch (error: any) {
-    const authResponse = authorizationErrorResponse(error);
+  } catch (error: unknown) {
+    const authResponse =
+      authorizationErrorResponse(error);
+
     if (authResponse) return authResponse;
-    const status = getAuthStatus(error);
-    if (status === 500) console.error('Error al consultar estado RAG:', error);
-    return NextResponse.json(
-      { ok: false, error: error?.message ?? 'Error al consultar estado RAG.' },
-      { status },
-    );
+
+    const response =
+      ragHttpErrorResponse(
+        error,
+        'Error al consultar estado RAG.',
+        [
+          {
+            message:
+              'No autorizado para usar herramientas RAG administrativas.',
+            status: 403,
+          },
+        ],
+      );
+
+    if (response.status >= 500) {
+      console.error(
+        'Error al consultar estado RAG:',
+        {
+          name:
+            error instanceof Error
+              ? error.name
+              : 'UnknownError',
+        },
+      );
+    }
+
+    return response;
   }
 }

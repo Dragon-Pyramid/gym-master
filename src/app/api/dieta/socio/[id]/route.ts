@@ -25,8 +25,17 @@ export async function GET(
   } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    const message = error instanceof Error ? error.message : 'Error al obtener las dietas del socio';
-    const status = message.includes('No autorizado') ? 403 : 500;
-    return NextResponse.json({ error: message }, { status });
+    console.error(
+      'Error al obtener dietas del socio:',
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          'Error al obtener las dietas del socio.',
+      },
+      { status: 500 },
+    );
   }
 }

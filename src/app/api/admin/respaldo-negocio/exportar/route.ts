@@ -66,8 +66,23 @@ export async function POST(req: Request) {
   } catch (error) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    const message = error instanceof Error ? error.message : 'Error interno del servidor';
-    const status = message.includes('No autorizado') || message.includes('Token') ? 403 : 500;
-    return NextResponse.json({ error: message }, { status });
+    const message = error instanceof Error ? error.message : '';
+    if (message === "No autorizado: solo administradores pueden exportar respaldos del negocio") {
+      return NextResponse.json(
+        { error: "No autorizado: solo administradores pueden exportar respaldos del negocio" },
+        { status: 403 }
+      );
+    }
+    if (message.startsWith('Módulos inválidos para exportación: ')) {
+      return NextResponse.json(
+        { error: 'Módulos inválidos para exportación.' },
+        { status: 400 }
+      );
+    }
+    console.error("No se pudo generar el respaldo de negocio:", error);
+    return NextResponse.json(
+      { error: "No se pudo generar el respaldo de negocio" },
+      { status: 500 }
+    );
   }
 }

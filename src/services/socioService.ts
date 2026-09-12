@@ -80,7 +80,6 @@ export const existeSocioActivo = async (
     .eq('id_socio', id)
     .eq('activo', true)
     .single();
-  console.log(data, error);
 
   if (error || !data) return false;
   return true;
@@ -122,7 +121,7 @@ export const getSocioById = async (
     .eq('id_socio', id)
     .single();
   if (error) {
-    console.log(error.message);
+    console.error(error.message);
     throw new Error('No se encontró el socio con ese id');
   }
   return data as Socio;
@@ -136,11 +135,10 @@ export const getAllSociosActivos = async (user: JwtUser): Promise<Socio[]> => {
     .eq('activo', true);
 
   if (error) {
-    console.log(error.message);
+    console.error(error.message);
     throw new Error('No se encontraron socios activos');
   }
   if (!data || data.length === 0) {
-    console.log('No se encontraron socios activos');
     return [];
   }
 
@@ -159,14 +157,13 @@ export const getSocioByIdUsuario = async (
     .single();
 
   if (errorSocio) {
-    console.log(errorSocio);
+    console.error(errorSocio);
     throw new Error(`Error al obtener el socio`);
   }
 
   if (!dataSocio) {
     throw new Error('No se encontró el socio');
   }
-  console.log(dataSocio);
   return dataSocio;
 };
 
@@ -183,14 +180,13 @@ export const updateFotoSocioById = async (
     .single();
 
   if (error) {
-    console.log(error.message);
+    console.error(error.message);
     throw new Error(error.message);
   }
   if (!data || data.length === 0) {
     throw new Error('No se encontró el socio con ese ID');
   }
 
-  console.log('profile_photo_updated: Foto de socio actualizada:');
 
   return data;
 };

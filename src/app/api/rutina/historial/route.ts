@@ -25,20 +25,17 @@ export async function GET(req: Request) {
         "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    const message = error?.message ?? "Error al obtener historial de rutinas";
 
-    if (
-      message.includes("Token no proporcionado") ||
-      message.includes("Token inválido") ||
-      message.includes("JWT_SECRET")
-    ) {
-      return NextResponse.json({ error: message }, { status: 401 });
-    }
+    console.error("Error al obtener historial de rutinas:", {
+      name: error instanceof Error ? error.name : "UnknownError",
+    });
 
-    console.error("Error al obtener historial de rutinas:", error);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      { error: "Error al obtener historial de rutinas" },
+      { status: 500 },
+    );
   }
 }

@@ -45,7 +45,7 @@ export async function sendEmail({
         },
       });
 
-    console.log(
+    console.info(
       'Email transaccional enviado por Brevo',
       {
         subject,

@@ -31,7 +31,7 @@ export async function GET(req: Request) {
 
     console.error('Error en la segmentación de pagos:', error);
     return NextResponse.json(
-      { error: error.message || 'Error en la segmentación de pagos' },
+      { error: "Error en la segmentación de pagos" },
       { status: 500 },
     );
   }

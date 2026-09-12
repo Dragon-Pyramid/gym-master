@@ -22,13 +22,13 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: "Unauthorized: User no tiene rol de admin" }, { status: 403 });
         }
 
-        //TODO IMPLEMENTAR LÓGICA USANDO sp_resumen_asistencias_por_periodo O FUNCIÓN SIMILAR
+        // Endpoint reservado para futura analítica de inactividad; el release actual responde 501 de forma explícita.
 
         return NextResponse.json({ error: "Endpoint no implementado" }, { status: 501 });
     } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
         console.error("Error en el resumen de asistencias por periodo:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: "Error al obtener el resumen de asistencias por periodo" }, { status: 500 });
     }
 }

@@ -10,7 +10,6 @@ import { createSingleRagEmbedding } from './ragEmbeddingProviderService';
 import {
   aiGeneratedContentTx,
   normalizeAiGeneratedContentLocale,
-  translateAiGeneratedTechnicalText,
 } from '@/utils/aiGeneratedContentI18n';
 
 const DEFAULT_ROUTINE_MATCH_THRESHOLD = 0.3;
@@ -145,12 +144,41 @@ export async function buildRutinasRagContext(
       query: '',
       results: [],
       summary: aiGeneratedContentTx(locale, 'RAG desactivado. Se usa generación local segura.', 'RAG is disabled. Safe local generation is used.'),
-      warnings: [translateAiGeneratedTechnicalText('RAG_ENABLED=false.', locale)],
+      warnings: [
+        aiGeneratedContentTx(
+          locale,
+          'El contexto RAG no está activo. Se utilizó generación local segura.',
+          'RAG context is not active. Safe local generation was used.',
+        ),
+      ],
     };
   }
 
-  if (config.provider === 'github' && !config.githubToken) warnings.push(translateAiGeneratedTechnicalText('Falta GITHUB_TOKEN.', locale));
-  if (config.provider === 'openai' && !config.openaiApiKey) warnings.push(translateAiGeneratedTechnicalText('Falta OPENAI_API_KEY.', locale));
+  if (
+    config.provider === 'github' &&
+    !config.githubToken
+  ) {
+    warnings.push(
+      aiGeneratedContentTx(
+        locale,
+        'El proveedor RAG de GitHub no está configurado.',
+        'The GitHub RAG provider is not configured.',
+      ),
+    );
+  }
+
+  if (
+    config.provider === 'openai' &&
+    !config.openaiApiKey
+  ) {
+    warnings.push(
+      aiGeneratedContentTx(
+        locale,
+        'El proveedor RAG de OpenAI no está configurado.',
+        'The OpenAI RAG provider is not configured.',
+      ),
+    );
+  }
 
   if (warnings.length > 0) {
     return {
@@ -197,7 +225,13 @@ export async function buildRutinasRagContext(
       query,
       results: [],
       summary: aiGeneratedContentTx(locale, 'No se pudo consultar el RAG. Se usa generación local segura.', 'The RAG service could not be queried. Safe local generation is used.'),
-      warnings: [translateAiGeneratedTechnicalText(`match_rag_chunks falló: ${error.message}`, locale)],
+      warnings: [
+        aiGeneratedContentTx(
+          locale,
+          'No se pudo recuperar contexto desde la base RAG.',
+          'Context could not be retrieved from the RAG database.',
+        ),
+      ],
     };
   }
 

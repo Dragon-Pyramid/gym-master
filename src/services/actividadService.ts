@@ -2,6 +2,8 @@ import 'server-only';
 
 import { getSupabaseServerClient } from "./supabaseServerClient";
 
+const ACTIVIDAD_NOT_FOUND_ERROR = "No se encontró la actividad con ese id";
+
 export const fetchAllActividades = async ()=>{
     const supabase = getSupabaseServerClient();
     const {data, error} = await supabase
@@ -24,7 +26,6 @@ export const updateActividad = async (id:string,updateData:{
     nombre_actividad?:string;
 } ) =>{
     const supabase = getSupabaseServerClient();
-    console.log(updateData);
     
 
     const {data,error} = await supabase
@@ -33,7 +34,7 @@ export const updateActividad = async (id:string,updateData:{
     .eq("id",id)
     .select();
     if(error) throw new Error(error.message);
-    if(!data) throw new Error("No se encontro actividad con ese id");
+    if (!data || data.length === 0) throw new Error(ACTIVIDAD_NOT_FOUND_ERROR);
     return data;
 
 }
@@ -47,7 +48,7 @@ export const deleteActividad = async (id: string) => {
     .select()
 
   if (error) throw new Error(error.message)
-  if (!data || data.length === 0) throw new Error('No se encontró la actividad con ese ID')
+  if (!data || data.length === 0) throw new Error(ACTIVIDAD_NOT_FOUND_ERROR);
 }
 
 export const getActividadById = async (id: string): Promise<any> => {
@@ -56,10 +57,15 @@ export const getActividadById = async (id: string): Promise<any> => {
     .from("actividad")
     .select()
     .eq("id", id)
-    .single();
+    .maybeSingle();
+
   if (error) {
-    console.log(error.message);
-    throw new Error("No se encontró la actividad con ese id");
+    throw new Error(error.message);
   }
+
+  if (!data) {
+    throw new Error(ACTIVIDAD_NOT_FOUND_ERROR);
+  }
+
   return data;
 };

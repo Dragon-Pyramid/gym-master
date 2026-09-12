@@ -19,7 +19,14 @@ export async function GET(req: Request) {
   } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    const message = error instanceof Error ? error.message : 'Error al obtener las dietas';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error(
+      'Error al obtener todas las dietas:',
+      error,
+    );
+
+    return NextResponse.json(
+      { error: 'Error al obtener las dietas.' },
+      { status: 500 },
+    );
   }
 }

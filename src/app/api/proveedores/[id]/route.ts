@@ -30,6 +30,17 @@ export async function GET(
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
-    return NextResponse.json({ error: error.message });
+    if (error?.message === "No se encontró el proveedor con ese id") {
+      return NextResponse.json(
+        { error: "Proveedor no encontrado" },
+        { status: 404 },
+      );
+    }
+
+    console.error("Error al obtener el proveedor:", error);
+    return NextResponse.json(
+      { error: "Error al obtener el proveedor" },
+      { status: 500 },
+    );
   }
 }
