@@ -58,7 +58,7 @@ export async function loginAsAdmin(page: Page, options: LoginOptions = {}) {
   });
 
   if (page.url().includes('/auth/change-password')) {
-    throw new Error('El usuario E2E tiene must_change_password=true. Usar un admin QA con contraseña definitiva.');
+    throw new Error('El usuario E2E tiene must_change_password=true. Usar un usuario QA con contraseña definitiva.');
   }
 
   await expect(page).toHaveURL(/\/dashboard(\/.*)?$/);

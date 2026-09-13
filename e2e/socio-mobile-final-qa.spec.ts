@@ -1,20 +1,19 @@
 import { devices, expect, test } from '@playwright/test';
+import { MENU_PERMISSION_GROUPS } from '../src/lib/permissions/menuPermissions';
 import { expectNoAccessDenied, expectNoCriticalAppError, waitForAppReady } from './helpers/assertions';
 import { loginAsSocio, skipIfMissingSocioCredentials } from './helpers/auth';
 
-const socioMobileRoutes = [
-  '/dashboard',
-  '/dashboard/control-asistencia',
-  '/dashboard/mi-cuenta/pagar-cuota',
-  '/dashboard/mi-cuenta/historial-pagos',
-  '/dashboard/rutinas',
-  '/dashboard/rutinas/asistente',
-  '/dashboard/dietas',
-  '/dashboard/coach',
-  '/dashboard/evolucion-fisica',
-  '/dashboard/ficha-medica',
-  '/dashboard/mensajes',
-];
+const socioPersonalExtraRoutes = ['/dashboard/rutinas'] as const;
+
+const socioMobileRoutes = Array.from(
+  new Set([
+    ...MENU_PERMISSION_GROUPS
+      .flatMap((group) => group.items)
+      .filter((item) => item.roles.includes('socio'))
+      .map((item) => item.path),
+    ...socioPersonalExtraRoutes,
+  ]),
+).sort();
 
 const { defaultBrowserType: _defaultBrowserType, ...iPhone12ProDevice } = devices['iPhone 12 Pro'];
 
@@ -54,12 +53,98 @@ test.describe('Smoke E2E socio mobile/PWA final', () => {
 
   for (const path of socioMobileRoutes) {
     test(`carga ${path} como socio mobile sin bloqueo RBAC`, async ({ page }) => {
-      await page.goto(path);
-      await waitForAppReady(page);
+      const appOrigin = new URL(page.url()).origin;
 
-      await expect(page).toHaveURL(new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+      const blockedMutations: string[] = [];
+      const pageErrors: string[] = [];
+      const serverErrors: string[] = [];
+
+      page.on('pageerror', (error) => {
+        pageErrors.push(`${path} :: ${error.message}`);
+      });
+
+      page.on('response', (response) => {
+        const request = response.request();
+
+        let responseUrl: URL;
+
+        try {
+          responseUrl = new URL(response.url());
+        } catch {
+          return;
+        }
+
+        if (responseUrl.origin !== appOrigin) {
+          return;
+        }
+
+        if (
+          response.status() >= 500 &&
+          ['document', 'xhr', 'fetch'].includes(request.resourceType())
+        ) {
+          serverErrors.push(
+            `${path} :: HTTP ${response.status()} ${request.method()} ${responseUrl.pathname}`,
+          );
+        }
+      });
+
+      await page.route('**/*', async (route) => {
+        const request = route.request();
+        const method = request.method().toUpperCase();
+
+        if (['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+          await route.continue();
+          return;
+        }
+
+        blockedMutations.push(`${path} :: ${method} ${request.url()}`);
+        await route.abort('blockedbyclient');
+      });
+
+      const response = await page.goto(path, {
+        waitUntil: 'domcontentloaded',
+        timeout: 45_000,
+      });
+
+      await waitForAppReady(page);
+      await page.waitForTimeout(800);
+
+      const finalPath =
+        new URL(page.url()).pathname.replace(/\/$/, '') || '/';
+
+      const expectedPath =
+        path.replace(/\/$/, '') || '/';
+
+      expect(finalPath).toBe(expectedPath);
+
+      if (response && response.status() >= 400) {
+        throw new Error(`HTTP ${response.status()}`);
+      }
+
       await expectNoAccessDenied(page);
       await expectNoCriticalAppError(page);
+
+      const bodyText = (await page.locator('body').innerText()).trim();
+
+      expect(
+        bodyText,
+        'La página Socio no debe renderizar body vacío.',
+      ).not.toBe('');
+
+      expect(
+        blockedMutations,
+        'La navegación Socio read-only intentó una request mutativa.',
+      ).toEqual([]);
+
+      expect(
+        pageErrors,
+        'Se detectaron errores JavaScript no controlados.',
+      ).toEqual([]);
+
+      expect(
+        serverErrors,
+        'Se detectaron respuestas HTTP 5xx same-origin.',
+      ).toEqual([]);
     });
   }
 });
