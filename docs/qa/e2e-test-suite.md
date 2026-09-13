@@ -20,6 +20,7 @@ e2e/auth-public.spec.ts
 e2e/admin-critical-routes.spec.ts
 e2e/admin-menu-routes.spec.ts
 e2e/business-flows.spec.ts
+e2e/commercial-final-qa.spec.ts
 e2e/socio-mobile-final-qa.spec.ts
 e2e/helpers/auth.ts
 e2e/helpers/assertions.ts
@@ -134,6 +135,25 @@ La prueba:
 
 Baseline validado en la rama Admin final QA: **51/51 rutas Admin read-only**.
 
+### Regresión final Comercial y Stock
+
+`e2e/commercial-final-qa.spec.ts` ejecuta una regresión autenticada read-only del grupo `Comercial y Stock` definido en `MENU_PERMISSION_GROUPS`.
+
+La cobertura incluye:
+
+- **13 rutas directas** del grupo `Comercial y Stock`;
+- autenticación con usuario Admin QA;
+- permanencia en el `pathname` esperado para cada ruta;
+- bloqueo de requests `POST`, `PUT`, `PATCH` y `DELETE` después del login;
+- detección de `pageerror`;
+- detección de respuestas HTTP 5xx same-origin para `document`, `xhr` y `fetch`;
+- detección de bloqueo RBAC y errores críticos visibles;
+- validación de `body` renderizado no vacío.
+
+La suite no ejecuta acciones comerciales mutativas. Quedan fuera de esta regresión la creación o anulación de ventas y compras, apertura/cierre o movimientos de caja, recepción de órdenes, cambios de stock, CRUD de productos/proveedores/servicios, creación de packs/promociones/cupones y generación persistente de códigos QR.
+
+Baseline validado: **13/13 rutas Comercial y Stock read-only**.
+
 ### Regresión final Socio mobile/PWA
 
 `e2e/socio-mobile-final-qa.spec.ts` ejecuta la regresión autenticada del rol `socio` con perfil mobile equivalente a iPhone 12 Pro.
@@ -157,7 +177,7 @@ Baseline final validado: **15 rutas Socio + 1 test funcional de dashboard = 16/1
 
 ## Alcance intencional
 
-La suite combina **smoke/regresión** con cobertura Admin read-only. No genera datos destructivos ni registra pagos reales. Sirve para detectar errores de compilación visual, rutas rotas, permisos mal aplicados, pantallas críticas que dejan de cargar, errores JavaScript y fallos HTTP 5xx durante navegación Admin.
+La suite combina **smoke/regresión** con cobertura Admin, Comercial y Socio. Las coberturas Admin y Comercial se ejecutan en modo read-only y no generan datos destructivos ni registran pagos, ventas, compras, movimientos de caja o stock reales. Sirve para detectar errores de compilación visual, rutas rotas, permisos mal aplicados, pantallas críticas que dejan de cargar, errores JavaScript y fallos HTTP 5xx durante navegación autenticada.
 
 Features futuras podrán ampliar:
 
