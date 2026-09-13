@@ -20,6 +20,7 @@ export default defineConfig({
   ],
   use: {
     baseURL: BASE_URL,
+    locale: 'es-AR',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',

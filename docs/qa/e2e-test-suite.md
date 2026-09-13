@@ -6,9 +6,11 @@
 
 ## Objetivo
 
-Agregar una primera suite E2E con Playwright para proteger los flujos principales de Gym Master antes de avanzar hacia demo comercial, campaña publicitaria y despliegues por cliente.
+Mantener una suite E2E con Playwright para proteger los flujos principales de Gym Master antes de demo comercial, campaña publicitaria y despliegues por cliente.
 
-La suite valida que las rutas críticas carguen sin errores fatales, que el login admin funcione con credenciales QA y que los módulos comerciales principales expongan sus acciones clave.
+La suite valida autenticación pública, login Admin con credenciales QA, rutas críticas, flujos comerciales smoke y cobertura read-only de todas las rutas habilitadas para el rol `admin` en `MENU_PERMISSION_GROUPS`.
+
+La cobertura Admin final también detecta redirects inesperados, errores JavaScript no controlados, respuestas HTTP 5xx same-origin y cualquier intento de request mutativa durante la navegación read-only.
 
 ## Archivos agregados
 
@@ -16,6 +18,7 @@ La suite valida que las rutas críticas carguen sin errores fatales, que el logi
 playwright.config.ts
 e2e/auth-public.spec.ts
 e2e/admin-critical-routes.spec.ts
+e2e/admin-menu-routes.spec.ts
 e2e/business-flows.spec.ts
 e2e/helpers/auth.ts
 e2e/helpers/assertions.ts
@@ -54,6 +57,10 @@ export E2E_ADMIN_ROLE="admin"
 ```
 
 Usar un usuario admin QA con contraseña definitiva. Si el usuario tiene `must_change_password=true`, el test falla con un mensaje explícito porque no debe usarse para smoke tests.
+
+La configuración Playwright fija `locale: es-AR` para que los asserts de copy en español no dependan del idioma ambiental del navegador.
+
+El helper de login espera la navegación autenticada hasta 30 segundos y usa `domcontentloaded`, reduciendo falsos negativos por cold start de `next dev`.
 
 ## Ejecución
 
@@ -106,9 +113,26 @@ npm run test:e2e
 - Ranking/bonificación: ranking, PDF, Excel y actualizar.
 - Equipamiento: listado, PDF y filtros.
 
+### Cobertura completa del menú Admin
+
+`e2e/admin-menu-routes.spec.ts` obtiene dinámicamente las rutas cuyo `roles` incluye `admin` desde `src/lib/permissions/menuPermissions.ts`.
+
+La prueba:
+
+- navega todas las rutas Admin sin duplicar manualmente la matriz de permisos;
+- bloquea requests `POST`, `PUT`, `PATCH` y `DELETE` después del login;
+- exige que cada ruta permanezca en su path esperado;
+- detecta errores críticos visibles y acceso denegado;
+- detecta `pageerror` de navegador;
+- detecta respuestas HTTP 5xx same-origin para `document`, `xhr` y `fetch`;
+- exige body no vacío;
+- no acciona botones de creación, actualización, eliminación, pagos, scanner, cámara, RAG ni providers externos.
+
+Baseline validado en la rama Admin final QA: **51/51 rutas Admin read-only**.
+
 ## Alcance intencional
 
-Esta primera suite es **smoke/regresión inicial**. No genera datos destructivos ni registra pagos reales. Sirve para detectar errores de compilación visual, rutas rotas, permisos mal aplicados y pantallas críticas que dejan de cargar.
+La suite combina **smoke/regresión** con cobertura Admin read-only. No genera datos destructivos ni registra pagos reales. Sirve para detectar errores de compilación visual, rutas rotas, permisos mal aplicados, pantallas críticas que dejan de cargar, errores JavaScript y fallos HTTP 5xx durante navegación Admin.
 
 Features futuras podrán ampliar:
 
