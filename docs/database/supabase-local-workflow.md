@@ -17,6 +17,10 @@ Si el stack local ya existe y querés reconstruir desde cero:
 npx supabase db reset
 ```
 
+El mecanismo standalone de `[db.seed]` está deshabilitado porque Gym Master no mantiene un `supabase/seed.sql`. Los datos demo históricos que continúan versionados forman parte de la propia cadena de migraciones y no de un seed independiente.
+
+El repositorio público no constituye por sí solo un baseline completo para reconstruir una base vacía desde cero: parte del histórico remoto se conserva como migraciones placeholder sin SQL por política de seguridad. Por ese motivo, un `db reset` sobre una base totalmente vacía puede fallar cuando una migración posterior depende de objetos creados en ese histórico. La recuperación completa desde cero debe apoyarse en un baseline o backup privado validado; `db reset` no debe considerarse un mecanismo de disaster recovery de producción.
+
 ## Baseline local
 
 La migración `202605200001_initial_schema_from_backup_minimal_rutinas.sql` es un baseline mínimo para validar el módulo de rutinas localmente. La base remota ya contiene su schema histórico, por lo que antes de aplicar migraciones al remoto se deberá marcar este baseline como aplicado y empujar solo los cambios reales posteriores.
