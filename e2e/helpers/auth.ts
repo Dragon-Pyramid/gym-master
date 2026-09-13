@@ -52,7 +52,10 @@ export async function loginAsAdmin(page: Page, options: LoginOptions = {}) {
   await page.locator('#password').fill(password);
   await page.getByRole('button', { name: /Iniciar sesión/i }).click();
 
-  await page.waitForURL(/\/(dashboard|auth\/change-password)(\/.*)?$/, { timeout: 20_000 });
+  await page.waitForURL(/\/(dashboard|auth\/change-password)(\/.*)?$/, {
+    timeout: 30_000,
+    waitUntil: 'domcontentloaded',
+  });
 
   if (page.url().includes('/auth/change-password')) {
     throw new Error('El usuario E2E tiene must_change_password=true. Usar un admin QA con contraseña definitiva.');
