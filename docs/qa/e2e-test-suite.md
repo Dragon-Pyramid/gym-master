@@ -20,6 +20,7 @@ e2e/auth-public.spec.ts
 e2e/admin-critical-routes.spec.ts
 e2e/admin-menu-routes.spec.ts
 e2e/business-flows.spec.ts
+e2e/socio-mobile-final-qa.spec.ts
 e2e/helpers/auth.ts
 e2e/helpers/assertions.ts
 docs/qa/e2e-test-suite.md
@@ -54,9 +55,12 @@ Las pruebas públicas no requieren credenciales. Las pruebas autenticadas se omi
 export E2E_ADMIN_EMAIL="<qa-admin-email>"
 export E2E_ADMIN_PASSWORD="<qa-admin-password>"
 export E2E_ADMIN_ROLE="admin"
+
+export E2E_SOCIO_EMAIL="<qa-socio-email>"
+export E2E_SOCIO_PASSWORD="<qa-socio-password>"
 ```
 
-Usar un usuario admin QA con contraseña definitiva. Si el usuario tiene `must_change_password=true`, el test falla con un mensaje explícito porque no debe usarse para smoke tests.
+Usar usuarios QA con contraseña definitiva. Si un usuario tiene `must_change_password=true`, el test falla con un mensaje explícito porque no debe usarse para smoke/regresión.
 
 La configuración Playwright fija `locale: es-AR` para que los asserts de copy en español no dependan del idioma ambiental del navegador.
 
@@ -129,6 +133,27 @@ La prueba:
 - no acciona botones de creación, actualización, eliminación, pagos, scanner, cámara, RAG ni providers externos.
 
 Baseline validado en la rama Admin final QA: **51/51 rutas Admin read-only**.
+
+### Regresión final Socio mobile/PWA
+
+`e2e/socio-mobile-final-qa.spec.ts` ejecuta la regresión autenticada del rol `socio` con perfil mobile equivalente a iPhone 12 Pro.
+
+La cobertura incluye:
+
+- **14 rutas directas** habilitadas para `socio` desde `MENU_PERMISSION_GROUPS`;
+- la ruta personal adicional `/dashboard/rutinas`, conservada explícitamente porque forma parte del flujo funcional del socio;
+- 1 test funcional específico del dashboard mobile.
+
+Cada navegación Socio:
+
+- exige permanecer en el `pathname` esperado;
+- bloquea requests `POST`, `PUT`, `PATCH` y `DELETE` después del login;
+- detecta `pageerror`;
+- detecta respuestas HTTP 5xx same-origin para `document`, `xhr` y `fetch`;
+- detecta bloqueo RBAC y errores críticos visibles;
+- exige que el `body` renderizado no esté vacío.
+
+Baseline final validado: **15 rutas Socio + 1 test funcional de dashboard = 16/16 tests passed**.
 
 ## Alcance intencional
 

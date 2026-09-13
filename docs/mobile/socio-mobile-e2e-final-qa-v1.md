@@ -2,7 +2,7 @@
 
 ## Rama
 
-`feature/socio-mobile-e2e-final-qa-v1`
+`feature/e2e-socio-final-regression-v1`
 
 ## Objetivo
 
@@ -12,19 +12,23 @@ Esta feature no agrega lógica de negocio nueva. Su foco es dejar una base de va
 
 ## Alcance
 
-- Se agregan helpers E2E para credenciales de socio.
-- Se agrega test Playwright mobile para recorrer rutas críticas del socio.
+- Se mantiene una regresión Playwright mobile autenticada para el rol socio.
+- Las rutas directas se derivan de `MENU_PERMISSION_GROUPS` para evitar desalineación entre permisos y E2E.
+- Se conserva `/dashboard/rutinas` como ruta personal adicional del socio.
 - Se valida que el dashboard mobile muestre el feed priorizado.
-- Se valida que las rutas del socio no caigan en bloqueo RBAC.
-- Se valida ausencia de errores críticos de renderizado.
-- Se documenta checklist manual para Android real, Vercel y Supabase remoto.
+- Se valida que las rutas no caigan en bloqueo RBAC.
+- La navegación read-only bloquea cualquier request `POST`, `PUT`, `PATCH` o `DELETE` después del login.
+- Se detectan errores JavaScript no controlados mediante `pageerror`.
+- Se detectan respuestas HTTP 5xx same-origin para `document`, `xhr` y `fetch`.
+- Se valida body no vacío y ausencia de errores críticos visibles.
+- Se mantiene checklist manual para Android real/PWA, Vercel y Supabase remoto.
 
 ## Archivos modificados
 
 - `e2e/helpers/auth.ts`
-- `e2e/helpers/assertions.ts`
 - `e2e/socio-mobile-final-qa.spec.ts`
 - `docs/mobile/socio-mobile-e2e-final-qa-v1.md`
+- `docs/qa/e2e-test-suite.md`
 
 ## Variables E2E requeridas
 
@@ -64,21 +68,31 @@ E2E_SKIP_WEBSERVER=1 E2E_BASE_URL="https://TU_DEPLOY.vercel.app" npm run test:e2
 
 ## Rutas cubiertas
 
+Cobertura final validada: **15 rutas Socio**.
+
 - `/dashboard`
-- `/dashboard/control-asistencia`
-- `/dashboard/mi-cuenta/pagar-cuota`
-- `/dashboard/mi-cuenta/historial-pagos`
-- `/dashboard/rutinas`
-- `/dashboard/rutinas/asistente`
-- `/dashboard/dietas`
+- `/dashboard/actividades`
+- `/dashboard/ayuda`
 - `/dashboard/coach`
+- `/dashboard/control-asistencia`
+- `/dashboard/dietas`
 - `/dashboard/evolucion-fisica`
 - `/dashboard/ficha-medica`
 - `/dashboard/mensajes`
+- `/dashboard/mi-cuenta/historial-pagos`
+- `/dashboard/mi-cuenta/pagar-cuota`
+- `/dashboard/perfil`
+- `/dashboard/rutinas`
+- `/dashboard/rutinas/asistente`
+- `/dashboard/settings/preferences`
+
+Las **14 rutas directas** se derivan dinámicamente de `MENU_PERMISSION_GROUPS`.
+
+`/dashboard/rutinas` se mantiene explícitamente como ruta personal adicional porque forma parte del flujo funcional del socio aunque no sea una entrada directa del menú.
 
 ## Validación automática
 
-El test verifica:
+La suite verifica:
 
 - Login como socio desde `/auth/login/socio`.
 - Carga del dashboard mobile.
@@ -90,7 +104,14 @@ El test verifica:
   - Agenda del gimnasio.
   - Soporte / mensajes.
 - Ausencia del mensaje `USTED NO TIENE ACCESO A ESTE MENÚ`.
+- `pathname` final exacto para cada ruta.
+- Ausencia de requests mutativas (`POST`, `PUT`, `PATCH`, `DELETE`) durante navegación read-only.
+- Ausencia de `pageerror` no controlados.
+- Ausencia de respuestas HTTP 5xx same-origin para `document`, `xhr` y `fetch`.
+- Body renderizado no vacío.
 - Ausencia de errores críticos tipo `Application error`, `Internal Server Error`, `ChunkLoadError` o errores runtime relevantes.
+
+Baseline automatizado final: **16/16 tests passed** (`15` rutas + `1` validación funcional específica del dashboard mobile).
 
 ## Checklist manual Android/PWA
 
