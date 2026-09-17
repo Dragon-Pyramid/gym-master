@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 // AUTH POLICY: PUBLIC_LOGIN
 
 const LOGIN_BODY_MAX_BYTES = 8 * 1024;
-const LOGIN_ROLES = new Set(['admin', 'usuario', 'socio']);
+const LOGIN_ROLES = new Set(['admin', 'usuario', 'socio', 'masteradmin']);
 
 type LoginBody = {
   email?: unknown;

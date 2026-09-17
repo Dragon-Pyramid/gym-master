@@ -227,7 +227,7 @@ const explicitNonJwtPolicies = [
   {
     path: 'src/app/api/custom-login/route.ts',
     marker: 'AUTH POLICY: PUBLIC_LOGIN',
-    snippets: ['signIn', 'LOGIN_MISSING_FIELDS'],
+    snippets: ['signIn', 'LOGIN_MISSING_FIELDS', "const LOGIN_ROLES = new Set(['admin', 'usuario', 'socio', 'masteradmin'])"],
   },
   {
     path: 'src/app/api/image-proxy/route.ts',
