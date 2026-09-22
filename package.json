@@ -21,7 +21,8 @@
     "test:business-backup-export": "node scripts/verify-business-backup-export.mjs",
     "security:cleanup-local-artifacts": "node scripts/cleanup-local-repo-artifacts.mjs",
     "test:repo-security": "node scripts/verify-repo-security.mjs",
-    "test:database-rls-boundary": "node scripts/verify-database-rls-boundary.mjs"
+    "test:database-rls-boundary": "node scripts/verify-database-rls-boundary.mjs",
+    "test:database-lifecycle-versioning": "node scripts/verify-database-lifecycle-versioning.mjs"
   },
   "dependencies": {
     "@getbrevo/brevo": "^6.0.3",
