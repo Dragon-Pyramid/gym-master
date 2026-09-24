@@ -257,3 +257,43 @@ planned_first_migration_id = 0001_adopt_golden_v2_lifecycle_metadata
 ```
 
 The Golden Baseline itself remains immutable.
+
+## Lifecycle Lab adoption evidence
+
+The following results describe **one isolated local Lifecycle Lab instance**.
+They do not establish the current state of customer installations, the
+application's normal local database, or any remote environment.
+
+- Baseline: `20260917-golden-v2`, initially without lifecycle metadata.
+- Applied migration: `0001_adopt_golden_v2_lifecycle_metadata`.
+- Confirmed database version: `db_version = 1`.
+- An independent post-apply check confirmed one instance-state record, one
+  applied migration-history record, and restricted access to the internal
+  `gm_lifecycle` namespace for the `anon` and `authenticated` roles.
+- Local public-data and sequence-state fingerprints matched before and after
+  migration. Before/after `public` schema-only exports also matched after
+  excluding only the generated `pg_dump` restrict/unrestrict commands.
+- An isolated application smoke against local Lifecycle Supabase passed
+  **three public login-page and unauthenticated-redirection tests**.
+  A subsequent read-only check confirmed that the lifecycle version,
+  migration history, public data, sequence state and authentication-user count
+  remained unchanged.
+
+**Validation boundary:** the public smoke did not exercise an authenticated
+business workflow. The lab remains at `DB_APPLIED_RUNTIME_PENDING`.
+Successful database adoption and this limited public-page smoke must not be
+described as a completed customer rollout or full application certification.
+
+**Security boundary:** pre-existing broad privileges on some `public`
+objects were observed separately during lab analysis. Migration `0001`
+did not change the before/after `public` schema or privileges. This
+preservation does **not** establish that the pre-existing permissions are
+appropriate for production; they require a separate security review.
+
+Before a customer rollout, the operator must independently verify the
+installation's certified source state and compatible application revision,
+create and verify an installation-specific backup, execute the private
+migration through its guarded procedure, perform post-apply database and
+representative authenticated application checks, and update the private
+installation inventory. Private SQL, execution logs, backups, credentials
+and customer-specific inventory are not part of this repository.
