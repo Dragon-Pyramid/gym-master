@@ -46,11 +46,22 @@ export default function HelpCenterPage() {
     setSelectedCategory(null);
     setSelectedEntryId(null);
   }, [locale, manualRole]);
-  const copy = getHelpCenterCopy(locale, manualRole ?? 'socio');
+  const copy = getHelpCenterCopy(
+    locale,
+    manualRole ?? 'socio',
+    user?.rol,
+  );
 
   const entries = useMemo(
-    () => (manualRole ? getHelpManualEntries(manualRole, locale) : []),
-    [locale, manualRole],
+    () => (
+      manualRole
+        ? getHelpManualEntries(manualRole, locale, {
+            userRole: user?.rol,
+            menuPermissions: user?.permisos_menu ?? null,
+          })
+        : []
+    ),
+    [locale, manualRole, user?.rol, user?.permisos_menu],
   );
 
   const categories = useMemo(() => getHelpManualCategories(entries), [entries]);
