@@ -1,5 +1,6 @@
 "use client";
 
+import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -65,7 +66,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import type { GymMasterLocale } from "@/i18n/config";
 
 type CatalogUiDefinition = {
-  icon: React.ElementType;
+  icon: LucideIcon;
   href?: string;
   tags: string[];
 };

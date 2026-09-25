@@ -11,10 +11,10 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await authorizeDashboardRequest(req, '/dashboard/mensajes-admin', ['admin', 'usuario']);
-    const mensaje = await getMensajeAdminById(params.id, user);
+    const mensaje = await getMensajeAdminById((await params).id, user);
     return NextResponse.json({ data: mensaje });
   } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
@@ -37,10 +37,10 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await authorizeDashboardRequest(req, '/dashboard/mensajes-admin', ['admin', 'usuario']);
-    const mensaje = await updateMensajeAdmin(params.id, await req.json(), user);
+    const mensaje = await updateMensajeAdmin((await params).id, await req.json(), user);
     return NextResponse.json({ data: mensaje });
   } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);

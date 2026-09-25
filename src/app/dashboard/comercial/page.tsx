@@ -1,6 +1,7 @@
 'use client';
 
-import { ElementType, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import type { LucideIcon } from "lucide-react";
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -108,7 +109,7 @@ function DashboardMetric({
   title: string;
   value: string;
   description: string;
-  icon: ElementType;
+  icon: LucideIcon;
   tone?: 'sky' | 'amber' | 'emerald' | 'violet' | 'red' | 'slate';
 }) {
   const toneClasses = {
@@ -150,7 +151,7 @@ function ActionCard({
   title: string;
   description: string;
   href?: string;
-  icon: ElementType;
+  icon: LucideIcon;
   disabled?: boolean;
   label?: string;
   disabledLabel?: string;
@@ -199,7 +200,7 @@ function InsightCard({
   title: string;
   value: string;
   description: string;
-  icon: ElementType;
+  icon: LucideIcon;
 }) {
   return (
     <div className='rounded-2xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70'>

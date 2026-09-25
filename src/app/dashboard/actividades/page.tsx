@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { ElementType, FormEvent } from "react";
+import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import type { LucideIcon } from "lucide-react";
 import ExcelJS from "exceljs";
 import {
   Bar,
@@ -325,7 +326,7 @@ function MetricCard({
   title: string;
   value: string | number;
   helper?: string;
-  icon: ElementType;
+  icon: LucideIcon;
 }) {
   return (
     <Card>

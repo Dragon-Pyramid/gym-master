@@ -90,7 +90,7 @@ function trainingSessionItemErrorResponse(
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const user = await authorizePersonalOrDashboardRequest(
@@ -113,17 +113,17 @@ export async function PATCH(
     );
 
     if (action === 'finish') {
-      const data = await finishTrainingSession(user, params.id);
+      const data = await finishTrainingSession(user, (await params).id);
       return NextResponse.json({ data }, { status: 200 });
     }
 
     if (action === 'cancel') {
-      const data = await cancelTrainingSession(user, params.id);
+      const data = await cancelTrainingSession(user, (await params).id);
       return NextResponse.json({ data }, { status: 200 });
     }
 
     if (action === 'update_exercise') {
-      const data = await updateTrainingSessionExercise(user, params.id, body);
+      const data = await updateTrainingSessionExercise(user, (await params).id, body);
       return NextResponse.json({ data }, { status: 200 });
     }
 

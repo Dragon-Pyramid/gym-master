@@ -23,11 +23,11 @@ async function fetchCompraById(supabase: ReturnType<typeof getSupabaseServerClie
   return data;
 }
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await authorizeDashboardRequest(req, '/dashboard/compras', ['admin', 'usuario']);
     const supabase = getSupabaseServerClient();
-    const compra = await fetchCompraById(supabase, params.id);
+    const compra = await fetchCompraById(supabase, (await params).id);
     return NextResponse.json({ data: compra }, { status: 200 });
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await authorizeDashboardRequest(req, '/dashboard/compras', ['admin', 'usuario']);
     const supabase = getSupabaseServerClient();
@@ -54,11 +54,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         observaciones: typeof body?.observaciones === 'string' ? body.observaciones.trim() || null : undefined,
         actualizado_en: new Date().toISOString(),
       })
-      .eq('id', params.id)
+      .eq('id', (await params).id)
       .neq('estado', 'anulada');
 
     if (error) throw new Error(error.message);
-    const compra = await fetchCompraById(supabase, params.id);
+    const compra = await fetchCompraById(supabase, (await params).id);
     return NextResponse.json({ data: compra }, { status: 200 });
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
@@ -67,11 +67,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await authorizeDashboardRequest(req, '/dashboard/compras', ['admin', 'usuario']);
     const supabase = getSupabaseServerClient();
-    const compra = await fetchCompraById(supabase, params.id);
+    const compra = await fetchCompraById(supabase, (await params).id);
 
     if (!compra) {
       return NextResponse.json({ error: 'Compra no encontrada' }, { status: 404 });
@@ -126,11 +126,11 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     const { error: compraError } = await supabase
       .from('compra')
       .update({ estado: 'anulada', activo: false, actualizado_en: new Date().toISOString() })
-      .eq('id', params.id);
+      .eq('id', (await params).id);
 
     if (compraError) throw new Error(compraError.message);
 
-    const updated = await fetchCompraById(supabase, params.id);
+    const updated = await fetchCompraById(supabase, (await params).id);
     return NextResponse.json({ data: updated }, { status: 200 });
   } catch (error: any) {
     const authResponse = authorizationErrorResponse(error);
