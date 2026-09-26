@@ -1,3 +1,4 @@
+// SERWIST_INSTALL_UPDATE_VERIFIER_V1
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -136,19 +137,53 @@ for (const requiredIcon of requiredIcons) {
   }
 }
 
-const configSource = readRequired(configPath, 'next.config.js');
+const configSource = readRequired(configPath, "next.config.js");
+const workerSource = readRequired(
+  resolve(root, "src", "sw.ts"),
+  "src/sw.ts",
+);
+const offlineDocumentSource = readRequired(
+  resolve(root, "public", "offline.html"),
+  "public/offline.html",
+);
+
+if (offlineDocumentSource.trim().length === 0) {
+  fail("public/offline.html must not be empty.");
+}
+
 requireSourceTokens(
   configSource,
   [
-    'register: false',
-    'skipWaiting: false',
-    'clientsClaim: true',
-    'cleanupOutdatedCaches: true',
-    'cacheStartUrl: false',
-    'dynamicStartUrl: false',
-    "document: '/offline'",
+    "swSrc: \"src/sw.ts\"",
+    "swDest: \"public/sw.js\"",
+    "swUrl: \"/sw.js\"",
+    "scope: \"/\"",
+    "register: false",
+    "cacheOnNavigation: false",
+    "reloadOnOnline: false",
+    "globPublicPatterns: [\"offline.html\"]",
+    "disable: process.env.NODE_ENV === \"development\"",
+    "module.exports = withSerwist(nextConfig);",
   ],
-  'next.config.js',
+  "Serwist configuration",
+);
+
+requireSourceTokens(
+  workerSource,
+  [
+    "precacheEntries: self.__SW_MANIFEST",
+    "cleanupOutdatedCaches: true",
+    "skipWaiting: false",
+    "clientsClaim: true",
+    "navigationPreload: false",
+    "runtimeCaching,",
+    "serwist.setCatchHandler(",
+    "pathname === \"/api\"",
+    "pathname.startsWith(\"/api/\")",
+    "serwist.matchPrecache(\"/offline.html\")",
+    "serwist.addEventListeners();",
+  ],
+  "Serwist source and controlled update policy",
 );
 
 const registrarSource = readRequired(
@@ -240,11 +275,20 @@ if (!existsSync(serviceWorkerPath)) {
   fail('public/sw.js was not generated. Run npm run build first.');
 }
 
-const serviceWorkerSource = readFileSync(serviceWorkerPath, 'utf8');
+const serviceWorkerSource = readRequired(
+  serviceWorkerPath,
+  "public/sw.js",
+);
+
 requireSourceTokens(
   serviceWorkerSource,
-  ['SKIP_WAITING', '/offline'],
-  'generated service worker',
+  [
+    "SKIP_WAITING",
+    "precacheEntries:[",
+    "skipWaiting:!1",
+    "matchPrecache(\"/offline.html\")",
+  ],
+  "generated Serwist service worker",
 );
 
 let trackedGeneratedFiles = '';
