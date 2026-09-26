@@ -25,7 +25,7 @@ const getStatusFromError = (message?: string) => {
 
 export async function GET(
   req: Request,
-  context: { params: { socio_id: string } }
+  context: { params: Promise<{ socio_id: string }> }
 ) {
   try {
     const user = await authorizePersonalOrDashboardRequest(
@@ -34,7 +34,7 @@ export async function GET(
       ['admin', 'usuario'],
       ['socio'],
     );
-    const requestedSocioId = context.params.socio_id;
+    const requestedSocioId = (await context.params).socio_id;
     const socioId = requestedSocioId === "me" ? user.id_socio : requestedSocioId;
 
     if (!socioId) {

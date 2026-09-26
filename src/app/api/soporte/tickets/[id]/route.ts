@@ -11,12 +11,12 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await authorizeDashboardRequest(_req, '/dashboard/soporte-dragon-pyramid', ['admin', 'usuario']);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const ticket = await getSoporteTicketById(params.id, user);
+    const ticket = await getSoporteTicketById((await params).id, user);
     return NextResponse.json({ data: ticket });
   } catch (error) {
     const authResponse = authorizationErrorResponse(error);
@@ -27,13 +27,13 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   }
 }
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await authorizeDashboardRequest(req, '/dashboard/soporte-dragon-pyramid', ['admin', 'usuario']);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
-    const ticket = await updateSoporteTicket(params.id, body, user);
+    const ticket = await updateSoporteTicket((await params).id, body, user);
     return NextResponse.json({ data: ticket });
   } catch (error) {
     const authResponse = authorizationErrorResponse(error);

@@ -49,13 +49,13 @@ export const viewport: Viewport = {
   themeColor: '#000000',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const initialLocale = normalizeLocale(
-    cookies().get(I18N_COOKIE_KEY)?.value ?? DEFAULT_LOCALE,
+    (await cookies()).get(I18N_COOKIE_KEY)?.value ?? DEFAULT_LOCALE,
   );
 
   return (

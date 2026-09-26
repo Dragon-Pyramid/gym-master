@@ -10,7 +10,7 @@ import {
   UserRound,
 } from 'lucide-react';
 import { useEffect } from 'react';
-import type { ElementType } from 'react';
+import type { LucideIcon } from "lucide-react";
 
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuthStore } from '@/stores/authStore';
@@ -19,7 +19,7 @@ import { useI18n } from '@/i18n/I18nProvider';
 type SocioBottomNavItem = {
   labelKey: string;
   href: string;
-  icon: ElementType;
+  icon: LucideIcon;
   isActive: (pathname: string) => boolean;
 };
 

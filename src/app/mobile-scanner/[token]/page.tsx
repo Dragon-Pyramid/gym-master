@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useRef, useState } from 'react';
+import { FormEvent, use, useEffect, useRef, useState } from 'react';
 import { Barcode, Camera, CheckCircle2, Loader2, Send, Smartphone, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,13 +13,11 @@ import type { PublicComercialScannerSessionInfo } from '@/interfaces/comercialMo
 import { toast } from 'sonner';
 
 type PageProps = {
-  params: {
-    token: string;
-  };
+  params: Promise<{ token: string }>;
 };
 
 export default function ComercialMobileScannerPage({ params }: PageProps) {
-  const token = params.token;
+  const token = use(params).token;
   const [session, setSession] = useState<PublicComercialScannerSessionInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

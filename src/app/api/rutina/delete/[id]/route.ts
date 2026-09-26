@@ -23,7 +23,7 @@ const isManager = (rol?: string | null): boolean => {
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await authorizePersonalOrDashboardRequest(
@@ -35,7 +35,7 @@ export async function GET(
 
 
     const rutinas = isManager(user.rol)
-      ? await historialRutinaSocio(user, params.id)
+      ? await historialRutinaSocio(user, (await params).id)
       : await historialRutinaSocioLogueado(user);
 
     return NextResponse.json(rutinas, {
@@ -61,7 +61,7 @@ export async function GET(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await authorizePersonalOrDashboardRequest(
@@ -72,7 +72,7 @@ export async function DELETE(
     );
 
 
-    const deleted = await eliminarRutina(user, params.id);
+    const deleted = await eliminarRutina(user, (await params).id);
 
     return NextResponse.json(
       {

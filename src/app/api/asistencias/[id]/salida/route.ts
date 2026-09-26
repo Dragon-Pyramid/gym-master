@@ -12,9 +12,7 @@ import {
 export const dynamic = "force-dynamic";
 
 type RouteContext = {
-  params: {
-    id: string;
-  };
+  params: Promise<{ id: string }>;
 };
 
 export async function POST(req: NextRequest, { params }: RouteContext) {
@@ -24,14 +22,14 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    if (!params.id) {
+    if (!(await params).id) {
       return NextResponse.json(
         { error: "ID de asistencia requerido" },
         { status: 400 },
       );
     }
 
-    const salida = await registrarSalidaAsistencia(user, params.id);
+    const salida = await registrarSalidaAsistencia(user, (await params).id);
     const aforo = await getAforoAsistencia(user);
 
     return NextResponse.json({ ...salida, aforo }, { status: 200 });

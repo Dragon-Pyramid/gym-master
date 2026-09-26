@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { ElementType, ReactNode } from "react";
+import type { ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import ExcelJS from "exceljs";
 import {
@@ -219,7 +220,7 @@ function MetricCard({
   title: string;
   value: string;
   helper: string;
-  icon: ElementType;
+  icon: LucideIcon;
   tone?: "blue" | "green" | "amber" | "violet" | "slate";
 }) {
   const toneClass = {

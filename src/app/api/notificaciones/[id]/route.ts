@@ -10,10 +10,10 @@ import { authorizationErrorResponse, authorizeDashboardRequest } from '@/lib/aut
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await authorizeDashboardRequest(req, '/dashboard/notificaciones', ['admin', 'usuario']);
-    return NextResponse.json(await getNotificacionById(params.id, user));
+    return NextResponse.json(await getNotificacionById((await params).id, user));
   } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
@@ -31,10 +31,10 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await authorizeDashboardRequest(req, '/dashboard/notificaciones', ['admin', 'usuario']);
-    return NextResponse.json(await updateNotificacion(params.id, await req.json(), user));
+    return NextResponse.json(await updateNotificacion((await params).id, await req.json(), user));
   } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;
@@ -55,10 +55,10 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await authorizeDashboardRequest(req, '/dashboard/notificaciones', ['admin', 'usuario']);
-    return NextResponse.json(await cancelarNotificacion(params.id, user));
+    return NextResponse.json(await cancelarNotificacion((await params).id, user));
   } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;

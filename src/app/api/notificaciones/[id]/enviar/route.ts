@@ -7,10 +7,10 @@ import { authorizationErrorResponse, authorizeDashboardRequest } from '@/lib/aut
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await authorizeDashboardRequest(req, '/dashboard/notificaciones', ['admin', 'usuario']);
-    return NextResponse.json(await enviarNotificacion(params.id, user));
+    return NextResponse.json(await enviarNotificacion((await params).id, user));
   } catch (error: unknown) {
     const authResponse = authorizationErrorResponse(error);
     if (authResponse) return authResponse;

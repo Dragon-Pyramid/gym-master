@@ -19,9 +19,7 @@ const PUBLIC_SCANNER_TOKEN_RE = /^gm-pos-[a-f0-9]{36}$/;
 const PUBLIC_SCANNER_BODY_MAX_BYTES = 8 * 1024;
 
 type Params = {
-  params: {
-    token: string;
-  };
+  params: Promise<{ token: string }>;
 };
 
 type ScannerBody = {
@@ -81,7 +79,7 @@ function getPublicScannerError(error: unknown, operation: 'read' | 'write') {
 export async function GET(_req: NextRequest, { params }: Params) {
   try {
     const session = await getPublicComercialScannerSession(
-      getValidatedToken(params.token),
+      getValidatedToken((await params).token),
     );
     return publicScannerResponse({ data: session }, 200);
   } catch (error) {
@@ -95,7 +93,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
 
 export async function POST(req: NextRequest, { params }: Params) {
   try {
-    const token = getValidatedToken(params.token);
+    const token = getValidatedToken((await params).token);
     const body = await readJsonBody<ScannerBody>(
       req,
       PUBLIC_SCANNER_BODY_MAX_BYTES,
