@@ -45,7 +45,7 @@ assert(
   'HTTPS-only CSP and HSTS must remain enabled for configured secure deployments while local production QA may load HTTP media without mixed-content breakage.',
 );
 
-const middleware = read('src/middleware.ts');
+const middleware = read('src/proxy.ts');
 assert(
   includesAll(middleware, [
     '/api/custom-login',

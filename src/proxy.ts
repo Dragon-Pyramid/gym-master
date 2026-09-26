@@ -103,7 +103,7 @@ function sweepExpiredBuckets(now: number) {
   runtimeGlobal.__gymMasterRuntimeRateLimitLastSweep = now;
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const policy = getPolicy(request);
   if (!policy) return NextResponse.next();
 
